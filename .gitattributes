@@ -1,0 +1,9 @@
+# Normalize line endings to LF for all text files checked into this repo.
+# This ensures consistent diffs and avoids CRLF/LF churn across Windows/Mac/Linux.
+* text=auto
+*.js text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.ts text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
