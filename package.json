@@ -1,0 +1,53 @@
+{
+  "name": "@critical-path-partners/cpm-engine",
+  "version": "2.8.0",
+  "description": "Forensically-defensible CPM engine — AACE-canonical, Daubert-disclosed, bit-identical JS-Python parity.",
+  "main": "cpm-engine.js",
+  "scripts": {
+    "test": "node cpm-engine.test.js",
+    "crossval": "node cpm-engine.crossval.js",
+    "test:all": "npm test && npm run crossval"
+  },
+  "keywords": [
+    "cpm",
+    "critical-path-method",
+    "forensic-delay-analysis",
+    "schedule-analysis",
+    "daubert",
+    "fre-707",
+    "aace",
+    "scl-protocol",
+    "construction",
+    "primavera-p6",
+    "tia",
+    "time-impact-analysis",
+    "monte-carlo",
+    "bayesian"
+  ],
+  "author": "Dana Fitkowski <danafitkowski@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danafitkowski/cpp-cpm-engine"
+  },
+  "homepage": "https://mcp.criticalpathpartners.ca/try",
+  "bugs": {
+    "url": "https://github.com/danafitkowski/cpp-cpm-engine/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "cpm-engine.js",
+    "cpm-engine.test.js",
+    "cpm-engine.crossval.js",
+    "LICENSE",
+    "README.md",
+    "DAUBERT.md",
+    "METHODOLOGY.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "docs/",
+    "examples/"
+  ]
+}

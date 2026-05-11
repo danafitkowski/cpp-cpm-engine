@@ -1,0 +1,42 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build / dist
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Test outputs
+coverage/
+*.lcov
+
+# Python (for crossval reference, if present)
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+
+# Lockfiles — engine has zero runtime deps; we don't ship a lock
+package-lock.json
+yarn.lock

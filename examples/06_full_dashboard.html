@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cpm-engine — interactive demo</title>
+<style>
+/* Forensic-record archival discipline (METHODOLOGY.md Pillar 1):
+ * No CDN, no @import, no font.googleapis.com. System fonts only.
+ * This file is self-contained and renders identically in 2031 as in 2026. */
+* { box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f7;
+    color: #0f2540;
+    margin: 0;
+    padding: 24px;
+    line-height: 1.5;
+}
+h1 {
+    color: #0f2540;
+    border-bottom: 4px solid #c8392f;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+}
+h2 {
+    color: #0f2540;
+    margin-top: 32px;
+    border-bottom: 1px solid #d4d4d8;
+    padding-bottom: 4px;
+}
+.subtitle { color: #71717a; font-size: 14px; margin-top: 0; margin-bottom: 24px; }
+.container { max-width: 1100px; margin: 0 auto; }
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+@media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+.card {
+    background: white;
+    border: 1px solid #d4d4d8;
+    border-radius: 6px;
+    padding: 16px;
+}
+textarea {
+    font-family: ui-monospace, "SF Mono", Monaco, Consolas, "Courier New", monospace;
+    font-size: 12px;
+    width: 100%;
+    min-height: 220px;
+    border: 1px solid #d4d4d8;
+    border-radius: 4px;
+    padding: 8px;
+    background: #fafafa;
+}
+button {
+    background: #0f2540;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 12px;
+    font-weight: 600;
+}
+button:hover { background: #1e3a5f; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+}
+th, td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid #e4e4e7;
+}
+th { background: #f5f5f7; font-weight: 600; color: #0f2540; }
+.critical { background: #fef2f2; color: #c8392f; font-weight: 600; }
+.label { font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; }
+.value { font-size: 14px; color: #0f2540; font-weight: 600; }
+.kv { margin-bottom: 8px; }
+pre {
+    background: #f5f5f7;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 12px;
+}
+code { font-family: ui-monospace, "SF Mono", Monaco, Consolas, "Courier New", monospace; }
+.error { background: #fef2f2; border: 1px solid #c8392f; padding: 12px; border-radius: 4px; color: #c8392f; }
+.footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #d4d4d8; color: #71717a; font-size: 12px; }
+.footer a { color: #0f2540; }
+.tag { display: inline-block; background: #0f2540; color: white; padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-right: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>cpm-engine — interactive demo</h1>
+<p class="subtitle">
+    <span class="tag">v2.8.0</span>
+    <span class="tag">528 tests</span>
+    <span class="tag">JS-Python parity</span>
+    <span class="tag">Daubert disclosed</span>
+    Self-contained, no external dependencies. Edit JSON below and click Run CPM.
+</p>
+
+<div class="grid">
+
+<div class="card">
+<h2>Activities (JSON)</h2>
+<textarea id="activities">[
+  { "code": "A", "duration_days": 5, "early_start": "2026-01-05", "clndr_id": "MF" },
+  { "code": "B", "duration_days": 3, "clndr_id": "MF" },
+  { "code": "C", "duration_days": 7, "clndr_id": "MF" },
+  { "code": "D", "duration_days": 4, "clndr_id": "MF" }
+]</textarea>
+</div>
+
+<div class="card">
+<h2>Relationships (JSON)</h2>
+<textarea id="relationships">[
+  { "from_code": "A", "to_code": "B", "type": "FS", "lag_days": 0 },
+  { "from_code": "A", "to_code": "C", "type": "FS", "lag_days": 0 },
+  { "from_code": "B", "to_code": "D", "type": "FS", "lag_days": 0 },
+  { "from_code": "C", "to_code": "D", "type": "FS", "lag_days": 0 }
+]</textarea>
+</div>
+
+</div>
+
+<button onclick="runCPM()">Run CPM</button>
+<button onclick="loadOntario()" style="background: #c8392f; margin-left: 8px;">Switch to Ontario calendar</button>
+
+<div id="error-box"></div>
+
+<h2>Result</h2>
+
+<div class="grid">
+
+<div class="card" id="summary">
+<h3 style="margin-top:0;">Summary</h3>
+<div class="kv"><span class="label">Project finish</span><br><span class="value" id="project-finish">—</span></div>
+<div class="kv"><span class="label">Critical path</span><br><span class="value" id="critical-path">—</span></div>
+<div class="kv"><span class="label">Activity / relationship count</span><br><span class="value" id="counts">—</span></div>
+<div class="kv"><span class="label">Engine version</span><br><span class="value" id="engine-ver">—</span></div>
+<div class="kv"><span class="label">Computed at</span><br><span class="value" id="computed-at">—</span></div>
+<div class="kv"><span class="label">Topology hash</span><br><code id="topo-hash" style="font-size:10px;">—</code></div>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0;">Per-activity float</h3>
+<table>
+<thead>
+<tr><th>Code</th><th>ES</th><th>EF</th><th>LS</th><th>LF</th><th>TF (cd)</th><th>TF (wd)</th><th>Driving pred</th></tr>
+</thead>
+<tbody id="result-table"></tbody>
+</table>
+</div>
+
+</div>
+
+<h2>Manifest (machine-readable)</h2>
+<pre><code id="manifest-json">—</code></pre>
+
+<h2>Daubert disclosure (4-prong)</h2>
+<div id="daubert-output"></div>
+
+<div class="footer">
+This demo runs the unmodified <code>cpm-engine.js</code> file from the parent directory. The same engine ships in CPP forensic skills, the live demo at <a href="https://mcp.criticalpathpartners.ca/try">mcp.criticalpathpartners.ca/try</a>, and the npm package <code>@critical-path-partners/cpm-engine</code>. MIT licensed.
+</div>
+
+</div>
+
+<script src="../cpm-engine.js"></script>
+<script>
+function runCPM() {
+    const errBox = document.getElementById('error-box');
+    errBox.innerHTML = '';
+    let activities, relationships;
+    try {
+        activities = JSON.parse(document.getElementById('activities').value);
+        relationships = JSON.parse(document.getElementById('relationships').value);
+    } catch (e) {
+        errBox.innerHTML = '<div class="error">JSON parse error: ' + e.message + '</div>';
+        return;
+    }
+    const calMap = window.__activeCalMap || { MF: { work_days: [1,2,3,4,5], holidays: [] } };
+    let result;
+    try {
+        result = CPMEngine.computeCPM(activities, relationships, {
+            dataDate: '2026-01-05',
+            calMap: calMap,
+        });
+    } catch (e) {
+        errBox.innerHTML = '<div class="error">Engine error: ' + e.message +
+            (e.cycles ? '<br>Cycles: ' + JSON.stringify(e.cycles) : '') + '</div>';
+        return;
+    }
+
+    document.getElementById('project-finish').textContent = result.projectFinish;
+    document.getElementById('critical-path').textContent = result.criticalCodesArray.join(' -> ');
+    document.getElementById('counts').textContent =
+        result.manifest.activity_count + ' activities, ' +
+        result.manifest.relationship_count + ' relationships';
+    document.getElementById('engine-ver').textContent = 'v' + result.manifest.engine_version;
+    document.getElementById('computed-at').textContent = result.manifest.computed_at;
+
+    const hash = CPMEngine.computeTopologyHash(activities, relationships);
+    document.getElementById('topo-hash').textContent = hash.topology_hash;
+
+    const tbody = document.getElementById('result-table');
+    tbody.innerHTML = '';
+    for (const code of result.topo_order) {
+        const n = result.nodes[code];
+        const tr = document.createElement('tr');
+        if (n.tf <= 0) tr.className = 'critical';
+        tr.innerHTML =
+            '<td>' + code + '</td>' +
+            '<td>' + n.es_date + '</td>' +
+            '<td>' + n.ef_date + '</td>' +
+            '<td>' + n.ls_date + '</td>' +
+            '<td>' + n.lf_date + '</td>' +
+            '<td>' + n.tf + '</td>' +
+            '<td>' + (n.tf_working_days || 0) + '</td>' +
+            '<td>' + (n.driving_predecessor || '') + '</td>';
+        tbody.appendChild(tr);
+    }
+
+    document.getElementById('manifest-json').textContent =
+        JSON.stringify(result.manifest, null, 2);
+
+    const disclosure = CPMEngine.buildDaubertDisclosure(result, {
+        activities, relationships,
+        test_count: 528,
+    });
+    const html = CPMEngine.renderDaubertHTML(disclosure, {
+        title: 'Daubert / FRE 707 Disclosure (auto-generated)',
+        expert_name: '[Expert Name]',
+        project_name: '[Project Name]',
+    });
+    // Strip outer HTML and just use body content
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/);
+    document.getElementById('daubert-output').innerHTML =
+        bodyMatch ? bodyMatch[1] : html;
+}
+
+function loadOntario() {
+    const ON = CPMEngine.getJurisdictionCalendar('CA-ON', { from_year: 2026, to_year: 2027 });
+    window.__activeCalMap = { MF: ON };
+    alert('Now using CA-ON statutory calendar (' + ON.holidays.length + ' holidays).');
+    runCPM();
+}
+
+// Run once on page load.
+runCPM();
+</script>
+</body>
+</html>

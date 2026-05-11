@@ -1,0 +1,46 @@
+name: test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Run unit tests
+        run: node cpm-engine.test.js
+
+      - name: Engine version sanity check
+        shell: bash
+        run: |
+          PKG_VER=$(node -p "require('./package.json').version")
+          ENGINE_VER=$(node -p "require('./cpm-engine.js').ENGINE_VERSION")
+          echo "package.json version: $PKG_VER"
+          echo "ENGINE_VERSION:       $ENGINE_VER"
+          if [ "$PKG_VER" != "$ENGINE_VER" ]; then
+            echo "::error::Version skew detected. package.json=$PKG_VER engine=$ENGINE_VER"
+            exit 1
+          fi
+
+      - name: Run examples (sanity)
+        shell: bash
+        run: |
+          for f in examples/*.js; do
+            echo "=== $f ==="
+            node "$f"
+          done

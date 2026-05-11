@@ -1,0 +1,55 @@
+name: crossval
+
+# Cross-validation runs the JS engine against a Python reference implementation.
+# The Python sibling lives in the CPP _cpp_common skills suite (not yet
+# open-source). This workflow verifies the test harness mechanically; the
+# Python reference must be supplied as a workflow secret or skipped.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  crossval:
+    name: JS-Python crossval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check for Python reference
+        id: check_ref
+        shell: bash
+        run: |
+          if [ -f "python_reference/cpm.py" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Python reference (python_reference/cpm.py) not present in this repo."
+            echo "::warning::Crossval will be skipped. Provide the reference to enable bit-identical parity checks."
+          fi
+
+      - name: Run crossval
+        if: steps.check_ref.outputs.available == 'true'
+        run: node cpm-engine.crossval.js
+
+      - name: Verify engine version sync
+        shell: bash
+        run: |
+          PKG_VER=$(node -p "require('./package.json').version")
+          ENGINE_VER=$(node -p "require('./cpm-engine.js').ENGINE_VERSION")
+          if [ "$PKG_VER" != "$ENGINE_VER" ]; then
+            echo "::error::Version skew detected. package.json=$PKG_VER engine=$ENGINE_VER"
+            exit 1
+          fi
+          echo "Versions agree: v$PKG_VER"
