@@ -32,7 +32,13 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.7.0 — 2026-05-09
+## Internal version history (pre-public-release)
+
+The entries below (v2.0 through v2.7.0) document internal development milestones that preceded the initial public release of this engine. They are retained for technical context — algorithm origin, performance lineage, verification counts — but the corresponding git tags exist only in internal repositories. **The public `cpp-cpm-engine` repository's tag history begins at `cpm-engine-v2.8.0`.** Do not attempt to `git checkout` any pre-v2.8.0 tag here; it does not exist.
+
+---
+
+## v2.7.0 — 2026-05-09 *(internal)*
 
 **Highlights:** Bayesian update with hierarchical pooling, refined Daubert disclosure, audit hardening.
 
@@ -46,7 +52,7 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.6.0 — 2026-05 (mid-cycle)
+## v2.6.0 — 2026-05 (mid-cycle) *(internal)*
 
 **Highlights:** Statutory holiday calendar engine — 66 jurisdictions.
 
@@ -58,7 +64,7 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.5.0 — 2026-05 (early-cycle)
+## v2.5.0 — 2026-05 (early-cycle) *(internal)*
 
 **Highlights:** Daubert disclosure renderer, forbidden-citations audit.
 
@@ -69,7 +75,7 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.4.0 — 2026-05-09 (push-it-all wave)
+## v2.4.0 — 2026-05-09 (push-it-all wave) *(internal)*
 
 **Highlights:** Bayesian update, kinematic-delay friendly labels, Daubert HTML/MD renderers landed.
 
@@ -81,7 +87,7 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.3.0 — 2026-05-09 (finishers + debug-audit)
+## v2.3.0 — 2026-05-09 (finishers + debug-audit) *(internal)*
 
 **Highlights:** P6-compatible MFP, float-burndown timeline, live-deploy.
 
@@ -94,7 +100,7 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.2.0 — 2026-05-09 (beat-SmartPM cross-repo wave)
+## v2.2.0 — 2026-05-09 (beat-SmartPM cross-repo wave) *(internal)*
 
 **Highlights:** Schedule Health Grade, kinematic delay dynamics, topology hash, FRE 707 wrapper.
 
@@ -108,7 +114,7 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.1.0 — 2026-05-09 (8-lens audit response)
+## v2.1.0 — 2026-05-09 (8-lens audit response) *(internal)*
 
 **Highlights:** Iterative Tarjan, working-day TF, free float, manifest, methodology label.
 
@@ -125,7 +131,7 @@ The engine itself carries no code changes from v2.8.0.
 
 ---
 
-## v2.0 — 2026-05-09 (initial reconstruction)
+## v2.0 — 2026-05-09 (initial reconstruction) *(internal)*
 
 **Highlights:** First public release of the JavaScript port.
 
@@ -150,10 +156,13 @@ The original `cpm-engine__11_.js` (Tarjan-SCC + claims/salvage + 3 driving-path 
 
 ## Roadmap
 
-Future versions:
+Current public release:
 
-- **v2.8** — Strategic open-source ship (this release). Public README, DAUBERT.md, METHODOLOGY.md, examples, GitHub Actions CI.
-- **v2.9** — MPXJ adapter (Java↔JS bridge for non-P6 schedules).
-- **v3.0** — Hosted MCP API + standalone CLI distribution.
+- **v2.9.1** — Synchronized release marker (suite-wide truncation-purge hotfix; engine byte-identical to v2.8.0).
+- **v2.8.0** — Strategic open-source ship: public README, DAUBERT.md, METHODOLOGY.md, examples, GitHub Actions CI.
+
+Planned:
+
+- **v2.9.x → v3.0** — MPXJ adapter (Java↔JS bridge for non-P6 schedules), hosted MCP API, and standalone CLI distribution.
 
 See [`docs/api.md`](docs/api.md) for the current public surface.

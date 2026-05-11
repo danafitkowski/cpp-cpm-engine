@@ -2482,7 +2482,7 @@ const _daubert_disc = E.buildDaubertDisclosure(null, {
     // O-T1: HTML render contains all 4 prongs
     const html = E.renderDaubertHTML(_daubert_disc, {
         expert_name: 'Dana Fitkowski',
-        project_name: 'Mulock Park',
+        project_name: 'Sample Civic Project',
         date: '2026-05-09',
     });
     check('O-T1: returns a string', typeof html === 'string');
@@ -2500,7 +2500,7 @@ const _daubert_disc = E.buildDaubertDisclosure(null, {
     // O-T2: Markdown render contains all 4 prongs
     const md = E.renderDaubertMarkdown(_daubert_disc, {
         expert_name: 'Dana Fitkowski',
-        project_name: 'Mulock Park',
+        project_name: 'Sample Civic Project',
     });
     check('O-T2: returns a string', typeof md === 'string');
     check('O-T2: contains Prong 1', md.includes('Prong 1'));
