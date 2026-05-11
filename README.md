@@ -162,6 +162,14 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 ---
 
+## Release notes
+
+**v2.9.1** (2026-05-10) — synchronized release marker. Engine code (`cpm-engine.js`) is byte-identical to v2.8.0; the SHA-256 topology hash algorithm and all CPM math are unchanged. The tag exists because the surrounding CPP skill suite absorbed an emergency truncation-purge hotfix — 80+ data-truncation sites removed across 13 renderers, enforcing the discipline described in `feedback_no_truncation.md`: analyst-facing data must never be silently cropped. A new regression test (`tests/test_no_data_truncation.py`) blocks future violations at CI.
+
+**v2.8.0** (2026-05-10) — initial public release. See [CHANGELOG.md](CHANGELOG.md).
+
+---
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 528 unit tests and 153 cross-validation checks. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
@@ -170,17 +178,12 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — e
 
 ## Companion repositories
 
-The CPP forensic suite skills (in their own repositories) consume this engine:
+Two companion repositories are public and consume this engine:
 
-- **[forensic-delay-analysis](https://github.com/danafitkowski/cpp-forensic-delay-analysis)** — Windows analysis (AACE MIP 3.3) producing HTML dashboard + DOCX report
-- **[claims-preparation](https://github.com/danafitkowski/cpp-claims-preparation)** — Owner-submission EOT package: cover letter + exhibits + mitigation log + QC
-- **[claim-workbench](https://github.com/danafitkowski/cpp-claim-workbench)** — Evidence ledger + chain-diff + rolling baseline + trust score
-- **[time-impact-analysis](https://github.com/danafitkowski/cpp-time-impact-analysis)** — Prospective fragnet insertion (AACE 52R-06)
-- **[collapsed-as-built](https://github.com/danafitkowski/cpp-collapsed-as-built)** — Collapsed as-built / but-for analysis (AACE MIP 3.8)
-- **[counter-claim-analysis](https://github.com/danafitkowski/cpp-counter-claim-analysis)** — Defense analysis against opposing-party delay claim
-- **[schedule-risk-analysis](https://github.com/danafitkowski/cpp-schedule-risk-analysis)** — Monte Carlo P50/P80 with sensitivity tornado
+- **[cpp-xer-parser](https://github.com/danafitkowski/cpp-xer-parser)** — Canonical Primavera P6 XER parser and generator
+- **[cpp-critical-path-validator](https://github.com/danafitkowski/cpp-critical-path-validator)** — Critical path validation and logic health assessment
 
-These are not yet open-source. The engine is.
+Additional CPP skills (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, collapsed-as-built, counter-claim-analysis, schedule-risk-analysis) are private; contact Critical Path Partners for access.
 
 ---
 
