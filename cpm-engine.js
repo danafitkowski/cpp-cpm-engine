@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.3';
+const ENGINE_VERSION = '2.9.4';
 
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize

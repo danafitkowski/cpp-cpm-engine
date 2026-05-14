@@ -1,6 +1,6 @@
 {
   "name": "@critical-path-partners/cpm-engine",
-  "version": "2.9.3",
+  "version": "2.9.4",
   "description": "Forensically-defensible CPM engine — AACE-canonical, Daubert-disclosed, bit-identical JS-Python parity.",
   "main": "cpm-engine.js",
   "scripts": {
@@ -48,6 +48,7 @@
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "docs/",
-    "examples/"
+    "examples/",
+    "python_reference/"
   ]
 }

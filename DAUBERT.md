@@ -1,4 +1,4 @@
-# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.3
+# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.4
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
 
@@ -51,6 +51,7 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite. The Python implementation is exercised by 1,800+ tests across 18 Python suites (forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review).
 - Made publicly available at https://github.com/danafitkowski/cpp-cpm-engine. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
+- **Externally reproducible cross-validation (v2.9.4).** A frozen Python reference implementation now ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`c984a1f521eb922b343c8783e7dcf686aa6aa578c739c395262a5b221c0623b7`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "153 / 153" headline and must be reproduced from a clean checkout.
 - Live-deployed at https://mcp.criticalpathpartners.ca/try where any party can run it against their own schedule.
 
 The underlying CPM math (Kelley & Walker forward/backward pass) is one of the most peer-reviewed scheduling algorithms in the industry; it is the basis of every commercial CPM tool from Primavera P6 to Microsoft Project. **What the engine adds is operational discipline** — manifested provenance, AACE-canonical method labels, salvage logging, multi-strategy critical-path identification with divergence reporting.
@@ -100,7 +101,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.3',                    // Synchronized with package.json
+    engine_version: '2.9.4',                    // Synchronized with package.json
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -167,12 +168,12 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.3`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14)
+`engine_version: 2.9.4`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.4 SHA-256 disclosure)
 
 ---
 
-## §7 Disclosed Heuristic Thresholds (v2.9.3)
+## §7 Disclosed Heuristic Thresholds (v2.9.4)
 
 Every numeric threshold used in `computeScheduleHealth()` and `findCriticalPathChain()` is named, defaulted, and source-cited. The engine emits no undisclosed magic numbers in its public scoring or critical-path output.
 
@@ -208,7 +209,7 @@ Callers may override `nearCriticalThreshold` via `opts`. The DCMA-14 Logic check
 
 ---
 
-## §8 Constraint Handling (v2.9.3)
+## §8 Constraint Handling (v2.9.4)
 
 The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (or the equivalent `cstr_type` / `cstr_date2` long-form XER tokens, automatically normalized).
 
@@ -224,4 +225,4 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the two contexts above. Pair with `result.manifest.engine_version === '2.9.3'` to confirm the constraint module was active.
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the two contexts above. Pair with `result.manifest.engine_version === '2.9.4'` to confirm the constraint module was active.

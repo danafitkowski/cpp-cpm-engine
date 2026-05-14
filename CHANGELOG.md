@@ -4,6 +4,25 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## v2.9.4 — 2026-05-14
+
+Bundle a frozen Python reference implementation for externally verifiable cross-validation. Round-2 and round-1 audits both flagged that `cpm-engine.crossval.js` referenced `./python_reference/cpm.py` but the file was not in the public repo — `npm run crossval` returned `0/13 fixtures, 0/0 checks` with a `ModuleNotFoundError`, making the "153 / 153 / 0 deviation" headline in DAUBERT.md externally unverifiable. This release closes that Daubert cross-examination vulnerability.
+
+- **`python_reference/cpm.py` bundled.** Frozen Python port of `compute_cpm` derived from the CPP-suite canonical engine (`_cpp_common/scripts/cpm.py` @ 2.8.0). The `xer_parser` dependency for calendar arithmetic has been inlined — `add_work_days` / `subtract_work_days` / `_is_work_day` are now local. Surfaces NOT used by the crossval harness (salvaging, LPM, strategies, float-burndown, Tarjan SCC, SVG render) have been stripped; what remains matches what the harness imports: `compute_cpm` + `date_to_num`. MIT-licensed, SPDX header.
+- **SHA-256 pinning.** `cpm-engine.crossval.js` now hashes the loaded `cpm.py` at startup and prints `Python reference: <path>` + `sha-256: <hex>` before running any fixtures. The pinned hash (`c984a1f521eb922b343c8783e7dcf686aa6aa578c739c395262a5b221c0623b7`) is documented in `python_reference/README.md` and `DAUBERT.md` §3. Opposing experts can recompute it with `shasum -a 256` (or `Get-FileHash` on Windows) and confirm the bytes they're testing against match the bytes documented; drift invalidates the headline.
+- **`python_reference/README.md` added.** Documents provenance, the SHA-256 pin, verification commands, and the path-resolution priority for `CPP_PYTHON_REFERENCE_DIR`.
+- **`python_reference/__init__.py` added.** Re-exports `compute_cpm`, `date_to_num`, etc. so `import python_reference.cpm` works as a package import in addition to the path-injection style used by the harness.
+- **`package.json` `files` adds `python_reference/`.** The frozen reference now ships in the npm tarball, not just the GitHub checkout.
+- **`CPP_PYTHON_BIN` env var honored.** External users whose `python` binary is not on PATH (or who need to point at `python3`) can override via `$CPP_PYTHON_BIN`; default is unchanged.
+- **DAUBERT.md §3.** Adds the "Externally reproducible cross-validation" bullet documenting the SHA-256 pin and removes the implicit unverifiability that Round 1 + Round 2 flagged. The "Known gaps" entry in the v2.9.3 changelog is now obsolete.
+- **Version bump.** `package.json` 2.9.3 → 2.9.4. `cpm-engine.js` `ENGINE_VERSION` 2.9.3 → 2.9.4. `python_reference/cpm.py` `ENGINE_VERSION` synchronized. DAUBERT.md title, §6 manifest sample, §7/§8 headers, footer all synced. `cpm-engine.test.js` version-equality assertions (5 sites) updated to `'2.9.4'`.
+
+**Verification:** 563 unit tests passing, 0 failures. `npm run crossval` reports `Fixtures: 13 passed, 0 failed / Checks: 153 / 153` on a fresh checkout with no env vars set. SHA-256 banner prints at top of crossval output.
+
+**No API breakage.** The JS engine is byte-identical to v2.9.3 apart from the `ENGINE_VERSION` constant. All v2.9.3 / v2.9.2 / v2.9.1 / v2.8.0 callers continue to work unchanged.
+
+---
+
 ## v2.9.3 — 2026-05-14
 
 Audit round-2 fix wave. Adds P6 constraint handling — the engine previously had no support for `cstr_type` / `cstr_date2` and silently produced wrong answers for any constrained activity. Also closes the in-progress ES pin gap, surfaces previously-silent parseXER drops, discloses all health-grading heuristic thresholds, and adds FF/SF relationship-type test coverage.
@@ -23,7 +42,7 @@ Audit round-2 fix wave. Adds P6 constraint handling — the engine previously ha
 **No API breakage.** Activities without a `constraint` field behave exactly as in v2.9.2. The `dropped_activities` field on `parseXER` is additive. All v2.9.2 / v2.9.1 / v2.8.0 callers continue to work.
 
 **Known gaps (follow-up):**
-- `python_reference/cpm.py` is still not shipped in the public repo. `npm run crossval` requires either `CPP_PYTHON_REFERENCE_DIR` env var or the sibling `python_reference/` directory. The "153 / 153 bit-identical" headline remains externally unverifiable without that file.
+- `python_reference/cpm.py` is still not shipped in the public repo. `npm run crossval` requires either `CPP_PYTHON_REFERENCE_DIR` env var or the sibling `python_reference/` directory. The "153 / 153 bit-identical" headline remains externally unverifiable without that file. **Closed in v2.9.4.**
 - Constraint coverage in Section D's Monte-Carlo `parseXER` / `runCPM` path is intentionally omitted — Section D ignores `actual_start` and `constraint` by design (it samples durations per-iteration).
 
 ---

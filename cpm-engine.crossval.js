@@ -6,19 +6,21 @@
 
 const E = require('./cpm-engine.js');
 const { execFileSync } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const PY = 'python';
+const PY = process.env.CPP_PYTHON_BIN || 'python';
 // Python reference path resolution (in priority order):
 //   1. $CPP_PYTHON_REFERENCE_DIR        — explicit override
 //   2. $CPP_PYTHON_REFERENCE_DIRS       — colon/semicolon-separated list (for xer-parser + _cpp_common together)
-//   3. ./python_reference               — sibling dir for open-source consumers
+//   3. ./python_reference               — bundled frozen reference (default for OSS consumers)
 //   4. ../../../_cpp_common/scripts     — CPP-internal source-tree layout (developer-only)
 //
-// External contributors: set CPP_PYTHON_REFERENCE_DIR to the directory containing cpm.py
-// (the canonical CPP Python reference engine). See CONTRIBUTING.md.
+// The bundled python_reference/cpm.py is pinned by SHA-256 — see
+// python_reference/README.md. The hash is printed at startup so external
+// auditors can verify the file has not drifted.
 function _resolvePythonRefDirs() {
     const dirs = [];
     if (process.env.CPP_PYTHON_REFERENCE_DIRS) {
@@ -43,6 +45,36 @@ const _PY_REF_DIRS = _resolvePythonRefDirs();
 const _PY_SYS_PATH_INSERTS = _PY_REF_DIRS
     .map(d => `sys.path.insert(0, r'${d.replace(/\\/g, '/')}')`)
     .join('\n');
+
+// Locate the first cpm.py that actually exists on the resolved path. Hash it
+// at startup so external auditors can verify the reference has not drifted
+// between this run and the SHA-256 pin documented in
+// python_reference/README.md.
+function _findAndHashReferenceCpm() {
+    for (const d of _PY_REF_DIRS) {
+        const candidate = path.join(d, 'cpm.py');
+        if (fs.existsSync(candidate)) {
+            try {
+                const bytes = fs.readFileSync(candidate);
+                const sha = crypto.createHash('sha256').update(bytes).digest('hex');
+                return { path: candidate, sha256: sha, bytes: bytes.length };
+            } catch (_) {
+                // fall through and try the next candidate
+            }
+        }
+    }
+    return null;
+}
+const _PY_REF_INFO = _findAndHashReferenceCpm();
+if (_PY_REF_INFO) {
+    console.log('Python reference: ' + _PY_REF_INFO.path);
+    console.log('  bytes:    ' + _PY_REF_INFO.bytes);
+    console.log('  sha-256:  ' + _PY_REF_INFO.sha256);
+} else {
+    console.log('Python reference: NOT FOUND on any of these paths:');
+    for (const d of _PY_REF_DIRS) console.log('  - ' + d);
+    console.log('  Set CPP_PYTHON_REFERENCE_DIR or restore python_reference/cpm.py.');
+}
 
 const PY_HARNESS = `
 import sys, json
