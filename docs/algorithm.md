@@ -176,8 +176,8 @@ After the v2.1 optimizations:
 - Kelley, J. E. & Walker, M. R. (1959). Critical-Path Planning and Scheduling. *Proceedings of the Eastern Joint IRE-AIEE-ACM Computer Conference*, 160-173.
 - Kahn, A. B. (1962). Topological Sorting of Large Networks. *CACM* 5(11):558-562.
 - Tarjan, R. (1972). Depth-first Search and Linear Graph Algorithms. *SIAM J. Comput.* 1(2):146-160.
-- AACE International Recommended Practice 29R-03 (2011). *Forensic Schedule Analysis.*
-- AACE International Recommended Practice 49R-06 (2010). *Identifying the Critical Path.*
+- AACE International Recommended Practice 29R-03 (2003, rev. 2011). *Forensic Schedule Analysis.*
+- AACE International Recommended Practice 49R-06 (2006, rev. 2010). *Identifying the Critical Path.*
 - AACE International Recommended Practice 52R-06 (2017). *Prospective Time Impact Analysis as a Forensic Schedule Analysis Method.*
 
 For the complete citation list with verified primary-source URLs, see [`citations.md`](citations.md).

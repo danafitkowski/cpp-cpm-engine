@@ -172,7 +172,7 @@ const r = E.computeCPMWithStrategies(acts, rels, {
 
 ### `E.computeTIA(activities, relationships, fragnets, opts)`
 
-Insert one or more delay fragnets into the network and report impact. Implements AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base) and 29R-03 MIP 3.7 (cumulative-additive).
+Insert one or more delay fragnets into the network and report impact. Implements AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base, `mode='isolated'`) and AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base, `mode='cumulative-additive'`). The umbrella RP for prospective TIA is AACE 52R-06.
 
 ```js
 const r = E.computeTIA(activities, relationships, fragnets, {

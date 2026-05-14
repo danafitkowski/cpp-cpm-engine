@@ -4,6 +4,19 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## v2.9.6 — 2026-05-14
+
+Round-4 audit fix wave — citation cleanup. One inline-comment AACE RP citation in `cpm-engine.js` referenced a fabricated `49R-03` (the false-CP threshold comment escaped the v2.9.5 truncation sweep because the regression test scans rendered narrative, not source comments — fixed to `49R-06`, the AACE RP for critical-path identification, citing §6). Two documentation files (`docs/algorithm.md`, `README.md`, `docs/api.md`) cited AACE RPs without the "rev." annotations used elsewhere in the suite (`docs/citations.md`, `DAUBERT.md`) — normalized to `29R-03 (2003, rev. 2011)` and `49R-06 (2006, rev. 2010)`. TIA documentation now disambiguates MIP 3.6 (Single Base, `mode='isolated'`) vs MIP 3.7 (Multiple Base, `mode='cumulative-additive'`) instead of citing only MIP 3.6 — matches the manifest output the engine has emitted since v2.2.
+
+- **`cpm-engine.js:2267` (T1) — false-CP threshold comment now cites `AACE 49R-06 §6`** (was `AACE 49R-03 §6`, a fabricated RP). DAUBERT.md §7 and `daubert_docx.py` already cited 49R-06; the inline comment is now consistent.
+- **`docs/algorithm.md:179-180` (T2) — AACE 29R-03 and 49R-06 reference entries now carry rev. annotations** (`(2003, rev. 2011)` and `(2006, rev. 2010)` respectively), matching `docs/citations.md:45,54` and `DAUBERT.md:140-141`.
+- **`README.md:71` + `README.md:88` (T2) — TIA disambiguation.** Bullet now says "MIP 3.6 Single Base or MIP 3.7 Multiple Base, depending on mode"; RP-table row now says "MIP 3.6 (Single Base) / MIP 3.7 (Multiple Base)". v2.9.5 flat-cited MIP 3.6 in both places even though the engine has supported both modes since v2.2.
+- **`docs/api.md:175` (T2) — `computeTIA` description now names both modes** with their AACE labels and references AACE 52R-06 as the umbrella RP.
+
+No code-path changes; documentation and one source comment only. 584 tests + 13 crossval fixtures pass.
+
+---
+
 ## v2.9.5 — 2026-05-14
 
 Round-3a audit fix wave. v2.9.3 added a Section C constraint-clamping path but never wired the XER reader to populate `task.constraint`, so every constrained XER silently lost its constraint mid-pipeline. v2.9.3's in-progress ES pin used the wrong pin order — `data_date` floored ES before `actual_start` was considered, so any schedule updated after work began clamped ES to data_date instead of the recorded historical start. Both gaps closed here. Two T2 follow-ups also shipped: finish-milestones are no longer silently dropped, and FF/SF anchor retreat now uses target (original) duration rather than progressed remaining.

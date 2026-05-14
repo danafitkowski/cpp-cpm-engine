@@ -68,7 +68,7 @@ The engine math is a commodity. The competitive moat in forensic scheduling is t
 
 ## What you can build
 
-- **Forensic delay analysis** — windows analysis (AACE MIP 3.3), collapsed as-built (MIP 3.8), prospective TIA (MIP 3.6)
+- **Forensic delay analysis** — windows analysis (AACE MIP 3.3), collapsed as-built (MIP 3.8), prospective TIA (MIP 3.6 Single Base or MIP 3.7 Multiple Base, depending on mode)
 - **Claim packages** — owner-submission EOT bundles with cover letter, exhibits, mitigation logs
 - **Daubert disclosures** — FRCP 26(a)(2)(B) reports, FRE 702/707 four-prong methodology statements
 - **Schedule risk analysis** — Monte Carlo P10/P50/P80/P90, sensitivity tornadoes, Bayesian updates
@@ -85,7 +85,7 @@ The engine implements the math behind these AACE Recommended Practices:
 |---------------|----------------------------------------------------------------|-----------------------|
 | 29R-03        | Forensic Schedule Analysis                                     | MIP 3.3 / 3.5 / 3.6 / 3.8 |
 | 49R-06        | Identifying the Critical Path                                  | LPM, TFM, MFP        |
-| 52R-06        | Prospective Time Impact Analysis                               | MIP 3.6 prospective   |
+| 52R-06        | Prospective Time Impact Analysis                               | MIP 3.6 (Single Base) / MIP 3.7 (Multiple Base) |
 | 122R-22       | Quantitative Risk Analysis Maturity Model (QRAMM)              | (badge surface)       |
 | PPG #20 (2nd Ed 2024) | Forensic Schedule Analysis Practice Guide              | (general acceptance)  |
 

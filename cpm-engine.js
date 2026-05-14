@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.5';
+const ENGINE_VERSION = '2.9.6';
 
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
@@ -2264,7 +2264,7 @@ const SH_SALVAGE_PENALTY_CAP        = 30;   // CPP house heuristic
 const SH_CP_PCT_HEALTHY_LOW         = 5;    // SmartPM whitepaper: <5% suspicious
 const SH_CP_PCT_HEALTHY_HIGH        = 15;   // SmartPM whitepaper: 5-15% healthy
 const SH_CP_PCT_WARN                = 20;   // CPP house heuristic: 20-30% drift
-const SH_CP_PCT_FALSE_CP_TRIGGER    = 30;   // AACE 49R-03 §6: >30% suggests constraint-driven false-CP
+const SH_CP_PCT_FALSE_CP_TRIGGER    = 30;   // AACE 49R-06 §6: >30% suggests constraint-driven false-CP
 const SH_CP_PCT_WARN_PENALTY        = 5;    // CPP house heuristic
 const SH_CP_PCT_FALSE_CP_PENALTY    = 10;   // CPP house heuristic
 const SH_CP_PCT_ZERO_PENALTY        = 8;    // CPP house heuristic: nothing critical is itself an anomaly
