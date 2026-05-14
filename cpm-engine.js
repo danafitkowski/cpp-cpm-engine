@@ -1233,11 +1233,17 @@ function computeCPM(activities, relationships, opts) {
 const _MC = {
     tasks: {},        // { taskId: {...} }
     predecessors: [], // [{ predTaskId, taskId, type, lag }]
+    // v2.9.7 — TT_Hammock activities deferred from the normal CPM forward pass.
+    // Hammocks are summary bars: duration = max(LF_succs) - min(ES_preds).
+    // They are resolved in runCPM's Pass-2 after the normal pass finishes.
+    // See SECTION D, _resolveHammocks() for the resolution semantics.
+    hammocks: {},     // { hammockId: { id, code, name, task_type, preds, succs, ... } }
 };
 
 function parseXER(content) {
     _MC.tasks = {};
     _MC.predecessors = [];
+    _MC.hammocks = {};
     // v2.9.3 — track silently-dropped activities so callers can surface them.
     // Previously TT_LOE / TT_WBS / fully-completed (remaining<=0) rows were
     // discarded without leaving a trace; now every drop is enumerated below.
@@ -1276,7 +1282,22 @@ function parseXER(content) {
                 } else if (_taskType === 'TT_WBS') {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'wbs-summary' });
                 } else if (_taskType === 'TT_Hammock') {
-                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'hammock-unsupported' });
+                    // v2.9.7 — hammocks are NO LONGER dropped. Captured into
+                    // _MC.hammocks for two-pass resolution in runCPM.
+                    _MC.hammocks[taskId] = {
+                        id: taskId,
+                        code: row.task_code || taskId,
+                        name: row.task_name || 'Hammock',
+                        task_type: _taskType,
+                        clndr_id: row.clndr_id || '',
+                        preds: [],
+                        succs: [],
+                        ES: 0, EF: 0,
+                        LS: 0, LF: 0,
+                        TF: 0,
+                        duration: 0,
+                        resolved: false,
+                    };
                 } else if (remaining <= 0 && !isMilestone && !row.act_end_date) {
                     // Zero-remaining non-milestone with no actual finish — degenerate row.
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'zero-remaining' });
@@ -1372,24 +1393,79 @@ function parseXER(content) {
         }
     }
 
-    // Build links — only valid (both sides exist).
+    // Build links — only valid (both sides exist). v2.9.7 — hammocks have
+    // their own preds/succs registries; the main _MC.predecessors array stays
+    // hammock-free so the normal CPM forward pass is unaffected.
     const validPreds = [];
+    const hammockRels = []; // for transparency / debugging
     for (const pred of _MC.predecessors) {
-        if (_MC.tasks[pred.predTaskId] && _MC.tasks[pred.taskId]) {
-            _MC.tasks[pred.taskId].preds.push(pred);
-            _MC.tasks[pred.predTaskId].succs.push({
+        const fromTask = _MC.tasks[pred.predTaskId];
+        const toTask = _MC.tasks[pred.taskId];
+        const fromHam = _MC.hammocks[pred.predTaskId];
+        const toHam = _MC.hammocks[pred.taskId];
+        // Case 1: pred→task (both normal) — feed into normal CPM.
+        if (fromTask && toTask) {
+            toTask.preds.push(pred);
+            fromTask.succs.push({
                 taskId: pred.taskId,
                 type: pred.type,
                 lag: pred.lag,
             });
             validPreds.push(pred);
+            continue;
         }
+        // Case 2: pred is hammock, succ is normal — register on hammock.succs
+        // and on the normal task's preds (so the normal task sees the hammock
+        // chain when the hammock is resolved). For Pass-1 (which ignores
+        // hammocks), the normal task simply has no predecessor on this link.
+        if (fromHam && toTask) {
+            fromHam.succs.push({
+                taskId: pred.taskId,
+                type: pred.type,
+                lag: pred.lag,
+            });
+            hammockRels.push(pred);
+            continue;
+        }
+        // Case 3: pred is normal, succ is hammock.
+        if (fromTask && toHam) {
+            toHam.preds.push({
+                predTaskId: pred.predTaskId,
+                taskId: pred.taskId,
+                type: pred.type,
+                lag: pred.lag,
+            });
+            hammockRels.push(pred);
+            continue;
+        }
+        // Case 4: both ends are hammocks (nested hammock). Track on both sides
+        // — resolveHammocks() iterates until all unresolved hammocks have all
+        // their preds/succs resolved.
+        if (fromHam && toHam) {
+            fromHam.succs.push({
+                taskId: pred.taskId,
+                type: pred.type,
+                lag: pred.lag,
+                _hammock_to: true,
+            });
+            toHam.preds.push({
+                predTaskId: pred.predTaskId,
+                taskId: pred.taskId,
+                type: pred.type,
+                lag: pred.lag,
+                _hammock_from: true,
+            });
+            hammockRels.push(pred);
+            continue;
+        }
+        // Otherwise both endpoints missing — silently dropped (same as v2.9.6).
     }
     _MC.predecessors = validPreds;
     return {
         taskCount: Object.keys(_MC.tasks).length,
         relCount: validPreds.length,
         dropped_activities: droppedActivities,
+        hammock_count: Object.keys(_MC.hammocks).length,
     };
 }
 
@@ -1513,9 +1589,20 @@ function runCPM(opts) {
         }
     }
 
+    // v2.9.7 — Pass-2: resolve TT_Hammock activities. Hammocks are summary
+    // bars: duration = max(LF of all successors) - min(ES of all predecessors).
+    // They have no driving logic of their own — they take whatever shape the
+    // surrounding network dictates. Iterate to a fixed point so nested
+    // hammocks (hammock pred or succ of another hammock) resolve in order.
+    const hammockReport = _resolveHammocks(projectFinish, logOutput ? log : null);
+
     let criticalCount = 0;
     for (const taskId in _MC.tasks) {
         if (_MC.tasks[taskId].TF <= 0.01) criticalCount += 1;
+    }
+    // Hammocks are by-definition zero-float summary bars; count them in.
+    for (const hammockId in _MC.hammocks) {
+        if (_MC.hammocks[hammockId].resolved) criticalCount += 1;
     }
 
     return {
@@ -1523,12 +1610,130 @@ function runCPM(opts) {
         criticalCount,
         excludedFromCycles: excluded,
         log: log.join('\n'),
+        hammocks_resolved: hammockReport.resolved,
+        hammocks_unresolved: hammockReport.unresolved,
     };
+}
+
+// v2.9.7 — Hammock resolver. A hammock H with predecessor set P and successor
+// set S has:
+//   H.ES = min over p in P of (anchor from p)
+//   H.LF = max over s in S of (anchor from s)
+//   H.duration = H.LF - H.ES (calendar-day arithmetic in Section D's
+//                              week-agnostic 5d-MonFri 8hr/day model)
+// Hammocks are zero-float summary bars: H.LS = H.ES, H.EF = H.LF, H.TF = 0.
+//
+// Two-stage resolution for nested hammocks:
+//   Stage 1: Hammock ES — walk pred chain transitively. When a hammock's
+//     pred is another hammock, recurse to find the deepest non-hammock anchor
+//     (the actual normal-task EF/ES that drives the chain). This is computable
+//     in one pass because the pred chain MUST terminate at a normal task (any
+//     hammock with no real preds floors at 0).
+//   Stage 2: Hammock LF — symmetric backward walk through succ chain.
+// Genuinely circular hammock-of-hammocks (mutual succ↔pred) is detected via
+// visited-set; unresolved hammocks indicate a logic cycle (graceful error).
+function _resolveHammocks(projectFinish, log) {
+    const hammockIds = Object.keys(_MC.hammocks);
+    if (hammockIds.length === 0) return { resolved: 0, unresolved: 0 };
+
+    for (const hid of hammockIds) {
+        _MC.hammocks[hid].resolved = false;
+        _MC.hammocks[hid].ES = 0;
+        _MC.hammocks[hid].LF = 0;
+    }
+
+    // Walk pred chain transitively to find min ES anchor. visited prevents
+    // infinite recursion on circular hammock-of-hammocks.
+    function _minESFromPredChain(h, visited) {
+        if (visited.has(h.id)) return null; // cycle — pass through
+        visited.add(h.id);
+        let minES = null;
+        for (const p of h.preds) {
+            const id = p.predTaskId;
+            const t = _MC.tasks[id];
+            if (t) {
+                // Normal task — terminate recursion.
+                let anchor;
+                switch (p.type) {
+                    case 'SS': anchor = t.ES + p.lag; break;
+                    case 'FF': anchor = t.EF + p.lag; break;
+                    case 'SF': anchor = t.ES + p.lag; break;
+                    case 'FS': default: anchor = t.EF + p.lag; break;
+                }
+                if (minES === null || anchor < minES) minES = anchor;
+                continue;
+            }
+            // Hammock pred — recurse to find its deepest anchor.
+            const ph = _MC.hammocks[id];
+            if (!ph) continue;
+            const sub = _minESFromPredChain(ph, visited);
+            if (sub !== null && (minES === null || sub < minES)) minES = sub;
+        }
+        return minES;
+    }
+
+    function _maxLFFromSuccChain(h, visited) {
+        if (visited.has(h.id)) return null;
+        visited.add(h.id);
+        let maxLF = null;
+        for (const s of h.succs) {
+            const id = s.taskId;
+            const t = _MC.tasks[id];
+            if (t) {
+                let anchor;
+                switch (s.type) {
+                    case 'SS': anchor = t.ES; break;
+                    case 'FF': anchor = t.LF; break;
+                    case 'SF': anchor = t.LF; break;
+                    case 'FS': default: anchor = t.LS; break;
+                }
+                anchor = anchor - s.lag;
+                if (maxLF === null || anchor > maxLF) maxLF = anchor;
+                continue;
+            }
+            const sh = _MC.hammocks[id];
+            if (!sh) continue;
+            const sub = _maxLFFromSuccChain(sh, visited);
+            if (sub !== null && (maxLF === null || sub > maxLF)) maxLF = sub;
+        }
+        return maxLF;
+    }
+
+    // Resolve every hammock in a single pass using the transitive walkers.
+    // No iteration needed because the walkers don't depend on the resolved
+    // state of other hammocks — they always walk down to normal tasks.
+    for (const hid of hammockIds) {
+        const h = _MC.hammocks[hid];
+        const minES = _minESFromPredChain(h, new Set());
+        const maxLF = _maxLFFromSuccChain(h, new Set());
+        const es = minES !== null ? minES : 0;
+        const lf = maxLF !== null ? maxLF : projectFinish;
+        const duration = lf >= es ? (lf - es) : 0;
+        h.ES = es;
+        h.EF = es + duration;
+        h.LS = es;
+        h.LF = h.EF;
+        h.TF = 0;
+        h.duration = duration;
+        h.resolved = true;
+        if (log) {
+            log.push('HAM: ' + h.code + ' ES=' + h.ES.toFixed(1) +
+                ' EF=' + h.EF.toFixed(1) + ' dur=' + duration.toFixed(1));
+        }
+    }
+
+    let resolved = 0, unresolved = 0;
+    for (const hid of hammockIds) {
+        if (_MC.hammocks[hid].resolved) resolved += 1;
+        else unresolved += 1;
+    }
+    return { resolved, unresolved };
 }
 
 function getTasks() { return _MC.tasks; }
 function getRelationships() { return _MC.predecessors; }
-function resetMC() { _MC.tasks = {}; _MC.predecessors = []; }
+function getHammocks() { return _MC.hammocks; }
+function resetMC() { _MC.tasks = {}; _MC.predecessors = []; _MC.hammocks = {}; }
 
 // ============================================================================
 // SECTION F — Salvage mode (cycle-break + degraded-input logging)
@@ -4802,7 +5007,7 @@ const _api = {
     // Section C
     computeCPM,
     // Section D
-    parseXER, runCPM, getTasks, getRelationships, resetMC,
+    parseXER, runCPM, getTasks, getRelationships, getHammocks, resetMC,
     // Section F
     computeCPMSalvaging,
     // Section G

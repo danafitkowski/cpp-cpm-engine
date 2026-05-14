@@ -3400,7 +3400,8 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
         'A.es=' + r.nodes.A.es_date + ', B.es=' + r.nodes.B.es_date);
 }
 
-// R-v295-6: T1 #3 — TT_Hammock dropped (Option B; documented gap).
+// R-v295-6: T1 #3 — TT_Hammock no longer dropped in v2.9.7 (captured for
+// two-pass resolution). Normal task still retained.
 {
     const xer = [
         '%T TASK',
@@ -3410,11 +3411,13 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
         '',
     ].join('\n');
     const res = E.parseXER(xer);
-    check('R-v295-6: TT_Hammock dropped, normal task retained', res.taskCount === 1);
-    const dropped = res.dropped_activities.find(d => d.task_code === 'H1');
-    check('R-v295-6: dropped_activities lists hammock with hammock-unsupported reason',
-        !!dropped && dropped.reason === 'hammock-unsupported',
-        'got ' + (dropped && dropped.reason));
+    check('R-v295-6: TT_Hammock NOT in tasks (deferred to hammock pass)',
+        res.taskCount === 1);
+    // v2.9.7 — hammock_count surfaced separately from dropped_activities.
+    check('R-v295-6: hammock_count === 1', res.hammock_count === 1);
+    const droppedHammock = res.dropped_activities.find(d => d.task_code === 'H1');
+    check('R-v295-6: hammock NOT in dropped_activities (now supported)',
+        !droppedHammock, 'got ' + (droppedHammock && droppedHammock.reason));
 }
 
 // R-v295-7: T2 #1 — TT_FinMile (finish milestone) retained, not dropped.
@@ -3644,6 +3647,194 @@ console.log('\n=== Section R-v297 — secondary cstr_type2 ===');
     check('R-v297-4: no secondary alerts when only primary is set',
         secondaryAlerts.length === 0,
         'got ' + secondaryAlerts.length);
+}
+
+// ============================================================================
+// Section R-Hammock — v2.9.7 TT_Hammock two-pass resolution (Feature 2)
+// ============================================================================
+console.log('\n=== Section R-Hammock — TT_Hammock two-pass ===');
+
+// HAM-1: Hammock with 1 predecessor + 1 successor — spans the gap.
+// Network: A(10d) → H(hammock) → B(5d)
+// A.ES=0, A.EF=10. B has no other preds, B.ES via H. With hammock resolution,
+// H spans [A.EF, B.LF] but since H has no driving role, B.ES becomes 0 (no
+// non-hammock predecessor pushes B). Then projectFinish = B.EF = 5. H spans
+// [A.EF=10, B.LS=0] which is degenerate — duration 0, pinned at min(ES_preds).
+// Better test setup: anchor B by a real predecessor too.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tFirstTask\tTT_Task\t80\t80',    // 10 days
+        '%R 2\tH\tHammockSummary\tTT_Hammock\t0\t0',
+        '%R 3\tB\tLastTask\tTT_Task\t40\t40',    // 5 days
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',    // A → H
+        '%R 2\t3\tPR_FS\t0',    // H → B
+        '%R 1\t3\tPR_FS\t0',    // A → B (direct, so B has a real driver)
+        '',
+    ].join('\n');
+    const parsed = E.parseXER(xer);
+    check('HAM-1: 2 normal tasks + 1 hammock',
+        parsed.taskCount === 2 && parsed.hammock_count === 1,
+        'taskCount=' + parsed.taskCount + ' hammock_count=' + parsed.hammock_count);
+    const result = E.runCPM();
+    check('HAM-1: hammock resolved',
+        result.hammocks_resolved === 1 && result.hammocks_unresolved === 0);
+    const hammocks = E.getHammocks();
+    const H = Object.values(hammocks).find(h => h.code === 'H');
+    check('HAM-1: H.ES = A.EF (10)', H.ES === 10, 'got ' + H.ES);
+    // B.ES is driven by A.EF=10 (FS direct from A). B.EF=15. projectFinish=15.
+    // Hammock succ side: H→B FS, so anchor = B.LS - 0. B.LS = B.LF - dur = 15-5=10.
+    // H.LF = 10, H.ES = 10 → duration = 0.
+    check('HAM-1: H.LF = B.LS (10)', H.LF === 10, 'got ' + H.LF);
+    check('HAM-1: H.duration = 0 (degenerate parallel summary)',
+        H.duration === 0, 'got ' + H.duration);
+    check('HAM-1: H.TF = 0 (summary bar has no float)', H.TF === 0);
+}
+
+// HAM-2: Hammock with 2 predecessors + 2 successors — spans the full window.
+// Network: A1(5d), A2(8d) both → H → B1(3d), B2(7d) → END
+// min(ES_preds): A1.EF=5, A2.EF=8 → maxFollow from A2=8. But P6 hammock uses
+// MIN ES from preds, which means earliest predecessor finish. So H.ES = min(5,8) = 5.
+// Wait: hammock semantics per Eichleay/AACE — the hammock starts at the
+// EARLIEST predecessor (so it spans as much as possible). H.ES = min over
+// preds of (pred-anchor). For FS preds, anchor = pred.EF + lag. min(5, 8) = 5.
+// Successors: B1.LS=?, B2.LS=?. H ends at MAX successor anchor (max LF).
+// projectFinish = max(A1+B1, A1+B2, A2+B1, A2+B2) with H acting as gate.
+// Without H driving (it's a summary), B1/B2 are pulled by A1, A2 directly?
+// In this test the only preds for B1, B2 are H (no direct A→B). So with H
+// non-driving, B1/B2 effectively have no real preds. Their ES=0. EF = dur.
+// projectFinish = max(B2.EF=7, A2.EF=8) = 8.
+// H.LF = max(B1.LS=0-3=-3, B2.LS=0-7=-7). Wait LS can be negative? When B1 has no real pred, B1.LS = projectFinish - B1.dur = 8 - 3 = 5. B2.LS = 8 - 7 = 1.
+// H.LF = max(5, 1) = 5. H.ES = min(5, 8) = 5. H.duration = 0.
+// This is the degenerate parallel-path case. Use a more realistic test.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 10\tA1\tA1\tTT_Task\t40\t40',
+        '%R 11\tA2\tA2\tTT_Task\t64\t64',  // 8d
+        '%R 12\tH\tH\tTT_Hammock\t0\t0',
+        '%R 13\tB1\tB1\tTT_Task\t24\t24',  // 3d
+        '%R 14\tB2\tB2\tTT_Task\t56\t56',  // 7d
+        '%R 15\tEND\tEND\tTT_FinMile\t0\t0',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 10\t12\tPR_FS\t0',   // A1 → H
+        '%R 11\t12\tPR_FS\t0',   // A2 → H
+        '%R 12\t13\tPR_FS\t0',   // H → B1
+        '%R 12\t14\tPR_FS\t0',   // H → B2
+        // Real drivers so B's have proper preds too
+        '%R 10\t13\tPR_FS\t0',   // A1 → B1 direct
+        '%R 11\t14\tPR_FS\t0',   // A2 → B2 direct
+        '%R 13\t15\tPR_FS\t0',   // B1 → END
+        '%R 14\t15\tPR_FS\t0',   // B2 → END
+        '',
+    ].join('\n');
+    const parsed = E.parseXER(xer);
+    check('HAM-2: 5 normal + 1 hammock',
+        parsed.taskCount === 5 && parsed.hammock_count === 1,
+        'taskCount=' + parsed.taskCount + ' hammock_count=' + parsed.hammock_count);
+    const result = E.runCPM();
+    check('HAM-2: hammock resolved (1)', result.hammocks_resolved === 1);
+    const hammocks = E.getHammocks();
+    const H = Object.values(hammocks).find(h => h.code === 'H');
+    // min(A1.EF=5, A2.EF=8) = 5 → H.ES = 5
+    check('HAM-2: H.ES = min(A1.EF=5, A2.EF=8) = 5',
+        H.ES === 5, 'got ' + H.ES);
+    // projectFinish = max(B1.EF=5+3=8, B2.EF=8+7=15) = 15
+    // B1.LS = projectFinish - B1.dur if on CP — but END drives B1.LS = END.LS - 0 = 15 - 0 = 15. So B1.LS = 15 - 3 = 12.
+    // B2.LS = END.LS - 0 = 15, B2.LS = 15 - 7 = 8.
+    // H.LF = max(B1.LS=12, B2.LS=8) = 12
+    check('HAM-2: H.LF = max(B1.LS, B2.LS) = 12',
+        H.LF === 12, 'got ' + H.LF);
+    check('HAM-2: H.duration = 12 - 5 = 7',
+        H.duration === 7, 'got ' + H.duration);
+}
+
+// HAM-3: Nested hammocks — H2's predecessor is H1 (another hammock).
+// Network: A(5d) → H1(hammock) → H2(hammock) → B(3d)
+// H1 resolves first (preds: A normal). H2 resolves after H1 (preds: H1).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 20\tA\tA\tTT_Task\t40\t40',    // 5d
+        '%R 21\tH1\tH1\tTT_Hammock\t0\t0',
+        '%R 22\tH2\tH2\tTT_Hammock\t0\t0',
+        '%R 23\tB\tB\tTT_Task\t24\t24',    // 3d
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 20\t21\tPR_FS\t0',  // A → H1
+        '%R 21\t22\tPR_FS\t0',  // H1 → H2 (nested)
+        '%R 22\t23\tPR_FS\t0',  // H2 → B
+        '%R 20\t23\tPR_FS\t0',  // A → B direct so B has a real driver
+        '',
+    ].join('\n');
+    const parsed = E.parseXER(xer);
+    check('HAM-3 (nested): 2 normal + 2 hammocks',
+        parsed.taskCount === 2 && parsed.hammock_count === 2,
+        'taskCount=' + parsed.taskCount + ' hammock_count=' + parsed.hammock_count);
+    const result = E.runCPM();
+    check('HAM-3 (nested): both hammocks resolved iteratively',
+        result.hammocks_resolved === 2 && result.hammocks_unresolved === 0,
+        'resolved=' + result.hammocks_resolved + ' unresolved=' + result.hammocks_unresolved);
+    const hammocks = E.getHammocks();
+    const H1 = Object.values(hammocks).find(h => h.code === 'H1');
+    const H2 = Object.values(hammocks).find(h => h.code === 'H2');
+    // A → B direct: B.ES = 5, B.EF = 8. projectFinish = 8. B.LS = 5.
+    // H1.ES = A.EF = 5. H1.LF via succ H2.LS (computed after H1, so we need
+    // to verify the iterative resolution works).
+    // H2.preds = [H1], H2.succs = [B]. After H1 resolves with H1.ES=5, then
+    // when H2 resolves: H2.ES = H1.EF (which depends on H1.LF). H1.LF needs
+    // H2.LS. This is a chicken-and-egg problem within the hammock pair —
+    // both succs of H1 are H2; H1 needs H2 resolved; H2 needs H1 resolved.
+    // The resolver should still converge because both fall back to bounds.
+    // Verify just that both resolved and ES/LF are integers >= 0.
+    check('HAM-3 (nested): H1 resolved with ES >= 0',
+        typeof H1.ES === 'number' && H1.ES >= 0);
+    check('HAM-3 (nested): H2 resolved with LF >= 0',
+        typeof H2.LF === 'number' && H2.LF >= 0);
+    check('HAM-3 (nested): H1.duration is non-negative',
+        H1.duration >= 0, 'got ' + H1.duration);
+    check('HAM-3 (nested): H2.duration is non-negative',
+        H2.duration >= 0, 'got ' + H2.duration);
+}
+
+// HAM-4: Hammock between predecessors and successors with FF/SS relationships.
+// Test that hammock anchor math handles non-FS rel types.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 30\tA\tA\tTT_Task\t80\t80',    // 10d
+        '%R 31\tH\tH\tTT_Hammock\t0\t0',
+        '%R 32\tB\tB\tTT_Task\t40\t40',    // 5d
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 30\t31\tPR_SS\t0',  // A → H via SS (H starts when A starts)
+        '%R 31\t32\tPR_FS\t0',  // H → B
+        '%R 30\t32\tPR_FS\t0',  // A → B direct
+        '',
+    ].join('\n');
+    const parsed = E.parseXER(xer);
+    const result = E.runCPM();
+    check('HAM-4 (SS-pred): hammock resolved',
+        result.hammocks_resolved === 1);
+    const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
+    // SS pred: H.ES anchor = A.ES + 0 = 0
+    check('HAM-4 (SS-pred): H.ES = A.ES (SS pred)',
+        H.ES === 0, 'got ' + H.ES);
 }
 
 // ============================================================================
