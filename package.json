@@ -5,8 +5,9 @@
   "main": "cpm-engine.js",
   "scripts": {
     "test": "node cpm-engine.test.js",
+    "test:cites": "node tests/no-fabricated-citations.test.js",
     "crossval": "node cpm-engine.crossval.js",
-    "test:all": "npm test && npm run crossval"
+    "test:all": "npm test && npm run crossval && npm run test:cites"
   },
   "keywords": [
     "cpm",
@@ -49,6 +50,7 @@
     "CONTRIBUTING.md",
     "docs/",
     "examples/",
-    "python_reference/"
+    "python_reference/",
+    "tests/"
   ]
 }

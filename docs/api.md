@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.8.0'`. |
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.8'`. |
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -90,9 +90,17 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
         duration_days: 5,                // Required. Calendar-day duration.
         early_start: '2026-01-05',       // Optional. Pin ES to this date (or later via predecessors).
         clndr_id: 'MF',                  // Optional. Calendar key in opts.calMap.
-        actual_start: '2026-01-05',      // Optional. Marks activity as in-progress.
+        actual_start: '2026-01-05',      // Optional. Marks activity as in-progress (immutable per AACE 29R-03 §4.3).
         actual_finish: '2026-01-09',     // Optional. Marks activity as complete.
         is_complete: false,              // Optional. Sets ES=actual_start, EF=actual_finish.
+        constraint: {                    // Optional. Primary P6 constraint.
+            type: 'SNET',                //   One of: SNET | SNLT | FNET | FNLT | MS_Start | MS_Finish | MFO | SO | ALAP.
+            date: '2026-01-10',          //   Anchor date for date-bearing constraints (omit for ALAP).
+        },
+        constraint2: {                   // Optional. Secondary P6 constraint (v2.9.7+). Applied after primary.
+            type: 'FNLT',                //   Common pairing: SNET (primary) + FNLT (secondary) = window pin.
+            date: '2026-01-20',
+        },
     },
     // ...
 ]
@@ -220,15 +228,24 @@ For the per-iteration hot loop in Monte Carlo schedule risk analysis.
 
 ### `E.parseXER(xerString)`
 
-Parse a P6 XER export. Returns `{ taskCount, relCount }`.
+Parse a P6 XER export. Returns `{ taskCount, relCount, dropped_activities }`.
 
-### `E.runCPM(salvage)`
+- `dropped_activities: Array<{ task_code, task_type, reason }>` — activities dropped during parse (e.g. `TT_LOE` level-of-effort, `TT_WBS` summary, completed or zero-remaining rows that are not milestones). Caller can surface for transparency; no silent corruption.
 
-Run CPM on the parsed XER. Returns `{ projectFinish, criticalCount }`.
+### `E.runCPM(opts)`
 
-### `E.getTasks()` / `E.getRelationships()`
+Run CPM on the parsed XER (Section D — Monte-Carlo-ready engine).
 
-Get the parsed task / relationship dictionaries.
+`opts: { logOutput?: boolean, projectStart?: string ('YYYY-MM-DD'), salvage?: boolean }`
+
+- `projectStart` enables constraint enforcement (`cstr_type`, `cstr_type2`, ALAP). Omit for relative-time analysis.
+- `salvage` (legacy single-arg form `runCPM(true)` accepted for back-compat) runs `computeCPMSalvaging` semantics under the hood.
+
+Returns `{ projectFinish, criticalCount, alerts, dropped_activities, hammocks_resolved, hammocks_unresolved, salvage_log? }`.
+
+### `E.getTasks()` / `E.getRelationships()` / `E.getHammocks()`
+
+Get the parsed task / relationship / hammock dictionaries from the most recent `parseXER` call. `getHammocks()` returns the hammock metadata array used by the two-pass hammock walker (v2.9.7+).
 
 ### `E.resetMC()`
 

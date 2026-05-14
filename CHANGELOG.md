@@ -4,6 +4,37 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## v2.9.8 — 2026-05-14 — Round 6 hardening
+
+Math correctness + Daubert hardening following parallel hardcore audit.
+
+### Bug fixes (engine math — T1)
+
+- Hammock non-FS relationship types now emit `hammock_unsupported_rel` alert (was silently wrong anchor math)
+- Section D MS_Finish / MFO backward LF: emits `constraint-violated` alert when infeasible vs predecessor logic (was silent EF<ES)
+- Section D SS+FS LS recompute drops tighter constraint (FIXED)
+- Hammock walker visited-set discarded anchors on DAG diamond joins (FIXED — memoization)
+- `dateToNum` 2-digit year silent rewrite to 1999 (FIXED — `_safeDateUTC` anchor)
+- Secondary-slot ALAP now honored (was primary-only)
+- Hammock negative-span emits alert (was silent clamp to 0)
+
+### Disclosure JSON
+
+- `cpm-engine.js` Daubert string: "13 fixtures" → "16 fixtures"
+
+### Documentation
+
+- `DAUBERT.md` SHA-256 pin rotated to `9a966777...`
+- `DAUBERT.md` §8 "known gaps" for TT_Hammock + secondary constraints CLOSED (both shipped)
+- `DAUBERT.md` Section D thread-safety disclosed (module-level state)
+- `DAUBERT.md` `methodology_status` flag introduced for kinematic / Bayesian / WOET
+- `README` + `CONTRIBUTING` test counts updated (528 → 641, 153 → 186)
+- `docs/api.md`: `runCPM` signature, `getHammocks` export, `constraint` / `constraint2` fields documented
+- Engine inline comments: AACE §3.7 mis-attributions corrected to §4 (Technical Considerations)
+- `docs/citations.md` MIP 3.5 mislabel corrected
+
+---
+
 ## v2.9.7 — 2026-05-14
 
 Round-5 Wave-2 audit follow-through — five deferred features shipped together as the v2.9.7 "deeper features" wave. Closes structural debt from Rounds 3 and 4: secondary constraint surface, real hammock semantics, MC constraint enforcement, ALAP backward-pass parity, and constrained-schedule crossval coverage.

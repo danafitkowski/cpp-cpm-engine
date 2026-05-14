@@ -1,4 +1,4 @@
-# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.5
+# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.8
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
 
@@ -31,14 +31,14 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening | **633 / 633 passing** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard | **677 / 677 passing** |
 | Cross-validation suite     | `cpm-engine.crossval.js` — 16 fixtures × 186 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures (SNET / MS_Start+FNLT / ALAP)  | **186 / 186 bit-identical** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
 | Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
 
 Performance benchmarks (Node 18, M1 Mac):
 
-- 563 unit tests in **~0.27 seconds**
+- 677 unit tests
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
@@ -65,7 +65,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 Performance characteristics:
 
-- 563 unit tests run in **~0.27 s** on Node 18.
+- 677 unit tests run on Node 18.
 - 5,000-node linear chain Tarjan SCC in **~8 ms**.
 - A 25,000-activity Mon-Fri schedule (full forward + backward pass) runs in **~1.6 s** after the v2.1-C1 / v2.1-C2 optimizations.
 
@@ -101,7 +101,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.5',                    // Synchronized with package.json
+    engine_version: '2.9.8',                    // Synchronized with package.json
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -159,7 +159,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 563 + 153 = 716 verifications.
+2. Run `npm run test:all` to reproduce the 677 + 186 = 863 verifications.
 3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
 4. Inspect the source — it is intentionally readable and well-commented (4,326 lines including narrative comments).
 
@@ -168,8 +168,8 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.5`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.5 constraint-reachability + actual-start pin-order corrections)
+`engine_version: 2.9.8`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.8 hammock semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, and Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard))
 
 ---
 
@@ -209,9 +209,9 @@ Callers may override `nearCriticalThreshold` via `opts`. The DCMA-14 Logic check
 
 ---
 
-## §8 Constraint Handling (v2.9.5)
+## §8 Constraint Handling (v2.9.8)
 
-The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (or the equivalent `cstr_type` / `cstr_date2` long-form XER tokens, automatically normalized).
+The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (primary) and `task.constraint2 = {type, date}` (secondary, v2.9.7+), or the equivalent `cstr_type` / `cstr_date2` (primary) and `cstr_type2` / `cstr_date` (secondary) long-form XER tokens, automatically normalized. Primary and secondary are applied sequentially per the Oracle P6 spec (primary first, secondary tightens further). Both Section C (`computeCPM`) and Section D (`runCPM`, used by the per-iteration Monte Carlo hot loop — see §D below) enforce constraints when an absolute `projectStart` anchor is supplied.
 
 | Canonical | XER long-form | Forward-pass behavior | Backward-pass behavior |
 |---|---|---|---|
@@ -227,11 +227,26 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **v2.9.5 — Actual-start pin order corrected (AACE 29R-03 §4.3).** When an activity has `actual_start`, that historical fact is immutable. v2.9.3 applied the data_date floor before checking actual_start, so any schedule updated after work began (the common case) pinned ES to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins immutably over both the data_date floor and predecessor-driven ES. The post-pass OoS detector still flags the predecessor anomaly; `driving_predecessor` is still surfaced for forensic traceability.
 
-**Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF appears in `result.alerts`.
+**v2.9.7 — Secondary constraint surface landed.** P6's TASK table supports a secondary constraint (`cstr_type2` + `cstr_date`) applied independently of the primary. v2.9.5 left this on the table; v2.9.7 ships full secondary support across `parseXER`, `computeCPM` forward + backward passes, and Section D `runCPM`. Common pairing — SNET (primary) + FNLT (secondary) — now pins an activity inside a window correctly. Forward-pass alerts carry a `(secondary)` tag for forensic traceability. The `_applyForwardESConstraint` / `_applyForwardEFConstraint` / `_applyBackwardLFConstraint` helpers share code between primary and secondary so behavior is identical.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the two contexts above. Pair with `result.manifest.engine_version === '2.9.5'` to confirm the constraint module was active.
+**v2.9.7 — TT_Hammock two-pass semantics.** v2.9.5 dropped hammocks as `hammock-unsupported`; v2.9.7 implements full P6 hammock semantics. Hammocks are summary bars: `duration = max(LF_succs) − min(ES_preds)` with no driving logic of their own. `parseXER` now routes hammock-side TASKPRED rows into `_MC.hammocks[id].preds/succs`. `runCPM` runs a Pass-2 `_resolveHammocks()` that walks pred/succ chains transitively. Nested hammocks (hammock-of-hammocks) are handled via visited-set recursion. `runCPM` result now includes `hammocks_resolved` / `hammocks_unresolved` counts.
 
-### Known gaps
+**v2.9.7 — Section D Monte Carlo constraint enforcement.** The per-trial `runCPM` engine (called 10k× per Monte Carlo simulation) previously ignored constraints. v2.9.7 wires constraint enforcement: `runCPM(opts)` accepts `opts.projectStart` ('YYYY-MM-DD') to anchor absolute constraint dates to Section D's relative day-number scale. Without `projectStart`, constraints are no-ops (backward-compat). Forward: ES-side SNET / MS_Start / SO clamp; EF-side FNET / MS_Finish / MFO clamp. Backward: FNLT / MS_Finish / MFO / SNLT tighten LF. Primary + secondary applied sequentially. ALAP slide added to runCPM for Section C parity.
 
-- **TT_Hammock unsupported.** Hammock activities (whose duration is computed as `last_predecessor.EF − first_successor.ES`) are not implemented. `parseXER()` drops them with `dropped_activities[{task_code, task_type:'TT_Hammock', reason:'hammock-unsupported'}]`. Callers see the drop in plain text; no silent corruption. Re-add when the spec ships.
-- **Secondary constraints (`cstr_type2` / `cstr_date`).** P6 allows a secondary deadline-style constraint per activity. v2.9.5 reads only the primary (`cstr_type` / `cstr_date2`). The raw secondary fields are preserved on the task record (`cstr_type_raw` / `cstr_date_raw`) for future expansion.
+**v2.9.8 — Round 6 hardening.** Section D MS_Finish/MFO now emits `constraint-violated` ALERT when infeasible vs predecessor logic (was a silent EF<ES). Hammock walker visited-set is memoized so DAG diamond joins do not lose anchors. Non-FS hammock relationship types (SS/FF/SF) emit `hammock_unsupported_rel` alert (was silent wrong-anchor math). `dateToNum` 2-digit-year guard added (was silently rewriting `'26-01-05'` to 1999). Section D SS+FS LS recompute drops the tighter constraint. Hammock negative-span emits alert (was silent clamp to 0).
+
+**Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Non-FS hammock ties emit `hammock_unsupported_rel`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
+
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.8'` to confirm the constraint module was active.
+
+### §D Section D thread-safety
+
+Section D engine state is module-level (`_MC` singleton). Concurrent invocations of `parseXER` + `runCPM` in the same module instance share state. For concurrent / comparative analysis, instantiate one engine module per worker. Court-filed analyses should be single-threaded.
+
+### §E Methodology status flags for industry-first features
+
+Three engine features are first-publication or pre-publication in construction scheduling: `computeKinematicDelay` (slip velocity / acceleration / jerk), `computeBayesianUpdate` (Bayesian posterior duration), and `woet_classifier` (Worked-vs-On-time Execution Timeline). Outputs from these functions carry a `methodology_status: 'pre-publication'` field. They are appropriate for demonstrative / illustrative use; opinion-supporting use in contested matters should be paired with the analyst's own qualifications and a Daubert §702 reliability showing. The core CPM math (Kelley-Walker forward / backward pass, Kahn topological sort, Tarjan SCC) is established since the 1960s-70s and is not subject to this caveat.
+
+### Known limitations
+
+- **Hammock non-FS relationship types** (SS / FF / SF tying a hammock to a non-hammock activity) emit `hammock_unsupported_rel` alert and are not computed (v2.9.8). The common case — FS chains — is fully supported. Two-pass full hammock-of-hammocks DAG join is supported via memoization (v2.9.8).

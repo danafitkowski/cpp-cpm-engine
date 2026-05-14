@@ -6,13 +6,13 @@ Thank you for considering a contribution. The engine is the core of an active fo
 
 ## Quick rules
 
-1. **Every commit must pass 528 unit tests, 0 fail.**
+1. **Every commit must pass 677 unit tests, 0 fail.**
 
    ```bash
    npm test
    ```
 
-2. **Every commit must pass 153/153 cross-validation checks against the Python sibling.**
+2. **Every commit must pass 186/186 cross-validation checks against the Python sibling.**
 
    ```bash
    npm run crossval
@@ -96,8 +96,8 @@ Every output manifest reads `ENGINE_VERSION` and embeds it in the report. A vers
 
 ## Pull-request checklist
 
-- [ ] `npm test` passes (528+ tests, 0 fail).
-- [ ] `npm run crossval` passes (153/153 checks).
+- [ ] `npm test` passes (677+ tests, 0 fail).
+- [ ] `npm run crossval` passes (186/186 checks).
 - [ ] If you added a new citation, the URL is in `docs/citations.md` and the case/RP is real.
 - [ ] If you bumped the engine version, both `cpm-engine.js` and `package.json` are updated.
 - [ ] If you added a new public API, it is documented in `docs/api.md`.
