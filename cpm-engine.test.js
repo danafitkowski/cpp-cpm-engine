@@ -3906,6 +3906,147 @@ console.log('\n=== Section R-MC — runCPM constraint enforcement ===');
         allPinned);
 }
 
+// ============================================================================
+// Section R-ALAP-bw — v2.9.7 ALAP backward-pass predecessor tightening (Feature 4)
+// ============================================================================
+console.log('\n=== Section R-ALAP-bw — ALAP backward pass tightens predecessor LF ===');
+
+// ALAP-bw-1: Simple A → B(ALAP) chain, no other paths.
+// projectFinish driven by B. B.LS pinned by ALAP. A.LF = B.LS - lag.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, constraint: { type: 'ALAP' } },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    // A.EF = 2026-01-10. B.ES = 2026-01-10, B.EF = 2026-01-13. projectFinish = 2026-01-13.
+    // Backward: B.LF = 2026-01-13, B.LS = 2026-01-10. A.LF = B.LS = 2026-01-10.
+    check('ALAP-bw-1: A.LF = B.LS - lag = 2026-01-10',
+        r.nodes.A.lf_date === '2026-01-10',
+        'A.LF=' + r.nodes.A.lf_date + ' B.LS=' + r.nodes.B.ls_date);
+    // After ALAP post-pass: B.ES = B.LS = 2026-01-10 (no float, already pinned).
+    check('ALAP-bw-1: ALAP B.ES = B.LS (no float to consume)',
+        r.nodes.B.es_date === r.nodes.B.ls_date,
+        'B.ES=' + r.nodes.B.es_date + ' B.LS=' + r.nodes.B.ls_date);
+}
+
+// ALAP-bw-2: ALAP with FS+2 lag — A.LF = B.LS - 2.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, constraint: { type: 'ALAP' } },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 2 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    // A.EF = 2026-01-10. B.ES = A.EF + 2 = 2026-01-12. B.EF = 2026-01-15.
+    // projectFinish = 2026-01-15. B.LF = 2026-01-15, B.LS = 2026-01-12.
+    // A.LF = B.LS - 2 = 2026-01-10.
+    check('ALAP-bw-2: A.LF = B.LS - 2 lag = 2026-01-10',
+        r.nodes.A.lf_date === '2026-01-10',
+        'A.LF=' + r.nodes.A.lf_date + ' B.LS=' + r.nodes.B.ls_date);
+    check('ALAP-bw-2: A.TF = 0 (on CP through ALAP B)',
+        r.nodes.A.tf === 0, 'got ' + r.nodes.A.tf);
+}
+
+// ALAP-bw-3: ALAP with float available — verify backward pass uses ALAP's
+// late position, not its early position.
+// Network: A(5d) → B(3d, ALAP) → END(0d) with parallel C(15d) → END.
+// projectFinish driven by C = 2026-01-25.
+// B.LF = END.LS = 2026-01-25. B.LS = 2026-01-22. Without ALAP, B.ES=2026-01-10.
+// With ALAP, B slides to B.ES=2026-01-22.
+// A.LF = min(B.LS=2026-01-22, C.LS=2026-01-05) = 2026-01-05.
+// So A.LF is driven by C (the CP), not B (ALAP-slid). A has 0 float through C.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, constraint: { type: 'ALAP' } },
+        { code: 'C', duration_days: 15 },
+        { code: 'END', duration_days: 0 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'END', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'END', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    // C is on CP (longer path). projectFinish via C = A.EF + 15 = 2026-01-25.
+    check('ALAP-bw-3: A.LF driven by tighter of {B.LS, C.LS}',
+        r.nodes.A.lf_date === r.nodes.C.ls_date,
+        'A.LF=' + r.nodes.A.lf_date + ' C.LS=' + r.nodes.C.ls_date +
+        ' B.LS=' + r.nodes.B.ls_date);
+    check('ALAP-bw-3: ALAP B slides ES forward (consumes float)',
+        r.nodes.B.es_date === r.nodes.B.ls_date,
+        'B.ES=' + r.nodes.B.es_date + ' B.LS=' + r.nodes.B.ls_date);
+}
+
+// ALAP-bw-4: After ALAP slide, the FREE FLOAT of predecessors should reflect
+// the slid B.ES (which equals B.LS). Free float = succ.ES - pred.EF - lag.
+// Network: A(5d) → B(3d, ALAP) only; no other path. A.ff was used to be
+// computed against the original B.ES (early). v2.9.7 ensures ff uses slid ES.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, constraint: { type: 'ALAP' } },
+        // Add an unrelated parallel D so there's float somewhere.
+        { code: 'D', duration_days: 10 },
+        { code: 'END', duration_days: 0 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'END', type: 'FS', lag_days: 0 },
+        { from_code: 'D', to_code: 'END', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    // D is 10d from 2026-01-05 = 2026-01-19. END = 2026-01-19. projectFinish = 2026-01-19.
+    // B.LF = END.LS = 2026-01-19. B.LS = 2026-01-14. ALAP slide: B.ES = 2026-01-14.
+    // A.LF = B.LS = 2026-01-14. A.LS = 2026-01-07. A.TF = 2 days.
+    check('ALAP-bw-4: A.LF = B.LS (ALAP succ drives backward)',
+        r.nodes.A.lf_date === r.nodes.B.ls_date,
+        'A.LF=' + r.nodes.A.lf_date + ' B.LS=' + r.nodes.B.ls_date);
+    // A.ff = B.ES - A.EF - 0 (using slid B.ES). With ALAP slide B.ES=2026-01-14,
+    // A.EF=2026-01-10, so A.ff = 4 cal days. The current implementation in
+    // Section C uses B.ES (the slid value) since the slide happens BEFORE the
+    // FF block. Verify the math.
+    check('ALAP-bw-4: A.ff uses slid B.ES, matches A.tf when on ALAP path',
+        r.nodes.A.ff === r.nodes.A.tf,
+        'A.ff=' + r.nodes.A.ff + ' A.tf=' + r.nodes.A.tf);
+}
+
+// MC-ALAP: Section D ALAP slide in runCPM (parallels Section C's slide).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type',
+        '%R 400\tA\tFirst\tTT_Task\t40\t40\t',
+        '%R 401\tB\tALAPped\tTT_Task\t16\t16\tCS_ALAP',
+        '%R 402\tC\tLong\tTT_Task\t120\t120\t',
+        '%R 403\tEND\tFin\tTT_FinMile\t0\t0\t',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 400\t401\tPR_FS\t0',  // A → B
+        '%R 400\t402\tPR_FS\t0',  // A → C
+        '%R 401\t403\tPR_FS\t0',  // B → END
+        '%R 402\t403\tPR_FS\t0',  // C → END
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    E.runCPM();
+    const tasks = E.getTasks();
+    const taskB = Object.values(tasks).find(t => t.code === 'B');
+    // A=5d, C=15d. projectFinish = 5 + 15 = 20. B is 2d.
+    // Without ALAP, B.ES=5, B.EF=7. With ALAP slide, B.LS=18, B.LF=20. B.ES=18.
+    check('MC-ALAP: Section D slides B.ES to LS (18)',
+        taskB.ES === 18, 'got ' + taskB.ES);
+    check('MC-ALAP: Section D B.EF = LF (20)',
+        taskB.EF === 20, 'got ' + taskB.EF);
+    check('MC-ALAP: Section D B.TF = 0 after slide',
+        taskB.TF === 0);
+}
+
 // MC-3: FNLT backward clamp tightens LF in runCPM.
 {
     E.resetMC();

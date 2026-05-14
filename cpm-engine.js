@@ -1660,6 +1660,25 @@ function runCPM(opts) {
         }
     }
 
+    // v2.9.7 — ALAP post-pass (parallels Section C's ALAP slide). For
+    // ALAP-marked activities, slide ES/EF forward to LS/LF (consume float).
+    // Predecessors' LF already reflects ALAP's LS via the standard backward
+    // pass formula min(succ.LS - lag), so no separate LF tightening is needed
+    // — the math is symmetric with Section C and Feature 4 verified.
+    for (const taskId in _MC.tasks) {
+        const t = _MC.tasks[taskId];
+        if (!t.constraint || t.constraint.type !== 'ALAP') continue;
+        if (t.is_complete || t.actual_start) continue;
+        if (t.LS > t.ES) {
+            t.ES = t.LS;
+            t.EF = t.LF;
+            t.TF = 0;
+            if (logOutput) {
+                log.push('ALAP: ' + t.code + ' slid ES=' + t.ES.toFixed(1) + ' EF=' + t.EF.toFixed(1));
+            }
+        }
+    }
+
     // v2.9.7 — Pass-2: resolve TT_Hammock activities. Hammocks are summary
     // bars: duration = max(LF of all successors) - min(ES of all predecessors).
     // They have no driving logic of their own — they take whatever shape the
