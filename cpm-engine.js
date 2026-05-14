@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.4';
+const ENGINE_VERSION = '2.9.5';
 
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
@@ -154,14 +154,19 @@ const ENGINE_VERSION = '2.9.4';
 //  - Oracle Primavera P6 Database Reference, TASK.cstr_type column (XER spec).
 //  - AACE 29R-03 §3.7 (constraint usage in forensic schedule analysis).
 const CONSTRAINT_TYPE_MAP = {
-    // Primavera XER tokens → canonical names used by the engine
-    'CS_MSO':      'MS_Start',     // Mandatory Start
-    'CS_MEO':      'MS_Finish',    // Mandatory Finish (Mandatory End Originally)
-    'CS_MEOA':     'MS_Finish',    // legacy variant
-    'CS_MSOA':     'MS_Start',     // legacy variant
+    // Primavera XER tokens → canonical names used by the engine.
+    // v2.9.5 — Tokens corrected against Oracle P6 Database Reference
+    // (TASK.cstr_type). The "A/B" suffix is After/Before (Start/Finish No
+    // Earlier/Later Than). v2.9.3 misclassified CS_MEOA / CS_MSOA as
+    // mandatory; per the P6 spec they are deadline-style soft constraints.
+    'CS_MSO':      'MS_Start',     // Mandatory Start On
+    'CS_MEO':      'MS_Finish',    // Mandatory Finish On (Mandatory End Originally)
+    'CS_MSOA':     'SNET',         // Start On or After (Start No Earlier Than)
+    'CS_MSOB':     'SNLT',         // Start On or Before (Start No Later Than)
+    'CS_MEOA':     'FNET',         // Finish On or After (Finish No Earlier Than)
+    'CS_MEOB':     'FNLT',         // Finish On or Before (Finish No Later Than)
     'CS_MANDSTART':'MS_Start',
     'CS_MANDFIN':  'MS_Finish',
-    'CS_MEOB':     'MFO',          // Must Finish On (treated as MS_Finish)
     'CS_ALAP':     'ALAP',
     'CS_SO':       'SO',           // Start On (treated as MS_Start)
     // Short tokens (already canonical or P6 GUI labels)
@@ -767,11 +772,27 @@ function computeCPM(activities, relationships, opts) {
         if (node.is_complete) continue;
         const preds = predMap[code] || [];
         const nodeCal = calFor(node);
-        // v2.9.3 in-progress ES pin: actual_start sets a floor that predecessor
-        // logic cannot push later (work has already begun on that date).
+        // v2.9.5 in-progress ES pin (corrected pin order). When an activity has
+        // an actual_start, that historical fact is immutable per AACE 29R-03
+        // §4.3 — neither the data_date floor NOR predecessor logic may push ES
+        // forward of an event that demonstrably already happened. When the
+        // predecessor would push ES later, the engine emits an OoS alert
+        // (handled in the post-pass detector) but the actual_start still wins.
+        //
+        // v2.9.3 had the wrong order: data_date floored ES first and
+        // actual_start was a Math.max afterward, so when data_date > actual_start
+        // (the normal case — schedule updated days after work began) ES was
+        // pinned to data_date, not actual_start.
         const actStartNum = node.actual_start ? dateToNum(node.actual_start) : 0;
-        let maxES = Math.max(node.es, ddNum);
-        if (actStartNum > 0) maxES = Math.max(maxES, actStartNum);
+        const hasActualStart = actStartNum > 0;
+        let maxES;
+        if (hasActualStart) {
+            // Historical actual — immutable per AACE 29R-03 §4.3.
+            maxES = actStartNum;
+        } else {
+            // No actual — forecasts cannot precede dataDate.
+            maxES = Math.max(node.es, ddNum);
+        }
         let drivingPred = null;  // tracks which pred (if any) gave maxES
         for (const p of preds) {
             const pnode = nodes[p.from_code];
@@ -797,6 +818,20 @@ function computeCPM(activities, relationships, opts) {
             } else {
                 drive = _advanceWithAlerts(pnode.ef, lag, nodeCal, alerts,
                     'FS-default lag ' + pnode.code + '->' + code);
+            }
+            // v2.9.5 — when this node has an actual_start, predecessor logic
+            // cannot push ES later. We still track the driving_predecessor for
+            // forensic traceability (which pred *would* have driven if not for
+            // the immutable actual), but maxES stays pinned.
+            if (hasActualStart) {
+                if (drive > maxES && drivingPred === null) {
+                    drivingPred = {
+                        code: pnode.code,
+                        type: p.type,
+                        lag_days: lag,
+                    };
+                }
+                continue;
             }
             if (drive > maxES) {
                 maxES = drive;
@@ -987,6 +1022,27 @@ function computeCPM(activities, relationships, opts) {
         node.tf = Math.round((node.lf - node.ef) * 1000) / 1000;
     }
 
+    // v2.9.5 — ALAP (As Late As Possible) post-pass. Per AACE 29R-03 §3.7 and
+    // Oracle P6 docs, ALAP activities slide their early dates to match their
+    // late dates (consuming float). Only applied when the activity has no
+    // actual_start (immutable historical fact) and is not complete.
+    for (const c in nodes) {
+        const n = nodes[c];
+        if (!n.constraint || n.constraint.type !== 'ALAP') continue;
+        if (n.is_complete || n.actual_start) continue;
+        if (n.ls > n.es) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-applied',
+                message: 'ALAP on ' + c + ' slides ES from ' + numToDate(n.es) +
+                    ' to ' + numToDate(n.ls) + ' (consumes ' + n.tf + ' days float)',
+            });
+            n.es = n.ls;
+            n.ef = n.lf;
+            n.tf = 0;
+        }
+    }
+
     // Populate date strings + TF in working days (companion to TF in calendar
     // days). P6 reports TF in working days on each activity's own calendar.
     for (const c in nodes) {
@@ -1153,15 +1209,31 @@ function parseXER(content) {
             if (currentTable === 'TASK') {
                 const taskId = row.task_id;
                 const remaining = (parseFloat(row.remain_drtn_hr_cnt) || 0) / 8;
+                const targetDur = (parseFloat(row.target_drtn_hr_cnt) || 0) / 8;
                 const _taskType = row.task_type || '';
+                // v2.9.5 — drop reasons. Finish milestones (TT_FinMile) and
+                // start milestones (TT_Mile) legitimately have 0 duration; they
+                // must NOT be dropped under the remaining<=0 rule or the
+                // project's terminal/CP endpoint disappears from the network.
+                // TT_Hammock is unsupported (v2.9.5 known gap — see DAUBERT.md
+                // §8); we surface it in dropped_activities for transparency.
+                const isMilestone = (_taskType === 'TT_Mile' || _taskType === 'TT_FinMile');
                 if (_taskType === 'TT_LOE') {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'level-of-effort' });
                 } else if (_taskType === 'TT_WBS') {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'wbs-summary' });
-                } else if (remaining <= 0) {
-                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'completed-or-zero-remaining' });
+                } else if (_taskType === 'TT_Hammock') {
+                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'hammock-unsupported' });
+                } else if (remaining <= 0 && !isMilestone && !row.act_end_date) {
+                    // Zero-remaining non-milestone with no actual finish — degenerate row.
+                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'zero-remaining' });
+                } else if (remaining <= 0 && !isMilestone && row.act_end_date) {
+                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'completed' });
                 }
-                if (remaining > 0 && _taskType !== 'TT_LOE' && _taskType !== 'TT_WBS') {
+
+                const isDroppedType = (_taskType === 'TT_LOE' || _taskType === 'TT_WBS' || _taskType === 'TT_Hammock');
+                // Retain: milestones (even zero-duration), or any non-dropped type with remaining>0.
+                if (!isDroppedType && (isMilestone || remaining > 0)) {
                     // Audit Alpha #1+#4: capture progress markers + per-activity
                     // calendar so Section C consumers (e.g. /try's
                     // _buildSectionCInput) can propagate them. XER timestamps
@@ -1171,17 +1243,39 @@ function parseXER(content) {
                     // per-iteration and re-derives criticality.
                     const actStart = (row.act_start_date || '').slice(0, 10);
                     const actFinish = (row.act_end_date || '').slice(0, 10);
+                    // v2.9.5 — read XER cstr_type / cstr_date2 (and secondary
+                    // cstr_type2 / cstr_date). Per Oracle P6 Database Reference
+                    // TASK schema, cstr_type2 is a secondary constraint applied
+                    // independently. v2.9.5 honors only the primary; secondary
+                    // is preserved on _xer_raw for future expansion.
+                    const cstrType = row.cstr_type || '';
+                    const cstrDate = (row.cstr_date2 || row.cstr_date || '').slice(0, 10);
+                    let constraint = null;
+                    if (cstrType) {
+                        // _normalizeConstraint handles tokens we don't recognize
+                        // by returning null (drops them silently). ALAP needs
+                        // no date.
+                        const canonical = CONSTRAINT_TYPE_MAP[cstrType] || null;
+                        if (canonical === 'ALAP') {
+                            constraint = { type: 'ALAP', date: '' };
+                        } else if (canonical && cstrDate) {
+                            constraint = { type: canonical, date: cstrDate };
+                        }
+                    }
                     _MC.tasks[taskId] = {
                         id: taskId,
                         code: row.task_code || taskId,
                         name: row.task_name || 'Unnamed',
-                        remaining,
-                        originalRemaining: remaining,
+                        remaining: isMilestone ? 0 : remaining,
+                        originalRemaining: isMilestone ? 0 : (targetDur > 0 ? targetDur : remaining),
                         actual_start: actStart,
                         actual_finish: actFinish,
                         is_complete: !!actFinish,
                         task_type: row.task_type || '',
                         clndr_id: row.clndr_id || '',
+                        constraint,
+                        cstr_type_raw: cstrType,
+                        cstr_date_raw: cstrDate,
                         ES: 0, EF: 0,
                         LS: Infinity, LF: Infinity,
                         TF: 0,
@@ -1280,11 +1374,17 @@ function runCPM(opts) {
                     predContribution = predTask.ES + pred.lag;
                     break;
                 case 'FF':
-                    predContribution = predTask.EF + pred.lag - task.remaining;
+                    // v2.9.5 — FF/SF anchor retreat uses TARGET (original)
+                    // duration, not progressed remaining. Using remaining on
+                    // in-progress activities shrinks the anchor and pulls the
+                    // successor earlier than the physical work could allow.
+                    // originalRemaining is the at-baseline planned duration.
+                    predContribution = predTask.EF + pred.lag - (task.originalRemaining || task.remaining);
                     break;
                 case 'SF':
                     // v14 FIX: was predTask.EF, must be predTask.ES.
-                    predContribution = predTask.ES + pred.lag - task.remaining;
+                    // v2.9.5 — also corrected to use target duration (see FF above).
+                    predContribution = predTask.ES + pred.lag - (task.originalRemaining || task.remaining);
                     break;
             }
             if (predContribution > maxES) maxES = predContribution;

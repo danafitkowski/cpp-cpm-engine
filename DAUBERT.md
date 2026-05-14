@@ -1,4 +1,4 @@
-# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.4
+# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.5
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
 
@@ -101,7 +101,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.4',                    // Synchronized with package.json
+    engine_version: '2.9.5',                    // Synchronized with package.json
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -168,8 +168,8 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.4`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.4 SHA-256 disclosure)
+`engine_version: 2.9.5`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.5 constraint-reachability + actual-start pin-order corrections)
 
 ---
 
@@ -209,20 +209,29 @@ Callers may override `nearCriticalThreshold` via `opts`. The DCMA-14 Logic check
 
 ---
 
-## §8 Constraint Handling (v2.9.4)
+## §8 Constraint Handling (v2.9.5)
 
 The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (or the equivalent `cstr_type` / `cstr_date2` long-form XER tokens, automatically normalized).
 
 | Canonical | XER long-form | Forward-pass behavior | Backward-pass behavior |
 |---|---|---|---|
-| `SNET` | (P6 GUI) | `ES = max(ES, date)`; WARN `constraint-applied` | – |
-| `SNLT` | (P6 GUI) | If `ES > date` → ALERT `constraint-violated` | `LF = min(LF, date + duration)` |
-| `FNET` | (P6 GUI) | `EF = max(EF, date)`; WARN | – |
-| `FNLT` | (P6 GUI) | If `EF > date` → ALERT | `LF = min(LF, date)` |
-| `MS_Start` / `SO` | `CS_MSO` | `ES = date` (forced); if pred logic > date → ALERT | – |
-| `MS_Finish` / `MFO` | `CS_MEO` | `EF = date` (forced); if pred logic > date → ALERT | `LF = date` |
-| `ALAP` | `CS_ALAP` | (no forward action — late dates deferred to project finish) | (handled implicitly by default LF init) |
+| `SNET` | `CS_MSOA` (Start On or After) | `ES = max(ES, date)`; WARN `constraint-applied` | – |
+| `SNLT` | `CS_MSOB` (Start On or Before) | If `ES > date` → ALERT `constraint-violated` | `LF = min(LF, date + duration)` |
+| `FNET` | `CS_MEOA` (Finish On or After) | `EF = max(EF, date)`; WARN | – |
+| `FNLT` | `CS_MEOB` (Finish On or Before) | If `EF > date` → ALERT | `LF = min(LF, date)` |
+| `MS_Start` / `SO` | `CS_MSO` (Mandatory Start) | `ES = date` (forced); if pred logic > date → ALERT | – |
+| `MS_Finish` / `MFO` | `CS_MEO` (Mandatory Finish) | `EF = date` (forced); if pred logic > date → ALERT | `LF = date` |
+| `ALAP` | `CS_ALAP` | (no forward action — pinned in post-backward sweep) | Post-pass slides ES/EF to LS/LF if `LS > ES`; WARN `constraint-applied` |
+
+**v2.9.5 — XER reachability closed.** v2.9.3 added the Section C constraint clamps above but `parseXER()` did not read `cstr_type` / `cstr_date2` from XER rows, so the constraint code was unreachable from real XER files. v2.9.5 wires the parser end-to-end: every TASK row now exposes `task.constraint` populated from `cstr_type` + `cstr_date2` (with `cstr_date` as fallback). The `A` / `B` suffix on long-form tokens (CS_MSOA, CS_MEOB) was also corrected per Oracle P6 Database Reference — `A = After` (SNET/FNET), `B = Before` (SNLT/FNLT). v2.9.3 had `CS_MEOA / CS_MSOA` mapped as mandatory variants, which silently produced wrong answers.
+
+**v2.9.5 — Actual-start pin order corrected (AACE 29R-03 §4.3).** When an activity has `actual_start`, that historical fact is immutable. v2.9.3 applied the data_date floor before checking actual_start, so any schedule updated after work began (the common case) pinned ES to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins immutably over both the data_date floor and predecessor-driven ES. The post-pass OoS detector still flags the predecessor anomaly; `driving_predecessor` is still surfaced for forensic traceability.
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the two contexts above. Pair with `result.manifest.engine_version === '2.9.4'` to confirm the constraint module was active.
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the two contexts above. Pair with `result.manifest.engine_version === '2.9.5'` to confirm the constraint module was active.
+
+### Known gaps
+
+- **TT_Hammock unsupported.** Hammock activities (whose duration is computed as `last_predecessor.EF − first_successor.ES`) are not implemented. `parseXER()` drops them with `dropped_activities[{task_code, task_type:'TT_Hammock', reason:'hammock-unsupported'}]`. Callers see the drop in plain text; no silent corruption. Re-add when the spec ships.
+- **Secondary constraints (`cstr_type2` / `cstr_date`).** P6 allows a secondary deadline-style constraint per activity. v2.9.5 reads only the primary (`cstr_type` / `cstr_date2`). The raw secondary fields are preserved on the task record (`cstr_type_raw` / `cstr_date_raw`) for future expansion.

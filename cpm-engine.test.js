@@ -1293,7 +1293,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.4.0',
-        r.manifest.engine_version === '2.9.4');
+        r.manifest.engine_version === '2.9.5');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1329,7 +1329,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.4');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.5');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1563,7 +1563,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.4');
+    check('D3: engine_version present', h.engine_version === '2.9.5');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2007,14 +2007,14 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.4');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.5');
 }
 {
     // Standalone use (null result) → graceful, no crash
     const d = E.buildDaubertDisclosure(null, {});
     check('E3: null result → method_id = unknown', d.methodology.method_id === 'unknown');
     check('E3: null result → no throw', true);
-    check('E3: null result → engine_version present', d.engine_version === '2.9.4');
+    check('E3: null result → engine_version present', d.engine_version === '2.9.5');
 }
 
 // ============================================================================
@@ -3286,7 +3286,235 @@ function _rChain(constraint, opts) {
     check('R-10: dropped reasons enumerated',
         reasons.indexOf('level-of-effort') >= 0 &&
         reasons.indexOf('wbs-summary') >= 0 &&
-        reasons.indexOf('completed-or-zero-remaining') >= 0);
+        // v2.9.5 — was 'completed-or-zero-remaining'; split into 'completed' vs 'zero-remaining'.
+        reasons.indexOf('completed') >= 0);
+}
+
+// ============================================================================
+// Section R-v295 — v2.9.5 Round 3a fix-wave regression tests
+// ============================================================================
+console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
+
+// R-v295-1: parseXER reads cstr_type / cstr_date2 (T1 #1 — round-2 reachability).
+{
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date2',
+        // Activity B: SNET on 2026-01-20 (CS_MSOA = Start On or After).
+        '%R 100\tA\tFirst\tTT_Task\t40\t40\t\t\t1\t\t',
+        '%R 101\tB\tSecond\tTT_Task\t24\t24\t\t\t1\tCS_MSOA\t2026-01-20 00:00',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 100\t101\tPR_FS\t0',
+        '',
+    ].join('\n');
+    const res = E.parseXER(xer);
+    check('R-v295-1: parseXER retained both activities', res.taskCount === 2);
+    const tasks = E.getTasks();
+    const taskB = Object.values(tasks).find(t => t.code === 'B');
+    check('R-v295-1: B has parsed constraint', !!taskB && !!taskB.constraint);
+    check('R-v295-1: CS_MSOA normalized to SNET (per P6 spec)',
+        taskB && taskB.constraint && taskB.constraint.type === 'SNET',
+        'got ' + (taskB && taskB.constraint && taskB.constraint.type));
+    check('R-v295-1: constraint date truncated to YYYY-MM-DD',
+        taskB && taskB.constraint && taskB.constraint.date === '2026-01-20',
+        'got ' + (taskB && taskB.constraint && taskB.constraint.date));
+}
+
+// R-v295-2: parseXER constraint flows into Section C (round-trip end-to-end).
+// Manually build Section C input from parseXER output and verify the SNET clamps ES.
+{
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date2',
+        '%R 200\tA\tFirst\tTT_Task\t40\t40\t\t\t1\t\t',
+        '%R 201\tB\tSecond\tTT_Task\t24\t24\t\t\t1\tCS_MSOA\t2026-02-15 00:00',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 200\t201\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const tasks = E.getTasks();
+    const acts = Object.values(tasks).map(t => ({
+        code: t.code,
+        duration_days: t.remaining,
+        constraint: t.constraint,
+    }));
+    // Seed A with an early_start so it has a defined ES.
+    acts.find(a => a.code === 'A').early_start = '2026-01-05';
+    const r = E.computeCPM(acts, [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ], { dataDate: '2026-01-05' });
+    check('R-v295-2: SNET from XER clamps B.ES to 2026-02-15',
+        r.nodes.B.es_date === '2026-02-15',
+        'got ' + r.nodes.B.es_date);
+    const applied = r.alerts.filter(a => a.context === 'constraint-applied');
+    check('R-v295-2: constraint-applied WARN emitted', applied.length === 1);
+}
+
+// R-v295-3: P6 token CS_MEOB (Finish On or Before) normalizes to FNLT (not MFO).
+{
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 300\tFM\tFinishConstrained\tTT_Task\t40\t40\tCS_MEOB\t2026-03-01 00:00',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const tasks = E.getTasks();
+    const taskFM = Object.values(tasks).find(t => t.code === 'FM');
+    check('R-v295-3: CS_MEOB normalizes to FNLT (P6 spec correction)',
+        taskFM && taskFM.constraint && taskFM.constraint.type === 'FNLT',
+        'got ' + (taskFM && taskFM.constraint && taskFM.constraint.type));
+}
+
+// R-v295-4: T1 #2 — in-progress ES pinned to actual_start, NOT data_date.
+// actual_start=2026-01-19, data_date=2026-01-20 → ES must be 2026-01-19.
+{
+    const acts = [
+        { code: 'A', duration_days: 5 },  // no early_start, no actual_start
+        { code: 'B', duration_days: 3, actual_start: '2026-01-19' },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-20' });
+    check('R-v295-4: in-progress B.ES = actual_start (immutable per AACE 29R-03)',
+        r.nodes.B.es_date === '2026-01-19',
+        'got ' + r.nodes.B.es_date + ' (expected 2026-01-19)');
+}
+
+// R-v295-5: T1 #2 — no actual_start, dataDate floor still applies (regression guard).
+// Both A and B have no actual_start; dataDate floors A.ES, which cascades to B
+// through the FS relationship. A.ES=2026-01-15, A.EF=2026-01-17, B.ES=2026-01-17.
+{
+    const acts = [
+        { code: 'A', duration_days: 2, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-15' });
+    check('R-v295-5: dataDate floors A.ES which cascades to B',
+        r.nodes.A.es_date === '2026-01-15' && r.nodes.B.es_date === '2026-01-17',
+        'A.es=' + r.nodes.A.es_date + ', B.es=' + r.nodes.B.es_date);
+}
+
+// R-v295-6: T1 #3 — TT_Hammock dropped (Option B; documented gap).
+{
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 400\tH1\tHammockActivity\tTT_Hammock\t40\t40',
+        '%R 401\tT1\tNormalTask\tTT_Task\t24\t24',
+        '',
+    ].join('\n');
+    const res = E.parseXER(xer);
+    check('R-v295-6: TT_Hammock dropped, normal task retained', res.taskCount === 1);
+    const dropped = res.dropped_activities.find(d => d.task_code === 'H1');
+    check('R-v295-6: dropped_activities lists hammock with hammock-unsupported reason',
+        !!dropped && dropped.reason === 'hammock-unsupported',
+        'got ' + (dropped && dropped.reason));
+}
+
+// R-v295-7: T2 #1 — TT_FinMile (finish milestone) retained, not dropped.
+{
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 500\tW\tWork\tTT_Task\t40\t40',
+        '%R 501\tM\tProjectFinish\tTT_FinMile\t0\t0',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 500\t501\tPR_FS\t0',
+        '',
+    ].join('\n');
+    const res = E.parseXER(xer);
+    check('R-v295-7: finish milestone NOT dropped (was bug in v2.9.4)',
+        res.taskCount === 2,
+        'got taskCount=' + res.taskCount);
+    const tasks = E.getTasks();
+    const ms = Object.values(tasks).find(t => t.code === 'M');
+    check('R-v295-7: milestone has 0 duration', ms && ms.remaining === 0);
+    check('R-v295-7: milestone is in network', !!ms);
+}
+
+// R-v295-8: T2 #2 — PR_FF anchor uses target (original) duration, not remaining.
+// Set up FF with B partially-progressed; verify anchor math uses originalRemaining.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date',
+        '%R 600\tA\tFirst\tTT_Task\t40\t40\t',
+        // B target=80h (10d), remaining=40h (5d) — half done.
+        '%R 601\tB\tSecond\tTT_Task\t80\t40\t2026-01-05 08:00',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 600\t601\tPR_FF\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const tasks = E.getTasks();
+    const taskB = Object.values(tasks).find(t => t.code === 'B');
+    check('R-v295-8: B.remaining = 5d (40hr/8)', taskB.remaining === 5);
+    check('R-v295-8: B.originalRemaining = 10d (target 80hr/8)',
+        taskB.originalRemaining === 10,
+        'got ' + taskB.originalRemaining);
+    // Sanity-check FF math via runCPM.
+    // A: ES=0, EF=5. FF anchor = A.EF + 0 - B.originalRemaining = 5 - 10 = -5.
+    // task.ES clamps to 0. EF = 0 + 5 (remaining) = 5.
+    E.runCPM();
+    check('R-v295-8: FF uses target dur — B.EF reflects target anchor, not remaining',
+        taskB.EF === 5,
+        'got B.EF=' + taskB.EF);
+}
+
+// R-v295-9: ALAP slides ES/EF to LS/LF when the activity has float.
+// Network: A (5d) ┬→ B (2d, ALAP) ─ no successor of B drives the finish
+//                 └→ C (10d) → END
+// B has float = (A.EF=2026-01-10) ... (project finish via A→C=2026-01-20).
+// Without ALAP, B.ES = 2026-01-10. With ALAP, B slides forward to consume float.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 2, constraint: { type: 'CS_ALAP' } },
+        { code: 'C', duration_days: 10 },
+        { code: 'END', duration_days: 0 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'END', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'END', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    const applied = r.alerts.filter(a => a.context === 'constraint-applied' && a.message.indexOf('ALAP') >= 0);
+    check('R-v295-9: ALAP emits constraint-applied WARN',
+        applied.length === 1,
+        'got ' + applied.length + ' ALAP alerts');
+    check('R-v295-9: ALAP zeros B.tf after sliding', r.nodes.B.tf === 0);
+    // B.LS = END.LS - 0 - B.dur. END.LS = 2026-01-20. B.LS = 2026-01-18.
+    check('R-v295-9: ALAP slides B.ES forward (consumed float)',
+        r.nodes.B.es_date === '2026-01-18',
+        'got ' + r.nodes.B.es_date);
+}
+
+// R-v295-10: Hammock count regression — fully-completed activities still drop with 'completed'.
+{
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date',
+        '%R 700\tDone\tFinishedWork\tTT_Task\t40\t0\t2026-01-05 08:00\t2026-01-12 17:00',
+        '',
+    ].join('\n');
+    const res = E.parseXER(xer);
+    check('R-v295-10: completed task still dropped',
+        res.dropped_activities.length === 1 &&
+        res.dropped_activities[0].reason === 'completed',
+        'got ' + JSON.stringify(res.dropped_activities));
 }
 
 // ============================================================================
