@@ -1293,7 +1293,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.4.0',
-        r.manifest.engine_version === '2.9.6');
+        r.manifest.engine_version === '2.9.7');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1329,7 +1329,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.6');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.7');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1563,7 +1563,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.6');
+    check('D3: engine_version present', h.engine_version === '2.9.7');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2007,14 +2007,14 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.6');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.7');
 }
 {
     // Standalone use (null result) → graceful, no crash
     const d = E.buildDaubertDisclosure(null, {});
     check('E3: null result → method_id = unknown', d.methodology.method_id === 'unknown');
     check('E3: null result → no throw', true);
-    check('E3: null result → engine_version present', d.engine_version === '2.9.6');
+    check('E3: null result → engine_version present', d.engine_version === '2.9.7');
 }
 
 // ============================================================================
@@ -3515,6 +3515,135 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
         res.dropped_activities.length === 1 &&
         res.dropped_activities[0].reason === 'completed',
         'got ' + JSON.stringify(res.dropped_activities));
+}
+
+// ============================================================================
+// Section R-v297 — v2.9.7 secondary constraint (cstr_type2) handling
+// ============================================================================
+console.log('\n=== Section R-v297 — secondary cstr_type2 ===');
+
+// R-v297-1: Secondary constraint applies AFTER primary in forward pass.
+// Primary SNET 2026-01-15, secondary FNLT 2026-01-20. ES pinned by SNET to
+// 2026-01-15, then EF = 2026-01-15 + 3 = 2026-01-18 (within FNLT, no violation).
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        {
+            code: 'B', duration_days: 3,
+            constraint:  { type: 'SNET', date: '2026-01-15' },
+            constraint2: { type: 'FNLT', date: '2026-01-20' },
+        },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('R-v297-1: SNET primary clamps B.ES forward to 2026-01-15',
+        r.nodes.B.es_date === '2026-01-15',
+        'got ' + r.nodes.B.es_date);
+    check('R-v297-1: FNLT secondary leaves EF unmoved (within window)',
+        r.nodes.B.ef_date === '2026-01-18',
+        'got ' + r.nodes.B.ef_date);
+    const applied = r.alerts.filter(a => a.context === 'constraint-applied');
+    check('R-v297-1: primary SNET emits constraint-applied WARN',
+        applied.some(a => a.message.indexOf('SNET') >= 0 && a.message.indexOf('secondary') < 0),
+        'got ' + applied.length + ' applied alerts');
+    // Backward pass: FNLT secondary is later than the actual EF (2026-01-18),
+    // so it doesn't clamp LF backward (projectFinish already <= FNLT date).
+    // The constraint stays on the node; if a later activity pushes finish past
+    // FNLT, it would constrain there. Here it's a no-op.
+    check('R-v297-1: FNLT secondary preserves LF at projectFinish (no-op when EF < FNLT)',
+        r.nodes.B.lf_date === '2026-01-18',
+        'got ' + r.nodes.B.lf_date);
+}
+
+// R-v297-1b: FNLT secondary actively tightens LF when it's earlier than current LF.
+// Add a non-CP successor so projectFinish > FNLT, forcing FNLT to bite.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        {
+            code: 'B', duration_days: 3,
+            constraint:  { type: 'SNET', date: '2026-01-15' },
+            constraint2: { type: 'FNLT', date: '2026-01-20' },
+        },
+        { code: 'C', duration_days: 30, early_start: '2026-01-05' },  // pushes projectFinish to ~2026-02-04
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    // C drives projectFinish to 2026-02-04. B.LF init = 2026-02-04. Then FNLT
+    // clamps B.LF backward to 2026-01-20.
+    check('R-v297-1b: FNLT secondary tightens B.LF backward to 2026-01-20',
+        r.nodes.B.lf_date === '2026-01-20',
+        'got ' + r.nodes.B.lf_date);
+}
+
+// R-v297-2: Same-direction constraints — secondary tightens primary further.
+// Primary SNET 2026-01-15, secondary SNET 2026-01-20 (later, tighter).
+// ES should land at 2026-01-20 (secondary wins because it's stricter).
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        {
+            code: 'B', duration_days: 3,
+            constraint:  { type: 'SNET', date: '2026-01-15' },
+            constraint2: { type: 'SNET', date: '2026-01-20' },
+        },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('R-v297-2: stricter secondary SNET wins (2026-01-20)',
+        r.nodes.B.es_date === '2026-01-20',
+        'got ' + r.nodes.B.es_date);
+    const secondaryApplied = r.alerts.filter(a =>
+        a.context === 'constraint-applied' && a.message.indexOf('secondary') >= 0);
+    check('R-v297-2: secondary SNET emits constraint-applied (secondary) WARN',
+        secondaryApplied.length === 1,
+        'got ' + secondaryApplied.length);
+}
+
+// R-v297-3: parseXER reads cstr_type2 + cstr_date as secondary constraint.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date\tcstr_type2\tcstr_date2',
+        // B: primary SNET (cstr_type=CS_MSOA, cstr_date2=2026-01-15),
+        //    secondary FNLT (cstr_type2=CS_MEOB, cstr_date=2026-01-25)
+        '%R 800\tA\tFirst\tTT_Task\t40\t40\t\t\t1\t\t\t\t',
+        '%R 801\tB\tSecond\tTT_Task\t24\t24\t\t\t1\tCS_MSOA\t2026-01-25 00:00\tCS_MEOB\t2026-01-15 00:00',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const tasks = E.getTasks();
+    const taskB = Object.values(tasks).find(t => t.code === 'B');
+    check('R-v297-3: parseXER captured primary constraint',
+        !!taskB && !!taskB.constraint && taskB.constraint.type === 'SNET',
+        'got ' + (taskB && taskB.constraint && taskB.constraint.type));
+    check('R-v297-3: parseXER captured secondary constraint',
+        !!taskB && !!taskB.constraint2 && taskB.constraint2.type === 'FNLT',
+        'got ' + (taskB && taskB.constraint2 && taskB.constraint2.type));
+    check('R-v297-3: primary date from cstr_date2 (XER convention)',
+        taskB && taskB.constraint && taskB.constraint.date === '2026-01-15',
+        'got ' + (taskB && taskB.constraint && taskB.constraint.date));
+    check('R-v297-3: secondary date from cstr_date (XER convention)',
+        taskB && taskB.constraint2 && taskB.constraint2.date === '2026-01-25',
+        'got ' + (taskB && taskB.constraint2 && taskB.constraint2.date));
+}
+
+// R-v297-4: Only primary set — secondary is null (regression guard).
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, constraint: { type: 'SNET', date: '2026-01-15' } },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('R-v297-4: missing secondary does not break primary',
+        r.nodes.B.es_date === '2026-01-15',
+        'got ' + r.nodes.B.es_date);
+    const secondaryAlerts = r.alerts.filter(a => a.message && a.message.indexOf('secondary') >= 0);
+    check('R-v297-4: no secondary alerts when only primary is set',
+        secondaryAlerts.length === 0,
+        'got ' + secondaryAlerts.length);
 }
 
 // ============================================================================

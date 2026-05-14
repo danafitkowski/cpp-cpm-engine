@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.6';
+const ENGINE_VERSION = '2.9.7';
 
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
@@ -203,6 +203,26 @@ function _normalizeConstraint(c) {
     if (!canonical) return null;
     const rawDate = c.date || c.cstr_date2 || c.cstr_date || '';
     // ALAP has no date.
+    if (canonical === 'ALAP') return { type: 'ALAP', date: '' };
+    const dateStr = String(rawDate).slice(0, 10);
+    if (!dateStr) return null;
+    return { type: canonical, date: dateStr };
+}
+
+// v2.9.7 — Secondary-constraint normalization. Per Oracle P6 Database
+// Reference, TASK supports cstr_type2 / cstr_date as a SECONDARY constraint
+// applied independently of the primary (cstr_type / cstr_date2). When both are
+// present, P6 applies them sequentially in forward/backward passes — primary
+// first, then secondary tightens further (secondary "wins" on conflict because
+// it's the second clamp). Common pairing: SNET (cstr_type) + FNLT (cstr_type2).
+function _normalizeConstraint2(c) {
+    if (!c || typeof c !== 'object') return null;
+    // Accept either a separate object with type/date or fields off the parent.
+    const rawType = c.type || c.cstr_type2 || '';
+    if (!rawType) return null;
+    const canonical = CONSTRAINT_TYPE_MAP[rawType] || (CANONICAL_CONSTRAINT_TYPES.has(rawType) ? rawType : null);
+    if (!canonical) return null;
+    const rawDate = c.date || c.cstr_date || '';
     if (canonical === 'ALAP') return { type: 'ALAP', date: '' };
     const dateStr = String(rawDate).slice(0, 10);
     if (!dateStr) return null;
@@ -637,8 +657,9 @@ function tarjanSCC(nodeCodes, succMap) {
 //
 // activities: [{ code, duration_days, name?, actual_start?, actual_finish?,
 //                early_start?, early_finish?, is_complete?, is_fragnet?,
-//                clndr_id?, constraint? }]
-// constraint: { type, date } — Primavera P6 cstr_type / cstr_date2 (v2.9.3).
+//                clndr_id?, constraint?, constraint2? }]
+// constraint:  { type, date } — Primavera P6 cstr_type  / cstr_date2 (v2.9.3).
+// constraint2: { type, date } — Primavera P6 cstr_type2 / cstr_date  (v2.9.7).
 //   type ∈ {SNET, SNLT, FNET, FNLT, MS_Start, MS_Finish, ALAP, MFO, SO}
 //   date  = 'YYYY-MM-DD'
 // relationships: [{ from_code, to_code, type: 'FS'|'SS'|'FF'|'SF', lag_days }]
@@ -648,6 +669,119 @@ function tarjanSCC(nodeCodes, succMap) {
 // result: { nodes, projectFinish, projectFinishNum, criticalCodes (Set),
 //           topoOrder, alerts }
 // ============================================================================
+
+// v2.9.7 — Forward-pass ES-side constraint clamp. Extracted into a helper so
+// the primary (cstr) and secondary (cstr2) constraints can be applied in
+// sequence with the same semantics. Returns the (possibly-clamped) ES value.
+// `label` is 'primary' or 'secondary' and appears in alert messages so the
+// caller can tell which constraint moved the value.
+function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
+    if (!cstr) return maxES;
+    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+    const tag = label === 'secondary' ? ' (secondary)' : '';
+    if (cstr.type === 'SNET' && cdNum > 0) {
+        if (cdNum > maxES) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-applied',
+                message: 'SNET' + tag + ' on ' + code + ' pushes ES from ' +
+                    numToDate(maxES) + ' to ' + cstr.date,
+            });
+            return cdNum;
+        }
+    } else if (cstr.type === 'SNLT' && cdNum > 0) {
+        if (maxES > cdNum) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'constraint-violated',
+                message: 'SNLT' + tag + ' on ' + code + ' violated: ES=' +
+                    numToDate(maxES) + ' is after constraint date ' + cstr.date,
+            });
+        }
+    } else if (cstr.type === 'MS_Start' || cstr.type === 'SO') {
+        if (cdNum > 0) {
+            if (maxES > cdNum) {
+                alerts.push({
+                    severity: 'ALERT',
+                    context: 'constraint-violated',
+                    message: 'Mandatory Start' + tag + ' on ' + code + ' violated: predecessor logic forces ES=' +
+                        numToDate(maxES) + ' which is after mandatory date ' + cstr.date,
+                });
+            } else if (maxES < cdNum) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-applied',
+                    message: 'Mandatory Start' + tag + ' on ' + code + ' pins ES to ' + cstr.date,
+                });
+            }
+            return cdNum; // forced regardless of pred logic
+        }
+    }
+    return maxES;
+}
+
+// v2.9.7 — Forward-pass EF-side constraint clamp helper.
+function _applyForwardEFConstraint(code, ef, cstr, label, alerts) {
+    if (!cstr) return ef;
+    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+    const tag = label === 'secondary' ? ' (secondary)' : '';
+    if (cstr.type === 'FNET' && cdNum > 0) {
+        if (cdNum > ef) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-applied',
+                message: 'FNET' + tag + ' on ' + code + ' pushes EF from ' +
+                    numToDate(ef) + ' to ' + cstr.date,
+            });
+            return cdNum;
+        }
+    } else if (cstr.type === 'FNLT' && cdNum > 0) {
+        if (ef > cdNum) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'constraint-violated',
+                message: 'FNLT' + tag + ' on ' + code + ' violated: EF=' +
+                    numToDate(ef) + ' is after constraint date ' + cstr.date,
+            });
+        }
+    } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
+        if (cdNum > 0) {
+            if (ef > cdNum) {
+                alerts.push({
+                    severity: 'ALERT',
+                    context: 'constraint-violated',
+                    message: 'Mandatory Finish' + tag + ' on ' + code + ' violated: predecessor logic forces EF=' +
+                        numToDate(ef) + ' which is after mandatory date ' + cstr.date,
+                });
+            } else if (ef < cdNum) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-applied',
+                    message: 'Mandatory Finish' + tag + ' on ' + code + ' pins EF to ' + cstr.date,
+                });
+            }
+            return cdNum; // forced regardless of pred logic
+        }
+    }
+    return ef;
+}
+
+// v2.9.7 — Backward-pass LF-side constraint clamp helper.
+function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, alerts) {
+    if (!cstr) return minLF;
+    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+    if (cstr.type === 'FNLT' && cdNum > 0) {
+        if (cdNum < minLF) return cdNum;
+    } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
+        if (cdNum > 0) return cdNum;
+    } else if (cstr.type === 'SNLT' && cdNum > 0) {
+        // LF = constraint.date + duration (clamps LS to ≤ constraint date).
+        const lfFromSnlt = _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
+            'SNLT LF ' + code);
+        if (lfFromSnlt < minLF) return lfFromSnlt;
+    }
+    return minLF;
+}
 
 function computeCPM(activities, relationships, opts) {
     opts = opts || {};
@@ -716,6 +850,10 @@ function computeCPM(activities, relationships, opts) {
             actual_finish: actualFinish,
             clndr_id: a.clndr_id || '',
             constraint: _normalizeConstraint(a.constraint),
+            // v2.9.7 — Secondary constraint (cstr_type2 / cstr_date). Stored as
+            // an independent {type, date} record. Applied AFTER the primary in
+            // forward/backward passes; tightens further (P6 spec).
+            constraint2: _normalizeConstraint2(a.constraint2),
         };
     }
 
@@ -843,99 +981,23 @@ function computeCPM(activities, relationships, opts) {
             }
         }
 
-        // v2.9.3 — P6 constraint application (forward pass).
-        // Clamps ES / EF using the activity's cstr_type / cstr_date2 (already
-        // normalized in `node.constraint`). See `CONSTRAINT_TYPE_MAP` for the
-        // canonical short codes.
+        // v2.9.3 — P6 constraint application (forward pass), v2.9.7 — secondary support.
+        // Clamps ES / EF using the activity's cstr_type / cstr_date2 (primary)
+        // and cstr_type2 / cstr_date (secondary). Per P6 spec, both apply
+        // independently; secondary tightens after primary so it "wins" on
+        // conflict. See `CONSTRAINT_TYPE_MAP` for canonical short codes.
         const cstr = node.constraint;
-        if (cstr) {
-            const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
-            if (cstr.type === 'SNET' && cdNum > 0) {
-                if (cdNum > maxES) {
-                    alerts.push({
-                        severity: 'WARN',
-                        context: 'constraint-applied',
-                        message: 'SNET on ' + code + ' pushes ES from ' +
-                            numToDate(maxES) + ' to ' + cstr.date,
-                    });
-                    maxES = cdNum;
-                }
-            } else if (cstr.type === 'SNLT' && cdNum > 0) {
-                if (maxES > cdNum) {
-                    alerts.push({
-                        severity: 'ALERT',
-                        context: 'constraint-violated',
-                        message: 'SNLT on ' + code + ' violated: ES=' +
-                            numToDate(maxES) + ' is after constraint date ' + cstr.date,
-                    });
-                }
-            } else if (cstr.type === 'MS_Start' || cstr.type === 'SO') {
-                if (cdNum > 0) {
-                    if (maxES > cdNum) {
-                        alerts.push({
-                            severity: 'ALERT',
-                            context: 'constraint-violated',
-                            message: 'Mandatory Start on ' + code + ' violated: predecessor logic forces ES=' +
-                                numToDate(maxES) + ' which is after mandatory date ' + cstr.date,
-                        });
-                    } else if (maxES < cdNum) {
-                        alerts.push({
-                            severity: 'WARN',
-                            context: 'constraint-applied',
-                            message: 'Mandatory Start on ' + code + ' pins ES to ' + cstr.date,
-                        });
-                    }
-                    maxES = cdNum; // forced regardless of pred logic
-                }
-            }
-        }
+        const cstr2 = node.constraint2;
+        maxES = _applyForwardESConstraint(code, maxES, cstr, 'primary', alerts);
+        maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts);
 
         node.es = maxES;
         node.ef = _advanceWithAlerts(node.es, node.duration_days, nodeCal, alerts,
             'forward ' + code + '.EF');
 
         // Forward-pass EF-side constraint clamps (FNET, FNLT, MS_Finish, MFO).
-        if (cstr) {
-            const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
-            if (cstr.type === 'FNET' && cdNum > 0) {
-                if (cdNum > node.ef) {
-                    alerts.push({
-                        severity: 'WARN',
-                        context: 'constraint-applied',
-                        message: 'FNET on ' + code + ' pushes EF from ' +
-                            numToDate(node.ef) + ' to ' + cstr.date,
-                    });
-                    node.ef = cdNum;
-                }
-            } else if (cstr.type === 'FNLT' && cdNum > 0) {
-                if (node.ef > cdNum) {
-                    alerts.push({
-                        severity: 'ALERT',
-                        context: 'constraint-violated',
-                        message: 'FNLT on ' + code + ' violated: EF=' +
-                            numToDate(node.ef) + ' is after constraint date ' + cstr.date,
-                    });
-                }
-            } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
-                if (cdNum > 0) {
-                    if (node.ef > cdNum) {
-                        alerts.push({
-                            severity: 'ALERT',
-                            context: 'constraint-violated',
-                            message: 'Mandatory Finish on ' + code + ' violated: predecessor logic forces EF=' +
-                                numToDate(node.ef) + ' which is after mandatory date ' + cstr.date,
-                        });
-                    } else if (node.ef < cdNum) {
-                        alerts.push({
-                            severity: 'WARN',
-                            context: 'constraint-applied',
-                            message: 'Mandatory Finish on ' + code + ' pins EF to ' + cstr.date,
-                        });
-                    }
-                    node.ef = cdNum; // forced regardless of pred logic
-                }
-            }
-        }
+        node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts);
+        node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts);
 
         node.driving_predecessor = drivingPred;
     }
@@ -998,23 +1060,14 @@ function computeCPM(activities, relationships, opts) {
             }
             if (minLF === null) minLF = maxEF;
         }
-        // v2.9.3 — P6 constraint application (backward pass).
+        // v2.9.3 — P6 constraint application (backward pass), v2.9.7 — secondary support.
         // Symmetric LF / LS clamps. Same semantics as forward pass but bounded
         // from above; violations were already alerted on the forward leg.
+        // Primary then secondary; secondary tightens further if it applies.
         const cstr = node.constraint;
-        if (cstr) {
-            const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
-            if (cstr.type === 'FNLT' && cdNum > 0) {
-                if (cdNum < minLF) minLF = cdNum;
-            } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
-                if (cdNum > 0) minLF = cdNum;
-            } else if (cstr.type === 'SNLT' && cdNum > 0) {
-                // LF = constraint.date + duration (clamps LS to ≤ constraint date).
-                const lfFromSnlt = _advanceWithAlerts(cdNum, node.duration_days, nodeCal, alerts,
-                    'SNLT LF ' + code);
-                if (lfFromSnlt < minLF) minLF = lfFromSnlt;
-            }
-        }
+        const cstr2 = node.constraint2;
+        minLF = _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, node.duration_days, alerts);
+        minLF = _applyBackwardLFConstraint(code, minLF, cstr2, nodeCal, node.duration_days, alerts);
 
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
@@ -1243,13 +1296,14 @@ function parseXER(content) {
                     // per-iteration and re-derives criticality.
                     const actStart = (row.act_start_date || '').slice(0, 10);
                     const actFinish = (row.act_end_date || '').slice(0, 10);
-                    // v2.9.5 — read XER cstr_type / cstr_date2 (and secondary
-                    // cstr_type2 / cstr_date). Per Oracle P6 Database Reference
-                    // TASK schema, cstr_type2 is a secondary constraint applied
-                    // independently. v2.9.5 honors only the primary; secondary
-                    // is preserved on _xer_raw for future expansion.
+                    // v2.9.5 — read XER cstr_type / cstr_date2 (primary), and
+                    // v2.9.7 — also cstr_type2 / cstr_date (secondary). Per
+                    // Oracle P6 Database Reference TASK schema, cstr_type2 is
+                    // a secondary constraint applied independently. v2.9.7
+                    // honors both and applies them sequentially in
+                    // forward/backward passes (secondary tightens further).
                     const cstrType = row.cstr_type || '';
-                    const cstrDate = (row.cstr_date2 || row.cstr_date || '').slice(0, 10);
+                    const cstrDate = (row.cstr_date2 || '').slice(0, 10);
                     let constraint = null;
                     if (cstrType) {
                         // _normalizeConstraint handles tokens we don't recognize
@@ -1260,6 +1314,18 @@ function parseXER(content) {
                             constraint = { type: 'ALAP', date: '' };
                         } else if (canonical && cstrDate) {
                             constraint = { type: canonical, date: cstrDate };
+                        }
+                    }
+                    // v2.9.7 — Secondary constraint (cstr_type2 + cstr_date).
+                    const cstrType2 = row.cstr_type2 || '';
+                    const cstrDate2nd = (row.cstr_date || '').slice(0, 10);
+                    let constraint2 = null;
+                    if (cstrType2) {
+                        const canonical2 = CONSTRAINT_TYPE_MAP[cstrType2] || null;
+                        if (canonical2 === 'ALAP') {
+                            constraint2 = { type: 'ALAP', date: '' };
+                        } else if (canonical2 && cstrDate2nd) {
+                            constraint2 = { type: canonical2, date: cstrDate2nd };
                         }
                     }
                     _MC.tasks[taskId] = {
@@ -1274,8 +1340,12 @@ function parseXER(content) {
                         task_type: row.task_type || '',
                         clndr_id: row.clndr_id || '',
                         constraint,
+                        // v2.9.7 — secondary P6 constraint (cstr_type2 + cstr_date)
+                        constraint2,
                         cstr_type_raw: cstrType,
                         cstr_date_raw: cstrDate,
+                        cstr_type2_raw: cstrType2,
+                        cstr_date2_raw: cstrDate2nd,
                         ES: 0, EF: 0,
                         LS: Infinity, LF: Infinity,
                         TF: 0,
