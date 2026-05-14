@@ -7,3 +7,7 @@
 *.ts text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+# Critical: python_reference/cpm.py is pinned by SHA-256. CRLF would change
+# the byte content and invalidate the hash documented in
+# python_reference/README.md and DAUBERT.md §3. Force LF for all .py.
+*.py text eol=lf
