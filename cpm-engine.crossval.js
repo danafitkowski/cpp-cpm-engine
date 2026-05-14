@@ -447,6 +447,66 @@ compareFixture('F12 — early_start pin ahead of logic', {
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
 });
 
+// =====================================================================
+// FIXTURE 13 — v2.9.7 SNET primary constraint (P6 cstr_type)
+// =====================================================================
+compareFixture('F13 — SNET primary constraint', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        // SNET pushes B.ES forward of where predecessor logic would place it.
+        { code: 'B', duration_days: 3, clndr_id: 'MF',
+          constraint: { type: 'SNET', date: '2026-01-20' } },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 14 — v2.9.7 FNLT + MS_Start combination
+// =====================================================================
+compareFixture('F14 — MS_Start + FNLT combo', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'MF' },
+        // MS_Start forces B.ES regardless of predecessor logic.
+        { code: 'B', duration_days: 5, clndr_id: 'MF',
+          constraint: { type: 'MS_Start', date: '2026-01-15' } },
+        // FNLT clamps C.LF backward; C is the off-CP terminal so LF tightens.
+        { code: 'C', duration_days: 2, clndr_id: 'MF',
+          constraint: { type: 'FNLT', date: '2026-01-30' } },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 15 — v2.9.7 ALAP slide forward
+// =====================================================================
+compareFixture('F15 — ALAP consumes float', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        // ALAP on B should slide ES forward to consume float.
+        { code: 'B', duration_days: 2, clndr_id: 'MF',
+          constraint: { type: 'ALAP' } },
+        { code: 'C', duration_days: 10, clndr_id: 'MF' },
+        { code: 'END', duration_days: 0, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'END', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'END', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
 console.log('\n=========================================');
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks);

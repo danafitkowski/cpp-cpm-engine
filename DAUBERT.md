@@ -31,8 +31,8 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 constraint handling, FF/SF relationship coverage | **563 / 563 passing** |
-| Cross-validation suite     | `cpm-engine.crossval.js` — 13 fixtures × 153 checks, JS engine vs Python `compute_cpm` reference  | **153 / 153 bit-identical** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening | **633 / 633 passing** |
+| Cross-validation suite     | `cpm-engine.crossval.js` — 16 fixtures × 186 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures (SNET / MS_Start+FNLT / ALAP)  | **186 / 186 bit-identical** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
 | Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
 
@@ -51,7 +51,7 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite. The Python implementation is exercised by 1,800+ tests across 18 Python suites (forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review).
 - Made publicly available at https://github.com/danafitkowski/cpp-cpm-engine. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
-- **Externally reproducible cross-validation (v2.9.4).** A frozen Python reference implementation now ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`c984a1f521eb922b343c8783e7dcf686aa6aa578c739c395262a5b221c0623b7`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "153 / 153" headline and must be reproduced from a clean checkout.
+- **Externally reproducible cross-validation (v2.9.7).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`9a966777e2b163d07b85d2599ed02ce5783ea6c2ecf0459cff31d6163d17855c`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "186 / 186" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules.)
 - Live-deployed at https://mcp.criticalpathpartners.ca/try where any party can run it against their own schedule.
 
 The underlying CPM math (Kelley & Walker forward/backward pass) is one of the most peer-reviewed scheduling algorithms in the industry; it is the basis of every commercial CPM tool from Primavera P6 to Microsoft Project. **What the engine adds is operational discipline** — manifested provenance, AACE-canonical method labels, salvage logging, multi-strategy critical-path identification with divergence reporting.
@@ -60,7 +60,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 ## §4 Error Rate
 
-**Cross-validation reports 153 / 153 = 0% deviation.**
+**Cross-validation reports 186 / 186 = 0% deviation.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
 
 Performance characteristics:

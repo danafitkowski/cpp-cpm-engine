@@ -5,7 +5,7 @@
 # Frozen Python reference implementation of compute_cpm — used only by the
 # cross-validation harness in cpm-engine.crossval.js. The production engine
 # is the JavaScript module cpm-engine.js at the repo root; this Python file
-# exists so external auditors (and CI) can reproduce the "153 / 153
+# exists so external auditors (and CI) can reproduce the "186 / 186
 # bit-identical" headline reported in DAUBERT.md §3.
 #
 # Source provenance: derived from the CPP suite's canonical Python CPM
@@ -29,9 +29,9 @@ Public surface (consumed by cpm-engine.crossval.js):
     compute_cpm(activities, relationships, data_date='', cal_map=None)
     date_to_num(d)
 
-The math mirrors cpm-engine.js's computeCPM byte-for-byte on the 13
-fixtures in cpm-engine.crossval.js. See DAUBERT.md §3 for verification
-methodology.
+The math mirrors cpm-engine.js's computeCPM byte-for-byte on the 16
+fixtures in cpm-engine.crossval.js (13 unconstrained + 3 constrained as of
+v2.9.7). See DAUBERT.md §3 for verification methodology.
 """
 import math
 from collections import defaultdict, deque
@@ -43,7 +43,88 @@ EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
 
 # Synchronized with cpm-engine.js ENGINE_VERSION.
-ENGINE_VERSION = '2.9.4'
+ENGINE_VERSION = '2.9.7'
+
+
+# =============================================================================
+# P6 constraint normalization (mirrors cpm-engine.js CONSTRAINT_TYPE_MAP)
+# =============================================================================
+
+CONSTRAINT_TYPE_MAP = {
+    'CS_MSO':      'MS_Start',
+    'CS_MEO':      'MS_Finish',
+    'CS_MSOA':     'SNET',
+    'CS_MSOB':     'SNLT',
+    'CS_MEOA':     'FNET',
+    'CS_MEOB':     'FNLT',
+    'CS_MANDSTART':'MS_Start',
+    'CS_MANDFIN':  'MS_Finish',
+    'CS_ALAP':     'ALAP',
+    'CS_SO':       'SO',
+    'SNET':        'SNET',
+    'SNLT':        'SNLT',
+    'FNET':        'FNET',
+    'FNLT':        'FNLT',
+    'MS_Start':    'MS_Start',
+    'MS_Finish':   'MS_Finish',
+    'ALAP':        'ALAP',
+    'MFO':         'MFO',
+    'SO':          'SO',
+    'CS_MSO_S':    'SNET',
+    'CS_MSO_F':    'SNLT',
+    'CS_MEO_S':    'FNET',
+    'CS_MEO_F':    'FNLT',
+    'StartOn':              'MS_Start',
+    'FinishOn':             'MS_Finish',
+    'StartNoEarlierThan':   'SNET',
+    'StartNoLaterThan':     'SNLT',
+    'FinishNoEarlierThan':  'FNET',
+    'FinishNoLaterThan':    'FNLT',
+}
+
+CANONICAL_CONSTRAINT_TYPES = frozenset([
+    'SNET', 'SNLT', 'FNET', 'FNLT', 'MS_Start', 'MS_Finish', 'ALAP', 'MFO', 'SO',
+])
+
+
+def _normalize_constraint(c):
+    """Primary constraint normalization (cstr_type + cstr_date2)."""
+    if not c or not isinstance(c, dict):
+        return None
+    raw_type = c.get('type') or c.get('cstr_type') or ''
+    if not raw_type:
+        return None
+    canonical = CONSTRAINT_TYPE_MAP.get(raw_type) or (
+        raw_type if raw_type in CANONICAL_CONSTRAINT_TYPES else None)
+    if not canonical:
+        return None
+    raw_date = c.get('date') or c.get('cstr_date2') or c.get('cstr_date') or ''
+    if canonical == 'ALAP':
+        return {'type': 'ALAP', 'date': ''}
+    date_str = str(raw_date)[:10]
+    if not date_str:
+        return None
+    return {'type': canonical, 'date': date_str}
+
+
+def _normalize_constraint2(c):
+    """Secondary constraint normalization (cstr_type2 + cstr_date)."""
+    if not c or not isinstance(c, dict):
+        return None
+    raw_type = c.get('type') or c.get('cstr_type2') or ''
+    if not raw_type:
+        return None
+    canonical = CONSTRAINT_TYPE_MAP.get(raw_type) or (
+        raw_type if raw_type in CANONICAL_CONSTRAINT_TYPES else None)
+    if not canonical:
+        return None
+    raw_date = c.get('date') or c.get('cstr_date') or ''
+    if canonical == 'ALAP':
+        return {'type': 'ALAP', 'date': ''}
+    date_str = str(raw_date)[:10]
+    if not date_str:
+        return None
+    return {'type': canonical, 'date': date_str}
 
 
 # =============================================================================
@@ -279,6 +360,111 @@ def _retreat_workdays(end_num, n_days, calendar_info, *, alerts, ctx):
 
 
 # =============================================================================
+# Constraint clamp helpers (mirrors cpm-engine.js v2.9.7)
+# =============================================================================
+
+def _apply_forward_es_constraint(code, max_es, cstr, label, alerts):
+    """Forward-pass ES-side clamp. Returns (possibly clamped) ES."""
+    if not cstr:
+        return max_es
+    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
+    tag = ' (secondary)' if label == 'secondary' else ''
+    ctype = cstr.get('type')
+    if ctype == 'SNET' and cd_num > 0:
+        if cd_num > max_es:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-applied',
+                'message': f'SNET{tag} on {code} pushes ES from {num_to_date(max_es)} to {cstr["date"]}',
+            })
+            return cd_num
+    elif ctype == 'SNLT' and cd_num > 0:
+        if max_es > cd_num:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'constraint-violated',
+                'message': f'SNLT{tag} on {code} violated: ES={num_to_date(max_es)} is after constraint date {cstr["date"]}',
+            })
+    elif ctype in ('MS_Start', 'SO'):
+        if cd_num > 0:
+            if max_es > cd_num:
+                alerts.append({
+                    'severity': 'ALERT',
+                    'context': 'constraint-violated',
+                    'message': f'Mandatory Start{tag} on {code} violated: predecessor logic forces ES={num_to_date(max_es)} which is after mandatory date {cstr["date"]}',
+                })
+            elif max_es < cd_num:
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'constraint-applied',
+                    'message': f'Mandatory Start{tag} on {code} pins ES to {cstr["date"]}',
+                })
+            return cd_num
+    return max_es
+
+
+def _apply_forward_ef_constraint(code, ef, cstr, label, alerts):
+    """Forward-pass EF-side clamp."""
+    if not cstr:
+        return ef
+    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
+    tag = ' (secondary)' if label == 'secondary' else ''
+    ctype = cstr.get('type')
+    if ctype == 'FNET' and cd_num > 0:
+        if cd_num > ef:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-applied',
+                'message': f'FNET{tag} on {code} pushes EF from {num_to_date(ef)} to {cstr["date"]}',
+            })
+            return cd_num
+    elif ctype == 'FNLT' and cd_num > 0:
+        if ef > cd_num:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'constraint-violated',
+                'message': f'FNLT{tag} on {code} violated: EF={num_to_date(ef)} is after constraint date {cstr["date"]}',
+            })
+    elif ctype in ('MS_Finish', 'MFO'):
+        if cd_num > 0:
+            if ef > cd_num:
+                alerts.append({
+                    'severity': 'ALERT',
+                    'context': 'constraint-violated',
+                    'message': f'Mandatory Finish{tag} on {code} violated: predecessor logic forces EF={num_to_date(ef)} which is after mandatory date {cstr["date"]}',
+                })
+            elif ef < cd_num:
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'constraint-applied',
+                    'message': f'Mandatory Finish{tag} on {code} pins EF to {cstr["date"]}',
+                })
+            return cd_num
+    return ef
+
+
+def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, alerts):
+    """Backward-pass LF-side clamp."""
+    if not cstr:
+        return min_lf
+    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
+    ctype = cstr.get('type')
+    if ctype == 'FNLT' and cd_num > 0:
+        if cd_num < min_lf:
+            return cd_num
+    elif ctype in ('MS_Finish', 'MFO'):
+        if cd_num > 0:
+            return cd_num
+    elif ctype == 'SNLT' and cd_num > 0:
+        lf_from_snlt = _advance_workdays(
+            cd_num, duration_days, node_cal,
+            alerts=alerts, ctx=f'SNLT LF {code}')
+        if lf_from_snlt < min_lf:
+            return lf_from_snlt
+    return min_lf
+
+
+# =============================================================================
 # Public surface: compute_cpm
 # =============================================================================
 
@@ -346,6 +532,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             'is_complete': is_complete,
             'is_fragnet': bool(a.get('is_fragnet', False)),
             'actual_start': actual_start,
+            # v2.9.7 — P6 constraint normalization
+            'constraint': _normalize_constraint(a.get('constraint')),
+            'constraint2': _normalize_constraint2(a.get('constraint2')),
             'actual_finish': actual_finish,
             'clndr_id': a.get('clndr_id', '') or '',
         }
@@ -418,10 +607,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                                           ctx=f'FS-default lag {pnode["code"]}->{code}')
             if drive > max_es:
                 max_es = drive
+
+        # v2.9.7 — P6 constraint application (forward pass). Primary then
+        # secondary; secondary tightens further per P6 spec.
+        cstr = node.get('constraint')
+        cstr2 = node.get('constraint2')
+        max_es = _apply_forward_es_constraint(code, max_es, cstr, 'primary', alerts)
+        max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts)
+
         node['es'] = max_es
         node['ef'] = _advance_workdays(
             node['es'], node['duration_days'], node_cal,
             alerts=alerts, ctx=f'forward {code}.EF')
+
+        # Forward-pass EF-side clamps (FNET, FNLT, MS_Finish, MFO).
+        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts)
+        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts)
 
     max_ef = 0
     for n in nodes.values():
@@ -485,11 +686,41 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                     min_lf = drive
             if min_lf is None:
                 min_lf = max_ef
+
+        # v2.9.7 — P6 constraint application (backward pass). Primary then
+        # secondary; secondary tightens further.
+        cstr = node.get('constraint')
+        cstr2 = node.get('constraint2')
+        min_lf = _apply_backward_lf_constraint(
+            code, min_lf, cstr, node_cal, node['duration_days'], alerts)
+        min_lf = _apply_backward_lf_constraint(
+            code, min_lf, cstr2, node_cal, node['duration_days'], alerts)
+
         node['lf'] = min_lf
         node['ls'] = _retreat_workdays(
             node['lf'], node['duration_days'], node_cal,
             alerts=alerts, ctx=f'backward {code}.LS')
         node['tf'] = round(node['lf'] - node['ef'], 3)
+
+    # v2.9.7 — ALAP post-pass. Per AACE 29R-03 §3.7 and Oracle P6 docs, ALAP
+    # activities slide their early dates to match their late dates (consume
+    # float). Only applied when the activity has no actual_start and is not
+    # complete.
+    for c, n in nodes.items():
+        cstr = n.get('constraint')
+        if not cstr or cstr.get('type') != 'ALAP':
+            continue
+        if n['is_complete'] or n['actual_start']:
+            continue
+        if n['ls'] > n['es']:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-applied',
+                'message': f'ALAP on {c} slides ES from {num_to_date(n["es"])} to {num_to_date(n["ls"])} (consumes {n["tf"]} days float)',
+            })
+            n['es'] = n['ls']
+            n['ef'] = n['lf']
+            n['tf'] = 0.0
 
     for n in nodes.values():
         n['es_date'] = num_to_date(n['es'])

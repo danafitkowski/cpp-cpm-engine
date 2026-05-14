@@ -23,8 +23,12 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  c984a1f521eb922b343c8783e7dcf686aa6aa578c739c395262a5b221c0623b7
+cpm.py  SHA-256:  9a966777e2b163d07b85d2599ed02ce5783ea6c2ecf0459cff31d6163d17855c
 ```
+
+(v2.9.7 — bumped from c984a1f5 with constraint backport: SNET / SNLT / FNET /
+FNLT / MS_Start / MS_Finish / MFO / SO / ALAP applied in forward + backward
+passes, plus secondary `constraint2` support. ENGINE_VERSION 2.9.4 → 2.9.7.)
 
 The hash is also printed by `npm run crossval` at startup. To verify the bundled file has not drifted:
 
