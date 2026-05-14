@@ -148,7 +148,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.8.0. https://github.com/danafitkowski/cpp-cpm-engine
+> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.8.0. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 

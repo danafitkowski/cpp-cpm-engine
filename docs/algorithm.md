@@ -31,7 +31,7 @@ The engine implements this as `tarjanSCC(codes, succMap)` in O(V + E) — see `c
 
 For each activity in topological order:
 
-```
+```text
 ES = max over predecessors P of:
     P.EF + lag      if rel.type === 'FS'
     P.ES + lag      if rel.type === 'SS'
@@ -56,7 +56,7 @@ The driving predecessor is the one whose contribution determined the ES. The eng
 
 Run after the forward pass. For each activity in **reverse** topological order:
 
-```
+```text
 LF = min over successors S of:
     S.LS - lag      if rel.type === 'FS'
     S.LS - lag      if rel.type === 'SS'   (note: not LF; SS targets LS)
@@ -71,7 +71,7 @@ LS = LF - duration                   # Calendar-aware: subtractWorkDays
 
 ## 5. Total Float and Free Float
 
-```
+```text
 TF = LS - ES                         # In calendar days
 TF (working days) = countWorkDays(EF, LF, calendar)
 

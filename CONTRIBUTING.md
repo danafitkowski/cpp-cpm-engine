@@ -7,27 +7,31 @@ Thank you for considering a contribution. The engine is the core of an active fo
 ## Quick rules
 
 1. **Every commit must pass 528 unit tests, 0 fail.**
+
    ```bash
    npm test
    ```
 
 2. **Every commit must pass 153/153 cross-validation checks against the Python sibling.**
+
    ```bash
    npm run crossval
    ```
+
    Crossval requires Python 3 and the CPP `cpm.py` Python reference engine. The reference is loaded from the following paths (first match wins):
-   
+
    - `$CPP_PYTHON_REFERENCE_DIR` — explicit single-directory override (set this if you have the reference elsewhere).
    - `$CPP_PYTHON_REFERENCE_DIRS` — colon/semicolon-separated list of directories (use when the reference + its dependencies live in separate folders).
    - `./python_reference/` — sibling directory inside this repo (recommended for external contributors; clone the CPP `_cpp_common/scripts/` tree there).
    - CPP-internal source-tree layout — falls back to `../scripts` / `../../xer-parser/scripts` for CPP developers.
-   
+
    Example:
+
    ```bash
    export CPP_PYTHON_REFERENCE_DIR=/path/to/cpm.py/directory
    npm run crossval
    ```
-   
+
    The Python reference (`cpm.py`) is not currently bundled with this engine repo — it lives in the larger CPP suite (`_cpp_common`). If you cannot obtain it locally, the CI pipeline will run crossval for you on the PR.
 
 3. **Run `npm run test:all` before opening a PR.**
@@ -115,7 +119,7 @@ Every output manifest reads `ENGINE_VERSION` and embeds it in the report. A vers
 
 ## Reporting bugs
 
-Open an issue at https://github.com/danafitkowski/cpp-cpm-engine/issues.
+Open an issue at <https://github.com/danafitkowski/cpp-cpm-engine/issues>.
 
 A good bug report includes:
 

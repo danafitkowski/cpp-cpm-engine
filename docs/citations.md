@@ -13,7 +13,7 @@ All citations the engine emits at runtime, plus any cited in the project documen
 This is the original publication of the Critical Path Method. Note: this paper is commonly **misquoted** as appearing in *Communications of the ACM* — it did not. The original venue is the joint IRE-AIEE-ACM conference proceedings.
 
 - **DOI:** 10.1145/1460299.1460318
-- **ACM Digital Library:** https://dl.acm.org/doi/10.1145/1460299.1460318
+- **ACM Digital Library:** <https://dl.acm.org/doi/10.1145/1460299.1460318>
 - **Verified:** Yes (primary source available via ACM DL).
 
 ### Kahn, A. B. (1962)
@@ -23,7 +23,7 @@ This is the original publication of the Critical Path Method. Note: this paper i
 The standard topological sort algorithm.
 
 - **DOI:** 10.1145/368996.369025
-- **ACM Digital Library:** https://dl.acm.org/doi/10.1145/368996.369025
+- **ACM Digital Library:** <https://dl.acm.org/doi/10.1145/368996.369025>
 - **Verified:** Yes.
 
 ### Tarjan, R. (1972)
@@ -33,7 +33,7 @@ The standard topological sort algorithm.
 The strongly-connected-components algorithm used for cycle isolation.
 
 - **DOI:** 10.1137/0201010
-- **SIAM:** https://epubs.siam.org/doi/10.1137/0201010
+- **SIAM:** <https://epubs.siam.org/doi/10.1137/0201010>
 - **Verified:** Yes.
 
 ---
@@ -48,7 +48,7 @@ All AACE RPs are peer-reviewed and adopted by AACE International, the leading pr
 
 Defines the standard methods for forensic schedule analysis (Method Implementation Protocols 3.1 through 3.9). The engine implements MIP 3.3 (Observational, As-Planned vs As-Built), MIP 3.5 (Modeled / Subtractive / Multiple Base), MIP 3.6 (Modeled / Additive / Single Base), and MIP 3.8 (Modeled / Subtractive / Single Base = Collapsed As-Built).
 
-- **AACE web:** https://web.aacei.org
+- **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
 
 ### AACE 49R-06 (2006, rev. 2010)
@@ -57,7 +57,7 @@ Defines the standard methods for forensic schedule analysis (Method Implementati
 
 Defines the LPM (Longest Path Method), TFM (Total Float Method), and Most-Float-Path (MFP) approaches to critical-path identification, plus divergence reporting requirements.
 
-- **AACE web:** https://web.aacei.org
+- **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
 
 ### AACE 52R-06 (2017)
@@ -66,7 +66,7 @@ Defines the LPM (Longest Path Method), TFM (Total Float Method), and Most-Float-
 
 Defines the prospective TIA method — fragnet insertion against a contemporaneous baseline.
 
-- **AACE web:** https://web.aacei.org
+- **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
 
 ### AACE 122R-22 (2022)
@@ -75,7 +75,7 @@ Defines the prospective TIA method — fragnet insertion against a contemporaneo
 
 Defines the maturity-model framework for QRA programs. The engine emits a QRAMM-compatible badge surface; the full QRAMM scoring is in the `schedule-risk-analysis` skill.
 
-- **AACE web:** https://web.aacei.org
+- **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
 
 ### AACE PPG #20 (2nd Ed., 2024)
@@ -84,7 +84,7 @@ Defines the maturity-model framework for QRA programs. The engine emits a QRAMM-
 
 The current AACE practice guide for forensic schedule analysis. Cited in `buildDaubertDisclosure()` Prong 4 (general acceptance).
 
-- **AACE web:** https://web.aacei.org
+- **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
 
 ---
@@ -97,8 +97,8 @@ The current AACE practice guide for forensic schedule analysis. Cited in `buildD
 
 The dominant English-law-jurisdictional standard for delay and disruption analysis.
 
-- **SCL web:** https://www.scl.org.uk/protocol
-- **Direct PDF:** https://www.scl.org.uk/sites/default/files/SCL_Delay_Protocol_2nd_Edition_Final.pdf
+- **SCL web:** <https://www.scl.org.uk/protocol>
+- **Direct PDF:** <https://www.scl.org.uk/sites/default/files/SCL_Delay_Protocol_2nd_Edition_Final.pdf>
 - **Verified:** Yes.
 
 ---
@@ -111,7 +111,7 @@ The dominant English-law-jurisdictional standard for delay and disruption analys
 
 The current federal expert-witness admissibility standard. The 2023 amendment clarified that the proponent of expert testimony must demonstrate that it is more likely than not that the expert's opinion meets the four reliability requirements.
 
-- **U.S. Courts:** https://www.uscourts.gov/sites/default/files/federal_rules_of_evidence_-_dec_1_2023_0.pdf
+- **U.S. Courts:** <https://www.uscourts.gov/sites/default/files/federal_rules_of_evidence_-_dec_1_2023_0.pdf>
 - **Verified:** Yes.
 
 ### FRE 707 (proposed federal rule, final effective date pending)
@@ -120,7 +120,7 @@ The current federal expert-witness admissibility standard. The 2023 amendment cl
 
 Not yet a final rule; published for comment. The engine's `buildDaubertDisclosure()` is structured to be 707-compliant when the rule lands.
 
-- **U.S. Courts (proposed):** https://www.uscourts.gov/rules-policies/proposed-amendments-published-public-comment
+- **U.S. Courts (proposed):** <https://www.uscourts.gov/rules-policies/proposed-amendments-published-public-comment>
 - **Verified:** Yes (as proposed rule).
 
 ---
@@ -133,7 +133,7 @@ Not yet a final rule; published for comment. The engine's `buildDaubertDisclosur
 
 The U.S. Supreme Court decision establishing the four-prong test for expert-witness admissibility in federal court.
 
-- **Justia:** https://supreme.justia.com/cases/federal/us/509/579/
+- **Justia:** <https://supreme.justia.com/cases/federal/us/509/579/>
 - **Verified:** Yes.
 
 ### White Burgess Langille Inman v. Abbott and Haliburton Co., 2015 SCC 23
@@ -142,7 +142,7 @@ The U.S. Supreme Court decision establishing the four-prong test for expert-witn
 
 The Supreme Court of Canada's modern test for expert-evidence admissibility — substantively similar to *Daubert* in requiring methodology disclosure and witness independence.
 
-- **CanLII:** https://www.canlii.org/en/ca/scc/doc/2015/2015scc23/2015scc23.html
+- **CanLII:** <https://www.canlii.org/en/ca/scc/doc/2015/2015scc23/2015scc23.html>
 - **Verified:** Yes.
 
 ---
@@ -155,7 +155,7 @@ The Supreme Court of Canada's modern test for expert-evidence admissibility — 
 
 Cited in `buildDaubertDisclosure()` Prong 4 caveat — acknowledges the academic debate over retrospective TIA acceptance limits.
 
-- **IBA:** https://www.ibanet.org/Junk-science-the-fallacy-of-retrospective-time-impact-analysis
+- **IBA:** <https://www.ibanet.org/Junk-science-the-fallacy-of-retrospective-time-impact-analysis>
 - **Verified:** Yes.
 
 ---

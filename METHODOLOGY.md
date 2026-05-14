@@ -109,4 +109,4 @@ The `cpm-engine` package is the reference implementation. Read the source, copy 
 ---
 
 *Critical Path Partners, 2026*
-*https://criticalpathpartners.ca*
+*<https://criticalpathpartners.ca>*

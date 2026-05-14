@@ -37,6 +37,7 @@ console.log('C:', result.nodes.C.es_date, '-', result.nodes.C.ef_date);
 ```
 
 Run:
+
 ```bash
 node examples/01_basic_cpm.js
 ```
@@ -222,6 +223,7 @@ A single HTML file that loads the engine in the browser and lets the user enter 
 See [`../examples/06_full_dashboard.html`](../examples/06_full_dashboard.html).
 
 Open in any browser:
+
 ```bash
 open examples/06_full_dashboard.html  # macOS
 start examples/06_full_dashboard.html  # Windows

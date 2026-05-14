@@ -50,9 +50,9 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite. The Python implementation is exercised by 1,800+ tests across 18 Python suites (forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review).
-- Made publicly available at https://github.com/danafitkowski/cpp-cpm-engine. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
+- Made publicly available at <https://github.com/danafitkowski/cpp-cpm-engine>. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
 - **Externally reproducible cross-validation (v2.9.7).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`9a966777e2b163d07b85d2599ed02ce5783ea6c2ecf0459cff31d6163d17855c`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "186 / 186" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules.)
-- Live-deployed at https://mcp.criticalpathpartners.ca/try where any party can run it against their own schedule.
+- Live-deployed at <https://mcp.criticalpathpartners.ca/try> where any party can run it against their own schedule.
 
 The underlying CPM math (Kelley & Walker forward/backward pass) is one of the most peer-reviewed scheduling algorithms in the industry; it is the basis of every commercial CPM tool from Primavera P6 to Microsoft Project. **What the engine adds is operational discipline** — manifested provenance, AACE-canonical method labels, salvage logging, multi-strategy critical-path identification with divergence reporting.
 
@@ -137,13 +137,13 @@ All citations in this disclosure have been verified against primary sources:
 - **Kelley & Walker (1959)** — Verified, Eastern Joint IRE-AIEE-ACM Computer Conference proceedings.
 - **Kahn (1962)** — Verified, *Communications of the ACM* 5(11):558-562, ACM Digital Library DOI: 10.1145/368996.369025.
 - **Tarjan (1972)** — Verified, *SIAM Journal on Computing* 1(2):146-160, DOI: 10.1137/0201010.
-- **AACE 29R-03 (2003, rev. 2011)** — Verified, AACE International Recommended Practice, https://web.aacei.org.
+- **AACE 29R-03 (2003, rev. 2011)** — Verified, AACE International Recommended Practice, <https://web.aacei.org>.
 - **AACE 49R-06 (2006, rev. 2010)** — Verified, AACE International Recommended Practice.
 - **AACE 52R-06 (2017)** — Verified, AACE International Recommended Practice.
 - **AACE 122R-22 (2022)** — Verified, AACE International Recommended Practice.
 - **AACE PPG #20 (2nd Ed 2024)** — Verified, AACE International Practice Guide.
-- **SCL Protocol 2nd Edition (2017)** — Verified, Society of Construction Law, https://www.scl.org.uk/protocol.
-- **FRE 702 (Dec 1, 2023 amendment)** — Verified, U.S. Federal Rules of Evidence, https://www.uscourts.gov.
+- **SCL Protocol 2nd Edition (2017)** — Verified, Society of Construction Law, <https://www.scl.org.uk/protocol>.
+- **FRE 702 (Dec 1, 2023 amendment)** — Verified, U.S. Federal Rules of Evidence, <https://www.uscourts.gov>.
 - **FRE 707 (proposed)** — Verified, U.S. Judicial Conference proposed amendment; final effective date pending.
 - **Daubert v. Merrell Dow Pharmaceuticals, 509 U.S. 579 (1993)** — Verified, U.S. Supreme Court.
 - **White Burgess Langille Inman v. Abbott and Haliburton Co., 2015 SCC 23** — Verified, Supreme Court of Canada.

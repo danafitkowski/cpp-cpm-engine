@@ -53,6 +53,7 @@ E.addWorkDays(
 ```
 
 **Calendar info object:**
+
 - `work_days` — array of weekday integers (`0=Sun, 1=Mon, ..., 6=Sat`). Default `[1,2,3,4,5]`.
 - `holidays` — array of `'YYYY-MM-DD'` strings. Default `[]`.
 
@@ -81,6 +82,7 @@ Tarjan's strongly-connected-components algorithm (iterative, stack-safe). Return
 The flagship function. Calendar-aware forward + backward pass, total float, free float, driving predecessor identification, out-of-sequence detection.
 
 **Activities array:**
+
 ```js
 [
     {
@@ -97,6 +99,7 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 ```
 
 **Relationships array:**
+
 ```js
 [
     {
@@ -110,11 +113,13 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 ```
 
 **opts:**
+
 - `dataDate` — `'YYYY-MM-DD'`. The "as-of" date for the run. ES of unstarted activities cannot be earlier than this.
 - `calMap` — object keyed by `clndr_id`: `{ MF: { work_days: [1,2,3,4,5], holidays: [...] } }`.
 - `projectCalendar` — string. Default calendar id when an activity has no `clndr_id`.
 
 **Returns:**
+
 ```js
 {
     nodes: {
@@ -188,6 +193,7 @@ const r = E.computeTIA(activities, relationships, fragnets, {
 ```
 
 **Fragnets array:**
+
 ```js
 [
     {
@@ -328,6 +334,7 @@ E.getHolidays('CA-ON', 2026, 2030);
 ```
 
 **Coverage:** 66 jurisdictions
+
 - **CA-FED** + 13 provinces / territories: ON, QC, BC, AB, MB, SK, NS, NB, NL, PE, YT, NT, NU.
 - **US-FED** + 50 states + DC.
 
