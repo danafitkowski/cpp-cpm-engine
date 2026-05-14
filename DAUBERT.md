@@ -31,8 +31,8 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard | **677 / 677 passing** |
-| Cross-validation suite     | `cpm-engine.crossval.js` — 16 fixtures × 186 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures (SNET / MS_Start+FNLT / ALAP)  | **186 / 186 bit-identical** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard, Round 6 strong-assertion strengthening (HAM-3/4, MC-2 exact, MS_Start hard-pin, FNLT per-trial, Q-3 SF backward exact dates, B1 exact working-day float) | **685 / 685 passing** |
+| Cross-validation suite     | `cpm-engine.crossval.js` — 25 fixtures × 281 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures plus Round 6 expansion (SNLT, FNET, MS_Finish, secondary constraint pair, OoS, ALAP-with-actual_start, calendar fallback, cycle, free-float documented gap). Severity-level alert parity asserted (not just count). | **281 / 281 bit-identical** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
 | Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
 
@@ -51,7 +51,7 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite. The Python implementation is exercised by 1,800+ tests across 18 Python suites (forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review).
 - Made publicly available at <https://github.com/danafitkowski/cpp-cpm-engine>. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
-- **Externally reproducible cross-validation (v2.9.7).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`9a966777e2b163d07b85d2599ed02ce5783ea6c2ecf0459cff31d6163d17855c`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "186 / 186" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules.)
+- **Externally reproducible cross-validation (v2.9.8).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`0602e50d7fdaf750f5afdbbccecbdb930664c453877148afed717e3315897236`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "281 / 281" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules. v2.9.8 Round 6 expanded the fixture set from 16 to 25 — adding SNLT primary, FNET, MS_Finish, secondary constraint pair, OoS regression, ALAP-with-actual_start suppression, calendar-fallback symmetry, cycle-error symmetry, and free-float documented gap — and extended `compareFixture` to assert alert SEVERITY-level parity, not just count.)
 - Live-deployed at <https://mcp.criticalpathpartners.ca/try> where any party can run it against their own schedule.
 
 The underlying CPM math (Kelley & Walker forward/backward pass) is one of the most peer-reviewed scheduling algorithms in the industry; it is the basis of every commercial CPM tool from Primavera P6 to Microsoft Project. **What the engine adds is operational discipline** — manifested provenance, AACE-canonical method labels, salvage logging, multi-strategy critical-path identification with divergence reporting.
@@ -60,7 +60,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 ## §4 Error Rate
 
-**Cross-validation reports 186 / 186 = 0% deviation.**
+**Cross-validation reports 281 / 281 = 0% deviation across 25 fixtures.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
 
 Performance characteristics:
@@ -159,7 +159,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 677 + 186 = 863 verifications.
+2. Run `npm run test:all` to reproduce the 685 + 281 = 966 verifications.
 3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
 4. Inspect the source — it is intentionally readable and well-commented (4,326 lines including narrative comments).
 

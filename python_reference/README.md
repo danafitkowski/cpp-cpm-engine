@@ -23,12 +23,13 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  9a966777e2b163d07b85d2599ed02ce5783ea6c2ecf0459cff31d6163d17855c
+cpm.py  SHA-256:  0602e50d7fdaf750f5afdbbccecbdb930664c453877148afed717e3315897236
 ```
 
-(v2.9.7 — bumped from c984a1f5 with constraint backport: SNET / SNLT / FNET /
-FNLT / MS_Start / MS_Finish / MFO / SO / ALAP applied in forward + backward
-passes, plus secondary `constraint2` support. ENGINE_VERSION 2.9.4 → 2.9.7.)
+(v2.9.8 Round 6 — bumped from 9a966777 with two changes: ENGINE_VERSION
+2.9.7 → 2.9.8 sync, and `tf` initialized as int `0` instead of float `0.0`
+in three sites so JSON cross-engine equality holds for `is_complete` and
+ALAP-slid activities. No math change.)
 
 The hash is also printed by `npm run crossval` at startup. To verify the bundled file has not drifted:
 
@@ -80,14 +81,14 @@ npm run crossval
 Expected output (Node 18+, Python 3.8+):
 
 ```
-Loaded python_reference/cpm.py @ SHA-256 c984a1f5...
+Loaded python_reference/cpm.py @ SHA-256 0602e50d...
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 13 passed, 0 failed
-  Checks:   153 / 153
+  Fixtures: 25 passed, 0 failed
+  Checks:   281 / 281
 =========================================
 ```
 

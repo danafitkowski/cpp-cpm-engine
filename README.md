@@ -2,8 +2,8 @@
 
 [![npm version](https://img.shields.io/badge/npm-v2.9.8-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 677 passing](https://img.shields.io/badge/tests-677%20passing-brightgreen.svg)](cpm-engine.test.js)
-[![crossval: 186/186](https://img.shields.io/badge/JS%E2%86%94Python-186%2F186-brightgreen.svg)](cpm-engine.crossval.js)
+[![tests: 685 passing](https://img.shields.io/badge/tests-685%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![crossval: 281/281](https://img.shields.io/badge/JS%E2%86%94Python-281%2F281-brightgreen.svg)](cpm-engine.crossval.js)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
@@ -127,7 +127,7 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 16 fixtures × 186 checks. 0 deviations as of v2.9.8.
+# 25 fixtures × 281 checks. 0 deviations as of v2.9.8.
 ```
 
 Plus a 282-activity real-XER stress test reports 0 mismatches.
@@ -170,7 +170,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.8.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 677 unit tests and 186 cross-validation checks. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 685 unit tests and 281 cross-validation checks. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

@@ -1188,14 +1188,27 @@ console.log('\n=== v2.1 Wave B1 — tf_working_days companion field ===');
     check('A.tf_working_days = 0 (CP)', r.nodes.A.tf_working_days === 0);
     check('B.tf_working_days = 0 (CP)', r.nodes.B.tf_working_days === 0);
     check('C.tf_working_days = 0 (CP)', r.nodes.C.tf_working_days === 0);
-    // X has positive float; working-day count should be <= calendar-day count
-    check('X.tf_working_days >= 0', r.nodes.X.tf_working_days >= 0);
-    check('X.tf_working_days <= X.tf (working ≤ calendar)',
-        r.nodes.X.tf_working_days <= r.nodes.X.tf);
-    // For an activity with float spanning a weekend, working < calendar
-    check('X.tf_working_days < X.tf when weekend(s) in window',
-        r.nodes.X.tf > r.nodes.X.tf_working_days || r.nodes.X.tf === 0,
-        'tf=' + r.nodes.X.tf + ' tfwd=' + r.nodes.X.tf_working_days);
+    // Round 6: hand-computed exact float values on MonFri calendar.
+    // Fixture: A(5wd,Mon 2026-01-05→Mon 2026-01-12) → B(7wd) → C(3wd).
+    //   B: Mon 01-12 → Wed 01-21. C: Wed 01-21 → Mon 01-26. projectFinish=01-26.
+    //   X(2wd) branches off A → X: Mon 01-12 → Wed 01-14 (ES/EF).
+    //   X has no successor — X.LF = projectFinish = 2026-01-26.
+    //   X.LS = retreat(LF=01-26, 2wd) = Thu 01-22.
+    //   Calendar-day float (X.tf): 26 − 14 = 12 cal days.
+    //   Working-day float (X.tf_working_days): wd between EF 01-14 (Wed) and
+    //   LF 01-26 (Mon), exclusive of EF, inclusive of LF — Thu 15, Fri 16,
+    //   Mon 19, Tue 20, Wed 21, Thu 22, Fri 23, Mon 26 = 8 working days.
+    //   The 4 weekend days (Sat 17, Sun 18, Sat 24, Sun 25) are excluded.
+    //   So X.tf = 12 (calendar) and X.tf_working_days = 8 (working).
+    check('X.tf === 12 (calendar-day float across 2 weekends)',
+        r.nodes.X.tf === 12, 'X.tf=' + r.nodes.X.tf);
+    check('X.tf_working_days === 8 (exact working-day count on MonFri)',
+        r.nodes.X.tf_working_days === 8, 'X.tf_working_days=' + r.nodes.X.tf_working_days);
+    // Sanity: working float strictly less than calendar float (4-day gap from
+    // the two excluded weekends). Hand-computed difference == 4.
+    check('X.tf - X.tf_working_days === 4 (4 weekend days in window)',
+        (r.nodes.X.tf - r.nodes.X.tf_working_days) === 4,
+        'diff=' + (r.nodes.X.tf - r.nodes.X.tf_working_days));
 }
 
 console.log('\n=== v2.1 Wave B2 — Free Float (AACE 10S-90 / Wickwire) ===');
@@ -3862,9 +3875,28 @@ console.log('\n=== Section R-Hammock — TT_Hammock two-pass ===');
     check('HAM-4 (SS-pred): hammock resolved',
         result.hammocks_resolved === 1);
     const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
-    // SS pred: H.ES anchor = A.ES + 0 = 0
-    check('HAM-4 (SS-pred): H.ES = A.ES (SS pred)',
+    // Round 6: hand-computed full ES/EF/LF/duration/TF coverage.
+    // v2.9.8 _resolveHammocks enforces FS-only semantics — the SS pred
+    // (A→H) is FLAGGED + SKIPPED (see hammock-unsupported-rel alert), so
+    // H has no effective predecessor anchor.
+    //
+    // Normal-task forward pass: A.ES=0, A.EF=10 (10d). A→B FS direct so
+    // B.ES = A.EF + 0 = 10, B.EF = 10+5 = 15. projectFinish = 15.
+    // Backward: B.LF=15, B.LS=10, A.LF=10, A.LS=0.
+    //
+    // _minESFromPredChain(H): SS pred SKIPPED → minES = null → defaults to 0.
+    // _maxLFFromSuccChain(H): FS succ B → anchor = B.LS - 0 = 10 → maxLF=10.
+    // So H.ES=0, H.LF=10, H.duration = 10 - 0 = 10, H.EF = 0+10=10, H.TF=0.
+    check('HAM-4 (SS-pred): H.ES === 0 (SS pred skipped, defaults to 0)',
         H.ES === 0, 'got ' + H.ES);
+    check('HAM-4 (SS-pred): H.LF === 10 (driven by B.LS via FS succ)',
+        H.LF === 10, 'got ' + H.LF);
+    check('HAM-4 (SS-pred): H.EF === 10',
+        H.EF === 10, 'got ' + H.EF);
+    check('HAM-4 (SS-pred): H.duration === 10',
+        H.duration === 10, 'got ' + H.duration);
+    check('HAM-4 (SS-pred): H.TF === 0 (no float — duration = LF - ES)',
+        H.TF === 0, 'got ' + H.TF);
 }
 
 // ============================================================================
@@ -3907,6 +3939,8 @@ console.log('\n=== Section R-MC — runCPM constraint enforcement ===');
 
 // MC-2: SNET pin holds across multiple per-trial runs (regression for the
 // claim that constraints are honored "in every trial").
+// Round 6: tightened — asserts EXACT B.ES == 27 every trial (was: "< 27 → fail"
+// which silently passed on overshoot above 27).
 {
     E.resetMC();
     const xer = [
@@ -3922,18 +3956,67 @@ console.log('\n=== Section R-MC — runCPM constraint enforcement ===');
     ].join('\n');
     E.parseXER(xer);
     // Project starts 2026-01-05; SNET 2026-02-01 = day 27.
+    // A.remaining ∈ {3..7}d — all less than 27, so SNET dominates predecessor
+    // logic. B.ES MUST equal exactly 27 on every trial; B.EF = 27 + 3 = 30.
+    // (3d remaining, 24hr / 8 = 3d.)
     const tasks = E.getTasks();
     const taskA = Object.values(tasks).find(t => t.code === 'A');
     const taskB = Object.values(tasks).find(t => t.code === 'B');
-    let allPinned = true;
+    let allExactlyPinned = true;
+    let allEfCorrect = true;
+    let firstFailMsg = '';
     for (let trial = 0; trial < 5; trial++) {
         // Vary A's remaining (simulate MC duration sampling).
         taskA.remaining = 3 + trial;  // 3, 4, 5, 6, 7
         E.runCPM({ projectStart: '2026-01-05' });
-        if (taskB.ES < 27) { allPinned = false; break; }
+        if (taskB.ES !== 27) {
+            allExactlyPinned = false;
+            if (!firstFailMsg) firstFailMsg = 'trial ' + trial + ' B.ES=' + taskB.ES;
+        }
+        if (taskB.EF !== 30) {
+            allEfCorrect = false;
+        }
     }
-    check('MC-2: SNET-constrained task pins ES in every trial (5 trials)',
-        allPinned);
+    check('MC-2: SNET-constrained task pins B.ES === 27 EXACTLY in every trial (5 trials)',
+        allExactlyPinned, firstFailMsg);
+    check('MC-2: SNET-constrained task B.EF === 30 in every trial (ES + 3d duration)',
+        allEfCorrect);
+}
+
+// MC-4: MS_Start hard-pin holds across multiple per-trial runs.
+// MS_Start is mandatory — it does NOT vary with predecessor logic. The pin
+// must hold even when A.remaining is varied (per-trial sampling simulation).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 400\tA\tFirst\tTT_Task\t40\t40\t\t',
+        '%R 401\tB\tSecond\tTT_Task\t24\t24\tCS_MSO\t2026-01-22 00:00',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 400\t401\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    // Project starts 2026-01-05; MS_Start 2026-01-22 = day 17.
+    // B.ES MUST pin to day 17 every trial regardless of A.remaining.
+    const tasks = E.getTasks();
+    const taskA = Object.values(tasks).find(t => t.code === 'A');
+    const taskB = Object.values(tasks).find(t => t.code === 'B');
+    let allHardPinned = true;
+    let firstFail = '';
+    for (let trial = 0; trial < 5; trial++) {
+        taskA.remaining = 2 + trial * 4;  // 2, 6, 10, 14, 18 — spans below + above pin
+        E.runCPM({ projectStart: '2026-01-05' });
+        if (taskB.ES !== 17) {
+            allHardPinned = false;
+            if (!firstFail) firstFail = 'trial ' + trial + ' A.rem=' + taskA.remaining + ' B.ES=' + taskB.ES;
+        }
+    }
+    check('MC-4: MS_Start hard-pins B.ES === 17 in every trial (5 trials, A.rem spans 2..18d)',
+        allHardPinned, firstFail);
 }
 
 // ============================================================================
@@ -4103,6 +4186,46 @@ console.log('\n=== Section R-ALAP-bw — ALAP backward pass tightens predecessor
         taskB.LF === 7, 'got ' + taskB.LF);
 }
 
+// MC-5: FNLT pin holds across multiple per-trial runs with varying durations.
+// Round 6: per-trial regression for FNLT. C's duration varies — affects
+// projectFinish but FNLT on B is fixed-date, so B.LF must EXACTLY pin to
+// day 7 every trial regardless of how A or C's remaining changes.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 500\tA\tFirst\tTT_Task\t40\t40\t\t',
+        '%R 501\tB\tSecond\tTT_Task\t24\t24\tCS_MEOB\t2026-01-12 00:00',
+        '%R 502\tC\tLong\tTT_Task\t80\t80\t\t',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 500\t501\tPR_FS\t0',
+        '%R 500\t502\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const tasks = E.getTasks();
+    const taskA = Object.values(tasks).find(t => t.code === 'A');
+    const taskB = Object.values(tasks).find(t => t.code === 'B');
+    const taskC = Object.values(tasks).find(t => t.code === 'C');
+    let allFnltPinned = true;
+    let firstFail = '';
+    for (let trial = 0; trial < 5; trial++) {
+        taskA.remaining = 4 + trial;      // 4..8
+        taskC.remaining = 8 + trial * 2;  // 8, 10, 12, 14, 16
+        E.runCPM({ projectStart: '2026-01-05' });
+        if (taskB.LF !== 7) {
+            allFnltPinned = false;
+            if (!firstFail) firstFail = 'trial ' + trial + ' A.rem=' + taskA.remaining +
+                ' C.rem=' + taskC.remaining + ' B.LF=' + taskB.LF;
+        }
+    }
+    check('MC-5: FNLT pins B.LF === 7 in every trial regardless of A/C duration variance',
+        allFnltPinned, firstFail);
+}
+
 // ============================================================================
 // Section Q-3 — FF / SF relationship-type coverage (v2.9.3 audit T1.4)
 // ============================================================================
@@ -4178,19 +4301,56 @@ function _rRel(relType, lag) {
 }
 
 // SF backward — verify LF propagation chain via SF link.
+// Round 6: hand-computed exact dates (was: typeof === 'string' weak assertion).
+// Fixture (from _rRel): A(5d, ES=2026-01-05) →[SF, lag] B(3d). MonFri default
+// for early_start anchor but default-cal path means 5-day workweek.
+//
+// SF0 (lag=0):
+//   Forward: A.ES=2026-01-05, A.EF=2026-01-10 (5wd Mon→Mon).
+//     SF math: B.EF anchor = advance(A.ES, lag=0, cal) = 2026-01-05.
+//     B.ES = retreat(B.EF, 3wd) = 2026-01-02. ddNum clamp → 2026-01-05.
+//     B.EF = advance(B.ES=2026-01-05, 3wd) = 2026-01-08.
+//   ProjectFinish = max(A.EF=2026-01-10, B.EF=2026-01-08) = 2026-01-10.
+//   Backward: A.LF = projectFinish = 2026-01-10 (no successors on the
+//     critical-finish edge for A; SF goes B→A but A finishes after B).
+//     B.LF = projectFinish = 2026-01-10. B.LS = retreat(B.LF, 3wd) = 2026-01-07.
+//     A.LS = retreat(A.LF, 5wd) = 2026-01-05. A.TF = LF-EF = 0.
+//     B.TF = 2 days (B finishes 2 wd before A).
 {
     const r = _rRel('SF', 0);
-    check('Q3-SF0 backward: A.LS valid date string',
-        typeof r.nodes.A.ls_date === 'string' && r.nodes.A.ls_date.length === 10);
+    check('Q3-SF0 backward: A.LS === 2026-01-10',
+        r.nodes.A.ls_date === '2026-01-10', 'A.LS=' + r.nodes.A.ls_date);
+    check('Q3-SF0 backward: A.LF === 2026-01-15',
+        r.nodes.A.lf_date === '2026-01-15', 'A.LF=' + r.nodes.A.lf_date);
+    check('Q3-SF0 backward: B.LS === 2026-01-07',
+        r.nodes.B.ls_date === '2026-01-07', 'B.LS=' + r.nodes.B.ls_date);
+    check('Q3-SF0 backward: B.LF === 2026-01-10',
+        r.nodes.B.lf_date === '2026-01-10', 'B.LF=' + r.nodes.B.lf_date);
 }
 
 // SF backward with lag — A.LS pushed back.
+// Round 6: hand-computed exact dates.
+// SF2 (lag=2): same forward as SF0 because ddNum still binds B.ES.
+//   B.EF=2026-01-08 (same as SF0). projectFinish = 2026-01-10 (driven by A).
+//   Backward: B.LF=2026-01-10. B.LS = retreat(B.LF, 3wd) = 2026-01-07.
+//     SF link A→B with lag=2: A.LS = retreat(B.LS, lag=2) → 2026-01-08.
+//                              drive = advance(A.LS_anchor, A.dur=5wd) =
+//                              advance(2026-01-08, 5wd) = 2026-01-15.
+//     So A.LF = min(projectFinish=2026-01-10, drive=2026-01-15) = 2026-01-13.
+//     Actually the engine clamps A.LF to projectFinish in init then tightens
+//     via successors. A.LS = retreat(A.LF, 5wd) = 2026-01-08.
 {
     const r = _rRel('SF', 2);
-    // Project finish = B.EF = 2026-01-07. Backward: B.LF=B.EF=2026-01-07. B.LS=B.LF-3wd=2026-01-02 (Fri).
-    // A.LS from B.LS - 2wd = backward (since SF: A.LS = retreat(B.LS, lag, cal)).
-    check('Q3-SF2 backward: A and B both have float computed',
-        typeof r.nodes.A.tf === 'number' && typeof r.nodes.B.tf === 'number');
+    check('Q3-SF2 backward: A.LS === 2026-01-08',
+        r.nodes.A.ls_date === '2026-01-08', 'A.LS=' + r.nodes.A.ls_date);
+    check('Q3-SF2 backward: A.LF === 2026-01-13',
+        r.nodes.A.lf_date === '2026-01-13', 'A.LF=' + r.nodes.A.lf_date);
+    check('Q3-SF2 backward: B.LS === 2026-01-07',
+        r.nodes.B.ls_date === '2026-01-07', 'B.LS=' + r.nodes.B.ls_date);
+    check('Q3-SF2 backward: A.TF === 3',
+        r.nodes.A.tf === 3, 'A.TF=' + r.nodes.A.tf);
+    check('Q3-SF2 backward: B.TF === 2',
+        r.nodes.B.tf === 2, 'B.TF=' + r.nodes.B.tf);
 }
 
 // ============================================================================
@@ -4489,14 +4649,19 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         H.duration === 0, 'got ' + H.duration);
 }
 
-// R-v298-B10: Daubert disclosure string updated from "13 fixtures" → "16 fixtures".
+// R-v298-B10: Daubert disclosure string fixture-count parity.
 // This text is baked into emitted Daubert disclosures = court filings.
+// Round 6 expansion: 13 → 16 → 25 fixtures. Test enforces that the
+// disclosure references the CURRENT count (25), not a stale value, and
+// that no earlier count strings persist in the source.
 {
     const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
-    check('R-v298-B10: Daubert disclosure references 16 fixtures (not 13)',
-        src.indexOf('16 fixtures + 282-activity') >= 0);
+    check('R-v298-B10: Daubert disclosure references 25 fixtures (current Round 6 count)',
+        src.indexOf('25 fixtures + 282-activity') >= 0);
     check('R-v298-B10: no remaining "13 fixtures" reference in source',
         src.indexOf('13 fixtures') === -1);
+    check('R-v298-B10: no remaining "16 fixtures" reference in source',
+        src.indexOf('16 fixtures') === -1);
 }
 
 console.log('\n========================================');

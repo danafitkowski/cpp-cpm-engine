@@ -528,7 +528,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             'code': code,
             'name': a.get('name', ''),
             'duration_days': dur,
-            'es': es, 'ef': ef, 'ls': 0, 'lf': 0, 'tf': 0.0,
+            # Round 6 — int 0 (not 0.0) for tf initial: JS serializes 0 and 0.0
+            # identically as "0"; Python keeps the float literal in json.dumps,
+            # which breaks crossval string-equality on is_complete fixtures
+            # (where tf is set via float-literal override). Keep tf as int when
+            # the value is exactly 0; round() preserves int↔int subtraction.
+            'es': es, 'ef': ef, 'ls': 0, 'lf': 0, 'tf': 0,
             'is_complete': is_complete,
             'is_fragnet': bool(a.get('is_fragnet', False)),
             'actual_start': actual_start,
@@ -642,7 +647,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         if node['is_complete']:
             node['lf'] = node['ef']
             node['ls'] = node['es']
-            node['tf'] = 0.0
+            # Round 6 — int 0 for JSON cross-engine parity (was 0.0).
+            node['tf'] = 0
             continue
         node_cal = _cal_for(node)
         succs = succ_map.get(code, [])
@@ -720,7 +726,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             })
             n['es'] = n['ls']
             n['ef'] = n['lf']
-            n['tf'] = 0.0
+            # Round 6 — int 0 for JSON cross-engine parity (was 0.0).
+            n['tf'] = 0
 
     for n in nodes.values():
         n['es_date'] = num_to_date(n['es'])

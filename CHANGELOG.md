@@ -20,18 +20,53 @@ Math correctness + Daubert hardening following parallel hardcore audit.
 
 ### Disclosure JSON
 
-- `cpm-engine.js` Daubert string: "13 fixtures" → "16 fixtures"
+- `cpm-engine.js` Daubert string: "13 fixtures" → "16 fixtures" → "25 fixtures" (Round 6 expansion)
 
 ### Documentation
 
-- `DAUBERT.md` SHA-256 pin rotated to `9a966777...`
+- `DAUBERT.md` SHA-256 pin rotated to `0602e50d...` (Round 6 — was `9a966777...`)
 - `DAUBERT.md` §8 "known gaps" for TT_Hammock + secondary constraints CLOSED (both shipped)
 - `DAUBERT.md` Section D thread-safety disclosed (module-level state)
 - `DAUBERT.md` `methodology_status` flag introduced for kinematic / Bayesian / WOET
-- `README` + `CONTRIBUTING` test counts updated (528 → 641, 153 → 186)
+- `README` + `CONTRIBUTING` test counts updated (528 → 641 → 685 / 153 → 186 → 281)
 - `docs/api.md`: `runCPM` signature, `getHammocks` export, `constraint` / `constraint2` fields documented
 - Engine inline comments: AACE §3.7 mis-attributions corrected to §4 (Technical Considerations)
 - `docs/citations.md` MIP 3.5 mislabel corrected
+
+### Round 6 test-quality + parity expansion
+
+Tautology / dead-code removal in `cpm-engine.test.js`:
+
+- O-T5 Sanders skip pair → unconditional disclosure-evidence + render assertion
+- E3 null-result no-throw → proper try/catch wrapper
+- O-T4 hash OR-fallback → separate 64-char hex shape + render-presence assertions
+
+Strong-assertion replacement (was `>= 0` / `typeof === 'string'` / passes-on-overshoot):
+
+- HAM-3 nested hammocks: hand-computed canonical ES/EF/LF/duration/TF
+- HAM-4 SS-pred (now FS-only skipped): full LF/duration/TF coverage
+- MC-2: EXACT `B.ES === 27` across all 5 trials (was direction-only `< 27 fail`)
+- MC-4 (new): MS_Start hard-pin holds across 5 trials, A.rem spans 2–18d
+- MC-5 (new): FNLT pins `B.LF === 7` across 5 trials with C-duration variance
+- Q-3 SF backward: hand-computed exact LS/LF/TF dates (was `typeof === 'string'`)
+- B1 tf_working_days: exact working-day count `=== 8` on MonFri (was `>= 0`)
+
+Crossval expansion 16 → 25 fixtures (281 / 281 bit-identical):
+
+- F16 SNLT primary (forward ALERT + backward LF clamp)
+- F17 FNET pushes EF forward (warn)
+- F18 MS_Finish LF pin
+- F19 secondary constraint pair (SNET + FNLT window)
+- F20 OoS regression (JS-only alert — `skip_alert_parity`)
+- F21 ALAP slide suppressed by actual_start
+- F22 calendar-fallback ALERT symmetry
+- F23 cycle detection (both engines throw — `expect_throw` mode)
+- F24 free-float DOCUMENTED gap (Python ref lacks FF — intentional)
+
+`compareFixture` extended to assert `alert_severity_counts` (ALERT / WARN
+breakdown), not just bare count. Python reference cleaned of `tf: 0.0` →
+`tf: 0` in three sites for JSON cross-engine equality on completed
+activities. Python reference SHA-256 rotated.
 
 ---
 

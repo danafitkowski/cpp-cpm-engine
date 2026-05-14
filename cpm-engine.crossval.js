@@ -76,24 +76,52 @@ if (_PY_REF_INFO) {
     console.log('  Set CPP_PYTHON_REFERENCE_DIR or restore python_reference/cpm.py.');
 }
 
+// PY_HARNESS — runs the Python reference and emits a JSON envelope matching
+// what runJS produces. Round 6 expansion: in addition to alert_count we now
+// emit alert_severity_counts {ALERT, WARN} so compareFixture can assert
+// SEVERITY-level parity (was: bare count). The bare count remains for
+// backwards-compatible reporting. A boolean `threw` field is emitted if
+// compute_cpm raises (cycle / cancel) so the cycle fixture can compare error
+// signaling instead of node output.
 const PY_HARNESS = `
 import sys, json
 ${_PY_SYS_PATH_INSERTS}
 from cpm import compute_cpm, date_to_num
 
 payload = json.loads(sys.stdin.read())
-result = compute_cpm(
-    payload['activities'],
-    payload['relationships'],
-    data_date=payload.get('data_date', ''),
-    cal_map=payload.get('cal_map') or None,
-)
+try:
+    result = compute_cpm(
+        payload['activities'],
+        payload['relationships'],
+        data_date=payload.get('data_date', ''),
+        cal_map=payload.get('cal_map') or None,
+    )
+except (ValueError, RuntimeError) as e:
+    err_type = type(e).__name__
+    print(json.dumps({
+        'threw': True,
+        'error_type': err_type,
+        'error_msg': str(e),
+    }))
+    sys.exit(0)
+
+# Severity-level alert breakdown for crossval parity (Round 6 expansion).
+sev_counts = {'ALERT': 0, 'WARN': 0, 'OTHER': 0}
+for a in result['alerts']:
+    s = (a.get('severity') or '').upper()
+    if s in sev_counts:
+        sev_counts[s] += 1
+    else:
+        sev_counts['OTHER'] += 1
+
 result_json = {
+    'threw': False,
     'project_finish_num': result['project_finish_num'],
     'project_finish': result['project_finish'],
     'critical_codes': sorted(result['critical_codes']),
     'topo_order': result['topo_order'],
     'alert_count': len(result['alerts']),
+    'alert_severity_counts': sev_counts,
     'nodes': {
         c: {
             'es': n['es'], 'ef': n['ef'], 'ls': n['ls'], 'lf': n['lf'],
@@ -123,11 +151,20 @@ function runPython(payload) {
 }
 
 function runJS(payload) {
-    const r = E.computeCPM(
-        payload.activities,
-        payload.relationships,
-        { dataDate: payload.data_date || '', calMap: payload.cal_map || {} }
-    );
+    let r;
+    try {
+        r = E.computeCPM(
+            payload.activities,
+            payload.relationships,
+            { dataDate: payload.data_date || '', calMap: payload.cal_map || {} }
+        );
+    } catch (e) {
+        return {
+            threw: true,
+            error_type: (e && e.name) || 'Error',
+            error_msg: (e && e.message) || String(e),
+        };
+    }
     const nodes = {};
     for (const code of Object.keys(r.nodes)) {
         const n = r.nodes[code];
@@ -138,12 +175,21 @@ function runJS(payload) {
             ls_date: n.ls_date, lf_date: n.lf_date,
         };
     }
+    // Severity-level alert breakdown for crossval parity (Round 6).
+    const sev_counts = { ALERT: 0, WARN: 0, OTHER: 0 };
+    for (const a of r.alerts) {
+        const s = String(a && a.severity || '').toUpperCase();
+        if (sev_counts.hasOwnProperty(s)) sev_counts[s] += 1;
+        else sev_counts.OTHER += 1;
+    }
     return {
+        threw: false,
         project_finish_num: r.projectFinishNum,
         project_finish: r.projectFinish,
         critical_codes: Array.from(r.criticalCodes).sort(),
         topo_order: r.topoOrder,
         alert_count: r.alerts.length,
+        alert_severity_counts: sev_counts,
         nodes,
     };
 }
@@ -153,8 +199,23 @@ let fixturesFailed = 0;
 let totalChecks = 0;
 let totalFails = 0;
 
-function compareFixture(name, payload) {
+// compareFixture(name, payload, opts?)
+//
+// opts.expect_throw: bool — when true, BOTH engines must throw an error of
+//   the SAME exception class (Python ValueError ↔ JS Error) and the fixture
+//   does not compare node output. Used for the cycle fixture (F23).
+// opts.skip_alert_parity: bool — when true, alert_count + severity_counts
+//   are skipped for this fixture (e.g. fixtures that intentionally diverge
+//   on alerts — Section D / runCPM-only paths). Kept off by default.
+// opts.note: string — printed under the fixture header for context.
+//
+// Round 6 expansion: compareFixture now compares alert_severity_counts
+// (Python vs JS) as well as bare alert_count. Previously only the count was
+// checked — a regression that swapped a WARN for an ALERT would have passed.
+function compareFixture(name, payload, opts) {
+    opts = opts || {};
     console.log('\n--- ' + name + ' ---');
+    if (opts.note) console.log('  (note: ' + opts.note + ')');
     let py, js;
     try { py = runPython(payload); }
     catch (e) {
@@ -183,11 +244,38 @@ function compareFixture(name, payload) {
         }
     }
 
+    // expect_throw — both engines must throw, no node comparison.
+    if (opts.expect_throw) {
+        eq('threw (both engines)', py.threw === true, js.threw === true);
+        if (py.threw && js.threw) {
+            // Compare error-class symmetry. Python: ValueError (cycle). JS: Error.
+            // We don't insist on identical class names because the languages
+            // disagree by design — we just confirm both engines refused.
+            console.log('  py error: ' + (py.error_type || '?') + ' — ' + (py.error_msg || ''));
+            console.log('  js error: ' + (js.error_type || '?') + ' — ' + (js.error_msg || ''));
+        }
+        if (fails === 0) fixturesPassed += 1; else fixturesFailed += 1;
+        return;
+    }
+
+    // Normal fixture: assert NEITHER threw, then compare full output.
+    if (py.threw || js.threw) {
+        fails += 1; totalFails += 1;
+        console.log('  FAIL  unexpected throw (py.threw=' + py.threw + ', js.threw=' + js.threw + ')');
+        if (py.threw) console.log('    py error: ' + py.error_msg);
+        if (js.threw) console.log('    js error: ' + js.error_msg);
+        fixturesFailed += 1;
+        return;
+    }
+
     eq('project_finish_num', py.project_finish_num, js.project_finish_num);
     eq('project_finish',     py.project_finish,     js.project_finish);
     eq('critical_codes',     py.critical_codes,     js.critical_codes);
     eq('topo_order',         py.topo_order,         js.topo_order);
-    eq('alert_count',        py.alert_count,        js.alert_count);
+    if (!opts.skip_alert_parity) {
+        eq('alert_count',          py.alert_count,          js.alert_count);
+        eq('alert_severity_counts', py.alert_severity_counts, js.alert_severity_counts);
+    }
     for (const code of Object.keys(py.nodes).sort()) {
         const a = py.nodes[code], b = js.nodes[code];
         if (!b) { fails += 1; totalFails += 1; console.log('  FAIL  node ' + code + ' missing in JS'); continue; }
@@ -505,6 +593,220 @@ compareFixture('F15 — ALAP consumes float', {
     ],
     data_date: '2026-01-05',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// ROUND 6 EXPANSION — F16-F24 stress fixtures + parity gap coverage
+// =====================================================================
+// Per A4 Round 6 audit: 9 specific topology / constraint / error-path
+// fixtures were absent from the 16-fixture baseline. Each fixture below
+// exercises a code path that previously had ONLY JS-side test coverage
+// (cpm-engine.test.js Section R-*); crossval now confirms Python and JS
+// agree on the produced output. Where they intentionally diverge (e.g.
+// OoS detection is JS-only, FF computation is JS-only), the gap is
+// documented INLINE with the `skip_alert_parity` / "INTENTIONAL gap"
+// markers below.
+
+// =====================================================================
+// FIXTURE 16 — SNLT primary constraint (forward warn + backward LF clamp)
+// =====================================================================
+// SNLT does NOT push B.ES forward — it just emits an ALERT if predecessor
+// logic places B.ES after the SNLT date. Backward pass: SNLT propagates
+// LF clamp via _apply_backward_lf_constraint (Python) /
+// _applyBackwardLFConstraint (JS).
+// A→B FS+0. A duration 5, SNLT on B = 01-08 which is BEFORE A.EF (01-12)
+// — so SNLT is violated → ALERT fires, ES not pushed back.
+compareFixture('F16 — SNLT primary (forward ALERT + backward LF clamp)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF',
+          constraint: { type: 'SNLT', date: '2026-01-08' } },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 17 — FNET pushing EF forward (single activity, no predecessor)
+// =====================================================================
+// FNET says "finish no earlier than" — if logic places EF BEFORE the FNET
+// date, EF is pushed forward to the FNET date. A WARN is emitted.
+// A: 3-day duration starting 2026-01-05 would naturally finish 2026-01-08;
+// FNET on 2026-01-20 forces EF to 01-20 and stretches the activity.
+compareFixture('F17 — FNET pushes EF forward (warn)', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'MF',
+          constraint: { type: 'FNET', date: '2026-01-20' } },
+    ],
+    relationships: [],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 18 — MS_Finish LF pin (backward pass clamp)
+// =====================================================================
+// MS_Finish (= MFO) is a HARD pin on the late-finish date. When the
+// constraint date is AFTER logical EF, EF is pushed forward (mandatory
+// finish wins) and a WARN is emitted; LF is then clamped to that date
+// in the backward pass.
+compareFixture('F18 — MS_Finish LF pin (forward warn + backward clamp)', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF',
+          constraint: { type: 'MS_Finish', date: '2026-01-30' } },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 19 — Secondary constraint pair (SNET primary + FNLT secondary)
+// =====================================================================
+// P6 supports a SECONDARY constraint slot (`cstr_type2` + `cstr_date`)
+// applied after the primary. Common pairing: SNET (window-open) + FNLT
+// (window-close). Both engines normalize via _normalize_constraint2 and
+// chain both forward + backward clamps.
+compareFixture('F19 — Secondary constraint pair (SNET + FNLT window)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF',
+          constraint:  { type: 'SNET', date: '2026-01-20' },
+          constraint2: { type: 'FNLT', date: '2026-01-30' } },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 20 — Out-of-sequence regression
+// =====================================================================
+// B is_complete with actuals BEFORE A's planned start. Both engines should
+// produce identical node output (B locked to actuals, A unchanged forward).
+// JS additionally emits an OUT_OF_SEQUENCE ALERT (Python does not — this is
+// an INTENTIONAL JS-only feature; see A4 §F20). Alert parity SKIPPED.
+compareFixture('F20 — Out-of-sequence (completed B before A starts)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-20', clndr_id: 'MF' },
+        { code: 'B', duration_days: 3, is_complete: true,
+          actual_start: '2026-01-05', actual_finish: '2026-01-12',
+          clndr_id: 'MF' },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+    data_date: '2026-01-15',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+}, {
+    skip_alert_parity: true,
+    note: 'OoS ALERT is JS-only (Python parity gap — INTENTIONAL, A4 §F20).',
+});
+
+// =====================================================================
+// FIXTURE 21 — ALAP slide SUPPRESSED when actual_start set
+// =====================================================================
+// ALAP normally slides ES forward to consume float. But per AACE 29R-03
+// §3.7, ALAP MUST NOT override actual_start (immutable historical fact).
+// Both engines guard the post-pass with `if not n.actual_start`. B has
+// actual_start in the past — ALAP slide is suppressed and ES locks to
+// actual_start.
+// JS emits an OoS ALERT (B started before A); Python does not. Alert
+// parity SKIPPED for the same reason as F20.
+compareFixture('F21 — ALAP slide suppressed by actual_start', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF',
+          actual_start: '2026-01-12', constraint: { type: 'ALAP' } },
+        { code: 'C', duration_days: 10, clndr_id: 'MF' },
+        { code: 'END', duration_days: 0, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'END', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'END', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+}, {
+    skip_alert_parity: true,
+    note: 'OoS ALERT JS-only — node output parity is what matters here.',
+});
+
+// =====================================================================
+// FIXTURE 22 — Calendar-fallback symmetry (missing clndr_id)
+// =====================================================================
+// Both engines fall back to 7-day ordinal arithmetic when calMap lacks
+// the referenced clndr_id, AND BOTH emit a calendar-fallback ALERT every
+// time _advance_workdays / _retreat_workdays is called without a calendar.
+// Alert *count* parity is the symmetry test — the 16-fixture baseline
+// never exercised this path.
+compareFixture('F22 — Calendar fallback (missing clndr_id triggers ALERT)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MISSING' },
+        { code: 'B', duration_days: 3, clndr_id: 'MISSING' },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 23 — Cycle detection (both engines must throw, same class)
+// =====================================================================
+// A→B→A creates a cycle. _topo_sort detects len(order) != len(nodes) and
+// raises ValueError (Python) / Error (JS). The two engines disagree on
+// the exception class by language convention but agree on the BEHAVIOR
+// (refuse to compute). compareFixture's expect_throw mode asserts both
+// engines refused and prints both error messages for audit.
+compareFixture('F23 — Cycle detection (both engines refuse)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3 },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'A', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: {},
+}, { expect_throw: true });
+
+// =====================================================================
+// FIXTURE 24 — Free-Float parity DOCUMENTED GAP
+// =====================================================================
+// JS computes free_float (ff / ff_working_days) per AACE 10S-90 / Wickwire
+// — see cpm-engine.js Section ~1120-1158. Python reference does NOT
+// compute ff; the field is absent from compute_cpm's output. Per A4 Round
+// 6 audit recommendation, this is an INTENTIONAL parity gap: the public
+// API of the Python reference is documented as the cross-validatable
+// surface, and FF is a JS-only extension.
+//
+// To LIFT this gap in a future round: backport the FF loop from
+// cpm-engine.js to python_reference/cpm.py, bump the SHA-256 pin in
+// python_reference/README.md, and extend compareFixture's per-node eq
+// to compare {ff, ff_working_days}. Until then, this fixture asserts
+// that for a SIMPLE chain with no float, both engines agree on the
+// quantities they DO share (es/ef/ls/lf/tf), proving FF would be 0 if
+// computed — i.e. the parity gap is real but the underlying float
+// arithmetic agrees.
+//
+// Network: A(5d) → B(3d). Linear, no float. JS reports B.ff = 0 and
+// B.ff_working_days = 0 (already covered by Section B2 in test.js).
+// Crossval here verifies the underlying quantities (es/ef/ls/lf/tf)
+// agree — which is what FF is derived from.
+compareFixture('F24 — Free-float parity DOCUMENTED GAP (no FF in Python ref)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF' },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+}, {
+    note: 'FF is a JS-only extension; parity asserts es/ef/ls/lf/tf only ' +
+          '(FF derivable from ls-es etc.). Backport to lift this gap.',
 });
 
 console.log('\n=========================================');

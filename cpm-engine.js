@@ -3395,8 +3395,9 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '16 cross-validation fixtures × 186 checks bit-identical. Real XER ' +
-                '(282 activities) 0 mismatches. ' + testCountStr +
+                '25 cross-validation fixtures × 281 checks bit-identical (including ' +
+                'severity-level alert parity). Real XER (282 activities) 0 mismatches. ' +
+                testCountStr +
                 ' unit tests passing in CI. Test suite hash and source available on request.',
         },
         prong_2_peer_review: {
@@ -3415,7 +3416,7 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Zero on validation suite; not formally characterized on adversarial inputs.',
             evidence: 'Engine produces bit-identical output to Python reference implementation ' +
-                'on 16 fixtures + 282-activity real XER (0 mismatches). Edge-case torture ' +
+                'on 25 fixtures + 282-activity real XER (0 mismatches). Edge-case torture ' +
                 'audit identified pre-flight conditions (NEGATIVE_DURATION, OUT_OF_SEQUENCE, ' +
                 'DISCONNECTED) where strict mode now throws; salvage mode logs and continues. ' +
                 'No silent wrong-answer paths after v2.1.0. ' +
