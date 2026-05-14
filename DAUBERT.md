@@ -18,8 +18,8 @@ The CPM math is derived from peer-reviewed publications:
 
 The forensic-method labels emitted by the engine are AACE-canonical:
 
-- **AACE 29R-03** (2011). *Forensic Schedule Analysis.*
-- **AACE 49R-06** (2010). *Identifying the Critical Path.*
+- **AACE 29R-03** (2003, rev. 2011). *Forensic Schedule Analysis.*
+- **AACE 49R-06** (2006, rev. 2010). *Identifying the Critical Path.*
 - **AACE 52R-06** (2017). *Prospective Time Impact Analysis as a Forensic Schedule Analysis Method.*
 - **AACE PPG #20** (2nd Ed., 2024). *Forensic Schedule Analysis* practice guide.
 
@@ -136,8 +136,8 @@ All citations in this disclosure have been verified against primary sources:
 - **Kelley & Walker (1959)** — Verified, Eastern Joint IRE-AIEE-ACM Computer Conference proceedings.
 - **Kahn (1962)** — Verified, *Communications of the ACM* 5(11):558-562, ACM Digital Library DOI: 10.1145/368996.369025.
 - **Tarjan (1972)** — Verified, *SIAM Journal on Computing* 1(2):146-160, DOI: 10.1137/0201010.
-- **AACE 29R-03 (2011)** — Verified, AACE International Recommended Practice, https://web.aacei.org.
-- **AACE 49R-06 (2010)** — Verified, AACE International Recommended Practice.
+- **AACE 29R-03 (2003, rev. 2011)** — Verified, AACE International Recommended Practice, https://web.aacei.org.
+- **AACE 49R-06 (2006, rev. 2010)** — Verified, AACE International Recommended Practice.
 - **AACE 52R-06 (2017)** — Verified, AACE International Recommended Practice.
 - **AACE 122R-22 (2022)** — Verified, AACE International Recommended Practice.
 - **AACE PPG #20 (2nd Ed 2024)** — Verified, AACE International Practice Guide.

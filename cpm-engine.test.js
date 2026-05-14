@@ -1293,7 +1293,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.4.0',
-        r.manifest.engine_version === '2.8.0');
+        r.manifest.engine_version === '2.9.2');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1329,7 +1329,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.8.0');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.2');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1563,7 +1563,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.8.0');
+    check('D3: engine_version present', h.engine_version === '2.9.2');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2007,14 +2007,14 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.8.0');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.2');
 }
 {
     // Standalone use (null result) → graceful, no crash
     const d = E.buildDaubertDisclosure(null, {});
     check('E3: null result → method_id = unknown', d.methodology.method_id === 'unknown');
     check('E3: null result → no throw', true);
-    check('E3: null result → engine_version present', d.engine_version === '2.8.0');
+    check('E3: null result → engine_version present', d.engine_version === '2.9.2');
 }
 
 // ============================================================================
@@ -3082,6 +3082,72 @@ console.log('\n=== Section P — computeCPM with Ontario calendar ===');
     check('P-11: Ontario EF at least 1 cal-day after no-holiday EF (Family Day shift)',
         efOntNum - efNoHolNum >= 1,
         'diff = ' + (efOntNum - efNoHolNum) + '; no-holiday=' + efNoHol + ', ontario=' + efOnt);
+}
+
+// ============================================================================
+// Section Q — v2.9.2 audit-fix regression tests
+// ============================================================================
+console.log('\n=== Section Q — v2.9.2 audit-fix regressions ===');
+
+// Q-1: Topology hash idempotency under duplicate relationships.
+// computeTopologyHash() must produce the same SHA-256 for `rels` and
+// `[...rels, rels[0]]`. P6 round-trips emit duplicate TASKPRED rows;
+// without dedup the hash flips and the provenance contract breaks.
+{
+    const acts = [
+        { code: 'A', duration_days: 5 },
+        { code: 'B', duration_days: 3 },
+        { code: 'C', duration_days: 4 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ];
+    const h1 = E.computeTopologyHash(acts, rels);
+    const h2 = E.computeTopologyHash(acts, [...rels, rels[0]]);
+    const h3 = E.computeTopologyHash(acts, [...rels, rels[0], rels[0], rels[1]]);
+    check('Q-1: hash idempotent under single duplicate relationship', h1.topology_hash === h2.topology_hash);
+    check('Q-1: hash idempotent under multiple duplicates', h1.topology_hash === h3.topology_hash);
+    // Sanity: a *different* lag must still produce a different hash.
+    const relsDifferent = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 2 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ];
+    const hDifferent = E.computeTopologyHash(acts, relsDifferent);
+    check('Q-1: hash differs when lag actually changes (no over-dedup)',
+        h1.topology_hash !== hDifferent.topology_hash);
+}
+
+// Q-2: Strict computeCPM emits dangling-rel ALERT.
+// DAUBERT.md claims "no silent wrong-answer paths" — strict mode must surface
+// dropped endpoints rather than discarding them silently.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        // Dangling: GHOST does not exist in `acts`.
+        { from_code: 'GHOST', to_code: 'B', type: 'FS', lag_days: 0 },
+        // Dangling: PHANTOM does not exist either.
+        { from_code: 'A', to_code: 'PHANTOM', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    const danglingAlerts = (r.alerts || []).filter(a => a.context === 'dangling-rel');
+    check('Q-2: strict computeCPM emits dangling-rel ALERT (2 dropped rels)',
+        danglingAlerts.length === 2,
+        'got ' + danglingAlerts.length + ' alerts: ' +
+            (r.alerts || []).map(a => a.context).join(','));
+    check('Q-2: dangling-rel ALERT message mentions endpoints',
+        danglingAlerts.length > 0 &&
+        danglingAlerts[0].message.indexOf('GHOST') >= 0 &&
+        danglingAlerts[0].message.indexOf('B') >= 0);
+    check('Q-2: dangling-rel ALERT has severity ALERT',
+        danglingAlerts.length > 0 && danglingAlerts[0].severity === 'ALERT');
+    // Sanity: the non-dangling relationship still drove the forward pass.
+    check('Q-2: surviving A→B relationship still drove ES of B',
+        r.nodes && r.nodes.B && typeof r.nodes.B.es === 'number');
 }
 
 console.log('\n========================================');

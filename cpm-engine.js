@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.8.0';
+const ENGINE_VERSION = '2.9.2';
 
 // ============================================================================
 // SECTION A — Date helpers + calendar arithmetic
@@ -661,7 +661,19 @@ function computeCPM(activities, relationships, opts) {
         let rtype = (r.type || 'FS').toUpperCase();
         if (VALID_REL_TYPES.indexOf(rtype) === -1) rtype = 'FS';
         const lag = parseFloat(r.lag_days) || 0;
-        if (!(fc in nodes) || !(tc in nodes)) continue;
+        if (!(fc in nodes) || !(tc in nodes)) {
+            // Audit T1 fix: emit a non-blocking ALERT so DAUBERT.md's
+            // "No silent wrong-answer paths" claim holds for strict mode.
+            // Salvage mode logs DANGLING_REL separately; strict mode previously
+            // dropped the edge silently.
+            alerts.push({
+                severity: 'ALERT',
+                context: 'dangling-rel',
+                message: 'Dropped relationship ' + fc + '->' + tc + ' ' + rtype +
+                    ': endpoint(s) not in node set',
+            });
+            continue;
+        }
         const rec = { from_code: fc, to_code: tc, type: rtype, lag_days: lag };
         if (!predMap[tc]) predMap[tc] = [];
         if (!succMap[fc]) succMap[fc] = [];
@@ -859,6 +871,13 @@ function computeCPM(activities, relationships, opts) {
     // mode users (mid-project TIA, ad-hoc analysis) still need awareness so
     // they don't unknowingly base findings on a schedule with retained-logic
     // anomalies.
+    // Audit T2 fix: replace O(n²) `activities.find(...)` per predecessor with
+    // a single Map lookup built once. On a 25k-completed-activity schedule,
+    // this drops the OoS scan from ~1.8s to <100ms.
+    const _actByCode = new Map();
+    for (const _aa of activities) {
+        if (_aa && _aa.code) _actByCode.set(_aa.code, _aa);
+    }
     for (const a of activities) {
         if (!a || !a.code || !a.is_complete) continue;
         const preds = predMap[a.code] || [];
@@ -866,7 +885,7 @@ function computeCPM(activities, relationships, opts) {
             const pred = nodes[p.from_code];
             if (!pred) continue;
             // Predecessor unstarted = no actual_start AND not is_complete
-            const predAct = activities.find((x) => x && x.code === p.from_code);
+            const predAct = _actByCode.get(p.from_code);
             if (!predAct) continue;
             if (!predAct.actual_start && !predAct.is_complete) {
                 alerts.push({
@@ -1783,6 +1802,23 @@ function computeTIA(activities, relationships, fragnets, opts) {
     let prevFinish = baselineFinish;
 
     for (const f of (fragnets || [])) {
+        // Audit T2 fix: intra-fragnet duplicate-code check BEFORE the base
+        // collision check. Previously, two fragnet activities with the same
+        // code would slip through (the base check only catches base-vs-fragnet
+        // collisions). The forensic record must reject malformed fragnets.
+        const _intraFragSeen = new Set();
+        for (const fa of (f.activities || [])) {
+            if (!fa || !fa.code) continue;
+            if (_intraFragSeen.has(fa.code)) {
+                const err = new Error('Fragnet ' + f.fragnet_id +
+                    ' contains duplicate activity code "' + fa.code + '" within the fragnet');
+                err.code = 'DUPLICATE_CODE';
+                err.duplicate_code = fa.code;
+                err.fragnet_id = f.fragnet_id;
+                throw err;
+            }
+            _intraFragSeen.add(fa.code);
+        }
         // Validate: no fragnet activity code collides with the *current* base
         // (in cumulative-additive mode, prior fragnets are part of the base).
         const validationBase = (mode === 'cumulative-additive') ? prevActivities : activities;
@@ -1995,21 +2031,35 @@ function computeScheduleHealth(result, opts) {
         passed: cpPct >= 1 && cpPct <= 30,
     });
 
-    // CHECK 4 — orphaned activities (no preds AND no succs, excluding 1-activity networks).
-    // Lightweight: count activities with neither driving_predecessor nor downstream impact.
-    // If the result doesn't include enough data, this check records 0.
+    // CHECK 4 — orphaned activities (no preds AND no succs, excluding project
+    // start/end milestones). Audit T2 fix: previously this check was a dead
+    // no-op in strict mode (the inner loop did nothing). Now: when caller
+    // supplies opts.relationships (or result.relationships), we run a real
+    // orphan analysis built from the relationship list. Without relationships,
+    // we preserve the legacy "always pass" so existing callers don't regress.
+    const _shRels = (opts && Array.isArray(opts.relationships)) ? opts.relationships
+                  : (Array.isArray(result.relationships) ? result.relationships : null);
     const orphans = [];
-    if (totalActs > 1) {
-        for (const code in result.nodes) {
-            const n = result.nodes[code];
-            if (!n.driving_predecessor) {
-                // No driving pred — but could be a legit start activity. Cross-check: any successor?
-                // We need succ info; reconstruct from topo_order roughly OR skip if not provided.
-                // For v1, skip succ check unless result has it.
-            }
+    if (_shRels && totalActs > 1) {
+        const _preds = Object.create(null);
+        const _succs = Object.create(null);
+        for (const _r of _shRels) {
+            if (!_r || !_r.from_code || !_r.to_code) continue;
+            if (!_preds[_r.to_code])   _preds[_r.to_code] = 0;
+            if (!_succs[_r.from_code]) _succs[_r.from_code] = 0;
+            _preds[_r.to_code]++;
+            _succs[_r.from_code]++;
         }
-        // Lightweight: count activities with neither driving_predecessor nor downstream impact.
-        // If the result doesn't include enough data, this check just records 0.
+        for (const code in result.nodes) {
+            const _n = result.nodes[code];
+            // Skip project-start / project-end milestones — a single endpoint is legitimate.
+            const _isStartMS = !!(_n && (_n.is_project_start || _n.is_start_milestone));
+            const _isEndMS   = !!(_n && (_n.is_project_finish || _n.is_finish_milestone || _n.is_project_end || _n.is_end_milestone));
+            if (_isStartMS || _isEndMS) continue;
+            const _hasPred = !!_preds[code];
+            const _hasSucc = !!_succs[code];
+            if (!_hasPred && !_hasSucc) orphans.push(code);
+        }
     }
     checks.push({
         id: 'C4_ORPHANS',
@@ -2020,9 +2070,38 @@ function computeScheduleHealth(result, opts) {
         passed: orphans.length === 0,
     });
 
-    // CHECK 5 — DISCONNECTED subnetworks (signal from salvage_log if present).
+    // CHECK 5 — DISCONNECTED subnetworks. Audit T2 fix: previously this check
+    // ONLY fired on salvage_log entries — strict mode never produces those, so
+    // the check was dead. Now: prefer salvage signal if present; otherwise
+    // compute weakly-connected components inline via union-find when
+    // relationships are available. Without relationships, preserve legacy
+    // behavior (compCount = 1, passing).
     const discEntries = (result.salvage_log || []).filter(e => e.category === 'DISCONNECTED');
-    const compCount = discEntries.length > 0 && discEntries[0].details ? discEntries[0].details.component_count : 1;
+    let compCount = 1;
+    if (discEntries.length > 0 && discEntries[0].details) {
+        compCount = discEntries[0].details.component_count;
+    } else if (_shRels && totalActs > 1) {
+        // Union-find on undirected version of the relationship graph.
+        const _codes = Object.keys(result.nodes);
+        const _parent = Object.create(null);
+        for (const _c of _codes) _parent[_c] = _c;
+        function _ufFind(x) {
+            while (_parent[x] !== x) { _parent[x] = _parent[_parent[x]]; x = _parent[x]; }
+            return x;
+        }
+        function _ufUnion(a, b) {
+            const ra = _ufFind(a); const rb = _ufFind(b);
+            if (ra !== rb) _parent[ra] = rb;
+        }
+        for (const _r of _shRels) {
+            if (!_r || !_r.from_code || !_r.to_code) continue;
+            if (!(_r.from_code in _parent) || !(_r.to_code in _parent)) continue;
+            _ufUnion(_r.from_code, _r.to_code);
+        }
+        const _roots = new Set();
+        for (const _c of _codes) _roots.add(_ufFind(_c));
+        compCount = _roots.size;
+    }
     checks.push({
         id: 'C5_CONNECTED',
         name: 'Schedule connectivity (single weakly-connected component)',
@@ -2289,18 +2368,29 @@ function computeTopologyHash(activities, relationships) {
     }
 
     // Build predecessor map keyed by activity code.
+    // Idempotency fix (audit T1): dedupe on (from_code, type, lag) tuple before
+    // hashing. P6 round-trips can emit duplicate TASKPRED rows; without dedup,
+    // h(rels) !== h([...rels, rels[0]]). The provenance contract demands the
+    // same logical topology produce the same hash.
     const predsByCode = Object.create(null);
+    const _predSeenByCode = Object.create(null);
     for (const code in durByCode) {
         predsByCode[code] = [];
+        _predSeenByCode[code] = Object.create(null);
     }
     for (const r of (relationships || [])) {
         if (!r || !r.from_code || !r.to_code) continue;
         if (!(r.to_code in predsByCode)) continue;
         if (!(r.from_code in predsByCode)) continue;
+        const _ptype = (r.type || 'FS').toUpperCase();
+        const _plag  = parseFloat(r.lag_days) || 0;
+        const _pkey  = r.from_code + '\x1f' + _ptype + '\x1f' + _plag;
+        if (_predSeenByCode[r.to_code][_pkey]) continue;
+        _predSeenByCode[r.to_code][_pkey] = true;
         predsByCode[r.to_code].push({
             from: r.from_code,
-            type: (r.type || 'FS').toUpperCase(),
-            lag: parseFloat(r.lag_days) || 0,
+            type: _ptype,
+            lag: _plag,
         });
     }
 
@@ -2429,8 +2519,8 @@ function buildDaubertDisclosure(result, opts) {
                 'IRE-AIEE-ACM Computer Conference, Boston, Dec 1-3, 1959, pp. 160-173. ' +
                 'Tarjan SCC per Tarjan (1972) SIAM J. Comput. 1(2):146-160. ' +
                 'Kahn topological sort per Kahn (1962) CACM 5(11):558-562. ' +
-                'AACE 29R-03 (2011) Forensic Schedule Analysis (peer-reviewed RP). ' +
-                'AACE 49R-06 (2010) Identifying the Critical Path (peer-reviewed RP). ' +
+                'AACE 29R-03 (2003, rev. 2011) Forensic Schedule Analysis (peer-reviewed RP). ' +
+                'AACE 49R-06 (2006, rev. 2010) Identifying the Critical Path (peer-reviewed RP). ' +
                 'AACE 52R-06 (2017) Prospective Time Impact Analysis (peer-reviewed RP). ' +
                 'SCL Protocol 2nd Edition (2017) Society of Construction Law. ' +
                 'Engine implementation peer-reviewed via 8-lens forensic audit 2026-05-09.',
@@ -4222,11 +4312,40 @@ function getHolidays(jurisdiction, fromYear, toYear) {
         err.code = 'UNKNOWN_JURISDICTION';
         throw err;
     }
+    // Audit T1 fix: cascade collisions to next weekday rather than silently
+    // dropping. Example: in 2027 Dec 25 (Sat) → observed Mon Dec 27, AND
+    // Dec 26 (Sun) → observed Mon Dec 27. The Ontario statutory rule when
+    // both holidays fall on the weekend is Mon Dec 27 + Tue Dec 28 (two days
+    // off), not a single Mon (which the old Set silently produced). The
+    // cascade preserves the holiday count and respects the next-weekday rule.
     const set = new Set();
     for (let yr = fromYear; yr <= toYear; yr++) {
         for (const rule of rules) {
-            const date = _evaluateRule(rule, yr);
-            if (date) set.add(date);
+            let date = _evaluateRule(rule, yr);
+            if (!date) continue;
+            if (set.has(date)) {
+                // Roll forward to next non-Saturday, non-Sunday, non-already-claimed date.
+                let cursor = date;
+                while (set.has(cursor)) {
+                    const parts = cursor.split('-');
+                    const ms = _safeDateUTC(
+                        parseInt(parts[0], 10),
+                        parseInt(parts[1], 10) - 1,
+                        parseInt(parts[2], 10)
+                    ).getTime();
+                    cursor = _numToDateRaw(_msToNum(ms + 86400000));
+                    // Skip weekends — statutory observance shifts to a weekday.
+                    const dow = _safeDateUTC(
+                        parseInt(cursor.split('-')[0], 10),
+                        parseInt(cursor.split('-')[1], 10) - 1,
+                        parseInt(cursor.split('-')[2], 10)
+                    ).getUTCDay();
+                    if (dow === 0 || dow === 6) continue;
+                    if (!set.has(cursor)) break;
+                }
+                date = cursor;
+            }
+            set.add(date);
         }
     }
     return Array.from(set).sort();

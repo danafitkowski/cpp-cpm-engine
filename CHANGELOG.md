@@ -4,6 +4,25 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## v2.9.2 — 2026-05-14
+
+Audit-fix wave. Substantive correctness fixes on top of the v2.9.1 hotfix tag; no API breakage.
+
+- **Topology hash idempotency (T1).** `computeTopologyHash()` now dedupes predecessors on the `(from_code, type, lag)` tuple before serializing. P6 round-trips that emit duplicate TASKPRED rows no longer flip the SHA-256. The provenance contract — same logical topology → same hash — is now enforced.
+- **Holiday weekend-cascade fix (T1).** `getHolidays()` previously used a plain Set to deduplicate observed dates, which silently dropped a holiday when two land on the same observed day. Example: in 2027 both Christmas (Sat) and Boxing Day (Sun) shift to Mon Dec 27. The new logic anchors Christmas at Mon Dec 27 and rolls Boxing Day to Tue Dec 28 (Ontario statutory rule). Verified: `getHolidays('CA-ON', 2027, 2027).length === 10`.
+- **Strict `computeCPM` dangling-relationship ALERT (T1).** Previously, relationships whose endpoints were absent from the activity set were silently dropped. Now they emit `{severity:'ALERT', context:'dangling-rel', message:'Dropped relationship ...'}` before `continue`. Satisfies DAUBERT.md's headline "no silent wrong-answer paths" claim for strict mode.
+- **`computeScheduleHealth` C4_ORPHANS and C5_CONNECTED now functional (T2).** Both checks were dead in strict mode (always passed). When the caller supplies `opts.relationships` (or the result carries `result.relationships`), C4 now identifies activities with no preds AND no succs (excluding project-start/end milestones), and C5 runs an inline union-find weakly-connected-components computation. Without relationships, behavior is unchanged for backward compatibility.
+- **`computeTIA` intra-fragnet duplicate-code check (T2).** Two fragnet activities with the same code previously slipped past validation. Now `DUPLICATE_CODE` throws with the offending code listed before the base-collision check runs.
+- **O(n²) → O(n) OoS scan (T2).** `computeCPM` out-of-sequence detection replaced `activities.find(...)` (per-predecessor per-completed-activity) with a single `Map<code, activity>` built once. 25k-completed-activity scan drops from ~1.8s to <100ms.
+- **AACE citation year corrections (T1, Daubert risk).** `29R-03` reference is now "2003, rev. 2011"; `49R-06` is now "2006, rev. 2010". Corrected in `cpm-engine.js` Daubert disclosure, `DAUBERT.md` peer-review and verification sections, and `docs/citations.md`. Opposing counsel cannot now claim the engine's own disclosure misstates publication history.
+- **Version bump.** `package.json` and `ENGINE_VERSION` now both report `2.9.2`. v2.9.1 was a non-code synchronized release marker; v2.9.2 is the first JS-side code revision since v2.8.0.
+
+**Verification:** 530+ JS unit tests (528 baseline + 2 new for topology-hash idempotency and dangling-rel ALERT), 153/153 cross-validation checks. All green.
+
+**No API breakage.** All v2.8.0 / v2.9.1 callers continue to work without modification. `computeScheduleHealth(result)` without `opts.relationships` preserves legacy "always pass" behavior for C4/C5.
+
+---
+
 ## v2.9.1 — 2026-05-10
 
 Synchronized release marker. Engine code (`cpm-engine.js`) is byte-identical to v2.8.0. This tag marks the suite-wide truncation-purge hotfix applied to the surrounding CPP forensic skill suite; 80+ data-truncation sites removed across 13 renderers. A new regression test (`tests/test_no_data_truncation.py`) blocks future violations at CI. Reference: `feedback_no_truncation.md`.

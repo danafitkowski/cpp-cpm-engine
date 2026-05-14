@@ -42,18 +42,18 @@ The strongly-connected-components algorithm used for cycle isolation.
 
 All AACE RPs are peer-reviewed and adopted by AACE International, the leading professional society for cost engineering and project controls.
 
-### AACE 29R-03 (2011)
+### AACE 29R-03 (2003, rev. 2011)
 
-> AACE International Recommended Practice 29R-03. *Forensic Schedule Analysis.* AACE International, 2011.
+> AACE International Recommended Practice 29R-03. *Forensic Schedule Analysis.* AACE International, originally 2003, revised 2011.
 
 Defines the standard methods for forensic schedule analysis (Method Implementation Protocols 3.1 through 3.9). The engine implements MIP 3.3 (Observational, As-Planned vs As-Built), MIP 3.5 (Modeled / Subtractive / Multiple Base), MIP 3.6 (Modeled / Additive / Single Base), and MIP 3.8 (Modeled / Subtractive / Single Simulation = Collapsed As-Built).
 
 - **AACE web:** https://web.aacei.org
 - **Verified:** Yes.
 
-### AACE 49R-06 (2010)
+### AACE 49R-06 (2006, rev. 2010)
 
-> AACE International Recommended Practice 49R-06. *Identifying the Critical Path.* AACE International, 2010.
+> AACE International Recommended Practice 49R-06. *Identifying the Critical Path.* AACE International, originally 2006, revised 2010.
 
 Defines the LPM (Longest Path Method), TFM (Total Float Method), and Most-Float-Path (MFP) approaches to critical-path identification, plus divergence reporting requirements.
 
