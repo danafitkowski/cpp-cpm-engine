@@ -1293,7 +1293,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.4.0',
-        r.manifest.engine_version === '2.9.7');
+        r.manifest.engine_version === '2.9.8');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1329,7 +1329,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.7');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.8');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1563,7 +1563,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.7');
+    check('D3: engine_version present', h.engine_version === '2.9.8');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2007,14 +2007,27 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.7');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.8');
 }
 {
-    // Standalone use (null result) → graceful, no crash
-    const d = E.buildDaubertDisclosure(null, {});
-    check('E3: null result → method_id = unknown', d.methodology.method_id === 'unknown');
-    check('E3: null result → no throw', true);
-    check('E3: null result → engine_version present', d.engine_version === '2.9.7');
+    // Standalone use (null result) → graceful, no crash.
+    // Round 6: tautology removed — the previous `check('... no throw', true)`
+    // was an assertion of literal `true` (always passed even if the call
+    // crashed earlier on the same line, because execution wouldn't reach it).
+    // We now wrap the call in try/catch so a future throw is actually observed.
+    let didNotThrow = false;
+    let dCaught = null;
+    try {
+        dCaught = E.buildDaubertDisclosure(null, {});
+        didNotThrow = true;
+    } catch (e) {
+        didNotThrow = false;
+    }
+    check('E3: buildDaubertDisclosure(null, {}) does not throw', didNotThrow);
+    check('E3: null result → method_id = unknown',
+        dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
+    check('E3: null result → engine_version present',
+        dCaught && dCaught.engine_version === '2.9.8');
 }
 
 // ============================================================================
@@ -2523,28 +2536,36 @@ const _daubert_disc = E.buildDaubertDisclosure(null, {
 }
 
 {
-    // O-T4: Renders topology hash in provenance section (HTML)
+    // O-T4: Renders topology hash in provenance section (HTML).
+    // Round 6: split into two strong assertions. The previous single check
+    // used `hash || ''` as the fallback, which made `html.includes('')`
+    // trivially true if hash was ever null/blank — silently passing on
+    // hash-generation failure. Now we assert (a) hash is the correct 64-char
+    // hex shape AND (b) it appears verbatim in the HTML render.
     const html = E.renderDaubertHTML(_daubert_disc, {});
-    check('O-T4: topology hash present in HTML',
-        html.includes(_daubert_disc.provenance.input_topology_hash || ''));
+    const _h = _daubert_disc.provenance.input_topology_hash;
+    check('O-T4a: topology hash is 64-char sha256 hex',
+        typeof _h === 'string' && _h.length === 64 && /^[0-9a-f]{64}$/.test(_h),
+        'hash=' + JSON.stringify(_h));
+    check('O-T4b: topology hash present in HTML',
+        typeof _h === 'string' && _h.length > 0 && html.includes(_h));
 }
 
 {
-    // O-T5: AACE/Sanders citations appear in output
+    // O-T5: AACE/Sanders citations appear in output.
+    // Round 6: tautology removed — buildDaubertDisclosure ALWAYS emits Sanders
+    // in prong_4_general_acceptance.evidence (see cpm-engine.js line ~3428).
+    // The previous "if Sanders ∈ evidence then check, else assert true" was a
+    // dead-code skip that masked a regression. Now we assert disclosure
+    // evidence directly + both renderers, unconditionally.
     const html = E.renderDaubertHTML(_daubert_disc, {});
     const md   = E.renderDaubertMarkdown(_daubert_disc, {});
     check('O-T5: HTML contains AACE citation', html.includes('AACE'));
     check('O-T5: Markdown contains AACE citation', md.includes('AACE'));
-    // The Sanders citation comes from prong 4 evidence text
-    const disc4 = _daubert_disc.prong_4_general_acceptance;
-    if (disc4 && disc4.evidence && disc4.evidence.includes('Sanders')) {
-        check('O-T5: HTML contains Sanders citation', html.includes('Sanders'));
-        check('O-T5: Markdown contains Sanders citation', md.includes('Sanders'));
-    } else {
-        // Sanders not in this disclosure variant — still fine
-        check('O-T5: Sanders check skipped (not in disclosure evidence)', true);
-        check('O-T5: Sanders check skipped (not in disclosure evidence)', true);
-    }
+    check('O-T5: Sanders citation in disclosure evidence',
+        _daubert_disc.prong_4_general_acceptance.evidence.toLowerCase().includes('sanders'));
+    check('O-T5: Sanders citation in HTML render', html.includes('Sanders'));
+    check('O-T5: Sanders citation in Markdown render', md.includes('Sanders'));
 }
 
 // ============================================================================
@@ -3790,23 +3811,32 @@ console.log('\n=== Section R-Hammock — TT_Hammock two-pass ===');
     const hammocks = E.getHammocks();
     const H1 = Object.values(hammocks).find(h => h.code === 'H1');
     const H2 = Object.values(hammocks).find(h => h.code === 'H2');
-    // A → B direct: B.ES = 5, B.EF = 8. projectFinish = 8. B.LS = 5.
-    // H1.ES = A.EF = 5. H1.LF via succ H2.LS (computed after H1, so we need
-    // to verify the iterative resolution works).
-    // H2.preds = [H1], H2.succs = [B]. After H1 resolves with H1.ES=5, then
-    // when H2 resolves: H2.ES = H1.EF (which depends on H1.LF). H1.LF needs
-    // H2.LS. This is a chicken-and-egg problem within the hammock pair —
-    // both succs of H1 are H2; H1 needs H2 resolved; H2 needs H1 resolved.
-    // The resolver should still converge because both fall back to bounds.
-    // Verify just that both resolved and ES/LF are integers >= 0.
-    check('HAM-3 (nested): H1 resolved with ES >= 0',
-        typeof H1.ES === 'number' && H1.ES >= 0);
-    check('HAM-3 (nested): H2 resolved with LF >= 0',
-        typeof H2.LF === 'number' && H2.LF >= 0);
-    check('HAM-3 (nested): H1.duration is non-negative',
-        H1.duration >= 0, 'got ' + H1.duration);
-    check('HAM-3 (nested): H2.duration is non-negative',
-        H2.duration >= 0, 'got ' + H2.duration);
+    // Round 6: hand-computed canonical values (was: >= 0 sentinels).
+    // v2.9.8 hammock resolver uses transitive _minESFromPredChain /
+    // _maxLFFromSuccChain walkers — they bypass other hammocks and walk down
+    // to normal tasks, so there's no chicken-and-egg.
+    //
+    // Forward pass on normal tasks: A.ES=0, A.EF=5. B.ES = max(A.EF+0)=5,
+    // B.EF=8. projectFinish=8. Backward: B.LF=8, B.LS=5, A.LF=5, A.LS=0.
+    //
+    // For H1: preds chain → A (normal). anchor = A.EF + 0 = 5. minES = 5.
+    //         succs chain → H2 (recurse) → B (normal).
+    //         anchor = B.LS - 0 = 5. maxLF = 5. So H1: ES=5, LF=5, dur=0.
+    // For H2: preds chain → H1 (recurse) → A. anchor = A.EF + 0 = 5. minES=5.
+    //         succs chain → B. anchor = B.LS - 0 = 5. maxLF = 5.
+    //         So H2: ES=5, LF=5, dur=0.
+    // Both hammocks resolve as zero-duration anchors at day 5 — the join
+    // point between the parallel A→H1→H2→B chain and the A→B direct edge.
+    check('HAM-3 (nested): H1.ES === 5', H1.ES === 5, 'got ' + H1.ES);
+    check('HAM-3 (nested): H1.EF === 5', H1.EF === 5, 'got ' + H1.EF);
+    check('HAM-3 (nested): H1.LF === 5', H1.LF === 5, 'got ' + H1.LF);
+    check('HAM-3 (nested): H1.duration === 0', H1.duration === 0, 'got ' + H1.duration);
+    check('HAM-3 (nested): H1.TF === 0', H1.TF === 0, 'got ' + H1.TF);
+    check('HAM-3 (nested): H2.ES === 5', H2.ES === 5, 'got ' + H2.ES);
+    check('HAM-3 (nested): H2.EF === 5', H2.EF === 5, 'got ' + H2.EF);
+    check('HAM-3 (nested): H2.LF === 5', H2.LF === 5, 'got ' + H2.LF);
+    check('HAM-3 (nested): H2.duration === 0', H2.duration === 0, 'got ' + H2.duration);
+    check('HAM-3 (nested): H2.TF === 0', H2.TF === 0, 'got ' + H2.TF);
 }
 
 // HAM-4: Hammock between predecessors and successors with FF/SS relationships.
@@ -4161,6 +4191,312 @@ function _rRel(relType, lag) {
     // A.LS from B.LS - 2wd = backward (since SF: A.LS = retreat(B.LS, lag, cal)).
     check('Q3-SF2 backward: A and B both have float computed',
         typeof r.nodes.A.tf === 'number' && typeof r.nodes.B.tf === 'number');
+}
+
+// ============================================================================
+// Section R-v298 — v2.9.8 Round 6 engine math + concurrency hardening
+// One test per fix; uses each bug's worst-case fixture. Asserts exact
+// expected values and that alerts fire when expected.
+// ============================================================================
+console.log('\n=== Section R-v298 — Round 6 fix wave ===');
+
+// R-v298-B1: Hammock with non-FS predecessor — flagged as unsupported.
+// Network: A(10d) --SS--> H(hammock). v2.9.8 declares hammocks FS-only;
+// SS pred should be skipped and surfaced in hammock_non_fs_alerts.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t80\t80',
+        '%R 2\tH\tH\tTT_Hammock\t0\t0',
+        '%R 3\tB\tB\tTT_Task\t40\t40',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_SS\t0',    // SS pred to hammock — unsupported in v2.9.8
+        '%R 2\t3\tPR_FS\t0',    // H → B (FS, supported)
+        '%R 1\t3\tPR_FS\t0',    // A → B (direct driver)
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    check('R-v298-B1: hammock_unsupported_rel_count === 1',
+        result.hammock_unsupported_rel_count === 1,
+        'got ' + result.hammock_unsupported_rel_count);
+    check('R-v298-B1: non-FS alert has direction=predecessor + rel_type=SS',
+        result.hammock_non_fs_alerts.length === 1 &&
+        result.hammock_non_fs_alerts[0].direction === 'predecessor' &&
+        result.hammock_non_fs_alerts[0].rel_type === 'SS' &&
+        result.hammock_non_fs_alerts[0].hammock_code === 'H',
+        'got ' + JSON.stringify(result.hammock_non_fs_alerts[0] || null));
+    check('R-v298-B1: hammock-unsupported-rel WARN surfaced in alerts',
+        result.alerts.some(a => a.context === 'hammock-unsupported-rel'));
+    // Hammock still resolves (SS pred just skipped, no anchor from it).
+    check('R-v298-B1: hammock still resolves with non-FS skipped',
+        result.hammocks_resolved === 1);
+}
+
+// R-v298-B2: Section D MS_Finish constraint earlier than pred-driven EF.
+// A(10d) → B(5d), B has MS_Finish on day 8 (impossible — pred forces EF >= 15).
+// v2.9.8 must emit ALERT and clamp EF >= ES (no negative duration).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 100\tA\tA\tTT_Task\t80\t80\t\t',
+        '%R 101\tB\tB\tTT_Task\t40\t40\tCS_MEO\t2026-01-13 00:00',  // MS_Finish day 8 (impossible)
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 100\t101\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM({ projectStart: '2026-01-05' });
+    const tasks = E.getTasks();
+    const B = Object.values(tasks).find(t => t.code === 'B');
+    // A.EF = 10. B.ES = 10. B.EF init = 15. MS_Finish cOff = 8 (day 8 from Jan 5).
+    // 8 < 15 (required), so ALERT fires + EF clamped to max(ES, cOff) = max(10, 8) = 10.
+    check('R-v298-B2: B.ES preserved at A.EF (10)', B.ES === 10, 'got ' + B.ES);
+    check('R-v298-B2: B.EF clamped to max(ES, cOff) = 10 (not <ES)',
+        B.EF === 10, 'got ' + B.EF);
+    const violated = result.alerts.filter(a => a.context === 'constraint-violated');
+    check('R-v298-B2: constraint-violated ALERT fired for MS_Finish',
+        violated.some(a => a.message.indexOf('B') >= 0 && a.message.indexOf('MS_Finish') >= 0),
+        'got ' + violated.length + ' violations');
+}
+
+// R-v298-B3: Section D SS successor produces tighter LS — not overwritten.
+// A(5d) --SS+0--> B(10d). Backward: B.LS=projectFinish-10. A's SS successor
+// (B) drives minLS = B.LS - 0. A.LF should reflect SS-driven LS via LF=LS+rem.
+// projectFinish = max(A.EF=5, B.EF= A.ES+B.dur via SS = 0+10 = 10) = 10.
+// B.LS = 10 - 10 = 0. A's SS minLS = 0. A.LS via FS minLF default = projectFinish=10,
+// A.LS init = 10 - 5 = 5. SS minLS=0 < 5, so A.LS should become 0 (and stay 0).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 200\tA\tA\tTT_Task\t40\t40',   // 5d
+        '%R 201\tB\tB\tTT_Task\t80\t80',   // 10d
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 200\t201\tPR_SS\t0',    // A → B SS
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    E.runCPM();
+    const tasks = E.getTasks();
+    const A = Object.values(tasks).find(t => t.code === 'A');
+    const B = Object.values(tasks).find(t => t.code === 'B');
+    // Verify SS-driven A.LS = 0 (matches B.LS via SS minLS), NOT overwritten to 5.
+    check('R-v298-B3: B.ES = A.ES = 0 (SS forward)', B.ES === 0);
+    check('R-v298-B3: B.EF = 10', B.EF === 10);
+    check('R-v298-B3: A.LS = 0 (SS-driven, not overwritten by LF-recompute)',
+        A.LS === 0, 'got A.LS=' + A.LS);
+    check('R-v298-B3: A.LF = A.LS + remaining = 5 (tightened to honor SS)',
+        A.LF === 5, 'got A.LF=' + A.LF);
+}
+
+// R-v298-B4: Hammock diamond join — H3 has TWO preds (H1, H2), both via FS
+// to normal tasks. Old visited-set discarded the second pred chain; memoization
+// reaches both legs and returns min(anchorH1, anchorH2).
+// Topology: A(3d) → H1 → H3; B(7d) → H2 → H3 → C(2d)
+// H3.ES via predChain: min(A.EF=3 through H1, B.EF=7 through H2) = 3.
+// Both chains must contribute; previously H2 was silently dropped after H1.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 300\tA\tA\tTT_Task\t24\t24',   // 3d
+        '%R 301\tB\tB\tTT_Task\t56\t56',   // 7d
+        '%R 302\tH1\tH1\tTT_Hammock\t0\t0',
+        '%R 303\tH2\tH2\tTT_Hammock\t0\t0',
+        '%R 304\tH3\tH3\tTT_Hammock\t0\t0',
+        '%R 305\tC\tC\tTT_Task\t16\t16',   // 2d
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 300\t302\tPR_FS\t0',    // A → H1
+        '%R 301\t303\tPR_FS\t0',    // B → H2
+        '%R 302\t304\tPR_FS\t0',    // H1 → H3
+        '%R 303\t304\tPR_FS\t0',    // H2 → H3 (diamond join)
+        '%R 304\t305\tPR_FS\t0',    // H3 → C
+        '%R 300\t305\tPR_FS\t0',    // A → C (real driver)
+        '%R 301\t305\tPR_FS\t0',    // B → C (real driver)
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    check('R-v298-B4: all 3 hammocks resolved (diamond join did not drop)',
+        result.hammocks_resolved === 3, 'got ' + result.hammocks_resolved);
+    const hams = E.getHammocks();
+    const H3 = Object.values(hams).find(h => h.code === 'H3');
+    // H3.ES = min(A.EF via H1, B.EF via H2) = min(3, 7) = 3. Old code dropped
+    // the second leg via visited-set; if the first-walked leg was H1, H3.ES=3
+    // would still be correct but inverted ordering would have shown the bug.
+    // The strongest assertion: both legs contributed (no silent drop).
+    check('R-v298-B4: H3.ES = 3 (min from A via H1)', H3.ES === 3, 'got ' + H3.ES);
+    // Verify memoization didn't break correctness for nested case.
+    const H1 = Object.values(hams).find(h => h.code === 'H1');
+    const H2 = Object.values(hams).find(h => h.code === 'H2');
+    check('R-v298-B4: H1.ES = A.EF = 3', H1.ES === 3, 'got ' + H1.ES);
+    check('R-v298-B4: H2.ES = B.EF = 7', H2.ES === 7, 'got ' + H2.ES);
+}
+
+// R-v298-B5: Section D module-level state warning — verify the JSDoc note is
+// present in the source. This is a documentation-only fix (refactor is v3.0);
+// the existence of the warning string in the runCPM JSDoc is the deliverable.
+{
+    const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
+    check('R-v298-B5: runCPM JSDoc warns about module-level singleton state',
+        src.indexOf('CONCURRENCY WARNING') >= 0 &&
+        src.indexOf('module-level singleton') >= 0 &&
+        src.indexOf('worker_threads') >= 0);
+}
+
+// R-v298-B6: dateToNum 2-digit year now rejected (no silent rewrite to 1999).
+// Before fix: dateToNum('99-01-01') → Date.UTC(99, 0, 1) → ms for 1999.
+// After fix: y < 1000 returns 0 (and 4-digit years still work normally).
+{
+    check('R-v298-B6: 2-digit year rejected (returns 0)',
+        E.dateToNum('99-01-01') === 0,
+        'got ' + E.dateToNum('99-01-01'));
+    check('R-v298-B6: 3-digit year rejected (returns 0)',
+        E.dateToNum('999-01-01') === 0,
+        'got ' + E.dateToNum('999-01-01'));
+    // 4-digit Gregorian still works (1999 < EPOCH 2020 → negative offset, valid).
+    check('R-v298-B6: 4-digit year still works (1999-01-01 non-zero, pre-EPOCH negative)',
+        E.dateToNum('1999-01-01') === -7670,
+        'got ' + E.dateToNum('1999-01-01'));
+    // Anchor that 1999 != year 99 (regression for the silent-rewrite bug).
+    check('R-v298-B6: 1999-01-01 and bug-induced 99 do NOT collide silently',
+        E.dateToNum('1999-01-01') !== E.dateToNum('99-01-01'));
+}
+
+// R-v298-B7: Secondary-slot ALAP honored in Section D (was primary-only).
+// Topology: parallel paths A→B→END(via short) AND A→C→END(long), so B has float.
+// B has secondary-slot-only ALAP — must slide ES forward to LS.
+// A(5d) → B(3d) → END;  A(5d) → C(15d) → END
+// Without ALAP: B.ES=5, B.EF=8, B.LS=17, B.LF=20, TF=12.
+// With ALAP slide: B.ES → 17, B.EF → 20, TF=0.
+// The regression target: pre-fix code skipped this slide because constraint
+// (primary slot) was null; only constraint2 had ALAP.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2\tcstr_type2\tcstr_date',
+        '%R 400\tA\tA\tTT_Task\t40\t40\t\t\t\t',     // 5d
+        // Secondary slot only: ALAP via cstr_type2 (no primary).
+        '%R 401\tB\tB\tTT_Task\t24\t24\t\t\tCS_ALAP\t',  // 3d
+        '%R 402\tC\tC\tTT_Task\t120\t120\t\t\t\t',    // 15d (CP driver)
+        '%R 403\tEND\tEND\tTT_FinMile\t0\t0\t\t\t\t',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 400\t401\tPR_FS\t0',     // A → B
+        '%R 400\t402\tPR_FS\t0',     // A → C
+        '%R 401\t403\tPR_FS\t0',     // B → END
+        '%R 402\t403\tPR_FS\t0',     // C → END
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    E.runCPM();
+    const tasks = E.getTasks();
+    const B = Object.values(tasks).find(t => t.code === 'B');
+    check('R-v298-B7: B has constraint2.type === ALAP (secondary slot)',
+        B.constraint2 && B.constraint2.type === 'ALAP');
+    // ALAP slide expected: ES from 5 → 17, EF from 8 → 20, TF: 12 → 0.
+    check('R-v298-B7: secondary-slot ALAP slides B.ES from 5 → 17',
+        B.ES === 17, 'got B.ES=' + B.ES);
+    check('R-v298-B7: secondary-slot ALAP slides B.EF from 8 → 20',
+        B.EF === 20, 'got B.EF=' + B.EF);
+    check('R-v298-B7: secondary-slot ALAP zeros B.TF (was 12, now 0)',
+        Math.abs(B.TF) < 0.001, 'got B.TF=' + B.TF);
+}
+
+// R-v298-B7b: Same fix in Section C (computeCPM forward pass).
+// Activity with constraint2 = ALAP and float available — ES should slide to LS.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        // B has float via parallel path; secondary-slot ALAP only.
+        { code: 'B', duration_days: 3, constraint2: { type: 'ALAP', date: '' } },
+        { code: 'C', duration_days: 10, early_start: '2026-01-05' },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    // C has 10d, drives projectFinish. B has float = projectFinish - B.EF.
+    // ALAP on secondary slot must trigger the slide.
+    const slideAlert = r.alerts.find(a =>
+        a.context === 'constraint-applied' && a.message.indexOf('ALAP') >= 0 &&
+        a.message.indexOf('B') >= 0);
+    check('R-v298-B7b: Section C secondary-slot ALAP emits slide WARN',
+        slideAlert !== undefined,
+        'alerts: ' + JSON.stringify(r.alerts.filter(a => a.message.indexOf('ALAP') >= 0)));
+    check('R-v298-B7b: B.TF = 0 after ALAP slide (Section C)',
+        Math.abs(r.nodes.B.tf) < 0.001, 'got B.tf=' + r.nodes.B.tf);
+}
+
+// R-v298-B8: Hammock with negative-span (LF < ES on chain) — alert emitted.
+// Build a topology where the hammock pred anchors later than its succ anchor.
+// Pred: A finishes day 10. Succ: B starts day 3. Hammock between them.
+// To force this without warnings, use a free-floating B with SNET pinning it
+// EARLIER than A, but then ensuring B is also a successor of the hammock.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        // A is a 10-day predecessor with FNET pinning its EF late (day 20).
+        '%R 500\tA\tA\tTT_Task\t80\t80\tCS_MEOA\t2026-01-25 00:00',  // FNET = day 20 forward clamp
+        // B is a successor anchored EARLY via direct end-mile chain.
+        '%R 501\tB\tB\tTT_Task\t40\t40\t\t',
+        '%R 502\tH\tH\tTT_Hammock\t0\t0',
+        '%R 503\tEND\tEND\tTT_FinMile\t0\t0',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 500\t502\tPR_FS\t0',     // A → H
+        '%R 502\t501\tPR_FS\t0',     // H → B (FS-only, supported)
+        '%R 501\t503\tPR_FS\t0',     // B → END (B drives projectFinish ONLY if downstream)
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM({ projectStart: '2026-01-05' });
+    const hams = E.getHammocks();
+    const H = Object.values(hams).find(h => h.code === 'H');
+    // A.EF clamped forward to day 20 via FNET. H pred-anchor = 20.
+    // B is anchored by H (no direct preds). projectFinish = END.EF = B.EF + 0.
+    // B.ES via H is not a normal driver (H is summary). Without other drivers
+    // B.ES=0, but H succ chain says H.LF = B.LS. With B no constraint, B.LS
+    // ≈ projectFinish - 5 ≈ tiny. We want H.LF < H.ES (=20).
+    // Verify B.LS - A.EF < 0 ⇒ alert fired.
+    const negSpanAlert = result.alerts.find(a => a.context === 'hammock-negative-span');
+    check('R-v298-B8: hammock-negative-span ALERT emitted when LF < ES',
+        negSpanAlert !== undefined &&
+        (negSpanAlert.message.indexOf('H') >= 0 ||
+         negSpanAlert.message.indexOf('Hammock') >= 0),
+        'got ' + result.alerts.map(a => a.context).join(','));
+    check('R-v298-B8: H.duration clamped to 0 on negative span',
+        H.duration === 0, 'got ' + H.duration);
+}
+
+// R-v298-B10: Daubert disclosure string updated from "13 fixtures" → "16 fixtures".
+// This text is baked into emitted Daubert disclosures = court filings.
+{
+    const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
+    check('R-v298-B10: Daubert disclosure references 16 fixtures (not 13)',
+        src.indexOf('16 fixtures + 282-activity') >= 0);
+    check('R-v298-B10: no remaining "13 fixtures" reference in source',
+        src.indexOf('13 fixtures') === -1);
 }
 
 console.log('\n========================================');

@@ -43,7 +43,7 @@ EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
 
 # Synchronized with cpm-engine.js ENGINE_VERSION.
-ENGINE_VERSION = '2.9.7'
+ENGINE_VERSION = '2.9.8'
 
 
 # =============================================================================
