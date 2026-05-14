@@ -1489,12 +1489,30 @@ function _mcTopologicalSort() {
 }
 
 function runCPM(opts) {
-    // opts: { logOutput?: bool }  — backward-compat: runCPM(true) also accepted
+    // opts: { logOutput?: bool, projectStart?: 'YYYY-MM-DD' }
+    //   projectStart anchors absolute constraint dates to Section D's relative
+    //   day-number scale (ES/EF are days from project start). When absent,
+    //   constraints are silently no-ops in Section D (graceful degradation —
+    //   Section D is week-agnostic; Section C is the calendar-aware path).
+    //   Backward-compat: runCPM(true) accepted as logOutput=true.
     let logOutput = false;
+    let projectStart = '';
     if (typeof opts === 'boolean') logOutput = opts;
-    else if (opts && typeof opts === 'object') logOutput = !!opts.logOutput;
+    else if (opts && typeof opts === 'object') {
+        logOutput = !!opts.logOutput;
+        projectStart = opts.projectStart || opts.project_start || '';
+    }
 
     const log = [];
+    // v2.9.7 — Convert constraint date to Section D's day-number scale.
+    // Returns -1 if conversion impossible (no projectStart or invalid date).
+    function _cstrDayOffset(cstrDate) {
+        if (!projectStart || !cstrDate) return -1;
+        const psNum = dateToNum(projectStart);
+        const cNum = dateToNum(cstrDate);
+        if (psNum <= 0 || cNum <= 0) return -1;
+        return cNum - psNum;
+    }
 
     for (const taskId in _MC.tasks) {
         const t = _MC.tasks[taskId];
@@ -1536,7 +1554,41 @@ function runCPM(opts) {
             if (predContribution > maxES) maxES = predContribution;
         }
         task.ES = Math.max(0, maxES);
+
+        // v2.9.7 — Apply constraint clamps on ES side (forward pass).
+        // Primary then secondary. Section D operates in day-number relative
+        // time; projectStart anchors absolute constraint dates. When
+        // projectStart is absent, _cstrDayOffset returns -1 and clamps are
+        // skipped — Section D degrades gracefully to pre-v2.9.7 behavior.
+        function _clampESForward(cstr) {
+            if (!cstr) return;
+            const cOff = _cstrDayOffset(cstr.date);
+            if (cstr.type === 'SNET' && cOff >= 0) {
+                if (cOff > task.ES) task.ES = cOff;
+            } else if (cstr.type === 'MS_Start' || cstr.type === 'SO') {
+                if (cOff >= 0) task.ES = cOff;  // forced
+            }
+            // SNLT, FNET, FNLT, MS_Finish, MFO are not ES-side clamps.
+        }
+        _clampESForward(task.constraint);
+        _clampESForward(task.constraint2);
+
         task.EF = task.ES + task.remaining;
+
+        // v2.9.7 — EF-side forward clamps (FNET, FNLT, MS_Finish, MFO).
+        function _clampEFForward(cstr) {
+            if (!cstr) return;
+            const cOff = _cstrDayOffset(cstr.date);
+            if (cstr.type === 'FNET' && cOff >= 0) {
+                if (cOff > task.EF) task.EF = cOff;
+            } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
+                if (cOff >= 0) task.EF = cOff;
+            }
+            // FNLT is documented in Section C but only a soft deadline in MC.
+        }
+        _clampEFForward(task.constraint);
+        _clampEFForward(task.constraint2);
+
         if (logOutput) {
             log.push('FWD: ' + task.code + ' ES=' + task.ES.toFixed(1) + ' EF=' + task.EF.toFixed(1));
         }
@@ -1582,6 +1634,25 @@ function runCPM(opts) {
             task.LS = task.LF - task.remaining;
             if (minLS !== Infinity && minLS < task.LS) task.LS = minLS;
         }
+        // v2.9.7 — Backward-pass constraint clamps on LF side.
+        // FNLT / MS_Finish / MFO tighten LF backward.
+        function _clampLFBackward(cstr) {
+            if (!cstr) return;
+            const cOff = _cstrDayOffset(cstr.date);
+            if (cstr.type === 'FNLT' && cOff >= 0) {
+                if (cOff < task.LF) task.LF = cOff;
+            } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
+                if (cOff >= 0) task.LF = cOff;
+            } else if (cstr.type === 'SNLT' && cOff >= 0) {
+                // LF must be <= constraint + duration (LS <= cOff).
+                const lfFromSnlt = cOff + task.remaining;
+                if (lfFromSnlt < task.LF) task.LF = lfFromSnlt;
+            }
+        }
+        _clampLFBackward(task.constraint);
+        _clampLFBackward(task.constraint2);
+        // Recompute LS after LF clamp.
+        task.LS = task.LF - task.remaining;
         task.TF = task.LF - task.EF;
         if (logOutput) {
             log.push('BWD: ' + task.code + ' LS=' + task.LS.toFixed(1) +

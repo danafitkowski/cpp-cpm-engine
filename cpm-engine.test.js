@@ -3838,6 +3838,101 @@ console.log('\n=== Section R-Hammock — TT_Hammock two-pass ===');
 }
 
 // ============================================================================
+// Section R-MC — v2.9.7 Section D Monte Carlo constraint enforcement (Feature 3)
+// ============================================================================
+console.log('\n=== Section R-MC — runCPM constraint enforcement ===');
+
+// MC-1: SNET pin in runCPM. Per-trial sampler should respect SNET constraint.
+// Project starts 2026-01-05. SNET 2026-01-15 on B = day 10. A.EF (5d) = 5, but
+// B.ES should pin at 10.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 100\tA\tFirst\tTT_Task\t40\t40\t\t',
+        '%R 101\tB\tSecond\tTT_Task\t24\t24\tCS_MSOA\t2026-01-15 00:00',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 100\t101\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    // No projectStart — constraints are no-op (backward-compat path).
+    const r1 = E.runCPM();
+    const tasksAfter1 = E.getTasks();
+    const taskB1 = Object.values(tasksAfter1).find(t => t.code === 'B');
+    check('MC-1a: without projectStart, SNET is no-op (B.ES = A.EF = 5)',
+        taskB1.ES === 5, 'got ' + taskB1.ES);
+    // With projectStart, SNET pins B.ES.
+    const r2 = E.runCPM({ projectStart: '2026-01-05' });
+    const tasksAfter2 = E.getTasks();
+    const taskB2 = Object.values(tasksAfter2).find(t => t.code === 'B');
+    check('MC-1b: with projectStart, SNET pins B.ES at day 10 (2026-01-15)',
+        taskB2.ES === 10, 'got ' + taskB2.ES);
+    check('MC-1b: B.EF = ES + dur (10 + 3 = 13)',
+        taskB2.EF === 13, 'got ' + taskB2.EF);
+}
+
+// MC-2: SNET pin holds across multiple per-trial runs (regression for the
+// claim that constraints are honored "in every trial").
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 200\tA\tFirst\tTT_Task\t40\t40\t\t',
+        '%R 201\tB\tSecond\tTT_Task\t24\t24\tCS_MSOA\t2026-02-01 00:00',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 200\t201\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    // Project starts 2026-01-05; SNET 2026-02-01 = day 27.
+    const tasks = E.getTasks();
+    const taskA = Object.values(tasks).find(t => t.code === 'A');
+    const taskB = Object.values(tasks).find(t => t.code === 'B');
+    let allPinned = true;
+    for (let trial = 0; trial < 5; trial++) {
+        // Vary A's remaining (simulate MC duration sampling).
+        taskA.remaining = 3 + trial;  // 3, 4, 5, 6, 7
+        E.runCPM({ projectStart: '2026-01-05' });
+        if (taskB.ES < 27) { allPinned = false; break; }
+    }
+    check('MC-2: SNET-constrained task pins ES in every trial (5 trials)',
+        allPinned);
+}
+
+// MC-3: FNLT backward clamp tightens LF in runCPM.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 300\tA\tFirst\tTT_Task\t40\t40\t\t',                       // 5d
+        '%R 301\tB\tSecond\tTT_Task\t24\t24\tCS_MEOB\t2026-01-12 00:00', // FNLT day 7
+        '%R 302\tC\tLong\tTT_Task\t80\t80\t\t',                        // 10d
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 300\t301\tPR_FS\t0',  // A → B
+        '%R 300\t302\tPR_FS\t0',  // A → C (off CP)
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    E.runCPM({ projectStart: '2026-01-05' });
+    const taskB = Object.values(E.getTasks()).find(t => t.code === 'B');
+    // ProjectFinish = A.EF + max(B, C) = 5 + 10 = 15. B.EF = 8.
+    // Without FNLT, B.LF = 15 (no successors).
+    // With FNLT 2026-01-12 = day 7, B.LF clamped backward to 7.
+    check('MC-3: FNLT clamps B.LF backward to day 7',
+        taskB.LF === 7, 'got ' + taskB.LF);
+}
+
+// ============================================================================
 // Section Q-3 — FF / SF relationship-type coverage (v2.9.3 audit T1.4)
 // ============================================================================
 console.log('\n=== Section Q-3 — FF / SF coverage ===');
