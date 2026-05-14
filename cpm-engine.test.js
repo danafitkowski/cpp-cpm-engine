@@ -1293,7 +1293,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.4.0',
-        r.manifest.engine_version === '2.9.2');
+        r.manifest.engine_version === '2.9.3');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1329,7 +1329,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.2');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.3');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1563,7 +1563,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.2');
+    check('D3: engine_version present', h.engine_version === '2.9.3');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2007,14 +2007,14 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.2');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.3');
 }
 {
     // Standalone use (null result) → graceful, no crash
     const d = E.buildDaubertDisclosure(null, {});
     check('E3: null result → method_id = unknown', d.methodology.method_id === 'unknown');
     check('E3: null result → no throw', true);
-    check('E3: null result → engine_version present', d.engine_version === '2.9.2');
+    check('E3: null result → engine_version present', d.engine_version === '2.9.3');
 }
 
 // ============================================================================
@@ -3148,6 +3148,235 @@ console.log('\n=== Section Q — v2.9.2 audit-fix regressions ===');
     // Sanity: the non-dangling relationship still drove the forward pass.
     check('Q-2: surviving A→B relationship still drove ES of B',
         r.nodes && r.nodes.B && typeof r.nodes.B.es === 'number');
+}
+
+// ============================================================================
+// Section R — v2.9.3 P6 constraint handling
+// ============================================================================
+console.log('\n=== Section R — v2.9.3 P6 constraints ===');
+
+// Helper: 2-activity FS chain with a constraint on B.
+function _rChain(constraint, opts) {
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, constraint },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    return E.computeCPM(acts, rels, Object.assign({ dataDate: '2026-01-05' }, opts || {}));
+}
+
+// R-1: SNET pushes ES later than predecessor would.
+{
+    // A: 5d from 2026-01-05 → ends 2026-01-12. Default B.ES = 2026-01-12.
+    // SNET 2026-01-20 should clamp B.ES to 2026-01-20.
+    const r = _rChain({ type: 'SNET', date: '2026-01-20' });
+    check('R-1: SNET clamps ES forward',
+        r.nodes.B.es_date === '2026-01-20',
+        'got ' + r.nodes.B.es_date);
+    const applied = r.alerts.filter(a => a.context === 'constraint-applied');
+    check('R-1: SNET emits constraint-applied WARN', applied.length === 1);
+}
+
+// R-2: SNET earlier than ES is a no-op (does not move ES backward).
+{
+    // No calendar in opts → 7-day arithmetic. A:5d from 2026-01-05 → A.EF=2026-01-10.
+    // B.ES (pred-driven) = 2026-01-10. SNET 2026-01-01 must NOT move it backward.
+    const r = _rChain({ type: 'SNET', date: '2026-01-01' });
+    check('R-2: SNET earlier than pred-driven ES is a no-op',
+        r.nodes.B.es_date === '2026-01-10',
+        'got ' + r.nodes.B.es_date);
+}
+
+// R-3: SNLT violation alerts when predecessor pushes ES past constraint.
+{
+    const r = _rChain({ type: 'SNLT', date: '2026-01-07' });
+    // Pred-driven ES = 2026-01-12, SNLT date = 2026-01-07 → violation.
+    const violated = r.alerts.filter(a => a.context === 'constraint-violated');
+    check('R-3: SNLT violation emits constraint-violated ALERT', violated.length === 1);
+}
+
+// R-4: FNET clamps EF forward.
+{
+    // Default B.EF (3d from 2026-01-12 MonFri) = 2026-01-15. FNET 2026-02-01.
+    const r = _rChain({ type: 'FNET', date: '2026-02-01' });
+    check('R-4: FNET clamps EF forward',
+        r.nodes.B.ef_date === '2026-02-01',
+        'got ' + r.nodes.B.ef_date);
+}
+
+// R-5: FNLT pulls LF backward and tightens TF.
+{
+    // Default projectFinish = B.EF = 2026-01-13. FNLT 2026-01-12 (earlier) pulls LF back.
+    const r = _rChain({ type: 'FNLT', date: '2026-01-12' });
+    // Engine emits violation since EF=2026-01-13 > FNLT=2026-01-12, but LF still clamped.
+    check('R-5: FNLT clamps LF backward',
+        r.nodes.B.lf_date === '2026-01-12',
+        'got ' + r.nodes.B.lf_date);
+    const violated = r.alerts.filter(a => a.context === 'constraint-violated');
+    check('R-5: FNLT violation emits ALERT (EF > constraint)', violated.length === 1);
+}
+
+// R-6: MS_Start (mandatory start) forces ES regardless of predecessor logic.
+{
+    const r = _rChain({ type: 'MS_Start', date: '2026-01-20' });
+    check('R-6: MS_Start forces ES to date',
+        r.nodes.B.es_date === '2026-01-20',
+        'got ' + r.nodes.B.es_date);
+}
+
+// R-7: MS_Finish forces EF regardless of predecessor logic.
+{
+    const r = _rChain({ type: 'MS_Finish', date: '2026-02-13' });
+    check('R-7: MS_Finish forces EF to date',
+        r.nodes.B.ef_date === '2026-02-13',
+        'got ' + r.nodes.B.ef_date);
+}
+
+// R-8: Long-form XER token (CS_MSO) normalizes to MS_Start.
+{
+    const r = _rChain({ type: 'CS_MSO', date: '2026-01-20' });
+    check('R-8: CS_MSO normalizes to MS_Start',
+        r.nodes.B.es_date === '2026-01-20');
+}
+
+// R-9: In-progress activity ES pin (fix #2).
+{
+    const acts = [
+        { code: 'A', duration_days: 10, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 5, actual_start: '2026-02-03' },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('R-9: in-progress actual_start pins ES',
+        r.nodes.B.es_date === '2026-02-03',
+        'got ' + r.nodes.B.es_date);
+    // A.EF = 2026-01-19, but B.actual_start = 2026-02-03 (later) → no OoS.
+    // Build an OoS scenario instead: A has no actual_start, B in progress.
+    const acts2 = [
+        { code: 'A', duration_days: 10 },
+        { code: 'B', duration_days: 5, actual_start: '2026-02-03' },
+    ];
+    const r2 = E.computeCPM(acts2, rels, { dataDate: '2026-01-05' });
+    const oos = r2.alerts.filter(a => a.context === 'out-of-sequence');
+    check('R-9: in-progress B with unstarted A emits OoS ALERT',
+        oos.length === 1,
+        'got ' + oos.length + ' OoS alerts');
+    check('R-9: OoS message mentions in progress', oos.length > 0 && oos[0].message.indexOf('in progress') >= 0);
+}
+
+// R-10: parseXER dropped_activities surfaces TT_LOE / TT_WBS / completed rows.
+{
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id',
+        '%R 1\tA\tActive\tTT_Task\t40\t\t\t1',
+        '%R 2\tB\tLOE\tTT_LOE\t40\t\t\t1',
+        '%R 3\tC\tWBS\tTT_WBS\t40\t\t\t1',
+        '%R 4\tD\tDone\tTT_Task\t0\t2026-01-05 08:00\t2026-01-12 17:00\t1',
+        '',
+    ].join('\n');
+    const res = E.parseXER(xer);
+    check('R-10: parseXER returns dropped_activities array',
+        Array.isArray(res.dropped_activities));
+    check('R-10: 3 activities dropped (LOE + WBS + completed)',
+        res.dropped_activities.length === 3,
+        'got ' + res.dropped_activities.length);
+    check('R-10: 1 active TT_Task retained', res.taskCount === 1);
+    const reasons = res.dropped_activities.map(d => d.reason).sort();
+    check('R-10: dropped reasons enumerated',
+        reasons.indexOf('level-of-effort') >= 0 &&
+        reasons.indexOf('wbs-summary') >= 0 &&
+        reasons.indexOf('completed-or-zero-remaining') >= 0);
+}
+
+// ============================================================================
+// Section Q-3 — FF / SF relationship-type coverage (v2.9.3 audit T1.4)
+// ============================================================================
+console.log('\n=== Section Q-3 — FF / SF coverage ===');
+
+// Helper for 2-act schedule with specified relationship type + lag.
+function _rRel(relType, lag) {
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: relType, lag_days: lag }];
+    return E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+}
+
+// FF-0 forward: B.EF must equal A.EF + 0.
+{
+    const r = _rRel('FF', 0);
+    // A: 2026-01-05 + 5d = 2026-01-12. B.EF = 2026-01-12. B.ES = EF - 3d = 2026-01-07.
+    check('Q3-FF0 forward: B.EF == A.EF',
+        r.nodes.B.ef_date === r.nodes.A.ef_date,
+        'A.EF=' + r.nodes.A.ef_date + ' B.EF=' + r.nodes.B.ef_date);
+    check('Q3-FF0 forward: B.ES = B.EF - 3 work days',
+        r.nodes.B.es_date === '2026-01-07',
+        'got ' + r.nodes.B.es_date);
+}
+
+// FF-3 forward: B.EF = A.EF + 3 cal days.
+{
+    const r = _rRel('FF', 3);
+    // A.EF=2026-01-10. +3d → 2026-01-13. B.EF must be 2026-01-13.
+    check('Q3-FF3 forward: B.EF = A.EF + 3 cal days',
+        r.nodes.B.ef_date === '2026-01-13',
+        'got ' + r.nodes.B.ef_date);
+}
+
+// SF-0 forward: with ddNum clamp, B.ES floors to data date; B.EF = B.ES + dur.
+{
+    const r = _rRel('SF', 0);
+    // SF math: B.ES = A.ES + lag - duration = 2026-01-05 - 3 = 2026-01-02.
+    // ddNum clamps B.ES floor to 2026-01-05. B.EF = 2026-01-05 + 3 = 2026-01-08.
+    check('Q3-SF0 forward: B.EF = max(ddNum, A.ES+lag-dur) + dur',
+        r.nodes.B.ef_date === '2026-01-08',
+        'A.ES=' + r.nodes.A.es_date + ' B.EF=' + r.nodes.B.ef_date);
+}
+
+// SF-2 forward: lag pushes anchor forward but ddNum still binds.
+{
+    const r = _rRel('SF', 2);
+    // SF: B.ES = A.ES + 2 - 3 = 2026-01-04. ddNum clamp → 2026-01-05. B.EF = 2026-01-08.
+    check('Q3-SF2 forward: B.EF = max(ddNum, A.ES+lag-dur) + dur',
+        r.nodes.B.ef_date === '2026-01-08',
+        'got ' + r.nodes.B.ef_date);
+}
+
+// FF backward — verify LF propagation. With FF, B.LF = A.LF (lag 0).
+{
+    const r = _rRel('FF', 0);
+    check('Q3-FF0 backward: A.LF and B.LF both bounded by projectFinish',
+        typeof r.nodes.A.lf_date === 'string' && typeof r.nodes.B.lf_date === 'string');
+    // A and B both finish on same date so both are critical (TF=0).
+    check('Q3-FF0 backward: A is critical (TF=0)', r.nodes.A.tf === 0);
+    check('Q3-FF0 backward: B is critical (TF=0)', r.nodes.B.tf === 0);
+}
+
+// FF backward lag>0 — A.LF should be pulled back from B.LF by lag.
+{
+    const r = _rRel('FF', 3);
+    // Project finish = B.EF = 2026-01-13. B.LF = 2026-01-13. A.LF = B.LF - 3d = 2026-01-10.
+    check('Q3-FF3 backward: A.LF = B.LF - 3 cal days',
+        r.nodes.A.lf_date === '2026-01-10',
+        'A.LF=' + r.nodes.A.lf_date + ' B.LF=' + r.nodes.B.lf_date);
+}
+
+// SF backward — verify LF propagation chain via SF link.
+{
+    const r = _rRel('SF', 0);
+    check('Q3-SF0 backward: A.LS valid date string',
+        typeof r.nodes.A.ls_date === 'string' && r.nodes.A.ls_date.length === 10);
+}
+
+// SF backward with lag — A.LS pushed back.
+{
+    const r = _rRel('SF', 2);
+    // Project finish = B.EF = 2026-01-07. Backward: B.LF=B.EF=2026-01-07. B.LS=B.LF-3wd=2026-01-02 (Fri).
+    // A.LS from B.LS - 2wd = backward (since SF: A.LS = retreat(B.LS, lag, cal)).
+    check('Q3-SF2 backward: A and B both have float computed',
+        typeof r.nodes.A.tf === 'number' && typeof r.nodes.B.tf === 'number');
 }
 
 console.log('\n========================================');

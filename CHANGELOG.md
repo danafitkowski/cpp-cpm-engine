@@ -4,6 +4,30 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## v2.9.3 — 2026-05-14
+
+Audit round-2 fix wave. Adds P6 constraint handling — the engine previously had no support for `cstr_type` / `cstr_date2` and silently produced wrong answers for any constrained activity. Also closes the in-progress ES pin gap, surfaces previously-silent parseXER drops, discloses all health-grading heuristic thresholds, and adds FF/SF relationship-type test coverage.
+
+- **P6 constraint handling (T1).** New `task.constraint = {type, date}` field on activity input. Forward pass clamps ES/EF on `SNET`, `FNET`, `MS_Start`, `MS_Finish`, `MFO`, `SO`; emits `WARN constraint-applied` when clamp moves a date and `ALERT constraint-violated` on infeasible constraints (`SNLT`/`FNLT` with later derived value, `MS_*` overridden by predecessor logic). Backward pass applies symmetric LF clamps for `FNLT` / `SNLT` / `MS_Finish` / `MFO`. Long-form XER tokens (`CS_MSO`, `CS_MEO`, etc.) auto-normalize via `CONSTRAINT_TYPE_MAP`. `ALAP` is a no-op in forward pass and behaves correctly via default-LF init.
+- **In-progress activity ES pin (T1).** Activities with `actual_start` set but `actual_finish` empty now pin ES to `actual_start` in the forward pass. Previously `actual_start` on in-progress work was silently ignored, allowing predecessor logic to override the recorded start.
+- **OoS scanner covers in-progress (T1).** Out-of-sequence detection at `cpm-engine.js:881` previously skipped in-progress activities (`if (!a.is_complete) continue;`). The guard is now `if (!a.actual_start && !a.is_complete) continue;` and the ALERT message distinguishes between "is complete" and "is in progress".
+- **parseXER `dropped_activities` surfaced (T1).** `parseXER()` previously discarded `TT_LOE`, `TT_WBS`, and zero-remaining rows without trace. The return object now includes `dropped_activities: [{task_code, task_type, reason}]` with `reason ∈ {'level-of-effort','wbs-summary','completed-or-zero-remaining'}`. Caller decides whether to surface; previously hidden from any audit.
+- **Disclosed heuristic thresholds (T1 — Daubert risk).** Every magic number in `computeScheduleHealth()` (alert/salvage/CP-pct/orphan/oos/letter-grade) and the default `nearCriticalThreshold = 5` are now named constants with comments citing source (SmartPM whitepaper, AACE 49R-06 §5/§6, DCMA-14 §1/§10, or "CPP house heuristic"). DAUBERT.md adds a new §7 "Disclosed Heuristic Thresholds" enumerating each. The headline "no hidden heuristics" claim is now true.
+- **Constraint Handling disclosed.** DAUBERT.md adds §8 "Constraint Handling" documenting which P6 constraint types are honored, the forward / backward semantics, and which alert contexts mark each.
+- **FF / SF relationship coverage (T1).** New Section Q-3 (8 tests) covers forward FF lag-0 + lag>0, forward SF lag-0 + lag>0, and backward FF / SF chains. The v14 SF forward-pass fix (`predTask.ES`, not `EF`) now has regression coverage.
+- **Section R — constraints (10 tests).** Hand-computed expected ES/EF/LS/LF for SNET, SNLT, FNET, FNLT, MS_Start, MS_Finish, XER long-form normalization, in-progress ES pin, in-progress OoS detection, and `dropped_activities` enumeration.
+- **Version bump.** `package.json` 2.9.2 → 2.9.3. `ENGINE_VERSION` 2.9.2 → 2.9.3. DAUBERT.md document title, manifest sample, footer, and verification counts all synced.
+
+**Verification:** 563 unit tests (535 baseline + 28 new across Section R + Section Q-3), 0 failures. `npm run crossval` unchanged (Python parity preserved on un-constrained schedules; constraint behavior is a JS-side addition).
+
+**No API breakage.** Activities without a `constraint` field behave exactly as in v2.9.2. The `dropped_activities` field on `parseXER` is additive. All v2.9.2 / v2.9.1 / v2.8.0 callers continue to work.
+
+**Known gaps (follow-up):**
+- `python_reference/cpm.py` is still not shipped in the public repo. `npm run crossval` requires either `CPP_PYTHON_REFERENCE_DIR` env var or the sibling `python_reference/` directory. The "153 / 153 bit-identical" headline remains externally unverifiable without that file.
+- Constraint coverage in Section D's Monte-Carlo `parseXER` / `runCPM` path is intentionally omitted — Section D ignores `actual_start` and `constraint` by design (it samples durations per-iteration).
+
+---
+
 ## v2.9.2 — 2026-05-14
 
 Audit-fix wave. Substantive correctness fixes on top of the v2.9.1 hotfix tag; no API breakage.

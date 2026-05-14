@@ -144,7 +144,65 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.2';
+const ENGINE_VERSION = '2.9.3';
+
+// P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
+// token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
+// to canonical short codes used in the engine's forward/backward passes.
+//
+// References:
+//  - Oracle Primavera P6 Database Reference, TASK.cstr_type column (XER spec).
+//  - AACE 29R-03 §3.7 (constraint usage in forensic schedule analysis).
+const CONSTRAINT_TYPE_MAP = {
+    // Primavera XER tokens → canonical names used by the engine
+    'CS_MSO':      'MS_Start',     // Mandatory Start
+    'CS_MEO':      'MS_Finish',    // Mandatory Finish (Mandatory End Originally)
+    'CS_MEOA':     'MS_Finish',    // legacy variant
+    'CS_MSOA':     'MS_Start',     // legacy variant
+    'CS_MANDSTART':'MS_Start',
+    'CS_MANDFIN':  'MS_Finish',
+    'CS_MEOB':     'MFO',          // Must Finish On (treated as MS_Finish)
+    'CS_ALAP':     'ALAP',
+    'CS_SO':       'SO',           // Start On (treated as MS_Start)
+    // Short tokens (already canonical or P6 GUI labels)
+    'SNET':        'SNET',
+    'SNLT':        'SNLT',
+    'FNET':        'FNET',
+    'FNLT':        'FNLT',
+    'MS_Start':    'MS_Start',
+    'MS_Finish':   'MS_Finish',
+    'ALAP':        'ALAP',
+    'MFO':         'MFO',
+    'SO':          'SO',
+    // Common P6 short tokens for start/finish constraints
+    'CS_MSO_S':    'SNET',
+    'CS_MSO_F':    'SNLT',
+    'CS_MEO_S':    'FNET',
+    'CS_MEO_F':    'FNLT',
+    'StartOn':     'MS_Start',
+    'FinishOn':    'MS_Finish',
+    'StartNoEarlierThan':  'SNET',
+    'StartNoLaterThan':    'SNLT',
+    'FinishNoEarlierThan': 'FNET',
+    'FinishNoLaterThan':   'FNLT',
+};
+const CANONICAL_CONSTRAINT_TYPES = new Set([
+    'SNET','SNLT','FNET','FNLT','MS_Start','MS_Finish','ALAP','MFO','SO',
+]);
+
+function _normalizeConstraint(c) {
+    if (!c || typeof c !== 'object') return null;
+    const rawType = c.type || c.cstr_type || '';
+    if (!rawType) return null;
+    const canonical = CONSTRAINT_TYPE_MAP[rawType] || (CANONICAL_CONSTRAINT_TYPES.has(rawType) ? rawType : null);
+    if (!canonical) return null;
+    const rawDate = c.date || c.cstr_date2 || c.cstr_date || '';
+    // ALAP has no date.
+    if (canonical === 'ALAP') return { type: 'ALAP', date: '' };
+    const dateStr = String(rawDate).slice(0, 10);
+    if (!dateStr) return null;
+    return { type: canonical, date: dateStr };
+}
 
 // ============================================================================
 // SECTION A — Date helpers + calendar arithmetic
@@ -574,7 +632,10 @@ function tarjanSCC(nodeCodes, succMap) {
 //
 // activities: [{ code, duration_days, name?, actual_start?, actual_finish?,
 //                early_start?, early_finish?, is_complete?, is_fragnet?,
-//                clndr_id? }]
+//                clndr_id?, constraint? }]
+// constraint: { type, date } — Primavera P6 cstr_type / cstr_date2 (v2.9.3).
+//   type ∈ {SNET, SNLT, FNET, FNLT, MS_Start, MS_Finish, ALAP, MFO, SO}
+//   date  = 'YYYY-MM-DD'
 // relationships: [{ from_code, to_code, type: 'FS'|'SS'|'FF'|'SF', lag_days }]
 // opts: { dataDate?: 'YYYY-MM-DD', calMap?: { clndrId: calendarInfo } }
 // calendarInfo: { work_days: [P6 weekdays], holidays: ['YYYY-MM-DD', ...] }
@@ -649,6 +710,7 @@ function computeCPM(activities, relationships, opts) {
             actual_start: actualStart,
             actual_finish: actualFinish,
             clndr_id: a.clndr_id || '',
+            constraint: _normalizeConstraint(a.constraint),
         };
     }
 
@@ -705,7 +767,11 @@ function computeCPM(activities, relationships, opts) {
         if (node.is_complete) continue;
         const preds = predMap[code] || [];
         const nodeCal = calFor(node);
+        // v2.9.3 in-progress ES pin: actual_start sets a floor that predecessor
+        // logic cannot push later (work has already begun on that date).
+        const actStartNum = node.actual_start ? dateToNum(node.actual_start) : 0;
         let maxES = Math.max(node.es, ddNum);
+        if (actStartNum > 0) maxES = Math.max(maxES, actStartNum);
         let drivingPred = null;  // tracks which pred (if any) gave maxES
         for (const p of preds) {
             const pnode = nodes[p.from_code];
@@ -741,9 +807,101 @@ function computeCPM(activities, relationships, opts) {
                 };
             }
         }
+
+        // v2.9.3 — P6 constraint application (forward pass).
+        // Clamps ES / EF using the activity's cstr_type / cstr_date2 (already
+        // normalized in `node.constraint`). See `CONSTRAINT_TYPE_MAP` for the
+        // canonical short codes.
+        const cstr = node.constraint;
+        if (cstr) {
+            const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+            if (cstr.type === 'SNET' && cdNum > 0) {
+                if (cdNum > maxES) {
+                    alerts.push({
+                        severity: 'WARN',
+                        context: 'constraint-applied',
+                        message: 'SNET on ' + code + ' pushes ES from ' +
+                            numToDate(maxES) + ' to ' + cstr.date,
+                    });
+                    maxES = cdNum;
+                }
+            } else if (cstr.type === 'SNLT' && cdNum > 0) {
+                if (maxES > cdNum) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'SNLT on ' + code + ' violated: ES=' +
+                            numToDate(maxES) + ' is after constraint date ' + cstr.date,
+                    });
+                }
+            } else if (cstr.type === 'MS_Start' || cstr.type === 'SO') {
+                if (cdNum > 0) {
+                    if (maxES > cdNum) {
+                        alerts.push({
+                            severity: 'ALERT',
+                            context: 'constraint-violated',
+                            message: 'Mandatory Start on ' + code + ' violated: predecessor logic forces ES=' +
+                                numToDate(maxES) + ' which is after mandatory date ' + cstr.date,
+                        });
+                    } else if (maxES < cdNum) {
+                        alerts.push({
+                            severity: 'WARN',
+                            context: 'constraint-applied',
+                            message: 'Mandatory Start on ' + code + ' pins ES to ' + cstr.date,
+                        });
+                    }
+                    maxES = cdNum; // forced regardless of pred logic
+                }
+            }
+        }
+
         node.es = maxES;
         node.ef = _advanceWithAlerts(node.es, node.duration_days, nodeCal, alerts,
             'forward ' + code + '.EF');
+
+        // Forward-pass EF-side constraint clamps (FNET, FNLT, MS_Finish, MFO).
+        if (cstr) {
+            const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+            if (cstr.type === 'FNET' && cdNum > 0) {
+                if (cdNum > node.ef) {
+                    alerts.push({
+                        severity: 'WARN',
+                        context: 'constraint-applied',
+                        message: 'FNET on ' + code + ' pushes EF from ' +
+                            numToDate(node.ef) + ' to ' + cstr.date,
+                    });
+                    node.ef = cdNum;
+                }
+            } else if (cstr.type === 'FNLT' && cdNum > 0) {
+                if (node.ef > cdNum) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'FNLT on ' + code + ' violated: EF=' +
+                            numToDate(node.ef) + ' is after constraint date ' + cstr.date,
+                    });
+                }
+            } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
+                if (cdNum > 0) {
+                    if (node.ef > cdNum) {
+                        alerts.push({
+                            severity: 'ALERT',
+                            context: 'constraint-violated',
+                            message: 'Mandatory Finish on ' + code + ' violated: predecessor logic forces EF=' +
+                                numToDate(node.ef) + ' which is after mandatory date ' + cstr.date,
+                        });
+                    } else if (node.ef < cdNum) {
+                        alerts.push({
+                            severity: 'WARN',
+                            context: 'constraint-applied',
+                            message: 'Mandatory Finish on ' + code + ' pins EF to ' + cstr.date,
+                        });
+                    }
+                    node.ef = cdNum; // forced regardless of pred logic
+                }
+            }
+        }
+
         node.driving_predecessor = drivingPred;
     }
 
@@ -805,6 +963,24 @@ function computeCPM(activities, relationships, opts) {
             }
             if (minLF === null) minLF = maxEF;
         }
+        // v2.9.3 — P6 constraint application (backward pass).
+        // Symmetric LF / LS clamps. Same semantics as forward pass but bounded
+        // from above; violations were already alerted on the forward leg.
+        const cstr = node.constraint;
+        if (cstr) {
+            const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+            if (cstr.type === 'FNLT' && cdNum > 0) {
+                if (cdNum < minLF) minLF = cdNum;
+            } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
+                if (cdNum > 0) minLF = cdNum;
+            } else if (cstr.type === 'SNLT' && cdNum > 0) {
+                // LF = constraint.date + duration (clamps LS to ≤ constraint date).
+                const lfFromSnlt = _advanceWithAlerts(cdNum, node.duration_days, nodeCal, alerts,
+                    'SNLT LF ' + code);
+                if (lfFromSnlt < minLF) minLF = lfFromSnlt;
+            }
+        }
+
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
             'backward ' + code + '.LS');
@@ -879,7 +1055,13 @@ function computeCPM(activities, relationships, opts) {
         if (_aa && _aa.code) _actByCode.set(_aa.code, _aa);
     }
     for (const a of activities) {
-        if (!a || !a.code || !a.is_complete) continue;
+        if (!a || !a.code) continue;
+        // v2.9.3 — scan both completed AND in-progress activities. Previously
+        // the guard was `!a.is_complete continue;` which silently exempted
+        // in-progress work from the OoS detector, even though an in-progress
+        // task with an unstarted predecessor is the more common retained-logic
+        // anomaly mid-project.
+        if (!a.actual_start && !a.is_complete) continue;
         const preds = predMap[a.code] || [];
         for (const p of preds) {
             const pred = nodes[p.from_code];
@@ -888,11 +1070,12 @@ function computeCPM(activities, relationships, opts) {
             const predAct = _actByCode.get(p.from_code);
             if (!predAct) continue;
             if (!predAct.actual_start && !predAct.is_complete) {
+                const label = a.is_complete ? 'is complete' : 'is in progress';
                 alerts.push({
                     severity: 'ALERT',
                     context: 'out-of-sequence',
                     message: 'Activity ' + a.code +
-                        ' is complete but predecessor ' + p.from_code +
+                        ' ' + label + ' but predecessor ' + p.from_code +
                         ' has no actual_start (retained-logic anomaly)',
                 });
                 break; // one alert per OoS activity
@@ -946,6 +1129,10 @@ const _MC = {
 function parseXER(content) {
     _MC.tasks = {};
     _MC.predecessors = [];
+    // v2.9.3 — track silently-dropped activities so callers can surface them.
+    // Previously TT_LOE / TT_WBS / fully-completed (remaining<=0) rows were
+    // discarded without leaving a trace; now every drop is enumerated below.
+    const droppedActivities = [];
     let currentTable = '';
     let headers = [];
 
@@ -966,7 +1153,15 @@ function parseXER(content) {
             if (currentTable === 'TASK') {
                 const taskId = row.task_id;
                 const remaining = (parseFloat(row.remain_drtn_hr_cnt) || 0) / 8;
-                if (remaining > 0 && row.task_type !== 'TT_LOE' && row.task_type !== 'TT_WBS') {
+                const _taskType = row.task_type || '';
+                if (_taskType === 'TT_LOE') {
+                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'level-of-effort' });
+                } else if (_taskType === 'TT_WBS') {
+                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'wbs-summary' });
+                } else if (remaining <= 0) {
+                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'completed-or-zero-remaining' });
+                }
+                if (remaining > 0 && _taskType !== 'TT_LOE' && _taskType !== 'TT_WBS') {
                     // Audit Alpha #1+#4: capture progress markers + per-activity
                     // calendar so Section C consumers (e.g. /try's
                     // _buildSectionCInput) can propagate them. XER timestamps
@@ -1027,7 +1222,11 @@ function parseXER(content) {
         }
     }
     _MC.predecessors = validPreds;
-    return { taskCount: Object.keys(_MC.tasks).length, relCount: validPreds.length };
+    return {
+        taskCount: Object.keys(_MC.tasks).length,
+        relCount: validPreds.length,
+        dropped_activities: droppedActivities,
+    };
 }
 
 function _mcTopologicalSort() {
@@ -1951,6 +2150,37 @@ function computeTIA(activities, relationships, fragnets, opts) {
  * @param {object} [opts] - Reserved for future options.
  * @returns {{score, letter, checks, engine_version, method_id, scored_at}}
  */
+// ── v2.9.3 Disclosed Heuristic Thresholds (computeScheduleHealth) ───────────
+// Per DAUBERT.md §6.5 ("Disclosed Heuristic Thresholds") — every penalty cap
+// and numeric threshold below is named and source-cited. Modifying any of
+// these constants changes the public health-grade output and MUST be reflected
+// in DAUBERT.md and CHANGELOG.md.
+const SH_ALERT_PENALTY_PER_UNIT     = 2;    // SmartPM-equiv: −2 pts per engine alert
+const SH_ALERT_PENALTY_CAP          = 20;   // CPP house heuristic: cap to 20 of 100
+const SH_SALVAGE_PENALTY_PER_UNIT   = 3;    // CPP house heuristic: salvage > alert
+const SH_SALVAGE_PENALTY_CAP        = 30;   // CPP house heuristic
+// Critical-path activity ratio. Healthy band derived from AACE 49R-06 §4
+// guidance + SmartPM's published CP-ratio benchmarks (10-15% typical).
+const SH_CP_PCT_HEALTHY_LOW         = 5;    // SmartPM whitepaper: <5% suspicious
+const SH_CP_PCT_HEALTHY_HIGH        = 15;   // SmartPM whitepaper: 5-15% healthy
+const SH_CP_PCT_WARN                = 20;   // CPP house heuristic: 20-30% drift
+const SH_CP_PCT_FALSE_CP_TRIGGER    = 30;   // AACE 49R-03 §6: >30% suggests constraint-driven false-CP
+const SH_CP_PCT_WARN_PENALTY        = 5;    // CPP house heuristic
+const SH_CP_PCT_FALSE_CP_PENALTY    = 10;   // CPP house heuristic
+const SH_CP_PCT_ZERO_PENALTY        = 8;    // CPP house heuristic: nothing critical is itself an anomaly
+const SH_CP_PCT_ZERO_MIN_ACTS       = 5;    // CPP house heuristic: only flag on 5+ activity schedules
+const SH_ORPHAN_PENALTY_PER_UNIT    = 2;    // DCMA-14 §1 (Logic): missing predecessors/successors
+const SH_DISCONNECTED_PENALTY_PER   = 5;    // CPP house heuristic
+const SH_DISCONNECTED_PENALTY_CAP   = 15;   // CPP house heuristic
+const SH_OOS_PENALTY_PER_UNIT       = 3;    // DCMA-14 §10 (Logic): out-of-sequence
+const SH_OOS_PENALTY_CAP            = 15;   // CPP house heuristic
+const SH_FALSE_CP_PENALTY_PER_UNIT  = 1;    // CPP house heuristic
+const SH_FALSE_CP_PENALTY_CAP       = 10;   // CPP house heuristic
+const SH_GRADE_A_THRESHOLD          = 90;   // SmartPM-equiv letter grades (A ≥ 90)
+const SH_GRADE_B_THRESHOLD          = 80;   // SmartPM-equiv
+const SH_GRADE_C_THRESHOLD          = 70;   // SmartPM-equiv
+const SH_GRADE_D_THRESHOLD          = 60;   // SmartPM-equiv
+
 function computeScheduleHealth(result, opts) {
     opts = opts || {};
     if (!result || typeof result !== 'object') {
@@ -1992,43 +2222,44 @@ function computeScheduleHealth(result, opts) {
     }
     const checks = [];
 
-    // CHECK 1 — alert count from CPM. Each ALERT entry = -2 points.
+    // CHECK 1 — alert count from CPM. See SH_ALERT_* constants above.
     const alertCount = (result.alerts || []).length;
     checks.push({
         id: 'C1_ALERTS',
         name: 'Engine alerts (calendar fallbacks, OoS, etc.)',
         value: alertCount,
-        penalty: Math.min(20, alertCount * 2),
+        penalty: Math.min(SH_ALERT_PENALTY_CAP, alertCount * SH_ALERT_PENALTY_PER_UNIT),
         threshold: 0,
         passed: alertCount === 0,
     });
 
-    // CHECK 2 — salvage_log entries. Each entry = -3 points (more severe than alerts).
+    // CHECK 2 — salvage_log entries. See SH_SALVAGE_* constants above.
     const salvageCount = (result.salvage_log || []).length;
     checks.push({
         id: 'C2_SALVAGE',
         name: 'Salvage log entries (degraded inputs handled)',
         value: salvageCount,
-        penalty: Math.min(30, salvageCount * 3),
+        penalty: Math.min(SH_SALVAGE_PENALTY_CAP, salvageCount * SH_SALVAGE_PENALTY_PER_UNIT),
         threshold: 0,
         passed: salvageCount === 0,
     });
 
-    // CHECK 3 — % activities on critical path. Healthy: 5-15%. Above 30% = constraint-driven false-CP signal.
+    // CHECK 3 — % activities on critical path. See SH_CP_PCT_* constants above.
     const totalActs = Object.keys(result.nodes || {}).length;
     const cpCount = (result.criticalCodesArray || Array.from(result.criticalCodes || [])).length;
     const cpPct = totalActs > 0 ? (cpCount / totalActs) * 100 : 0;
     let cpPenalty = 0;
-    if (cpPct > 30) cpPenalty = 10;        // false-CP signal
-    else if (cpPct > 20) cpPenalty = 5;
-    else if (cpPct < 1 && totalActs > 5) cpPenalty = 8; // anomaly: nothing critical
+    if (cpPct > SH_CP_PCT_FALSE_CP_TRIGGER) cpPenalty = SH_CP_PCT_FALSE_CP_PENALTY;
+    else if (cpPct > SH_CP_PCT_WARN) cpPenalty = SH_CP_PCT_WARN_PENALTY;
+    else if (cpPct < 1 && totalActs > SH_CP_PCT_ZERO_MIN_ACTS) cpPenalty = SH_CP_PCT_ZERO_PENALTY;
     checks.push({
         id: 'C3_CP_RATIO',
         name: 'Critical path activity ratio',
         value: Math.round(cpPct * 10) / 10,
         penalty: cpPenalty,
-        threshold: '5-15% healthy, >30% suggests constraint-driven false-CP',
-        passed: cpPct >= 1 && cpPct <= 30,
+        threshold: SH_CP_PCT_HEALTHY_LOW + '-' + SH_CP_PCT_HEALTHY_HIGH +
+            '% healthy, >' + SH_CP_PCT_FALSE_CP_TRIGGER + '% suggests constraint-driven false-CP',
+        passed: cpPct >= 1 && cpPct <= SH_CP_PCT_FALSE_CP_TRIGGER,
     });
 
     // CHECK 4 — orphaned activities (no preds AND no succs, excluding project
@@ -2065,7 +2296,7 @@ function computeScheduleHealth(result, opts) {
         id: 'C4_ORPHANS',
         name: 'Orphaned activities (no preds, no succs)',
         value: orphans.length,
-        penalty: orphans.length * 2,
+        penalty: orphans.length * SH_ORPHAN_PENALTY_PER_UNIT,
         threshold: 0,
         passed: orphans.length === 0,
     });
@@ -2106,7 +2337,7 @@ function computeScheduleHealth(result, opts) {
         id: 'C5_CONNECTED',
         name: 'Schedule connectivity (single weakly-connected component)',
         value: compCount,
-        penalty: compCount > 1 ? Math.min(15, (compCount - 1) * 5) : 0,
+        penalty: compCount > 1 ? Math.min(SH_DISCONNECTED_PENALTY_CAP, (compCount - 1) * SH_DISCONNECTED_PENALTY_PER) : 0,
         threshold: 1,
         passed: compCount === 1,
     });
@@ -2119,7 +2350,7 @@ function computeScheduleHealth(result, opts) {
         id: 'C6_OOS',
         name: 'Out-of-sequence progress',
         value: oosCount,
-        penalty: Math.min(15, oosCount * 3),
+        penalty: Math.min(SH_OOS_PENALTY_CAP, oosCount * SH_OOS_PENALTY_PER_UNIT),
         threshold: 0,
         passed: oosCount === 0,
     });
@@ -2133,7 +2364,7 @@ function computeScheduleHealth(result, opts) {
         id: 'C7_FALSE_CP',
         name: 'Constraint-driven false-CP candidates (only_TFM)',
         value: constraintFalseCp,
-        penalty: Math.min(10, constraintFalseCp * 1),
+        penalty: Math.min(SH_FALSE_CP_PENALTY_CAP, constraintFalseCp * SH_FALSE_CP_PENALTY_PER_UNIT),
         threshold: 0,
         passed: constraintFalseCp === 0,
     });
@@ -2142,12 +2373,12 @@ function computeScheduleHealth(result, opts) {
     const totalPenalty = checks.reduce((s, c) => s + c.penalty, 0);
     const score = Math.max(0, Math.min(100, 100 - totalPenalty));
 
-    // Letter grade. SmartPM-style brackets.
+    // Letter grade. SmartPM-style brackets (see SH_GRADE_* constants above).
     let letter;
-    if (score >= 90) letter = 'A';
-    else if (score >= 80) letter = 'B';
-    else if (score >= 70) letter = 'C';
-    else if (score >= 60) letter = 'D';
+    if (score >= SH_GRADE_A_THRESHOLD) letter = 'A';
+    else if (score >= SH_GRADE_B_THRESHOLD) letter = 'B';
+    else if (score >= SH_GRADE_C_THRESHOLD) letter = 'C';
+    else if (score >= SH_GRADE_D_THRESHOLD) letter = 'D';
     else letter = 'F';
 
     return {
@@ -3279,8 +3510,13 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
 function computeFloatBurndown(snapshots, opts) {
     opts = opts || {};
     const tfField = opts.tfField || 'tf';
+    // v2.9.3 disclosed heuristic — near-critical TF threshold.
+    // Source: AACE 49R-06 §5 ("near-critical paths typically defined within
+    // 5-10 working days of zero float"). Default 5 is the conservative end of
+    // that range. Caller can override via opts.nearCriticalThreshold.
+    const DEFAULT_NEAR_CRITICAL_TF_DAYS = 5;
     const nearCriticalThreshold = (opts.nearCriticalThreshold !== undefined)
-        ? opts.nearCriticalThreshold : 5;
+        ? opts.nearCriticalThreshold : DEFAULT_NEAR_CRITICAL_TF_DAYS;
 
     // ── Degenerate case ──────────────────────────────────────────────────────
     if (!Array.isArray(snapshots) || snapshots.length < 2) {

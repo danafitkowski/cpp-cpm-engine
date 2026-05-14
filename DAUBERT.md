@@ -1,4 +1,4 @@
-# Daubert / FRE 707 Disclosure — `cpm-engine` v2.8.0
+# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.3
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
 
@@ -31,14 +31,14 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays | **528 / 528 passing** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 constraint handling, FF/SF relationship coverage | **563 / 563 passing** |
 | Cross-validation suite     | `cpm-engine.crossval.js` — 13 fixtures × 153 checks, JS engine vs Python `compute_cpm` reference  | **153 / 153 bit-identical** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
 | Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
 
 Performance benchmarks (Node 18, M1 Mac):
 
-- 528 unit tests in **~0.24 seconds**
+- 563 unit tests in **~0.27 seconds**
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
@@ -64,7 +64,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 Performance characteristics:
 
-- 528 unit tests run in **~0.24 s** on Node 18.
+- 563 unit tests run in **~0.27 s** on Node 18.
 - 5,000-node linear chain Tarjan SCC in **~8 ms**.
 - A 25,000-activity Mon-Fri schedule (full forward + backward pass) runs in **~1.6 s** after the v2.1-C1 / v2.1-C2 optimizations.
 
@@ -100,7 +100,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.8.0',                    // Synchronized with package.json
+    engine_version: '2.9.3',                    // Synchronized with package.json
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -158,7 +158,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 528 + 153 = 681 verifications.
+2. Run `npm run test:all` to reproduce the 563 + 153 = 716 verifications.
 3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
 4. Inspect the source — it is intentionally readable and well-commented (4,326 lines including narrative comments).
 
@@ -167,5 +167,61 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.8.0`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-10)
+`engine_version: 2.9.3`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14)
+
+---
+
+## §7 Disclosed Heuristic Thresholds (v2.9.3)
+
+Every numeric threshold used in `computeScheduleHealth()` and `findCriticalPathChain()` is named, defaulted, and source-cited. The engine emits no undisclosed magic numbers in its public scoring or critical-path output.
+
+### `computeScheduleHealth` (Section I)
+
+| Constant | Default | Source |
+|---|---|---|
+| `SH_ALERT_PENALTY_PER_UNIT` | 2 | SmartPM-equiv (engine alerts) |
+| `SH_ALERT_PENALTY_CAP` | 20 | CPP house heuristic |
+| `SH_SALVAGE_PENALTY_PER_UNIT` | 3 | CPP house heuristic (salvage > alert severity) |
+| `SH_SALVAGE_PENALTY_CAP` | 30 | CPP house heuristic |
+| `SH_CP_PCT_HEALTHY_LOW` | 5 % | SmartPM whitepaper benchmark |
+| `SH_CP_PCT_HEALTHY_HIGH` | 15 % | SmartPM whitepaper benchmark |
+| `SH_CP_PCT_WARN` | 20 % | CPP house heuristic |
+| `SH_CP_PCT_FALSE_CP_TRIGGER` | 30 % | AACE 49R-06 §6 (constraint-driven false-CP signal) |
+| `SH_ORPHAN_PENALTY_PER_UNIT` | 2 | DCMA-14 §1 (Logic) |
+| `SH_DISCONNECTED_PENALTY_PER` | 5 | CPP house heuristic |
+| `SH_DISCONNECTED_PENALTY_CAP` | 15 | CPP house heuristic |
+| `SH_OOS_PENALTY_PER_UNIT` | 3 | DCMA-14 §10 (Out-of-sequence) |
+| `SH_OOS_PENALTY_CAP` | 15 | CPP house heuristic |
+| `SH_GRADE_A_THRESHOLD` | 90 | SmartPM letter-grade brackets |
+| `SH_GRADE_B_THRESHOLD` | 80 | SmartPM letter-grade brackets |
+| `SH_GRADE_C_THRESHOLD` | 70 | SmartPM letter-grade brackets |
+| `SH_GRADE_D_THRESHOLD` | 60 | SmartPM letter-grade brackets |
+
+### Near-critical detection (`findCriticalPathChain`, etc.)
+
+| Constant | Default | Source |
+|---|---|---|
+| `DEFAULT_NEAR_CRITICAL_TF_DAYS` | 5 | AACE 49R-06 §5 (near-critical defined within 5-10 working days of zero float; default 5 is conservative end) |
+
+Callers may override `nearCriticalThreshold` via `opts`. The DCMA-14 Logic check uses a fixed 10-WD definition of "near-critical" which is reported separately in the DCMA module.
+
+---
+
+## §8 Constraint Handling (v2.9.3)
+
+The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (or the equivalent `cstr_type` / `cstr_date2` long-form XER tokens, automatically normalized).
+
+| Canonical | XER long-form | Forward-pass behavior | Backward-pass behavior |
+|---|---|---|---|
+| `SNET` | (P6 GUI) | `ES = max(ES, date)`; WARN `constraint-applied` | – |
+| `SNLT` | (P6 GUI) | If `ES > date` → ALERT `constraint-violated` | `LF = min(LF, date + duration)` |
+| `FNET` | (P6 GUI) | `EF = max(EF, date)`; WARN | – |
+| `FNLT` | (P6 GUI) | If `EF > date` → ALERT | `LF = min(LF, date)` |
+| `MS_Start` / `SO` | `CS_MSO` | `ES = date` (forced); if pred logic > date → ALERT | – |
+| `MS_Finish` / `MFO` | `CS_MEO` | `EF = date` (forced); if pred logic > date → ALERT | `LF = date` |
+| `ALAP` | `CS_ALAP` | (no forward action — late dates deferred to project finish) | (handled implicitly by default LF init) |
+
+**Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF appears in `result.alerts`.
+
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the two contexts above. Pair with `result.manifest.engine_version === '2.9.3'` to confirm the constraint module was active.
