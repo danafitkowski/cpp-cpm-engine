@@ -4,6 +4,55 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## v2.9.9 — 2026-05-14 — Round 7 full hammock SS/FF/SF semantics
+
+Closes the Round 6 FS-only hammock limitation (Agent A1/A3 finding).
+
+### Behavior change
+
+- **Full hammock SS/FF/SF semantics.** Round 6 FixB shipped hammocks as FS-only with `hammock_non_fs_alerts` for SS/FF/SF rel types. v2.9.9 implements the real two-pass semantics so all four rel types compute correctly via four axis-specific transitive walkers:
+  - `esFloor`  — FS-pred `T.EF+L`, SS-pred `T.ES+L`
+  - `lfFloor`  — FF-pred `T.EF+L`, SF-pred `T.ES+L`
+  - `lfCeiling` — FS-succ `T.LS−L`, FF-succ `T.LF−L`
+  - `esCeiling` — SS-succ `T.LS−L`, SF-succ `T.LF−L`
+- Widest-span synthesis: `H.ES = esFloor (capped by esCeiling if lower)` and `H.LF = lfCeiling (raised by lfFloor if higher)`.
+- Cross-axis recursion for hammock-of-hammocks: FF-pred chain into a hammock recurses on upstream's `lfCeiling`; SF-pred recurses on upstream's `esFloor`. Memoization is per-axis. Cycles return null and emit `hammock-cycle` ALERT.
+- Hammock cycle topology (mutual succ↔pred between hammocks) detected via per-axis in-progress markers; ALERT emitted, hammocks still resolve from non-cyclic anchors (graceful degradation).
+
+### Back-compat
+
+- `hammock_non_fs_alerts` and `hammock_unsupported_rel_count` fields preserved in the result shape but always 0/empty under v2.9.9 — non-FS rels are no longer flagged.
+- Test fixture R-v298-B1 updated to assert the new v2.9.9 behavior (was: counts the SS pred as unsupported; now: counts it as resolved).
+
+### Documentation
+
+- `DAUBERT.md` "Known limitations" section: hammock non-FS limitation closed.
+- `DAUBERT.md` v2.9.9 entry added covering the new walker design.
+- `DAUBERT.md` test count updated (685 → 728), v2.9.8 references → v2.9.9.
+- `cpm-engine.js` `ENGINE_VERSION = '2.9.9'`.
+- `package.json` version 2.9.8 → 2.9.9.
+
+### Tests
+
+- New Section R-v299 added — 42 strong-assertion tests covering:
+  - **HAM-SS-1** — hammock with SS pred lag=2, FS succ; hand-computed ES=2, LF=10
+  - **HAM-FF-1** — hammock with FF pred, FS succ; verifies lfFloor pushes LF to 10
+  - **HAM-SF-1** — hammock with SF pred; ES floor null fallback to 0
+  - **HAM-SS-succ-1** — hammock with FS pred + SS succ; esCeiling caps ES at 4
+  - **HAM-MIXED-1** — mixed FS+SS preds and FS+FF succs; six-axis verification
+  - **HAM-CONVERGE-1** — nested hammocks via FF link; cross-axis recursion through `H1.lfCeiling → H2.lfCeiling`
+  - **HAM-CYCLE-1** — pathological mutual succ↔pred between hammocks; `hammock-cycle` ALERT emitted, hammocks still resolve
+- HAM-4 (SS-pred) test message updated to reflect new semantics + back-compat asserts.
+- R-v298-B1 retargeted to verify non-FS rels no longer fire `hammock-unsupported-rel`.
+
+### Verification
+
+- 728 unit tests passing (was 685; +43 net for v2.9.9 — 42 new R-v299 tests plus updated R-v298-B1 + HAM-4 expectations).
+- 25 crossval fixtures / 281 checks still passing.
+- `tests/no-fabricated-citations.test.js` PASS.
+
+---
+
 ## v2.9.8 — 2026-05-14 — Round 6 hardening
 
 Math correctness + Daubert hardening following parallel hardcore audit.

@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.8';
+const ENGINE_VERSION = '2.9.9';
 
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
@@ -1805,7 +1805,10 @@ function runCPM(opts) {
         log: log.join('\n'),
         hammocks_resolved: hammockReport.resolved,
         hammocks_unresolved: hammockReport.unresolved,
-        // v2.9.8 — hammock unsupported-rel alerts surfaced for forensic record.
+        // v2.9.8 — hammock unsupported-rel alerts (FS-only era).
+        // v2.9.9 — preserved as back-compat; always 0/empty under full
+        // SS/FF/SF semantics. Downstream consumers reading these fields
+        // continue to work.
         hammock_non_fs_alerts: hammockReport.non_fs_alerts || [],
         hammock_unsupported_rel_count: (hammockReport.non_fs_alerts || []).length,
         // v2.9.8 Bug B2/B8 — Section D constraint + hammock alerts collector.
@@ -1813,89 +1816,53 @@ function runCPM(opts) {
     };
 }
 
-// v2.9.7 — Hammock resolver. A hammock H with predecessor set P and successor
-// set S has:
-//   H.ES = min over p in P of (anchor from p)
-//   H.LF = max over s in S of (anchor from s)
-//   H.duration = H.LF - H.ES (calendar-day arithmetic in Section D's
-//                              week-agnostic 5d-MonFri 8hr/day model)
-// Hammocks are zero-float summary bars: H.LS = H.ES, H.EF = H.LF, H.TF = 0.
+// v2.9.7 — Hammock resolver. A hammock H is a summary bar whose extent
+// is set by the surrounding network. v2.9.9 supports ALL FOUR relationship
+// types (FS, SS, FF, SF) on both predecessor and successor sides — closing
+// the v2.9.8 Round 6 A1/A3 FS-only limitation.
 //
-// Two-stage resolution for nested hammocks:
-//   Stage 1: Hammock ES — walk pred chain transitively. When a hammock's
-//     pred is another hammock, recurse to find the deepest non-hammock anchor
-//     (the actual normal-task EF/ES that drives the chain). This is computable
-//     in one pass because the pred chain MUST terminate at a normal task (any
-//     hammock with no real preds floors at 0).
-//   Stage 2: Hammock LF — symmetric backward walk through succ chain.
-// Genuinely circular hammock-of-hammocks (mutual succ↔pred) is detected via
-// visited-set; unresolved hammocks indicate a logic cycle (graceful error).
-// v2.9.8 Bug B1 — AACE 29R-03: Hammock semantics are FS-only in v2.9.8.
-// SS/FF/SF hammock ties are flagged as unsupported and skipped (no anchor
-// contribution). Implementing two-pass full hammock semantics for non-FS
-// relationships is v3.0 scope. Until then, surface the unsupported rels
-// in `hammock_non_fs_alerts` so callers can surface them to the user
-// (silent-wrong-answer path closed).
+// Per-rel-type anchor semantics (lag L in calendar days, 5d-MonFri model):
 //
-// v2.9.8 Bug B4 — Memoization replaces visited-set. Previously a visited-set
-// treated every revisit as a cycle, but in a DAG with diamond joins
-// (H1→H3, H2→H3) H3 is legitimately reached from two non-cyclic paths and
-// the second was silently dropped. Memoization caches the resolved anchor
-// per hammock; cycles are detected by a separate in-progress marker.
+// PREDECESSOR T → HAMMOCK H:
+//   FS pred T → H: H starts after T finishes  → ES floor:  T.EF + L
+//   SS pred T → H: H starts when T starts     → ES floor:  T.ES + L
+//   FF pred T → H: H ends when T ends         → LF floor:  T.EF + L
+//   SF pred T → H: H ends when T starts       → LF floor:  T.ES + L
 //
-// v2.9.8 Bug B8 — Negative-span hammocks (LF < ES on chain) now emit ALERT.
+// HAMMOCK H → SUCCESSOR T:
+//   FS succ H → T: T starts after H ends      → LF ceiling: T.LS - L
+//   FF succ H → T: T ends when H ends         → LF ceiling: T.LF - L
+//   SS succ H → T: T starts when H starts     → ES ceiling: T.LS - L
+//   SF succ H → T: T ends when H starts       → ES ceiling: T.LF - L
+//
+// Widest-span semantic (matches P6 / AACE hammock behaviour):
+//   H.ES = min over all (ES floors); subject to H.ES ≤ min(ES ceilings)
+//   H.LF = max over all (LF ceilings); subject to H.LF ≥ max(LF floors)
+//   H.duration = H.LF - H.ES (clamped ≥ 0 on degenerate network)
+//
+// Two-stage resolution for nested hammocks: walkers recurse through
+// hammock-side preds/succs to find the deepest normal-task anchor. A hammock
+// reached via FS-pred chain contributes its ES-floor; via FF/SF-pred chain
+// contributes its LF-floor; etc. Cycles detected by inProgress markers;
+// memoization caches per-hammock results to handle DAG diamond joins.
+//
+// v2.9.9 — Backward-compat: `hammock_non_fs_alerts` and
+// `hammock_unsupported_rel_count` fields remain in the result shape so
+// downstream consumers don't break, but are now always empty (0 length).
+// The full 4-rel semantics no longer require flagging non-FS rels.
+//
+// v2.9.8 Bug B8 — Negative-span hammocks (LF < ES on chain) still emit
+// ALERT — this remains a genuine topology error.
 function _resolveHammocks(projectFinish, log, alerts) {
     const hammockIds = Object.keys(_MC.hammocks);
     if (hammockIds.length === 0) {
         return { resolved: 0, unresolved: 0, non_fs_alerts: [] };
     }
 
+    // v2.9.9 — FS-only restriction lifted. The hammock_non_fs_alerts field is
+    // preserved in the return shape for back-compat but always empty; non-FS
+    // rels now feed real anchor math below.
     const non_fs_alerts = [];
-    // Pre-scan: flag SS/FF/SF rels touching any hammock. These contribute
-    // nothing to the resolver in v2.9.8 (FS-only semantics).
-    for (const hid of hammockIds) {
-        const h = _MC.hammocks[hid];
-        for (const p of h.preds) {
-            if (p.type && p.type !== 'FS') {
-                non_fs_alerts.push({
-                    hammock_code: h.code,
-                    related_code: (_MC.tasks[p.predTaskId] || _MC.hammocks[p.predTaskId] || {}).code || p.predTaskId,
-                    direction: 'predecessor',
-                    rel_type: p.type,
-                    message: 'AACE 29R-03: Hammock ' + h.code + ' has ' + p.type +
-                        ' predecessor — v2.9.8 supports FS hammock ties only. This relation is flagged and skipped.',
-                });
-                if (alerts) {
-                    alerts.push({
-                        severity: 'WARN',
-                        context: 'hammock-unsupported-rel',
-                        message: 'Hammock ' + h.code + ' has ' + p.type +
-                            ' predecessor ' + p.predTaskId + ' — skipped (FS-only in v2.9.8).',
-                    });
-                }
-            }
-        }
-        for (const s of h.succs) {
-            if (s.type && s.type !== 'FS') {
-                non_fs_alerts.push({
-                    hammock_code: h.code,
-                    related_code: (_MC.tasks[s.taskId] || _MC.hammocks[s.taskId] || {}).code || s.taskId,
-                    direction: 'successor',
-                    rel_type: s.type,
-                    message: 'AACE 29R-03: Hammock ' + h.code + ' has ' + s.type +
-                        ' successor — v2.9.8 supports FS hammock ties only. This relation is flagged and skipped.',
-                });
-                if (alerts) {
-                    alerts.push({
-                        severity: 'WARN',
-                        context: 'hammock-unsupported-rel',
-                        message: 'Hammock ' + h.code + ' has ' + s.type +
-                            ' successor ' + s.taskId + ' — skipped (FS-only in v2.9.8).',
-                    });
-                }
-            }
-        }
-    }
 
     for (const hid of hammockIds) {
         _MC.hammocks[hid].resolved = false;
@@ -1903,77 +1870,192 @@ function _resolveHammocks(projectFinish, log, alerts) {
         _MC.hammocks[hid].LF = 0;
     }
 
-    // v2.9.8 Bug B4 — Memoized walkers. Cache resolved anchor per hammock.
-    // `inProgress` set detects genuine cycles (true hammock-of-hammocks
-    // mutual succ↔pred); cached results return immediately on diamond joins.
-    const memoMinES = new Map();
-    const memoMaxLF = new Map();
-    const inProgressES = new Set();
-    const inProgressLF = new Set();
+    // v2.9.9 — Four transitive walkers, axis-specific:
+    //   esFloor   : earliest start anchor (FS-pred T.EF+L, SS-pred T.ES+L)
+    //   lfFloor   : minimum-LF anchor from preds (FF-pred T.EF+L, SF-pred T.ES+L)
+    //   lfCeiling : maximum-LF anchor from succs (FS-succ T.LS-L, FF-succ T.LF-L)
+    //   esCeiling : maximum-ES anchor from succs (SS-succ T.LS-L, SF-succ T.LF-L)
+    //
+    // When a hammock's pred is another hammock, the upstream hammock acts
+    // as a transparent forward bar — its "EF" pass-through is the deepest
+    // normal-task EF in the chain, derived by recursing on the SAME axis
+    // (esFloor for FS, esFloor for SS). FF/SF preds couple to the upstream
+    // hammock's LF — which is itself defined by upstream's lfCeiling (or
+    // upstream's deeper lfFloor). This cross-axis recursion is bounded by
+    // memoization + in-progress cycle detection.
+    //
+    // Walker contract: recurses through hammock-side preds/succs to find
+    // the deepest non-hammock anchor. Memoization caches per-hammock
+    // per-axis results so DAG diamond joins don't lose anchors.
 
-    function _minESFromPredChain(h) {
-        if (memoMinES.has(h.id)) return memoMinES.get(h.id);
-        if (inProgressES.has(h.id)) return null; // genuine cycle
-        inProgressES.add(h.id);
-        let minES = null;
+    const memoEsFloor = new Map();
+    const memoLfFloor = new Map();
+    const memoLfCeiling = new Map();
+    const memoEsCeiling = new Map();
+    const inProgressEsFloor = new Set();
+    const inProgressLfFloor = new Set();
+    const inProgressLfCeiling = new Set();
+    const inProgressEsCeiling = new Set();
+    let cycleDetected = false;
+
+    // ─── ES floor ─────────────────────────────────────────────────────────
+    // From preds: FS-pred T.EF+L  /  SS-pred T.ES+L
+    // Hammock pred: FS chain recurses into upstream's esFloor (transparent
+    // pass-through of the FS chain). SS chain recurses into upstream's
+    // esFloor too (SS pred to hammock = upstream's ES drives ours).
+    function _esFloor(h) {
+        if (memoEsFloor.has(h.id)) return memoEsFloor.get(h.id);
+        if (inProgressEsFloor.has(h.id)) { cycleDetected = true; return null; }
+        inProgressEsFloor.add(h.id);
+        let val = null;
         for (const p of h.preds) {
-            // v2.9.8 Bug B1 — FS-only semantics; skip non-FS rels.
-            if (p.type && p.type !== 'FS') continue;
             const id = p.predTaskId;
+            const lag = p.lag || 0;
             const t = _MC.tasks[id];
             if (t) {
-                // Normal task — terminate recursion. FS anchor = predEF + lag.
-                const anchor = t.EF + (p.lag || 0);
-                if (minES === null || anchor < minES) minES = anchor;
+                let anchor = null;
+                if (p.type === 'FS' || !p.type) anchor = t.EF + lag;
+                else if (p.type === 'SS') anchor = t.ES + lag;
+                if (anchor !== null && (val === null || anchor < val)) val = anchor;
                 continue;
             }
-            // Hammock pred — recurse to find its deepest anchor.
             const ph = _MC.hammocks[id];
             if (!ph) continue;
-            const sub = _minESFromPredChain(ph);
-            if (sub !== null && (minES === null || sub < minES)) minES = sub;
+            if (p.type === 'FS' || !p.type || p.type === 'SS') {
+                const sub = _esFloor(ph);
+                if (sub !== null && (val === null || sub + lag < val)) val = sub + lag;
+            }
+            // FF/SF hammock preds do NOT contribute to our ES floor — they
+            // affect our LF floor (see _lfFloor below).
         }
-        inProgressES.delete(h.id);
-        memoMinES.set(h.id, minES);
-        return minES;
+        inProgressEsFloor.delete(h.id);
+        memoEsFloor.set(h.id, val);
+        return val;
     }
 
-    function _maxLFFromSuccChain(h) {
-        if (memoMaxLF.has(h.id)) return memoMaxLF.get(h.id);
-        if (inProgressLF.has(h.id)) return null;
-        inProgressLF.add(h.id);
-        let maxLF = null;
-        for (const s of h.succs) {
-            // v2.9.8 Bug B1 — FS-only semantics; skip non-FS rels.
-            if (s.type && s.type !== 'FS') continue;
-            const id = s.taskId;
+    // ─── LF floor ─────────────────────────────────────────────────────────
+    // From preds: FF-pred T.EF+L  /  SF-pred T.ES+L
+    // Hammock pred: FF couples to upstream's lfCeiling (= upstream's EF).
+    // SF couples to upstream's esFloor (= upstream's ES).
+    function _lfFloor(h) {
+        if (memoLfFloor.has(h.id)) return memoLfFloor.get(h.id);
+        if (inProgressLfFloor.has(h.id)) { cycleDetected = true; return null; }
+        inProgressLfFloor.add(h.id);
+        let val = null;
+        for (const p of h.preds) {
+            const id = p.predTaskId;
+            const lag = p.lag || 0;
             const t = _MC.tasks[id];
             if (t) {
-                // FS successor: hammock's LF = succLS - lag.
-                const anchor = t.LS - (s.lag || 0);
-                if (maxLF === null || anchor > maxLF) maxLF = anchor;
+                let anchor = null;
+                if (p.type === 'FF') anchor = t.EF + lag;
+                else if (p.type === 'SF') anchor = t.ES + lag;
+                if (anchor !== null && (val === null || anchor > val)) val = anchor;
+                continue;
+            }
+            const ph = _MC.hammocks[id];
+            if (!ph) continue;
+            if (p.type === 'FF') {
+                const sub = _lfCeiling(ph);
+                if (sub !== null && (val === null || sub + lag > val)) val = sub + lag;
+            } else if (p.type === 'SF') {
+                const sub = _esFloor(ph);
+                if (sub !== null && (val === null || sub + lag > val)) val = sub + lag;
+            }
+        }
+        inProgressLfFloor.delete(h.id);
+        memoLfFloor.set(h.id, val);
+        return val;
+    }
+
+    // ─── LF ceiling ───────────────────────────────────────────────────────
+    // From succs: FS-succ T.LS-L  /  FF-succ T.LF-L
+    // Hammock succ: FS couples to downstream's lfCeiling (zero-float ham:
+    // downstream LS = downstream ES, but ES depends on its preds which
+    // include us — so recurse on lfCeiling to walk DOWN the succ chain to
+    // a normal-task LS). FF couples to downstream's lfCeiling.
+    function _lfCeiling(h) {
+        if (memoLfCeiling.has(h.id)) return memoLfCeiling.get(h.id);
+        if (inProgressLfCeiling.has(h.id)) { cycleDetected = true; return null; }
+        inProgressLfCeiling.add(h.id);
+        let val = null;
+        for (const s of h.succs) {
+            const id = s.taskId;
+            const lag = s.lag || 0;
+            const t = _MC.tasks[id];
+            if (t) {
+                let anchor = null;
+                if (s.type === 'FS' || !s.type) anchor = t.LS - lag;
+                else if (s.type === 'FF') anchor = t.LF - lag;
+                if (anchor !== null && (val === null || anchor > val)) val = anchor;
                 continue;
             }
             const sh = _MC.hammocks[id];
             if (!sh) continue;
-            const sub = _maxLFFromSuccChain(sh);
-            if (sub !== null && (maxLF === null || sub > maxLF)) maxLF = sub;
+            if (s.type === 'FS' || !s.type || s.type === 'FF') {
+                const sub = _lfCeiling(sh);
+                if (sub !== null && (val === null || sub - lag > val)) val = sub - lag;
+            }
+            // SS/SF hammock succs do NOT contribute to our LF ceiling — they
+            // affect our ES ceiling (see _esCeiling below).
         }
-        inProgressLF.delete(h.id);
-        memoMaxLF.set(h.id, maxLF);
-        return maxLF;
+        inProgressLfCeiling.delete(h.id);
+        memoLfCeiling.set(h.id, val);
+        return val;
     }
 
-    // Resolve every hammock in a single pass using the transitive walkers.
-    // No iteration needed because the walkers don't depend on the resolved
-    // state of other hammocks — they always walk down to normal tasks.
+    // ─── ES ceiling ───────────────────────────────────────────────────────
+    // From succs: SS-succ T.LS-L  /  SF-succ T.LF-L
+    function _esCeiling(h) {
+        if (memoEsCeiling.has(h.id)) return memoEsCeiling.get(h.id);
+        if (inProgressEsCeiling.has(h.id)) { cycleDetected = true; return null; }
+        inProgressEsCeiling.add(h.id);
+        let val = null;
+        for (const s of h.succs) {
+            const id = s.taskId;
+            const lag = s.lag || 0;
+            const t = _MC.tasks[id];
+            if (t) {
+                let anchor = null;
+                if (s.type === 'SS') anchor = t.LS - lag;
+                else if (s.type === 'SF') anchor = t.LF - lag;
+                if (anchor !== null && (val === null || anchor < val)) val = anchor;
+                continue;
+            }
+            const sh = _MC.hammocks[id];
+            if (!sh) continue;
+            if (s.type === 'SS') {
+                const sub = _esCeiling(sh);
+                if (sub !== null && (val === null || sub - lag < val)) val = sub - lag;
+            } else if (s.type === 'SF') {
+                const sub = _lfCeiling(sh);
+                if (sub !== null && (val === null || sub - lag < val)) val = sub - lag;
+            }
+        }
+        inProgressEsCeiling.delete(h.id);
+        memoEsCeiling.set(h.id, val);
+        return val;
+    }
+
+    // Resolve every hammock by collecting all four anchors. Widest-span
+    // semantic:
+    //   H.ES = esFloor (or 0 fallback); capped by esCeiling if present
+    //   H.LF = lfCeiling (or projectFinish fallback); raised by lfFloor
+    //          if a FF/SF pred demands LF extend further.
+    //   H.duration = max(0, H.LF − H.ES); negative-span emits ALERT.
     for (const hid of hammockIds) {
         const h = _MC.hammocks[hid];
-        const minES = _minESFromPredChain(h);
-        const maxLF = _maxLFFromSuccChain(h);
-        const es = minES !== null ? minES : 0;
-        const lf = maxLF !== null ? maxLF : projectFinish;
-        // v2.9.8 Bug B8 — negative-span detection + alert.
+        const esFloor = _esFloor(h);
+        const lfFloor = _lfFloor(h);
+        const lfCeiling = _lfCeiling(h);
+        const esCeiling = _esCeiling(h);
+
+        let es = esFloor !== null ? esFloor : 0;
+        if (esCeiling !== null && esCeiling < es) es = esCeiling;
+
+        let lf = lfCeiling !== null ? lfCeiling : projectFinish;
+        if (lfFloor !== null && lfFloor > lf) lf = lfFloor;
+
         let duration;
         if (lf >= es) {
             duration = lf - es;
@@ -2001,6 +2083,16 @@ function _resolveHammocks(projectFinish, log, alerts) {
             log.push('HAM: ' + h.code + ' ES=' + h.ES.toFixed(1) +
                 ' EF=' + h.EF.toFixed(1) + ' dur=' + duration.toFixed(1));
         }
+    }
+
+    if (cycleDetected && alerts) {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'hammock-cycle',
+            message: 'Hammock-of-hammocks cycle detected during anchor walk. ' +
+                'One or more hammocks have circular pred/succ relationships. ' +
+                'Affected hammocks may have incomplete anchor sets.',
+        });
     }
 
     let resolved = 0, unresolved = 0;

@@ -31,7 +31,7 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard, Round 6 strong-assertion strengthening (HAM-3/4, MC-2 exact, MS_Start hard-pin, FNLT per-trial, Q-3 SF backward exact dates, B1 exact working-day float) | **685 / 685 passing** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard, Round 6 strong-assertion strengthening (HAM-3/4, MC-2 exact, MS_Start hard-pin, FNLT per-trial, Q-3 SF backward exact dates, B1 exact working-day float), Round 7 full hammock SS/FF/SF semantics (HAM-SS-1, HAM-FF-1, HAM-SF-1, HAM-SS-succ-1, HAM-MIXED-1, HAM-CONVERGE-1, HAM-CYCLE-1) | **728 / 728 passing** |
 | Cross-validation suite     | `cpm-engine.crossval.js` — 25 fixtures × 281 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures plus Round 6 expansion (SNLT, FNET, MS_Finish, secondary constraint pair, OoS, ALAP-with-actual_start, calendar fallback, cycle, free-float documented gap). Severity-level alert parity asserted (not just count). | **281 / 281 bit-identical** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
 | Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
@@ -101,7 +101,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.8',                    // Synchronized with package.json
+    engine_version: '2.9.9',                    // Synchronized with package.json
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -169,7 +169,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 
 `disclosure_format_version: 1.0`
 `engine_version: 2.9.8`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.8 hammock semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, and Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard))
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.9 full hammock SS/FF/SF semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard), and Round 7 full hammock semantics (four axis-specific transitive walkers with per-axis memoization))
 
 ---
 
@@ -235,9 +235,11 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **v2.9.8 — Round 6 hardening.** Section D MS_Finish/MFO now emits `constraint-violated` ALERT when infeasible vs predecessor logic (was a silent EF<ES). Hammock walker visited-set is memoized so DAG diamond joins do not lose anchors. Non-FS hammock relationship types (SS/FF/SF) emit `hammock_unsupported_rel` alert (was silent wrong-anchor math). `dateToNum` 2-digit-year guard added (was silently rewriting `'26-01-05'` to 1999). Section D SS+FS LS recompute drops the tighter constraint. Hammock negative-span emits alert (was silent clamp to 0).
 
-**Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Non-FS hammock ties emit `hammock_unsupported_rel`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
+**v2.9.9 — Full hammock SS/FF/SF semantics.** Round 6's FS-only restriction is closed. Non-FS hammock ties now compute real per-rel-type anchors via four axis-specific transitive walkers — `esFloor` (FS/SS preds), `lfFloor` (FF/SF preds), `lfCeiling` (FS/FF succs), `esCeiling` (SS/SF succs). Widest-span synthesis sets `H.ES = esFloor (capped by esCeiling)` and `H.LF = lfCeiling (raised by lfFloor)`. Hammock-of-hammocks DAG joins handled via per-axis memoization with cross-axis recursion (FF-pred chain through a hammock recurses into upstream's `lfCeiling`; SF-pred recurses into `esFloor`; etc.). Hammock-cycle topology detected via in-progress markers and emits `hammock-cycle` ALERT. Back-compat fields `hammock_non_fs_alerts` and `hammock_unsupported_rel_count` preserved in the result shape, always 0/empty for v2.9.9.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.8'` to confirm the constraint module was active.
+**Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Hammock-cycle topology emits `{severity:'ALERT', context:'hammock-cycle'}`. Hammock negative-span emits `{severity:'ALERT', context:'hammock-negative-span'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
+
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.9'` to confirm the constraint module was active.
 
 ### §D Section D thread-safety
 
@@ -249,4 +251,4 @@ Three engine features are first-publication or pre-publication in construction s
 
 ### Known limitations
 
-- **Hammock non-FS relationship types** (SS / FF / SF tying a hammock to a non-hammock activity) emit `hammock_unsupported_rel` alert and are not computed (v2.9.8). The common case — FS chains — is fully supported. Two-pass full hammock-of-hammocks DAG join is supported via memoization (v2.9.8).
+- **Hammock non-FS relationship types** (SS / FF / SF tying a hammock to a non-hammock activity) are fully computed as of v2.9.9 via four axis-specific transitive walkers (`esFloor`, `lfFloor`, `lfCeiling`, `esCeiling`). Hammock-of-hammocks DAG joins resolved via per-axis memoization. Genuine hammock-cycle topology (mutual succ↔pred between hammocks) is detected and emits `hammock-cycle` ALERT — cycle-affected hammocks still resolve from their non-cyclic anchors but may have incomplete anchor sets.

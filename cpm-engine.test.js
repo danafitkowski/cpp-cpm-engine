@@ -1306,7 +1306,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.4.0',
-        r.manifest.engine_version === '2.9.8');
+        r.manifest.engine_version === '2.9.9');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1342,7 +1342,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.8');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.9');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1576,7 +1576,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.8');
+    check('D3: engine_version present', h.engine_version === '2.9.9');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2020,7 +2020,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.8');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.9');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2040,7 +2040,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.8');
+        dCaught && dCaught.engine_version === '2.9.9');
 }
 
 // ============================================================================
@@ -3875,19 +3875,19 @@ console.log('\n=== Section R-Hammock — TT_Hammock two-pass ===');
     check('HAM-4 (SS-pred): hammock resolved',
         result.hammocks_resolved === 1);
     const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
-    // Round 6: hand-computed full ES/EF/LF/duration/TF coverage.
-    // v2.9.8 _resolveHammocks enforces FS-only semantics — the SS pred
-    // (A→H) is FLAGGED + SKIPPED (see hammock-unsupported-rel alert), so
-    // H has no effective predecessor anchor.
+    // Round 7 v2.9.9 — Full SS/FF/SF semantics. The SS pred now feeds the
+    // ES floor (was: SKIPPED in v2.9.8 FS-only).
     //
     // Normal-task forward pass: A.ES=0, A.EF=10 (10d). A→B FS direct so
     // B.ES = A.EF + 0 = 10, B.EF = 10+5 = 15. projectFinish = 15.
     // Backward: B.LF=15, B.LS=10, A.LF=10, A.LS=0.
     //
-    // _minESFromPredChain(H): SS pred SKIPPED → minES = null → defaults to 0.
-    // _maxLFFromSuccChain(H): FS succ B → anchor = B.LS - 0 = 10 → maxLF=10.
-    // So H.ES=0, H.LF=10, H.duration = 10 - 0 = 10, H.EF = 0+10=10, H.TF=0.
-    check('HAM-4 (SS-pred): H.ES === 0 (SS pred skipped, defaults to 0)',
+    // _esFloorFromPredChain(H): SS pred A → anchor = A.ES + 0 = 0 → ES=0.
+    // _lfCeilingFromSuccChain(H): FS succ B → anchor = B.LS - 0 = 10 → LF=10.
+    // So H.ES=0, H.LF=10, H.duration=10, H.EF=10, H.TF=0.
+    // Same numeric outcome as v2.9.8 (which defaulted to 0); but now the SS
+    // anchor is the real driver, not a fallback.
+    check('HAM-4 (SS-pred): H.ES === 0 (SS pred anchor = A.ES + 0)',
         H.ES === 0, 'got ' + H.ES);
     check('HAM-4 (SS-pred): H.LF === 10 (driven by B.LS via FS succ)',
         H.LF === 10, 'got ' + H.LF);
@@ -3897,6 +3897,13 @@ console.log('\n=== Section R-Hammock — TT_Hammock two-pass ===');
         H.duration === 10, 'got ' + H.duration);
     check('HAM-4 (SS-pred): H.TF === 0 (no float — duration = LF - ES)',
         H.TF === 0, 'got ' + H.TF);
+    // v2.9.9 — non-FS rels no longer flagged as unsupported.
+    check('HAM-4 (SS-pred): hammock_non_fs_alerts length === 0 (v2.9.9 supports SS)',
+        Array.isArray(result.hammock_non_fs_alerts) && result.hammock_non_fs_alerts.length === 0,
+        'got ' + (result.hammock_non_fs_alerts && result.hammock_non_fs_alerts.length));
+    check('HAM-4 (SS-pred): hammock_unsupported_rel_count === 0',
+        result.hammock_unsupported_rel_count === 0,
+        'got ' + result.hammock_unsupported_rel_count);
 }
 
 // ============================================================================
@@ -4360,9 +4367,10 @@ function _rRel(relType, lag) {
 // ============================================================================
 console.log('\n=== Section R-v298 — Round 6 fix wave ===');
 
-// R-v298-B1: Hammock with non-FS predecessor — flagged as unsupported.
-// Network: A(10d) --SS--> H(hammock). v2.9.8 declares hammocks FS-only;
-// SS pred should be skipped and surfaced in hammock_non_fs_alerts.
+// R-v298-B1 → R-v299: Round 7 v2.9.9 closed the FS-only limitation. Non-FS
+// hammock ties (SS/FF/SF) now compute real anchors — no `hammock_unsupported_rel`
+// alerts are emitted. Back-compat fields are still present (always 0/empty).
+// Network: A(10d) --SS lag 0--> H(hammock) --FS lag 0--> B(5d); A --FS--> B direct.
 {
     E.resetMC();
     const xer = [
@@ -4374,26 +4382,23 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         '',
         '%T TASKPRED',
         '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
-        '%R 1\t2\tPR_SS\t0',    // SS pred to hammock — unsupported in v2.9.8
-        '%R 2\t3\tPR_FS\t0',    // H → B (FS, supported)
+        '%R 1\t2\tPR_SS\t0',    // SS pred — v2.9.9 anchors via A.ES+0=0
+        '%R 2\t3\tPR_FS\t0',    // H → B (FS)
         '%R 1\t3\tPR_FS\t0',    // A → B (direct driver)
         '',
     ].join('\n');
     E.parseXER(xer);
     const result = E.runCPM();
-    check('R-v298-B1: hammock_unsupported_rel_count === 1',
-        result.hammock_unsupported_rel_count === 1,
+    // v2.9.9 — no longer flagged.
+    check('R-v298-B1 (v2.9.9): hammock_unsupported_rel_count === 0 (SS now supported)',
+        result.hammock_unsupported_rel_count === 0,
         'got ' + result.hammock_unsupported_rel_count);
-    check('R-v298-B1: non-FS alert has direction=predecessor + rel_type=SS',
-        result.hammock_non_fs_alerts.length === 1 &&
-        result.hammock_non_fs_alerts[0].direction === 'predecessor' &&
-        result.hammock_non_fs_alerts[0].rel_type === 'SS' &&
-        result.hammock_non_fs_alerts[0].hammock_code === 'H',
-        'got ' + JSON.stringify(result.hammock_non_fs_alerts[0] || null));
-    check('R-v298-B1: hammock-unsupported-rel WARN surfaced in alerts',
-        result.alerts.some(a => a.context === 'hammock-unsupported-rel'));
-    // Hammock still resolves (SS pred just skipped, no anchor from it).
-    check('R-v298-B1: hammock still resolves with non-FS skipped',
+    check('R-v298-B1 (v2.9.9): no hammock_non_fs_alerts entries',
+        result.hammock_non_fs_alerts.length === 0,
+        'got ' + result.hammock_non_fs_alerts.length);
+    check('R-v298-B1 (v2.9.9): no hammock-unsupported-rel alerts emitted',
+        !result.alerts.some(a => a.context === 'hammock-unsupported-rel'));
+    check('R-v298-B1 (v2.9.9): hammock resolves with real SS anchor',
         result.hammocks_resolved === 1);
 }
 
@@ -4662,6 +4667,317 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         src.indexOf('13 fixtures') === -1);
     check('R-v298-B10: no remaining "16 fixtures" reference in source',
         src.indexOf('16 fixtures') === -1);
+}
+
+// ============================================================================
+// Section R-v299 — Hammock SS/FF/SF semantics (Round 7 Agent 7H)
+// ============================================================================
+// Round 6 FixB shipped hammocks as FS-only with hammock_non_fs_alerts for
+// SS/FF/SF rel types. Round 7 implements the real two-pass semantics so all
+// four rel types compute correctly. These tests cover the full anchor matrix
+// with hand-computed expected values (strong assertions — no >= 0 sentinels).
+// ============================================================================
+console.log('\n=== Section R-v299 — Hammock SS/FF/SF semantics ===');
+
+// HAM-SS-1: Hammock with SS pred (lag=2), single FS succ.
+// Network: A(10d) --SS lag=2--> H(hammock) --FS--> B(5d); A --FS--> B direct.
+// Forward: A.ES=0, A.EF=10. B.ES = A.EF + 0 = 10, B.EF=15. projectFinish=15.
+// Backward: B.LF=15, B.LS=10. A.LF=10, A.LS=0.
+// H anchors:
+//   esFloor: SS pred A → A.ES + 2 = 2
+//   lfCeiling: FS succ B → B.LS - 0 = 10
+//   lfFloor, esCeiling = null
+//   H.ES = 2, H.LF = 10, H.duration = 8
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t80\t80',
+        '%R 2\tH\tH\tTT_Hammock\t0\t0',
+        '%R 3\tB\tB\tTT_Task\t40\t40',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_SS\t16',   // A --SS lag=2d (16 hours)--> H
+        '%R 2\t3\tPR_FS\t0',
+        '%R 1\t3\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
+    check('HAM-SS-1: hammock resolved', result.hammocks_resolved === 1);
+    check('HAM-SS-1: H.ES === 2 (A.ES + lag=2)', H.ES === 2, 'got ' + H.ES);
+    check('HAM-SS-1: H.LF === 10 (B.LS - 0)', H.LF === 10, 'got ' + H.LF);
+    check('HAM-SS-1: H.EF === 10', H.EF === 10, 'got ' + H.EF);
+    check('HAM-SS-1: H.LS === 2', H.LS === 2, 'got ' + H.LS);
+    check('HAM-SS-1: H.duration === 8', H.duration === 8, 'got ' + H.duration);
+    check('HAM-SS-1: H.TF === 0', H.TF === 0, 'got ' + H.TF);
+    check('HAM-SS-1: hammock_non_fs_alerts empty (v2.9.9 supports SS)',
+        result.hammock_non_fs_alerts.length === 0);
+    check('HAM-SS-1: hammock_unsupported_rel_count === 0',
+        result.hammock_unsupported_rel_count === 0);
+}
+
+// HAM-FF-1: Hammock with FF pred (lag=0), single FS succ.
+// Network: A(10d) --FF--> H(hammock) --FS--> B(5d); A --FS--> B direct.
+// Forward/backward same as HAM-SS-1: A.EF=10, B.LS=10.
+// H anchors:
+//   esFloor: no FS/SS preds → null → fallback 0
+//   lfFloor: FF pred A → A.EF + 0 = 10
+//   lfCeiling: FS succ B → B.LS - 0 = 10
+//   esCeiling: null
+//   H.ES = 0 (fallback), H.LF = max(10, 10) = 10, H.duration = 10
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t80\t80',
+        '%R 2\tH\tH\tTT_Hammock\t0\t0',
+        '%R 3\tB\tB\tTT_Task\t40\t40',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FF\t0',    // A --FF--> H
+        '%R 2\t3\tPR_FS\t0',
+        '%R 1\t3\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
+    check('HAM-FF-1: hammock resolved', result.hammocks_resolved === 1);
+    check('HAM-FF-1: H.ES === 0 (no FS/SS preds, fallback to 0)',
+        H.ES === 0, 'got ' + H.ES);
+    check('HAM-FF-1: H.LF === 10 (max of lfCeiling=10, lfFloor=10)',
+        H.LF === 10, 'got ' + H.LF);
+    check('HAM-FF-1: H.duration === 10', H.duration === 10, 'got ' + H.duration);
+    check('HAM-FF-1: H.TF === 0', H.TF === 0, 'got ' + H.TF);
+    check('HAM-FF-1: hammock_non_fs_alerts empty', result.hammock_non_fs_alerts.length === 0);
+}
+
+// HAM-SF-1: Hammock with SF pred (lag=0), single FS succ.
+// Network: A(10d) --SF--> H(hammock) --FS--> B(5d); A --FS--> B direct.
+// SF pred: H.EF = A.ES → lfFloor = A.ES + 0 = 0.
+// Forward/backward: A.ES=0, A.EF=10. B.ES=10, B.LS=10. projectFinish=15.
+// H anchors:
+//   esFloor: null → fallback 0
+//   lfFloor: SF pred A → A.ES + 0 = 0
+//   lfCeiling: FS succ B → B.LS - 0 = 10
+//   esCeiling: null
+//   H.ES = 0, H.LF = max(10, 0) = 10, H.duration = 10
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t80\t80',
+        '%R 2\tH\tH\tTT_Hammock\t0\t0',
+        '%R 3\tB\tB\tTT_Task\t40\t40',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_SF\t0',    // A --SF--> H
+        '%R 2\t3\tPR_FS\t0',
+        '%R 1\t3\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
+    check('HAM-SF-1: hammock resolved', result.hammocks_resolved === 1);
+    check('HAM-SF-1: H.ES === 0 (no FS/SS preds)', H.ES === 0, 'got ' + H.ES);
+    check('HAM-SF-1: H.LF === 10 (max(lfCeiling=10, lfFloor=0))',
+        H.LF === 10, 'got ' + H.LF);
+    check('HAM-SF-1: H.duration === 10', H.duration === 10, 'got ' + H.duration);
+    check('HAM-SF-1: H.TF === 0', H.TF === 0, 'got ' + H.TF);
+}
+
+// HAM-SS-succ-1: Hammock with FS pred + FS succ + SS succ (ES ceiling check).
+// Network: A(5d) --FS--> H --FS--> B(3d); H --SS lag=2--> C(2d); A→B direct, B→END, C→END.
+// CPM main pass treats hammock-side rels as not driving normal tasks. So:
+//   Forward: A.ES=0, A.EF=5. B's normal preds = {A FS}, B.ES=5, B.EF=8.
+//   C has no normal preds → C.ES=0, C.EF=2.
+//   END preds: B FS, C FS. END.ES = max(8, 2) = 8. projectFinish=8.
+// Backward: END.LS=8. B.LF=8, B.LS=5. C.LF=8, C.LS=6. A.LF=5, A.LS=0.
+// H anchors:
+//   esFloor: FS pred A → A.EF + 0 = 5
+//   lfFloor: null
+//   lfCeiling: FS succ B → B.LS - 0 = 5
+//   esCeiling: SS succ C → C.LS - 2 = 4
+//   ES = esFloor=5 capped to esCeiling=4 → H.ES = 4.
+//   LF = lfCeiling=5 → H.LF = 5.
+//   duration = 5 - 4 = 1. SS succ ceiling pulls H.ES back to 4 (so C can SS-start day 6).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t40\t40',     // 5d
+        '%R 2\tH\tH\tTT_Hammock\t0\t0',
+        '%R 3\tB\tB\tTT_Task\t24\t24',     // 3d
+        '%R 4\tC\tC\tTT_Task\t16\t16',     // 2d
+        '%R 5\tEND\tEND\tTT_FinMile\t0\t0',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',    // A --FS--> H
+        '%R 2\t3\tPR_FS\t0',    // H --FS--> B
+        '%R 2\t4\tPR_SS\t16',   // H --SS lag=2d--> C
+        '%R 1\t3\tPR_FS\t0',    // A --FS--> B (direct driver so B has a normal pred)
+        '%R 3\t5\tPR_FS\t0',
+        '%R 4\t5\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
+    check('HAM-SS-succ-1: hammock resolved', result.hammocks_resolved === 1);
+    check('HAM-SS-succ-1: H.ES === 4 (esFloor=5 capped by esCeiling=C.LS-2=4)',
+        H.ES === 4, 'got ' + H.ES);
+    check('HAM-SS-succ-1: H.LF === 5 (lfCeiling = B.LS - 0)',
+        H.LF === 5, 'got ' + H.LF);
+    check('HAM-SS-succ-1: H.duration === 1', H.duration === 1, 'got ' + H.duration);
+    check('HAM-SS-succ-1: H.TF === 0', H.TF === 0, 'got ' + H.TF);
+}
+
+// HAM-MIXED-1: Hammock with mixed FS+SS preds and mixed FS+FF succs.
+// Network:
+//   A1(5d) --FS--> H; A2(8d) --SS lag=1--> H
+//   H --FS--> B1(3d); H --FF lag=2--> B2(7d)
+//   A1→B1 direct, A2→B2 direct (for normal anchoring)
+// Forward: A1.ES=0, A1.EF=5. A2.ES=0, A2.EF=8.
+//   B1.ES = A1.EF = 5, B1.EF=8.
+//   B2.ES = A2.EF = 8, B2.EF=15. projectFinish = 15.
+// Backward: B1.LF, B2.LF from END (B2 is finish task). projectFinish=15.
+//   B2.LF=15, B2.LS=8. B1.LF=15? Need END to anchor B1.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA1\tA1\tTT_Task\t40\t40',   // 5d
+        '%R 2\tA2\tA2\tTT_Task\t64\t64',   // 8d
+        '%R 3\tH\tH\tTT_Hammock\t0\t0',
+        '%R 4\tB1\tB1\tTT_Task\t24\t24',   // 3d
+        '%R 5\tB2\tB2\tTT_Task\t56\t56',   // 7d
+        '%R 6\tEND\tEND\tTT_FinMile\t0\t0',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t3\tPR_FS\t0',    // A1 --FS--> H
+        '%R 2\t3\tPR_SS\t8',    // A2 --SS lag=1--> H
+        '%R 3\t4\tPR_FS\t0',    // H --FS--> B1
+        '%R 3\t5\tPR_FF\t16',   // H --FF lag=2--> B2
+        '%R 1\t4\tPR_FS\t0',    // A1 → B1 direct
+        '%R 2\t5\tPR_FS\t0',    // A2 → B2 direct
+        '%R 4\t6\tPR_FS\t0',
+        '%R 5\t6\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
+    check('HAM-MIXED-1: hammock resolved', result.hammocks_resolved === 1);
+    // esFloor: min(FS-pred A1.EF=5, SS-pred A2.ES+1=1) = 1
+    // lfFloor: null (no FF/SF preds)
+    // lfCeiling: max(FS-succ B1.LS-0, FF-succ B2.LF-2)
+    //   B1.LS = B1.LF - B1.dur. B1 → END FS so B1.LF = END.LS = 15. B1.LS = 12.
+    //   B2.LF = 15. So lfCeiling = max(12, 15-2=13) = 13.
+    // esCeiling: null (no SS/SF succs)
+    // H.ES = 1, H.LF = 13, H.duration = 12.
+    check('HAM-MIXED-1: H.ES === 1 (min of A1.EF=5, A2.ES+1=1)',
+        H.ES === 1, 'got ' + H.ES);
+    check('HAM-MIXED-1: H.LF === 13 (max of B1.LS=12, B2.LF-2=13)',
+        H.LF === 13, 'got ' + H.LF);
+    check('HAM-MIXED-1: H.duration === 12', H.duration === 12, 'got ' + H.duration);
+    check('HAM-MIXED-1: H.TF === 0', H.TF === 0, 'got ' + H.TF);
+    check('HAM-MIXED-1: no non-FS alerts', result.hammock_non_fs_alerts.length === 0);
+}
+
+// HAM-CONVERGE-1: Nested hammocks with mixed rel types — must resolve in
+// single transitive walk (no iteration needed — walkers chain to normal
+// tasks). Verifies the cross-axis recursion works for FF-pred-hammock
+// chains.
+// Network: A(5d) → H1(hammock) --FF--> H2(hammock) → B(3d); A → B direct.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t40\t40',    // 5d
+        '%R 2\tH1\tH1\tTT_Hammock\t0\t0',
+        '%R 3\tH2\tH2\tTT_Hammock\t0\t0',
+        '%R 4\tB\tB\tTT_Task\t24\t24',    // 3d
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',   // A → H1 (FS)
+        '%R 2\t3\tPR_FF\t0',   // H1 --FF--> H2
+        '%R 3\t4\tPR_FS\t0',   // H2 → B (FS)
+        '%R 1\t4\tPR_FS\t0',   // A → B direct
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    const H1 = Object.values(E.getHammocks()).find(h => h.code === 'H1');
+    const H2 = Object.values(E.getHammocks()).find(h => h.code === 'H2');
+    check('HAM-CONVERGE-1: both hammocks resolved', result.hammocks_resolved === 2);
+    // Forward: A.EF=5. B.ES=5, B.EF=8. projectFinish=8.
+    // Backward: B.LS=5, A.LS=0.
+    // H1 anchors:
+    //   esFloor: pred A → A.EF=5
+    //   lfFloor: null (no FF/SF pred — H1's pred is FS)
+    //   lfCeiling: succ H2 (FF) → recurse _lfCeiling(H2). H2 succ B (FS) → B.LS=5. = 5.
+    //   esCeiling: null
+    //   H1.ES = 5, H1.LF = 5, duration = 0
+    // H2 anchors:
+    //   esFloor: pred H1 FF — FF pred does NOT touch esFloor. = null → 0.
+    //   lfFloor: pred H1 FF → recurse _lfCeiling(H1). H1's lfCeiling already
+    //     computed = 5. So H2.lfFloor = 5 + 0 = 5.
+    //   lfCeiling: succ B FS → B.LS - 0 = 5
+    //   esCeiling: null
+    //   H2.ES = 0 (fallback), H2.LF = max(5, 5) = 5, duration = 5
+    check('HAM-CONVERGE-1: H1.ES === 5', H1.ES === 5, 'got ' + H1.ES);
+    check('HAM-CONVERGE-1: H1.LF === 5', H1.LF === 5, 'got ' + H1.LF);
+    check('HAM-CONVERGE-1: H1.duration === 0', H1.duration === 0, 'got ' + H1.duration);
+    check('HAM-CONVERGE-1: H2.ES === 0 (FF pred does not touch ES floor)',
+        H2.ES === 0, 'got ' + H2.ES);
+    check('HAM-CONVERGE-1: H2.LF === 5', H2.LF === 5, 'got ' + H2.LF);
+    check('HAM-CONVERGE-1: H2.duration === 5', H2.duration === 5, 'got ' + H2.duration);
+}
+
+// HAM-CYCLE-1: Pathological hammock-to-hammock cycle (H1 → H2 via FS, H2 → H1
+// via FS). Walker detects cycle and emits hammock-cycle ALERT; hammocks still
+// resolve (with whatever anchor they can find).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t40\t40',
+        '%R 2\tH1\tH1\tTT_Hammock\t0\t0',
+        '%R 3\tH2\tH2\tTT_Hammock\t0\t0',
+        '%R 4\tB\tB\tTT_Task\t24\t24',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',   // A → H1
+        '%R 2\t3\tPR_FS\t0',   // H1 → H2
+        '%R 3\t2\tPR_FS\t0',   // H2 → H1 — cycle!
+        '%R 3\t4\tPR_FS\t0',   // H2 → B
+        '%R 1\t4\tPR_FS\t0',   // A → B direct
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    check('HAM-CYCLE-1: hammock-cycle ALERT emitted',
+        result.alerts.some(a => a.context === 'hammock-cycle'),
+        'alerts=' + JSON.stringify(result.alerts.map(a => a.context)));
+    check('HAM-CYCLE-1: hammocks still resolved (graceful degradation)',
+        result.hammocks_resolved === 2);
 }
 
 console.log('\n========================================');
