@@ -1,5 +1,5 @@
 {
-  "name": "@critical-path-partners/cpm-engine",
+  "name": "cpp-cpm-engine",
   "version": "2.9.12",
   "description": "Forensically-defensible CPM engine — AACE-canonical, Daubert-disclosed, bit-identical JS-Python parity.",
   "main": "cpm-engine.js",
