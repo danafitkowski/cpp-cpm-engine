@@ -1,4 +1,4 @@
-# Daubert / Proposed FRE 707 Disclosure — `cpm-engine` v2.9.9
+# Daubert / Proposed FRE 707 Disclosure — `cpm-engine` v2.9.10
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
 
