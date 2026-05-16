@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.10'`.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.11'`.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -345,7 +345,7 @@ Build a structured Daubert / FRE 707 disclosure package.
 ```js
 const d = E.buildDaubertDisclosure(cpmResult, {
     activities, relationships,    // For topology hash
-    test_count: 528,
+    test_count: 744,
     validator_independence: '...',
     method_caveat: '...',
 });
