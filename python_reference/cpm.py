@@ -42,8 +42,14 @@ EPOCH_MONTH = 1
 EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
 
-# Synchronized with cpm-engine.js ENGINE_VERSION.
-ENGINE_VERSION = '2.9.10'
+# Synchronized with cpm-engine.js ENGINE_VERSION. v2.9.11 (Round 8 R8A fix
+# wave) is JS-only — the Python reference is bumped to track the JS engine
+# but contains no Python math changes: the four fixes are JS-side (additional
+# ALERT emissions + a JS-only FF/SF working-day calendar correction). Crossval
+# continues to compare es/ef/ls/lf/tf only; the new alerts are flagged via the
+# existing severity-count parity check and the existing crossval fixtures
+# intentionally avoid the newly-loud configurations.
+ENGINE_VERSION = '2.9.11'
 
 
 # =============================================================================

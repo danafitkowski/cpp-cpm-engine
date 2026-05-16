@@ -1,8 +1,8 @@
 # cpm-engine
 
-[![npm version](https://img.shields.io/badge/npm-v2.9.10-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
+[![npm version](https://img.shields.io/badge/npm-v2.9.11-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 728 passing](https://img.shields.io/badge/tests-728%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![tests: 744 passing](https://img.shields.io/badge/tests-744%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: 346/346](https://img.shields.io/badge/JS%E2%86%94Python-346%2F346-brightgreen.svg)](cpm-engine.crossval.js)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
@@ -42,7 +42,7 @@ const result = E.computeCPM(
 
 console.log('Project finish:', result.projectFinish);     // 2026-01-21
 console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
-console.log('Engine version:', result.manifest.engine_version); // 2.9.10
+console.log('Engine version:', result.manifest.engine_version); // 2.9.11
 ```
 
 That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
@@ -100,7 +100,7 @@ Every computation emits a manifest:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.10',
+    engine_version: '2.9.11',
     method_id: 'computeCPM',
     activity_count: 3,
     relationship_count: 2,
@@ -128,7 +128,7 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 32 fixtures × 346 checks. 0 deviations as of v2.9.10.
+# 32 fixtures × 346 checks. 0 deviations as of v2.9.11.
 ```
 
 Plus a 282-activity real-XER stress test reports 0 mismatches.
@@ -181,7 +181,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.9.10. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.9.11. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
@@ -197,15 +197,17 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 ## Release notes
 
-**v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) now formally ships as a tagged release. Engine math byte-identical to v2.9.9; this is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
+**v2.9.11 (2026-05-16) — Round 8 R8A engine math fix wave.** Four T1 silent-wrong-answer paths closed: `actual_finish` without `actual_start` no longer collapses ES to EF (now derives via `subtractWorkDays(EF, duration)` + emits `MISSING_ACTUAL_START` WARN); sub-day fractional lags (P6 hour-based lags / 8 producing 0.5-day values) now emit `SUB_DAY_LAG_ROUNDED` ALERT instead of silently rounding; FF / SF Free Float working-day conversion now uses the successor's calendar (P6 spec) instead of the predecessor's; Section D constraint clamps emit `constraint-skipped` WARN when `opts.projectStart` is missing (was previously a silent drop). 744 unit tests / 346 crossval checks / verify PASS. See [CHANGELOG.md](CHANGELOG.md) for the full v2.9.11 entry.
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.10.
+**v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.11.
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 728 unit tests and 346 cross-validation checks. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 744 unit tests and 346 cross-validation checks. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

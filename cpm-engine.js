@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.10';
+const ENGINE_VERSION = '2.9.11';
 
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
@@ -511,7 +511,31 @@ function _countWorkDaysBetween(fromNum, toNum, calendarInfo) {
 }
 
 // "Loud fallback" — match Python _advance_workdays / _retreat_workdays alerts.
+// v2.9.11 R8A-2 — Sub-day fractional lag detector. The engine operates in
+// day granularity; addWorkDays / subtractWorkDays internally Math.round() the
+// nDays argument. P6 stores lags in hours and parseXER divides by 8 → e.g. a
+// 4-hour lag becomes 0.5 days which Math.round() collapses (V8 rounds 0.5
+// to 1, other engines half-even to 0 — both lose the half-day). 50 successive
+// 4-hour lags would silently inflate project finish by up to 50 calendar days
+// vs P6. Loud alert at the callsite so claims-prep flags the schedule as
+// requiring sub-day precision review before relying on the dates.
+function _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx) {
+    if (!alerts) return;
+    const raw = Number(nDays);
+    if (!Number.isFinite(raw)) return;
+    if (raw === Math.round(raw)) return;
+    alerts.push({
+        severity: 'ALERT',
+        context: ctx,
+        message: 'SUB_DAY_LAG_ROUNDED: lag/duration value ' + raw +
+            ' is fractional; engine rounds to ' + Math.round(raw) +
+            ' day(s). P6 typically stores hours; sub-day precision is lost in this engine. ' +
+            'Re-run with full-day lags or accept the documented drift.',
+    });
+}
+
 function _advanceWithAlerts(startNum, nDays, calendarInfo, alerts, ctx) {
+    _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx);
     if (startNum <= 0) return startNum + Math.round(Number(nDays) || 0);
     if (!calendarInfo) {
         alerts.push({
@@ -525,6 +549,7 @@ function _advanceWithAlerts(startNum, nDays, calendarInfo, alerts, ctx) {
 }
 
 function _retreatWithAlerts(endNum, nDays, calendarInfo, alerts, ctx) {
+    _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx);
     if (endNum <= 0) return endNum - Math.round(Number(nDays) || 0);
     if (!calendarInfo) {
         alerts.push({
@@ -1155,6 +1180,17 @@ function computeCPM(activities, relationships, opts) {
     // Free Float: slack that doesn't delay any successor's earliest start.
     // For terminals, FF = TF (no successor constraint). Computed in calendar
     // days same as TF; ff_working_days follows.
+    //
+    // v2.9.11 R8A-3 — FF / SF free-float calendar correction. Per P6 spec, the
+    // slack on a FF or SF link absorbs the SUCCESSOR's finish, so the working-
+    // day conversion of that slack must use the SUCCESSOR's calendar (not the
+    // predecessor's). Example: A on 7-day calendar, B on 5-day calendar, FF
+    // link — A.ff_working_days uses B's 5-day calendar. The predecessor's
+    // calendar gives a wrong number of working days because the slack is
+    // measured in the successor's working frame. For FS / SS the slack absorbs
+    // the SUCCESSOR's start but the float is consumed in the PREDECESSOR's
+    // frame of reference, so the predecessor's calendar remains correct. The
+    // binding successor's rel-type determines which calendar is used.
     for (const c in nodes) {
         const n = nodes[c];
         if (n.is_complete) {
@@ -1170,6 +1206,8 @@ function computeCPM(activities, relationships, opts) {
             continue;
         }
         let minSlack = Infinity;
+        let bindingSuccCode = '';
+        let bindingSuccType = '';
         for (const s of successors) {
             const sn = nodes[s.to_code];
             if (!sn) continue;
@@ -1179,12 +1217,23 @@ function computeCPM(activities, relationships, opts) {
             else if (s.type === 'FF') slack = sn.ef - n.ef - (s.lag_days || 0);
             else if (s.type === 'SF') slack = sn.ef - n.es - (s.lag_days || 0);
             else slack = sn.es - n.ef - (s.lag_days || 0);
-            if (slack < minSlack) minSlack = slack;
+            if (slack < minSlack) {
+                minSlack = slack;
+                bindingSuccCode = s.to_code;
+                bindingSuccType = s.type;
+            }
         }
         const ff = (minSlack === Infinity) ? n.tf : Math.max(0, Math.round(minSlack * 1000) / 1000);
         n.ff = ff;
-        const nCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
-        n.ff_working_days = _countWorkDaysBetween(n.ef, n.ef + ff, nCal);
+        // v2.9.11 R8A-3 — Use binding successor's calendar for FF / SF.
+        let ffCal;
+        if ((bindingSuccType === 'FF' || bindingSuccType === 'SF') && bindingSuccCode) {
+            const sn = nodes[bindingSuccCode];
+            ffCal = (sn && sn.clndr_id && calMap) ? calMap[sn.clndr_id] : null;
+        } else {
+            ffCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
+        }
+        n.ff_working_days = _countWorkDaysBetween(n.ef, n.ef + ff, ffCal);
     }
 
     const criticalCodes = new Set();
@@ -1560,10 +1609,13 @@ function _mcTopologicalSort() {
  *
  * opts: { logOutput?: bool, projectStart?: 'YYYY-MM-DD' }
  *   projectStart anchors absolute constraint dates to Section D's relative
- *   day-number scale (ES/EF are days from project start). When absent,
- *   constraints are silently no-ops in Section D (graceful degradation —
- *   Section D is week-agnostic; Section C is the calendar-aware path).
- *   Backward-compat: runCPM(true) accepted as logOutput=true.
+ *   day-number scale (ES/EF are days from project start). REQUIRED for any
+ *   schedule that uses primary or secondary P6 constraints (SNET, SNLT,
+ *   FNET, FNLT, MS_Start, MS_Finish, MFO, SO). When absent, constraints are
+ *   degraded to no-ops AND a per-constraint `constraint-skipped` WARN alert
+ *   is emitted (v2.9.11 R8A-4); prior to v2.9.11 this was silent. Section D
+ *   itself remains week-agnostic and Section C remains the calendar-aware
+ *   path. Backward-compat: runCPM(true) accepted as logOutput=true.
  */
 function runCPM(opts) {
     let logOutput = false;
@@ -1643,15 +1695,33 @@ function runCPM(opts) {
         // time; projectStart anchors absolute constraint dates. When
         // projectStart is absent, _cstrDayOffset returns -1 and clamps are
         // skipped — Section D degrades gracefully to pre-v2.9.7 behavior.
+        // v2.9.11 R8A-4 — emit ALERT when an ES-side constraint is dropped
+        // because cOff<0 (projectStart missing or invalid cstr.date).
         function _clampESForward(cstr) {
             if (!cstr) return;
+            const isESType = (cstr.type === 'SNET' ||
+                              cstr.type === 'MS_Start' ||
+                              cstr.type === 'SO');
+            if (!isESType) return;
             const cOff = _cstrDayOffset(cstr.date);
-            if (cstr.type === 'SNET' && cOff >= 0) {
-                if (cOff > task.ES) task.ES = cOff;
-            } else if (cstr.type === 'MS_Start' || cstr.type === 'SO') {
-                if (cOff >= 0) task.ES = cOff;  // forced
+            if (cOff < 0) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-skipped',
+                    message: 'Section D ES-side constraint ' + cstr.type + ' on ' + task.code +
+                        ' (date=' + cstr.date + ') skipped: ' +
+                        (projectStart ? 'invalid constraint date' : 'opts.projectStart missing') +
+                        '; constraint cannot be anchored to relative day-offset. ' +
+                        'Provide a valid opts.projectStart and cstr.date to enforce constraints.',
+                });
+                return;
             }
-            // SNLT, FNET, FNLT, MS_Finish, MFO are not ES-side clamps.
+            if (cstr.type === 'SNET') {
+                if (cOff > task.ES) task.ES = cOff;
+            } else {
+                // MS_Start / SO — forced.
+                task.ES = cOff;
+            }
         }
         _clampESForward(task.constraint);
         _clampESForward(task.constraint2);
@@ -1664,37 +1734,53 @@ function runCPM(opts) {
         // logic forced ES forward but constraint pinned EF backward), producing
         // negative-duration tasks. Now: emit ALERT when constraint is
         // infeasible vs pred logic, and clamp EF >= ES.
+        // v2.9.11 R8A-4 — emit ALERT when an EF-side constraint is dropped
+        // because cOff<0 (projectStart missing or invalid cstr.date).
         function _clampEFForward(cstr) {
             if (!cstr) return;
+            const isEFType = (cstr.type === 'FNET' ||
+                              cstr.type === 'MS_Finish' ||
+                              cstr.type === 'MFO');
+            if (!isEFType) return;
             const cOff = _cstrDayOffset(cstr.date);
-            if (cstr.type === 'FNET' && cOff >= 0) {
+            if (cOff < 0) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-skipped',
+                    message: 'Section D EF-side constraint ' + cstr.type + ' on ' + task.code +
+                        ' (date=' + cstr.date + ') skipped: ' +
+                        (projectStart ? 'invalid constraint date' : 'opts.projectStart missing') +
+                        '; constraint cannot be anchored to relative day-offset. ' +
+                        'Provide a valid opts.projectStart and cstr.date to enforce constraints.',
+                });
+                return;
+            }
+            if (cstr.type === 'FNET') {
                 if (cOff > task.EF) task.EF = cOff;
             } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
-                if (cOff >= 0) {
-                    const requiredEF = task.ES + task.remaining;
-                    if (cOff < requiredEF) {
+                const requiredEF = task.ES + task.remaining;
+                if (cOff < requiredEF) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'Mandatory Finish (' + cstr.type + ') on ' + task.code +
+                            ' violated: predecessor logic forces EF=' + requiredEF.toFixed(1) +
+                            ' (days from project start) which is after mandatory offset ' +
+                            cOff.toFixed(1) + '. Section D clamps EF >= ES to preserve duration invariant.',
+                    });
+                    // Preserve EF >= ES invariant — never let constraint
+                    // push EF below ES (negative duration).
+                    task.EF = Math.max(task.ES, cOff);
+                } else {
+                    task.EF = cOff;
+                    if (cOff > requiredEF) {
                         alerts.push({
-                            severity: 'ALERT',
-                            context: 'constraint-violated',
+                            severity: 'WARN',
+                            context: 'constraint-applied',
                             message: 'Mandatory Finish (' + cstr.type + ') on ' + task.code +
-                                ' violated: predecessor logic forces EF=' + requiredEF.toFixed(1) +
-                                ' (days from project start) which is after mandatory offset ' +
-                                cOff.toFixed(1) + '. Section D clamps EF >= ES to preserve duration invariant.',
+                                ' pins EF to offset ' + cOff.toFixed(1) + ' (after predecessor-driven EF=' +
+                                requiredEF.toFixed(1) + ').',
                         });
-                        // Preserve EF >= ES invariant — never let constraint
-                        // push EF below ES (negative duration).
-                        task.EF = Math.max(task.ES, cOff);
-                    } else {
-                        task.EF = cOff;
-                        if (cOff > requiredEF) {
-                            alerts.push({
-                                severity: 'WARN',
-                                context: 'constraint-applied',
-                                message: 'Mandatory Finish (' + cstr.type + ') on ' + task.code +
-                                    ' pins EF to offset ' + cOff.toFixed(1) + ' (after predecessor-driven EF=' +
-                                    requiredEF.toFixed(1) + ').',
-                            });
-                        }
                     }
                 }
             }
@@ -1770,29 +1856,46 @@ function runCPM(opts) {
         // v2.9.8 Bug B2 — MS_Finish/MFO now mirrors Section C's invariant guard:
         // emit ALERT when constraint forces LF < ES+remaining (infeasible vs
         // forward pass), and clamp LF >= ES+remaining to preserve duration.
+        // v2.9.11 R8A-4 — emit ALERT when an LF-side constraint is dropped
+        // because cOff<0 (projectStart missing or invalid cstr.date).
         function _clampLFBackward(cstr) {
             if (!cstr) return;
+            const isLFType = (cstr.type === 'FNLT' ||
+                              cstr.type === 'MS_Finish' ||
+                              cstr.type === 'MFO' ||
+                              cstr.type === 'SNLT');
+            if (!isLFType) return;
             const cOff = _cstrDayOffset(cstr.date);
-            if (cstr.type === 'FNLT' && cOff >= 0) {
+            if (cOff < 0) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-skipped',
+                    message: 'Section D LF-side constraint ' + cstr.type + ' on ' + task.code +
+                        ' (date=' + cstr.date + ') skipped: ' +
+                        (projectStart ? 'invalid constraint date' : 'opts.projectStart missing') +
+                        '; constraint cannot be anchored to relative day-offset. ' +
+                        'Provide a valid opts.projectStart and cstr.date to enforce constraints.',
+                });
+                return;
+            }
+            if (cstr.type === 'FNLT') {
                 if (cOff < task.LF) task.LF = cOff;
             } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
-                if (cOff >= 0) {
-                    const requiredLF = task.ES + task.remaining;
-                    if (cOff < requiredLF) {
-                        alerts.push({
-                            severity: 'ALERT',
-                            context: 'constraint-violated',
-                            message: 'Mandatory Finish (' + cstr.type + ') on ' + task.code +
-                                ' violated on backward pass: predecessor logic forces ES+remaining=' +
-                                requiredLF.toFixed(1) + ' (days from project start) which is after mandatory offset ' +
-                                cOff.toFixed(1) + '. Section D clamps LF >= ES+remaining to preserve duration invariant.',
-                        });
-                        task.LF = Math.max(requiredLF, cOff);
-                    } else {
-                        task.LF = cOff;
-                    }
+                const requiredLF = task.ES + task.remaining;
+                if (cOff < requiredLF) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'Mandatory Finish (' + cstr.type + ') on ' + task.code +
+                            ' violated on backward pass: predecessor logic forces ES+remaining=' +
+                            requiredLF.toFixed(1) + ' (days from project start) which is after mandatory offset ' +
+                            cOff.toFixed(1) + '. Section D clamps LF >= ES+remaining to preserve duration invariant.',
+                    });
+                    task.LF = Math.max(requiredLF, cOff);
+                } else {
+                    task.LF = cOff;
                 }
-            } else if (cstr.type === 'SNLT' && cOff >= 0) {
+            } else if (cstr.type === 'SNLT') {
                 // LF must be <= constraint + duration (LS <= cOff).
                 const lfFromSnlt = cOff + task.remaining;
                 if (lfFromSnlt < task.LF) task.LF = lfFromSnlt;
@@ -2224,6 +2327,21 @@ function computeCPMSalvaging(activities, relationships, opts) {
                 category: 'NO_ACTUALS_BUT_COMPLETE',
                 message: 'Activity ' + a.code + ' is_complete=true but has no actual_finish',
                 details: { code: a.code },
+            });
+        }
+        // v2.9.11 R8A-1 — mirror the strict-mode WARN for actual_finish
+        // without actual_start. Without this, salvage callers that supply
+        // is_complete=true + actual_finish only get no diagnostic; strict
+        // computeCPM derives ES from EF-duration and emits the WARN — salvage
+        // now matches.
+        if (a.actual_finish && !a.actual_start) {
+            salvage_log.push({
+                severity: 'WARN',
+                category: 'MISSING_ACTUAL_START',
+                message: 'Activity ' + a.code + ' has actual_finish but no actual_start; ' +
+                    'ES will be derived as subtractWorkDays(EF, duration). ' +
+                    'Provide actual_start for forensic accuracy.',
+                details: { code: a.code, actual_finish: a.actual_finish },
             });
         }
     }

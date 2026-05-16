@@ -4,6 +4,29 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## v2.9.11 — 2026-05-16 — Round 8 R8A engine math fix wave
+
+Four T1 engine-math bugs identified by the Round 8 R8A audit. Each was a silent-wrong-answer path — math diverged from P6 / AACE convention without any user-facing diagnostic. v2.9.11 closes all four with a corrected calculation plus a loud alert so the affected configurations cannot be missed in the future.
+
+### Fixed
+
+- **R8A-1 — `actual_finish` without `actual_start` silent ES collapse.** When an activity had `is_complete: true` AND `actual_finish` set AND `actual_start` empty, the engine previously set `es = dateToNum(actualStart || actualFinish)` which collapsed ES to the finish date — the activity reported a zero working duration on the past and silently appeared critical. v2.9.11 derives ES via `subtractWorkDays(EF, duration_days, calendar)` so the planned working span is preserved, and emits a `MISSING_ACTUAL_START` WARN alert at the activity level. Salvage mode (`computeCPMSalvaging`) emits the same alert in `salvage_log` for symmetry with the existing `NO_ACTUALS_BUT_COMPLETE` entry.
+- **R8A-2 — Sub-day fractional lags silently rounded.** `addWorkDays` / `subtractWorkDays` internally `Math.round()` the `nDays` argument. P6 stores lags in hours and `parseXER` converts via `lag_hr_cnt / 8` — a 4-hour P6 lag becomes 0.5 days, which V8 rounds to 1 and other engines half-even to 0. 50 successive 4-hour lags would silently inflate project finish by up to 50 calendar days vs P6. v2.9.11 detects fractional values at `_advanceWithAlerts` / `_retreatWithAlerts` callsites and emits a `SUB_DAY_LAG_ROUNDED` ALERT identifying the fractional input and the rounded value. `docs/api.md` documents the day-granularity constraint.
+- **R8A-3 — FF / SF Free Float measured on wrong calendar.** Per P6 spec, the slack on a FF / SF relationship absorbs the SUCCESSOR's finish, so the working-day conversion of that slack must use the SUCCESSOR's calendar (not the predecessor's). The engine previously used the predecessor's calendar for all rel types. v2.9.11 tracks the binding successor's rel-type and switches to the successor's calendar for FF / SF; FS / SS still use the predecessor's (the float is consumed in the predecessor's working frame for those).
+- **R8A-4 — Section D silent constraint drop when `projectStart` missing.** Section D's MS_Start / MS_Finish / SNET / SNLT / FNET / FNLT / MFO / SO clamps depend on `opts.projectStart` to anchor absolute constraint dates to relative day-offsets. When `projectStart` was absent (or `cstr.date` was invalid), the clamps were silently no-ops — the user had no idea their constraints were ignored. v2.9.11 emits a `constraint-skipped` WARN alert at every dropped constraint identifying the activity, constraint type, date, and reason. The `runCPM` JSDoc now documents `opts.projectStart` as REQUIRED whenever the schedule uses any P6 constraint.
+
+### Fixed (cpp-forensic-mcp companion)
+
+- **R8E HIGH-1 — `critical_path_validator` driver_chain_narrative leaked Python `ValueError:` class name** on cycle XERs. Replaced `f"...: {type(e).__name__}: {e}"` with a neutral wrapper using `str(e)` directly so the response no longer whispers the underlying stdlib identifier to attackers / opposing experts.
+
+### Notes
+
+- Tests: 744 / 744 passing (728 prior + 16 new R-v2.9.11 assertions across R8A-1 / -1b / -1c / -2 / -2b / -3 / -3b / -4 / -4b).
+- Crossval: 32 fixtures / 346 / 346 bit-identical. The Round 8 R8A fixes are JS-only — the Python reference is bumped 2.9.10 → 2.9.11 to track ENGINE_VERSION but contains no math changes. The new ALERTS are flagged via the existing severity-count parity check and the existing crossval fixtures intentionally avoid the newly-loud configurations.
+- `package.json`, `cpm-engine.js`, `python_reference/cpm.py` ENGINE_VERSION all bumped 2.9.10 → 2.9.11.
+
+---
+
 ## v2.9.10 — 2026-05-16 — Round 7 independent-verification infrastructure (Daubert Angle 5 closer)
 
 Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening). No engine math changed; the engine bytes at v2.9.9 are unchanged in this docs/infra release — `cpm-engine.js` byte content is identical apart from the `ENGINE_VERSION` constant bump and a few v2.9.9-era inline comments rewritten to cite v2.9.10. The verification + attestation infrastructure landed in this release.

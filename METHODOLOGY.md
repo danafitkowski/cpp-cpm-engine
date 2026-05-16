@@ -48,7 +48,7 @@ The engine exposes `E.ENGINE_VERSION` as a public constant. Every CPP skill that
 
 ## Pillar 4 — JS-Python crossval bit-identical
 
-**Rule.** The JavaScript engine and the Python reference implementation must produce bit-identical output on every cross-validation fixture. As of v2.9.10: **346 / 346 checks bit-identical** across 32 fixtures, plus a 282-activity real-XER stress test with 0 mismatches. Backed by 728 unit tests.
+**Rule.** The JavaScript engine and the Python reference implementation must produce bit-identical output on every cross-validation fixture. As of v2.9.11: **346 / 346 checks bit-identical** across 32 fixtures, plus a 282-activity real-XER stress test with 0 mismatches. Backed by 744 unit tests.
 
 **Rationale.** A forensic report should not change based on which surface produced it. A claim package assembled in Python (batch pipeline) must match a live demo run in JavaScript (browser). Two implementations of the same specification, kept in lockstep, materially improve the engine's Daubert posture relative to a single-implementation tool.
 

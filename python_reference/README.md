@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **153 / 153 bit-identical** claim reported in [`DAUBERT.md`](../DAUBERT.md) §3 without depending on a private CPP-internal codebase.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **346 / 346 bit-identical** claim reported in [`DAUBERT.md`](../DAUBERT.md) §3 without depending on a private CPP-internal codebase.
 
 ## Provenance
 
@@ -23,10 +23,14 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  924a8bb2f388bff32b91e1c7ce4cf4027cc96ba119d52077e6fc54529933e6a4
+cpm.py  SHA-256:  9779f268276fd9def00040b3bef4ebe3d56cda0d0996b2d29c2d72f0ba016e24
 ```
 
-(v2.9.10 Round 8 — bumped from 0602e50d with two changes: ENGINE_VERSION
+(v2.9.11 Round 8 R8A — bumped from 924a8bb2 with ENGINE_VERSION sync only
+(2.9.10 → 2.9.11). The R8A engine math fix wave is JS-only — see CHANGELOG.md
+v2.9.11 entry for the four T1 fixes. No Python math changes.
+
+Prior v2.9.10 Round 8 — bumped from 0602e50d with two changes: ENGINE_VERSION
 2.9.8 → 2.9.10 sync (matches the JS engine), and AACE 29R-03 §4.3
 in-progress immutability backported — when an activity has `actual_start`
 set but is not is_complete, both ES is pinned to actual_start (predecessor
@@ -89,7 +93,7 @@ npm run crossval
 Expected output (Node 18+, Python 3.8+):
 
 ```
-Loaded python_reference/cpm.py @ SHA-256 924a8bb2...
+Loaded python_reference/cpm.py @ SHA-256 9779f268...
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
