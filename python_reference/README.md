@@ -89,14 +89,14 @@ npm run crossval
 Expected output (Node 18+, Python 3.8+):
 
 ```
-Loaded python_reference/cpm.py @ SHA-256 0602e50d...
+Loaded python_reference/cpm.py @ SHA-256 924a8bb2...
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 25 passed, 0 failed
-  Checks:   281 / 281
+  Fixtures: 32 passed, 0 failed
+  Checks:   346 / 346
 =========================================
 ```
 

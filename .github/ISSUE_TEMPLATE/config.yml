@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/danafitkowski/cpp-cpm-engine/blob/main/SECURITY.md
+    about: Do NOT open a public issue for security vulnerabilities. See SECURITY.md for the coordinated-disclosure process and the security@criticalpathpartners.ca address.
+  - name: Daubert / forensic-methodology question
+    url: mailto:hello@criticalpathpartners.ca
+    about: Questions about whether a method, citation, or disclosure satisfies Daubert / FRCP 26(a)(2)(B) / AACE RP citation discipline. Email is faster than a GitHub issue for these.
+  - name: General discussion
+    url: https://github.com/danafitkowski/cpp-cpm-engine/discussions
+    about: Open-ended questions, architecture discussion, "how do I model X" — anything that is not a defect, feature request, or citation correction.

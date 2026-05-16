@@ -841,8 +841,30 @@ function computeCPM(activities, relationships, opts) {
         let es = a.early_start ? dateToNum(a.early_start) : 0;
         let ef = a.early_finish ? dateToNum(a.early_finish) : 0;
         if (isComplete && actualFinish) {
-            es = dateToNum(actualStart || actualFinish);
             ef = dateToNum(actualFinish);
+            if (actualStart) {
+                es = dateToNum(actualStart);
+            } else {
+                // v2.9.11 R8A-1 — actual_finish without actual_start. Previously
+                // collapsed ES to actualFinish (`es = dateToNum(actualStart ||
+                // actualFinish)` with actualStart=''), making ES === EF — a
+                // zero-working-duration completed activity that silently appeared
+                // critical. Now: derive ES via subtractWorkDays(EF, duration) on
+                // the activity's calendar so ES reflects the planned working
+                // span, and emit a WARN alert at the activity level. Salvage
+                // mode emits NO_ACTUALS_BUT_COMPLETE for the opposite asymmetry
+                // (is_complete && !actualFinish); this closes the symmetric gap.
+                const cal = (a.clndr_id && calMap) ? calMap[a.clndr_id] : null;
+                es = subtractWorkDays(ef, dur, cal);
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'completion-data-incomplete',
+                    message: 'MISSING_ACTUAL_START on ' + code + ': activity has actual_finish=' +
+                        actualFinish + ' but no actual_start; ES derived as ' +
+                        'subtractWorkDays(EF, duration) = ' + numToDate(es) +
+                        '. Provide actual_start for forensic accuracy.',
+                });
+            }
         }
         nodes[code] = {
             code,
