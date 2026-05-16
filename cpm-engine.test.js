@@ -5818,8 +5818,8 @@ console.log('\n=== v2.9.13 Bug F1 — In-progress retained-logic correctness ===
         A.ls === A.es,
         'ls=' + A.ls + ' es=' + A.es);
     check('T-FIX-F1-1: A on critical path (in-progress critical activity)',
-        r.critical_codes && r.critical_codes.indexOf('A') >= 0,
-        'critical_codes=' + JSON.stringify(r.critical_codes));
+        r.criticalCodes && r.criticalCodes.has('A'),
+        'criticalCodesArray=' + JSON.stringify(r.criticalCodesArray));
 }
 
 // T-FIX-F1-2 — Python T3.18 backport coverage (JS side). The retained-logic
