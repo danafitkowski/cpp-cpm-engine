@@ -1787,6 +1787,13 @@ const _MC = {
     // so runCPM can drain them into result.alerts. INFO severity — these
     // are informational, not violations of forensic math.
     parseAlerts: [],
+    // F11 — insertion-ordered task ID list. JavaScript's `for (const k in obj)`
+    // hoists integer-like string keys (e.g. "2170") to the front in numeric
+    // ascending order — Python dicts do not. Section D's topological sort
+    // walks this list to break ties stably with the canonical XER row order
+    // instead of with JS's hoisting quirks. Built up at parseXER time so
+    // runCPM doesn't have to recover insertion order from `for...in`.
+    taskIdsOrdered: [],
 };
 
 function parseXER(content) {
@@ -1794,6 +1801,7 @@ function parseXER(content) {
     _MC.predecessors = [];
     _MC.hammocks = {};
     _MC.parseAlerts = [];
+    _MC.taskIdsOrdered = [];
     // v2.9.3 — track silently-dropped activities so callers can surface them.
     // Previously TT_LOE / TT_WBS / fully-completed (remaining<=0) rows were
     // discarded without leaving a trace; now every drop is enumerated below.
@@ -1981,6 +1989,7 @@ function parseXER(content) {
                         criticalCount: 0,
                         durationSamples: [],
                     };
+                    _MC.taskIdsOrdered.push(taskId);
                     _activityCount++;
                     if (_activityCount > MAX_ACTIVITIES) {
                         const err = new Error('PARSE_LIMIT_EXCEEDED: XER activity count exceeds ' +
@@ -2131,17 +2140,39 @@ function _mcTopologicalSort() {
     // queue alone was a measurable O(n²) cost (~80ms of the runCPM budget).
     // Section B's topologicalSort already does the same trick — Section D
     // was the last shift-based queue in the engine.
+    //
+    // F11 — deterministic insertion-order walk. JavaScript's `for (const k in
+    // obj)` hoists integer-like string keys to the front in numeric ascending
+    // order — Python dicts do not. When parseXER built taskIdsOrdered (the
+    // canonical XER row order), iterate that instead so Section D's tie-breaks
+    // match Python and don't flip when activity codes are numeric. Falls back
+    // to `for...in` when taskIdsOrdered is absent (legacy callers that
+    // hand-construct _MC.tasks without going through parseXER).
     const tasks = _MC.tasks;
+    const ordered = (_MC.taskIdsOrdered && _MC.taskIdsOrdered.length > 0)
+        ? _MC.taskIdsOrdered
+        : null;
     const inDegree = Object.create(null);
     const queue = [];
     let head = 0;
     const sorted = [];
     let total = 0;
-    for (const taskId in tasks) {
-        total += 1;
-        const d = tasks[taskId].preds.length;
-        inDegree[taskId] = d;
-        if (d === 0) queue.push(taskId);
+    if (ordered) {
+        for (let i = 0; i < ordered.length; i++) {
+            const taskId = ordered[i];
+            if (!tasks[taskId]) continue;
+            total += 1;
+            const d = tasks[taskId].preds.length;
+            inDegree[taskId] = d;
+            if (d === 0) queue.push(taskId);
+        }
+    } else {
+        for (const taskId in tasks) {
+            total += 1;
+            const d = tasks[taskId].preds.length;
+            inDegree[taskId] = d;
+            if (d === 0) queue.push(taskId);
+        }
     }
     while (head < queue.length) {
         const taskId = queue[head++];
@@ -2185,10 +2216,16 @@ function _mcTopologicalSort() {
 function runCPM(opts) {
     let logOutput = false;
     let projectStart = '';
+    let dataDate = '';
     if (typeof opts === 'boolean') logOutput = opts;
     else if (opts && typeof opts === 'object') {
         logOutput = !!opts.logOutput;
         projectStart = opts.projectStart || opts.project_start || '';
+        // F11 — Section D dataDate floor. Section C has anchored ES to
+        // data_date for un-started activities since v2.9.3; Section D never
+        // did. The fast path silently forecast start dates before the schedule
+        // update, which downstream forensic windows then read as drift.
+        dataDate = opts.dataDate || opts.data_date || '';
     }
 
     const log = [];
@@ -2242,6 +2279,14 @@ function runCPM(opts) {
         if (psNum <= 0 || aNum <= 0) return -1;
         return aNum - psNum;
     }
+    // F11 — dataDate offset in Section D's day-number scale. Requires
+    // projectStart anchor; -1 when not derivable (no floor applied).
+    let _ddOff = -1;
+    if (dataDate && projectStart) {
+        const _psNum = dateToNum(projectStart);
+        const _ddNum = dateToNum(dataDate);
+        if (_psNum > 0 && _ddNum > 0) _ddOff = _ddNum - _psNum;
+    }
     let _projectStartMissingClashCount = 0;
 
     // Forward pass.
@@ -2288,7 +2333,13 @@ function runCPM(opts) {
             // logic cannot push ES later than the recorded actual.
             task.ES = actOff;
         } else {
-            task.ES = Math.max(0, maxES);
+            // F11 — for un-started activities, floor ES at dataDate when
+            // available. Section C has done this since v2.9.3; Section D
+            // didn't, which let the fast path forecast start dates before
+            // the schedule update for any activity with insufficient
+            // predecessor pressure.
+            const _baseES = Math.max(0, maxES);
+            task.ES = (_ddOff >= 0 && _ddOff > _baseES) ? _ddOff : _baseES;
         }
 
         // v2.9.7 — Apply constraint clamps on ES side (forward pass).
@@ -2677,6 +2728,24 @@ function runCPM(opts) {
     // Hammocks are by-definition zero-float summary bars; count them in.
     for (const hammockId in _MC.hammocks) {
         if (_MC.hammocks[hammockId].resolved) criticalCount += 1;
+    }
+
+    // F11 — emit ERROR alert when activities were excluded by cycle detection.
+    // Section D previously surfaced the count silently in the return value;
+    // callers that didn't read excludedFromCycles got no signal that part of
+    // the network was orphaned by a cycle. AACE 29R-03 forensic prerequisite:
+    // every cycle must be visible in result.alerts.
+    if (excluded > 0) {
+        alerts.push({
+            severity: 'ERROR',
+            context: 'cycle-excluded',
+            message: 'TOPOLOGY_CYCLE: ' + excluded + ' activity(ies) excluded ' +
+                'from Section D forward/backward pass because their predecessor ' +
+                'chain forms a cycle (Kahn topological sort could not reach them). ' +
+                'Excluded activities have ES/EF/LS/LF=0 and will not appear on the ' +
+                'critical path. Repair the cycle in the source schedule before ' +
+                'forensic use, or run computeCPMSalvaging for cycle-break logging.',
+        });
     }
 
     return {
