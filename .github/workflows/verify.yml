@@ -1,0 +1,127 @@
+name: verify
+
+# Round 7 — Independent Verification workflow (Daubert Angle 5 closer).
+#
+# Runs the full verification suite (unit tests + JS-Python crossval +
+# citation regression) and emits a signed witness JSON file as a workflow
+# artifact + release asset. The witness is the Daubert "Independent
+# Verification" artifact: any third-party expert can reproduce it locally
+# via `npm run verify` and compare byte-for-byte against the CI output.
+#
+# Cryptographic attestation: the witness is signed via Sigstore using
+# GitHub OIDC (actions/attest-build-provenance). Verification:
+#   gh attestation verify attestations/latest.json --owner danafitkowski
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write       # for release upload on tag pushes
+  id-token: write       # for Sigstore OIDC attestation
+  attestations: write   # for actions/attest-build-provenance
+
+jobs:
+  verify:
+    name: Independent verification (Node ${{ matrix.node }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Engine version sanity check
+        shell: bash
+        run: |
+          PKG_VER=$(node -p "require('./package.json').version")
+          ENGINE_VER=$(node -p "require('./cpm-engine.js').ENGINE_VERSION")
+          echo "package.json version: $PKG_VER"
+          echo "ENGINE_VERSION:       $ENGINE_VER"
+          if [ "$PKG_VER" != "$ENGINE_VER" ]; then
+            echo "::error::Version skew detected. package.json=$PKG_VER engine=$ENGINE_VER"
+            exit 1
+          fi
+
+      - name: Run full verification + generate witness
+        shell: bash
+        run: |
+          node scripts/attestation.js --output attestations/witness-${{ matrix.os }}-node${{ matrix.node }}.json
+        # attestation.js exits 1 if any test fails — gates the workflow
+
+      - name: Display witness (Linux/Mac)
+        if: matrix.os != 'windows-latest'
+        run: cat attestations/witness-${{ matrix.os }}-node${{ matrix.node }}.json
+
+      - name: Display witness (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: Get-Content attestations/witness-${{ matrix.os }}-node${{ matrix.node }}.json
+
+      - name: Upload witness as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: witness-${{ matrix.os }}-node${{ matrix.node }}
+          path: attestations/witness-${{ matrix.os }}-node${{ matrix.node }}.json
+          retention-days: 90
+
+  attest:
+    name: Sign witness (Sigstore via GitHub OIDC)
+    runs-on: ubuntu-latest
+    needs: verify
+    # Sign only on main-branch pushes and tag pushes — not on every PR
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate canonical witness (Linux/Node 20)
+        run: node scripts/attestation.js --output attestations/latest.json
+
+      - name: Display canonical witness
+        run: cat attestations/latest.json
+
+      - name: Attest witness via Sigstore
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'attestations/latest.json'
+
+      - name: Upload canonical witness as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: witness-canonical
+          path: attestations/latest.json
+          retention-days: 365
+
+      - name: Attach witness to release (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: attestations/latest.json
+          fail_on_unmatched_files: false
+          generate_release_notes: false

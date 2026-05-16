@@ -7,7 +7,9 @@
     "test": "node cpm-engine.test.js",
     "test:cites": "node tests/no-fabricated-citations.test.js",
     "crossval": "node cpm-engine.crossval.js",
-    "test:all": "npm test && npm run crossval && npm run test:cites"
+    "test:all": "npm test && npm run crossval && npm run test:cites",
+    "verify": "node scripts/attestation.js",
+    "attest": "node scripts/attestation.js --silent --output attestations/latest.json"
   },
   "keywords": [
     "cpm",
@@ -51,6 +53,8 @@
     "docs/",
     "examples/",
     "python_reference/",
-    "tests/"
+    "tests/",
+    "scripts/",
+    "attestations/"
   ]
 }

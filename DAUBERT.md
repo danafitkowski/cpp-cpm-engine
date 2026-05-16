@@ -1,4 +1,4 @@
-# Daubert / FRE 707 Disclosure — `cpm-engine` v2.9.8
+# Daubert / Proposed FRE 707 Disclosure — `cpm-engine` v2.9.9
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
 
@@ -38,7 +38,7 @@ The engine's correctness has been tested in four independent ways:
 
 Performance benchmarks (Node 18, M1 Mac):
 
-- 677 unit tests
+- 728 unit tests
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
@@ -51,8 +51,49 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite. The Python implementation is exercised by 1,800+ tests across 18 Python suites (forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review).
 - Made publicly available at <https://github.com/danafitkowski/cpp-cpm-engine>. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
-- **Externally reproducible cross-validation (v2.9.8).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`0602e50d7fdaf750f5afdbbccecbdb930664c453877148afed717e3315897236`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "281 / 281" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules. v2.9.8 Round 6 expanded the fixture set from 16 to 25 — adding SNLT primary, FNET, MS_Finish, secondary constraint pair, OoS regression, ALAP-with-actual_start suppression, calendar-fallback symmetry, cycle-error symmetry, and free-float documented gap — and extended `compareFixture` to assert alert SEVERITY-level parity, not just count.)
+- **Externally reproducible cross-validation (v2.9.9).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`0602e50d7fdaf750f5afdbbccecbdb930664c453877148afed717e3315897236`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "281 / 281" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules. v2.9.8 Round 6 expanded the fixture set from 16 to 25 — adding SNLT primary, FNET, MS_Finish, secondary constraint pair, OoS regression, ALAP-with-actual_start suppression, calendar-fallback symmetry, cycle-error symmetry, and free-float documented gap — and extended `compareFixture` to assert alert SEVERITY-level parity, not just count. v2.9.9 closed the hammock SS/FF/SF FS-only limitation per Round 7 A1+A3, shipping a four-walker design with cross-axis recursion that handles all four relationship types and DAG diamond joins.)
 - Live-deployed at <https://mcp.criticalpathpartners.ca/try> where any party can run it against their own schedule.
+
+### §3.1 Independent Verification (v2.9.9 — Round 7 Daubert hardening)
+
+The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. v2.9.9 adds three layers of independent-verification infrastructure to mitigate this:
+
+**Layer 1 — Public Continuous Integration.** Every push to `main` and every PR triggers `.github/workflows/verify.yml`, which runs:
+
+- The full unit-test suite (`cpm-engine.test.js`) on 9 OS × Node combinations (Ubuntu / macOS / Windows × Node 18 / 20 / 22)
+- The JS-Python crossval suite (`cpm-engine.crossval.js`) on Linux + Python 3.11
+- The citation regression test (`tests/no-fabricated-citations.test.js`)
+
+Workflow runs are publicly visible at <https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml>. Anyone can audit the build logs; the GitHub Actions infrastructure runs them, not the proponent.
+
+**Layer 2 — Cryptographic attestation via Sigstore.** On every push to `main` and every tag push, the workflow:
+
+1. Generates a **witness JSON file** (`attestations/latest.json`) containing: package version, engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version, runner OS, and the exact pass/fail counts from each test suite.
+2. Signs the witness via **Sigstore using GitHub OIDC** (`actions/attest-build-provenance@v1`). The signature is recorded on the public Sigstore transparency log, providing a tamper-evident audit trail.
+3. Publishes the signed witness as a workflow artifact (90-day retention) and — on tag pushes — as a release asset (permanent).
+
+Anyone can verify a published attestation:
+
+```bash
+gh attestation verify attestations/latest.json --owner danafitkowski
+```
+
+**Layer 3 — One-command local reproduction.** Any third-party expert can reproduce the verification on their own machine without trusting the proponent's CI:
+
+```bash
+git clone https://github.com/danafitkowski/cpp-cpm-engine
+cd cpp-cpm-engine
+git checkout <commit-sha>   # the SHA cited in the disclosure
+npm run verify              # generates a fresh witness on their own hardware
+```
+
+The local witness includes the same SHA-256 fields, test counts, and verdict as the CI witness. **Bit-identical SHA-256s + matching pass counts on a clean clone = third-party reproduction confirmed.** Any drift documents the delta and is itself usable evidence.
+
+Engine has **zero npm dependencies** (`engines.node >=18`), so the reproduction requires only Node 18+ and Python 3.10+ — no supply-chain trust required.
+
+**What this closes.** A *Daubert* challenger asserting "the testing was conducted solely by the proponent" must contend with: (a) GitHub's infrastructure running the same code at every commit, (b) Sigstore-signed attestations on a public transparency log, and (c) any third party producing an independent witness file in under 90 seconds. The challenger can no longer claim untestability.
+
+**What this does NOT close.** Independent reproduction is mechanical; it does not constitute **peer review** (Daubert Prong 2). A formal AACE TCM Forum or *Cost Engineering* journal submission, plus an independent academic or competing forensic-firm attestation, remain on the roadmap (see §10).
 
 The underlying CPM math (Kelley & Walker forward/backward pass) is one of the most peer-reviewed scheduling algorithms in the industry; it is the basis of every commercial CPM tool from Primavera P6 to Microsoft Project. **What the engine adds is operational discipline** — manifested provenance, AACE-canonical method labels, salvage logging, multi-strategy critical-path identification with divergence reporting.
 
@@ -65,7 +106,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 Performance characteristics:
 
-- 677 unit tests run on Node 18.
+- 728 unit tests run on Node 18.
 - 5,000-node linear chain Tarjan SCC in **~8 ms**.
 - A 25,000-activity Mon-Fri schedule (full forward + backward pass) runs in **~1.6 s** after the v2.1-C1 / v2.1-C2 optimizations.
 
@@ -209,7 +250,7 @@ Callers may override `nearCriticalThreshold` via `opts`. The DCMA-14 Logic check
 
 ---
 
-## §8 Constraint Handling (v2.9.8)
+## §8 Constraint Handling (v2.9.9)
 
 The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (primary) and `task.constraint2 = {type, date}` (secondary, v2.9.7+), or the equivalent `cstr_type` / `cstr_date2` (primary) and `cstr_type2` / `cstr_date` (secondary) long-form XER tokens, automatically normalized. Primary and secondary are applied sequentially per the Oracle P6 spec (primary first, secondary tightens further). Both Section C (`computeCPM`) and Section D (`runCPM`, used by the per-iteration Monte Carlo hot loop — see §D below) enforce constraints when an absolute `projectStart` anchor is supplied.
 

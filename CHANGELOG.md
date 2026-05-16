@@ -4,6 +4,26 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## Unreleased — 2026-05-16 — Round 7 independent-verification infrastructure (Daubert Angle 5 closer)
+
+Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v299--round-7-daubert-hardening). No engine math changed; the engine bytes at v2.9.9 are unchanged, only the verification + attestation infrastructure landed.
+
+### New
+
+- `scripts/attestation.js` — runs unit tests + crossval + citation regression, then emits a structured witness JSON (`attestations/latest.json`) containing engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version + platform, and the parsed pass/fail counts from each suite.
+- `npm run verify` — one-command third-party reproduction. No npm dependencies required (engine has zero), Python 3.10+ for crossval.
+- `.github/workflows/verify.yml` — public CI workflow that runs the full verification suite on Ubuntu / macOS / Windows × Node 18 / 20 / 22 on every push and PR. Generates per-matrix witness files as workflow artifacts.
+- **Cryptographic attestation via Sigstore.** On every push to `main` and every tag push, the workflow signs the canonical witness via `actions/attest-build-provenance@v1` using GitHub OIDC. Verify with: `gh attestation verify attestations/latest.json --owner danafitkowski`.
+- DAUBERT.md §3.1 "Independent Verification" — full Daubert framing: Layer 1 (public CI), Layer 2 (Sigstore attestation), Layer 3 (one-command local reproduction). Documents what this closes (Prong 1 testing objection) and what it does not (peer review).
+- `attestations/README.md` — explains the witness shape + how to use it.
+
+### Notes
+
+- The engine remains at v2.9.9 — this is an infrastructure release, not a math release.
+- `attestations/latest.json` is gitignored (locally regenerated on every `npm run verify`); CI-generated witnesses are published as workflow artifacts (90-day retention) + release assets on tag pushes (permanent).
+
+---
+
 ## v2.9.9 — 2026-05-14 — Round 7 full hammock SS/FF/SF semantics
 
 Closes the Round 6 FS-only hammock limitation (Agent A1/A3 finding).

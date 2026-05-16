@@ -1,9 +1,10 @@
 # cpm-engine
 
-[![npm version](https://img.shields.io/badge/npm-v2.9.8-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
+[![npm version](https://img.shields.io/badge/npm-v2.9.9-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 685 passing](https://img.shields.io/badge/tests-685%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![tests: 728 passing](https://img.shields.io/badge/tests-728%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: 281/281](https://img.shields.io/badge/JS%E2%86%94Python-281%2F281-brightgreen.svg)](cpm-engine.crossval.js)
+[![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
@@ -127,12 +128,44 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 25 fixtures × 281 checks. 0 deviations as of v2.9.8.
+# 25 fixtures × 281 checks. 0 deviations as of v2.9.9.
 ```
 
 Plus a 282-activity real-XER stress test reports 0 mismatches.
 
 This means a forensic analysis run in JavaScript (browser, Node) produces the same numbers as one run in Python (claims-preparation skill, MCP server, batch pipeline). Every CPP deliverable carries the same manifest regardless of which surface produced it.
+
+---
+
+## Independent verification
+
+The same-author crossval is honest about its limit: both JS and Python implementations are maintained here. To close the Daubert "no independent testing" objection, the engine ships with a **one-command third-party reproduction harness**:
+
+```bash
+git clone https://github.com/danafitkowski/cpp-cpm-engine
+cd cpp-cpm-engine
+git checkout <commit-sha>     # the SHA cited in the disclosure
+npm run verify                # runs unit + crossval + citation tests
+# → attestations/latest.json   ← machine-readable witness file
+```
+
+Engine has **zero npm dependencies**, so reproduction requires only Node 18+ and Python 3.10+. The witness file contains:
+
+- Engine SHA-256 + Python-reference SHA-256
+- Commit SHA + git ref + workflow URL (in CI)
+- Test counts: unit-tests passed/failed, crossval fixtures + checks, citation regression status
+- Timestamp + Node version + platform
+- Verdict (PASS/FAIL)
+
+Compare your locally-generated witness against the CI-signed witness (published on every push as a workflow artifact + Sigstore-signed via `actions/attest-build-provenance`). Bit-identical SHA-256s + matching pass counts on a clean clone = third-party reproduction confirmed.
+
+Verify a signed CI attestation:
+
+```bash
+gh attestation verify attestations/latest.json --owner danafitkowski
+```
+
+See [DAUBERT.md §3.1 — Independent Verification](DAUBERT.md#31-independent-verification-v299--round-7-daubert-hardening) for the full Daubert framing.
 
 ---
 
@@ -148,7 +181,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.9.8. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.9.9. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
