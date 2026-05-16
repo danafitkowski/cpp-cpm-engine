@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="canonical" href="https://criticalpathpartners.ca/deliverables.html" />
+<title>Deliverables — Forensic Delay Analysis Reports | CPP</title>
+<meta name="description" content="What you get from a CPP engagement — DCMA-14 dashboards, forensic delay reports, collapsed as-built, EOT submissions, counter-claim defense. AACE 29R-03 backed.">
+<meta property="og:title" content="Deliverables — Forensic Delay Analysis Reports | CPP">
+<meta property="og:description" content="The full artifact set behind every CPP engagement — DCMA dashboards, forensic delay reports, EOT claim packages, counter-claim defense workbooks.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://criticalpathpartners.ca/deliverables.html">
+<meta property="og:image" content="https://criticalpathpartners.ca/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Critical Path Partners — The full deliverable set behind every forensic schedule engagement.">
+<meta property="og:site_name" content="Critical Path Partners">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Deliverables — Forensic Delay Analysis Reports | CPP">
+<meta name="twitter:description" content="DCMA dashboards, forensic delay reports, EOT claim packages, counter-claim defense workbooks. AACE-compliant, audit-trailed.">
+<meta name="twitter:image" content="https://criticalpathpartners.ca/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/cpp-brand.css">
+<style>
+/* deliverables.html — page-specific overrides on top of /styles/cpp-brand.css */
+
+/* Hero — slightly smaller h1 cap (52px) + looser line-height (1.1)
+   + honesty paragraph under the tagline */
+.hero h1 {
+    font-size: clamp(36px, 5vw, 52px);
+    line-height: 1.1;
+}
+.hero-honesty {
+    font-size: 14px;
+    color: var(--slate-400);
+    max-width: 800px;
+    font-style: italic;
+    line-height: 1.6;
+}
+
+/* HONESTY CALLOUT */
+.honesty-band {
+    background: var(--off-white);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 24px 0;
+}
+.honesty-callout {
+    background: var(--white);
+    border: 1px solid var(--slate-100);
+    border-left: 3px solid var(--navy);
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--slate-700);
+    line-height: 1.6;
+    max-width: 1000px;
+}
+.honesty-callout strong { color: var(--navy); font-weight: 700; }
+.honesty-callout a { color: var(--red); text-decoration: none; font-weight: 600; }
+.honesty-callout a:hover { color: var(--red-dark); }
+
+/* SECTION */
+.section { padding: 80px 0; }
+.section-alt { background: var(--off-white); }
+
+.section-eyebrow {
+    display: inline-flex; align-items: center; gap: 12px;
+    font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--red); font-weight: 700;
+    margin-bottom: 16px;
+}
+.section-eyebrow::before {
+    content: ''; width: 28px; height: 2px; background: var(--red);
+}
+.section-title {
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    max-width: 720px;
+}
+.section-lede {
+    font-size: 17px;
+    color: var(--slate-700);
+    max-width: 740px;
+    margin-bottom: 48px;
+    line-height: 1.65;
+}
+
+/* DELIVERABLES GRID */
+.deliv-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+.deliv-card {
+    background: var(--white);
+    border: 1px solid var(--slate-100);
+    border-left: 3px solid var(--red);
+    padding: 30px 32px 28px 36px;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.deliv-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -8px rgba(15,37,64,0.08);
+}
+.deliv-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+.deliv-card h3 {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    flex: 1;
+}
+.format-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    flex-shrink: 0;
+    align-items: flex-start;
+}
+.format-pill {
+    display: inline-block;
+    font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    background: var(--slate-50);
+    color: var(--navy);
+    border: 1px solid var(--slate-200);
+    border-radius: 3px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.deliv-summary {
+    font-size: 14.5px;
+    color: var(--slate-700);
+    line-height: 1.6;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--slate-50);
+}
+.deliv-inside-label {
+    font-size: 11px;
+    color: var(--slate-500);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+}
+.deliv-inside {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 22px;
+}
+.deliv-inside li {
+    font-size: 13.5px;
+    color: var(--slate-700);
+    padding: 6px 0 6px 18px;
+    position: relative;
+    line-height: 1.55;
+}
+.deliv-inside li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 14px;
+    width: 9px; height: 2px;
+    background: var(--red);
+}
+.deliv-inside li strong {
+    color: var(--navy);
+    font-weight: 700;
+}
+.deliv-citation {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--slate-50);
+    font-size: 11.5px;
+    color: var(--slate-500);
+    line-height: 1.5;
+    font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+    letter-spacing: 0.2px;
+}
+.deliv-citation strong {
+    color: var(--navy);
+    font-weight: 600;
+}
+
+/* ENGAGEMENT MAP */
+.engage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px;
+}
+.engage-card {
+    background: var(--white);
+    border: 1px solid var(--slate-100);
+    border-top: 3px solid var(--navy);
+    padding: 26px 28px;
+}
+.engage-card .engage-tag {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+}
+.engage-card h3 {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+}
+.engage-arrow {
+    font-size: 13px;
+    color: var(--slate-500);
+    margin-bottom: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.engage-card p {
+    font-size: 14px;
+    color: var(--slate-700);
+    line-height: 1.6;
+}
+.engage-card p strong { color: var(--navy); font-weight: 700; }
+
+/* CTA row + tertiary button — page-specific (cpp-brand .btn-tertiary is the
+   red-underlined link variant; this page wants the calmer slate-200 link) */
+.cta-row {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    justify-content: center; align-items: center;
+}
+.btn-tertiary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent; color: var(--slate-200);
+    padding: 16px 24px; border-radius: 4px;
+    font-weight: 500; font-size: 14.5px;
+    text-decoration: none;
+    border-bottom: none;
+    transition: color 0.15s;
+}
+.btn-tertiary:hover { color: var(--white); border-bottom-color: transparent; }
+
+/* CTA-band heading + paragraph constraints (page-specific) */
+.cta-band h2 {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.cta-band p { max-width: 640px; }
+
+/* RESPONSIVE — page-specific in addition to /styles/cpp-brand.css */
+@media (max-width: 900px) {
+    .deliv-grid { grid-template-columns: 1fr; }
+    .engage-grid { grid-template-columns: 1fr; }
+    .deliv-card-header { flex-direction: column; gap: 10px; }
+}
+
+/* WCAG-AA accessibility — focus-visible, skip-link, mobile nav (added 2026-05-14) */
+a:focus-visible, .btn:focus-visible, .nav a:focus-visible, button:focus-visible, .nav-cta:focus-visible {
+    outline: 2px solid #C8392F;
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+.skip-to-main {
+    position: absolute; left: -9999px; top: 0;
+    background: #0F2540; color: #fff;
+    padding: 12px 20px; z-index: 9999;
+    text-decoration: none; font-weight: 600;
+}
+.skip-to-main:focus { left: 8px; top: 8px; }
+.nav-burger {
+    display: none;
+    background: transparent; border: 1px solid #cbd5e1;
+    width: 44px; height: 44px;
+    border-radius: 4px; cursor: pointer; padding: 0;
+    align-items: center; justify-content: center;
+    color: #0F2540;
+}
+@media (max-width: 780px) {
+    .nav-links { display: none; }
+    .nav-links.open {
+        display: flex; flex-direction: column;
+        position: absolute; top: 100%; left: 0; right: 0;
+        background: #fff; padding: 12px 20px;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 8px 24px rgba(15,37,64,0.06);
+        z-index: 100;
+    }
+    .nav-burger { display: inline-flex !important; }
+}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Deliverables","url":"https://criticalpathpartners.ca/deliverables.html","description":"Forensic schedule analysis deliverables CPP produces — windows analysis, collapsed as-built, claim packages, Daubert disclosures.","publisher":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca"},"breadcrumb":{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://criticalpathpartners.ca/"},{"@type":"ListItem","position":2,"name":"Deliverables","item":"https://criticalpathpartners.ca/deliverables.html"}]}}</script>
+</head>
+<body>
+<a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+<div class="accent-strip"></div>
+
+<!-- NAV -->
+<nav class="nav">
+    <div class="container">
+        <a href="/" class="nav-brand">
+            <div class="nav-brand-mark">CPP</div>
+            <div class="nav-brand-text">Critical Path Partners</div>
+        </a>
+        <button type="button" class="nav-burger" aria-label="Open menu" aria-expanded="false" onclick="var nl=this.parentNode.querySelector('.nav-links'); nl.classList.toggle('open'); this.setAttribute('aria-expanded', nl.classList.contains('open'));"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div class="nav-links">
+            <a href="/schedule-health-report.html"><span class="nav-live-dot"></span>Schedule Health Report</a>
+            <a href="/forensic-schedule-analysis.html"><span class="nav-live-dot"></span>Forensic Schedule Analysis</a>
+            <a href="/samples.html">Samples</a>
+            <a href="/case-studies/">Case Studies</a>
+            <a href="/blog/">Blog</a>
+            <a href="/ask.html">Ask</a>
+            <a href="/connect.html" class="nav-cta">Talk to CPP</a>
+        </div>
+    </div>
+</nav>
+
+<!-- HERO -->
+<main id="main-content" class="hero">
+    <div class="container">
+        <div class="breadcrumb"><a href="/">Home</a> · Deliverables</div>
+        <div class="hero-eyebrow">The Artifact Set Behind Every Engagement</div>
+        <h1>What you actually get.</h1>
+        <p class="hero-tagline">
+            Every CPP engagement ships a complete artifact set — interactive HTML dashboards your team can drill into, DOCX cover letters built for owner submission, XLSX workbooks that survive expert review, and PDF exhibits ready to drop into an arbitration binder. <strong>Browse the full set below.</strong>
+        </p>
+        <p class="hero-honesty">
+            The engine produces the files. The analyst produces the conclusion. Both ship.
+        </p>
+    </div>
+</main>
+
+<!-- HONESTY NOTE -->
+<section class="honesty-band">
+    <div class="container">
+        <div class="honesty-callout">
+            <strong>Note:</strong> the cards below describe each deliverable's structure, sections, and methodology citations — not screenshots from real client engagements. To see one rendered live on your own data, drop your XER into the <a href="https://mcp.criticalpathpartners.ca/try">live demo</a>.
+        </div>
+    </div>
+</section>
+
+<!-- DELIVERABLES GRID -->
+<section class="section">
+    <div class="container">
+        <div class="section-eyebrow">Eight Deliverable Types</div>
+        <h2 class="section-title">Every artifact a forensic engagement produces.</h2>
+        <p class="section-lede">A schedule-health check ships one. An owner-submission EOT package ships six or seven, indexed and cross-referenced. Each one is keyed to a published recommended practice — DCMA 14-Point, AACE 29R-03, AACE 52R-06, AACE 122R-22, SCL Delay &amp; Disruption Protocol 2nd Ed.</p>
+
+        <div class="deliv-grid">
+
+            <!-- 1. Schedule Health Dashboard -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>Schedule Health Dashboard</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">HTML · ~1.3 MB</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    Self-contained DCMA 14-Point assessment of a baseline-vs-current XER pair. One file, no dependencies, opens in any browser — drop it on a network share and your PMO sees the same dashboard you do.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>Executive summary</strong> with overall grade and the three to five findings most likely to surface in cross-examination</li>
+                    <li><strong>14-criterion drill-downs</strong> — logic, lags, hard constraints, BEI, missed tasks, float distribution, critical-path reasonableness, each with pass/fail rationale</li>
+                    <li><strong>Baseline vs current variance</strong> — activity-level slip, added/removed activities, retroactive baseline edits</li>
+                    <li><strong>Slip register</strong> ranked by impact to project finish</li>
+                    <li><strong>BEI / CPLI / SPI metrics</strong> with industry benchmarks and contextual reading</li>
+                    <li><strong>GAO-16-89G + CPP Quality Overlay grade</strong> with embedded reproducibility manifest</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> DCMA 14-Point Assessment · AACE RP 29R-03 · GAO-16-89G Schedule Assessment Guide
+                </div>
+            </div>
+
+            <!-- 2. Forensic Delay Analysis Report -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>Forensic Delay Analysis Report</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">HTML</span>
+                        <span class="format-pill">DOCX</span>
+                        <span class="format-pill">CSV</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    Windows analysis (AACE MIP 3.3 — Observational / Dynamic / Contemporaneous As-Is) across the full update chain. The HTML dashboard is the analyst's working document; the DOCX narrative is the owner-deliverable executive read.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>Per-window cause attribution</strong> with critical-path-impact gate and per-party day buckets that sum to project drift</li>
+                    <li><strong>Concurrent delay matrix</strong> — per window × per party — with WOET 4-state day classifier</li>
+                    <li><strong>Notice-gate review</strong> per SCL Protocol §3 (paired with evidence ledger when claim-workbench is run alongside)</li>
+                    <li><strong>Baseline stability check</strong> flagging retroactive edits, added/removed activities, completion reversals</li>
+                    <li><strong>Dual-method validation</strong> against collapsed-as-built result with documented gap reconciliation</li>
+                    <li><strong>Per-window CSVs</strong> for downstream pivot work, expert workpapers, and exhibit preparation</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> AACE RP 29R-03 §3.3 Observational/Dynamic/Contemporaneous As-Is · SCL Delay &amp; Disruption Protocol 2nd Ed §11.5
+                </div>
+            </div>
+
+            <!-- 3. Collapsed As-Built Validation -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>Collapsed As-Built Validation</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">HTML</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    But-for analysis (AACE MIP 3.8 — Modeled / Subtractive / Single Base). Independent recomputation of project drift via subtractive removal of delay activities from the as-built schedule. The validation step opposing counsel demands.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>As-built finish vs but-for finish</strong> per delay event, with cumulative roll-up across the event population</li>
+                    <li><strong>Per-event float erosion</strong> showing which removals matter to project finish and which are absorbed</li>
+                    <li><strong>Subtractive simulation log</strong> recording every activity edit so the calculation is reproducible</li>
+                    <li><strong>Dual-method gap report</strong> against the windows-analysis result — flags any divergence that needs analyst reconciliation before submission</li>
+                    <li><strong>Methodology disclosure</strong> identifying what the technique can and cannot conclude</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> AACE RP 29R-03 §3.8 Modeled/Subtractive/Single Base · SCL Delay &amp; Disruption Protocol 2nd Ed §11.5
+                </div>
+            </div>
+
+            <!-- 4. Time Impact Analysis Package -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>Time Impact Analysis Package</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">HTML</span>
+                        <span class="format-pill">DOCX</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    Prospective TIA with fragnet insertion against a contemporaneous baseline. The forward-looking method when a delay event has occurred but its impact on remaining work is the question.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>Fragnet insertion</strong> for each delay event — added activities, logic ties, calendar assignments, constraint treatment</li>
+                    <li><strong>Modeled / additive / multiple-base CPM forward-pass</strong> with pre- and post-impact finish dates</li>
+                    <li><strong>Per-event impact quantification</strong> in working days, with float-erosion accounting</li>
+                    <li><strong>Cumulative impact tracking</strong> when multiple events are modeled in sequence</li>
+                    <li><strong>Owner-vs-contractor delay attribution</strong> with concurrent-delay handling per SCL Protocol</li>
+                    <li><strong>DOCX narrative</strong> formatted for inclusion as a TIA exhibit in an EOT submission</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> AACE RP 52R-06 Time Impact Analysis · AACE RP 29R-03 §3.7 Modeled/Additive/Multiple Base
+                </div>
+            </div>
+
+            <!-- 5. Monte Carlo Schedule Risk Report -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>Monte Carlo Schedule Risk Report</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">HTML</span>
+                        <span class="format-pill">DOCX</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    Probabilistic finish-date forecast with sensitivity analysis. Suitable for executive briefings, owner risk reviews, or as the quantitative spine of a contractor's schedule-acceleration case.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>P10 / P50 / P80 / P90 completion-date forecasts</strong> using linear-interpolation percentiles per AACE convention</li>
+                    <li><strong>Sensitivity tornado</strong> identifying the activities whose duration uncertainty drives finish-date variance</li>
+                    <li><strong>Scenario comparison</strong> — baseline risk profile vs mitigated profile, with side-by-side finish-date distributions</li>
+                    <li><strong>Convergence diagnostics</strong> confirming iteration count is sufficient for the reported percentile precision</li>
+                    <li><strong>QRAMM maturity badge</strong> per AACE 122R-22, naming the maturity tier the inputs support</li>
+                    <li><strong>DOCX narrative</strong> with input assumptions, methodology disclosure, and what the simulation does not establish</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> AACE RP 122R-22 QRAMM-aligned · linear-interpolation percentiles
+                </div>
+            </div>
+
+            <!-- 6. EOT Claim Submission Package -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>EOT Claim Submission Package</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">DOCX</span>
+                        <span class="format-pill">XLSX</span>
+                        <span class="format-pill">PDF</span>
+                        <span class="format-pill">MD</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    The full owner-submission-ready Extension of Time package. Cover letter, per-event exhibits, forensic workbook, mitigation report, supporting-documents index, and an internal QC pass — assembled as one indexed bundle.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>DOCX cover letter</strong> framed for owner submission, naming the contract clauses and notice provisions invoked</li>
+                    <li><strong>Per-event exhibits</strong> — one DOCX per delay event with cause, attribution, contemporaneous notice, impact quantification</li>
+                    <li><strong>Forensic workbook (XLSX)</strong> — per-window math, per-event roll-up, attribution buckets, formulas left visible for owner-side review</li>
+                    <li><strong>Mitigation report</strong> documenting steps taken to reduce or absorb impact, per SCL Protocol mitigation duty</li>
+                    <li><strong>Supporting documents index</strong> cross-referencing every cited RFI, change order, daily report, and correspondence item</li>
+                    <li><strong>Owner-submission QC markdown</strong> — internal pre-flight check for completeness, citation accuracy, exhibit cross-references</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> SCL Delay &amp; Disruption Protocol 2nd Ed §3 notice-gate · AACE RP 67R-11 entitlement framework
+                </div>
+            </div>
+
+            <!-- 7. Counter-Claim / Defense Package -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>Counter-Claim / Defense Package</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">DOCX</span>
+                        <span class="format-pill">XLSX</span>
+                        <span class="format-pill">HTML</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    Defensive equivalent of the EOT package. Tests the opposing party's claim against ten defense theories, then assembles the rebuttal letter, defense workbook, and dashboard for response.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>DOCX rebuttal letter</strong> structured to match the opposing party's submission, theory by theory</li>
+                    <li><strong>XLSX defense workbook</strong> with per-event findings and the math behind each defense theory</li>
+                    <li><strong>HTML rebuttal dashboard</strong> for internal counsel review and deposition prep workpapers</li>
+                    <li><strong>Ten defense theories tested:</strong> no critical-path impact, concurrent delay, pacing, no notice, failure to mitigate, causation gap, float ownership, scope-change disguise, self-caused acceleration, LD cap</li>
+                    <li><strong>Per-theory evidence pull</strong> citing the contemporaneous record items each theory rests on</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> SCL Delay &amp; Disruption Protocol 2nd Ed · Wickwire and Pickavance treatise framing
+                </div>
+            </div>
+
+            <!-- 8. Claim Workbench Bundle -->
+            <div class="deliv-card">
+                <div class="deliv-card-header">
+                    <h3>Claim Workbench Bundle</h3>
+                    <div class="format-pills">
+                        <span class="format-pill">HTML</span>
+                        <span class="format-pill">CSV</span>
+                        <span class="format-pill">JSON</span>
+                    </div>
+                </div>
+                <p class="deliv-summary">
+                    Evidence-triage layer underneath the forensic report. Takes one folder of mixed correspondence (MSG / PDF / DOCX / XLSX) plus the full XER update chain and produces a unified analysis the analyst works from.
+                </p>
+                <div class="deliv-inside-label">What's inside</div>
+                <ul class="deliv-inside">
+                    <li><strong>Evidence ledger CSV</strong> — every correspondence item parsed, dated, sender-classified by analyst-supplied domain mapping</li>
+                    <li><strong>Schedule chain-diff CSV</strong> across the full update chain — TASKPRED add/remove, constraint flips, retroactive baseline edits, completion reversals</li>
+                    <li><strong>Rolling baseline</strong> — every activity carries the baseline date it had when it first appeared in the chain</li>
+                    <li><strong>Trust score JSON</strong> flagging statistical patterns (zero-duration-variance schedules, no-new-activities, every-activity-hits-baseline) — correlation, not causation</li>
+                    <li><strong>Slip-to-evidence cross-reference</strong> with NER-extracted recurring actors flagged for analyst follow-up review</li>
+                    <li><strong>HTML dashboard</strong> stitching all of the above into one navigable working surface</li>
+                </ul>
+                <div class="deliv-citation">
+                    <strong>Methodology:</strong> Forensic-correctness audit framework · disclosure boilerplate inline · CORRELATION not CAUSATION
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ENGAGEMENT MAP -->
+<section class="section section-alt">
+    <div class="container">
+        <div class="section-eyebrow">How an Engagement Maps to Deliverables</div>
+        <h2 class="section-title">Four typical engagements. Different artifact sets.</h2>
+        <p class="section-lede">Not every project needs the full bundle. A schedule-health check is one HTML file. An owner defense is the workbench plus the counter-claim package. The right deliverable mix is the first conversation in scoping.</p>
+
+        <div class="engage-grid">
+
+            <div class="engage-card">
+                <div class="engage-tag">Engagement Type 01</div>
+                <h3>Schedule Health Check</h3>
+                <div class="engage-arrow">Ships →</div>
+                <p><strong>Schedule Health Dashboard</strong> — one self-contained HTML file with DCMA 14-Point findings, baseline-vs-current variance, and the BEI/CPLI/SPI snapshot. Used as a pre-bid check, monthly health pass, or pre-claim diagnostic.</p>
+            </div>
+
+            <div class="engage-card">
+                <div class="engage-tag">Engagement Type 02</div>
+                <h3>Forensic Delay Analysis</h3>
+                <div class="engage-arrow">Ships →</div>
+                <p><strong>Forensic Delay Analysis Report</strong> + <strong>Collapsed As-Built Validation</strong> + <strong>forensic workbook</strong>. Two methods (MIP 3.3 windows and MIP 3.8 collapsed as-built) computed independently, then reconciled. The dual-method standard opposing counsel cannot dismiss as single-method bias.</p>
+            </div>
+
+            <div class="engage-card">
+                <div class="engage-tag">Engagement Type 03</div>
+                <h3>EOT Claim Submission</h3>
+                <div class="engage-arrow">Ships →</div>
+                <p><strong>Full claim package</strong> — cover letter + per-event exhibits + forensic workbook + mitigation report + supporting-documents index + owner-submission QC markdown. Indexed as one bundle, ready to submit on the contract notice clause's required medium.</p>
+            </div>
+
+            <div class="engage-card">
+                <div class="engage-tag">Engagement Type 04</div>
+                <h3>Owner Defense (Counter-Claim)</h3>
+                <div class="engage-arrow">Ships →</div>
+                <p><strong>Counter-Claim Package</strong> + <strong>Claim Workbench Bundle</strong> for evidence triage. The workbench builds the contemporaneous record cross-reference; the counter-claim package tests the opposing claim against ten defense theories, theory by theory.</p>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- CTA BAND -->
+<section class="cta-band">
+    <div class="container">
+        <h2>The deliverables are concrete. The analysis behind them is the work.</h2>
+        <p>Every artifact above is reproducible from a CPP engagement — the engine produces the files, the analyst produces the conclusion. Try the engine on your own data, or scope an engagement directly.</p>
+        <div class="cta-row">
+            <a href="https://mcp.criticalpathpartners.ca/try" class="btn-primary">Try It Live →</a>
+            <a href="/forensic-schedule-analysis.html" class="btn-secondary">Browse Forensic Schedule Analysis</a>
+            <a href="/connect.html" class="btn-tertiary">Talk to CPP</a>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-row">
+            <div>
+                <div class="footer-brand">Critical Path Partners</div>
+                <p class="footer-tag">Forensic Schedule Analysis · Project Controls · Claims Consulting. Boutique forensic-scheduling practice.</p>
+            </div>
+            <div class="footer-col">
+                <h3>Practice</h3>
+                <a href="/#services">Services</a>
+                <a href="/case-studies/">Case Studies</a>
+                <a href="/schedule-health-report.html">Schedule Health Report</a>
+                <a href="/forensic-schedule-analysis.html">Forensic Schedule Analysis</a>
+                <a href="/#about">About CPP</a>
+            </div>
+            <div class="footer-col">
+                <h3>Contact</h3>
+                <a href="mailto:dana@criticalpathpartners.ca">dana@criticalpathpartners.ca</a>
+                <a href="tel:+15195326300">519-532-6300</a>
+                <a href="/connect.html">Talk to CPP</a>
+                <a href="/privacy-policy.html">Privacy Policy</a>
+                <a href="/terms-of-service.html">Terms of Service</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div>© 2026 Critical Path Partners. All rights reserved.</div>
+            <div>criticalpathpartners.ca</div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

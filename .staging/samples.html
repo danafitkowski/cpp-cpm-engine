@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="canonical" href="https://criticalpathpartners.ca/samples.html" />
+<title>Sample Forensic Schedule Analysis Deliverables | CPP</title>
+<meta name="description" content="Actual rendered output from the CPP forensic toolkit. Click any sample to open the full interactive dashboard. Sample data, fictional project, real methodology.">
+<meta name="robots" content="index, follow">
+
+<meta property="og:title" content="Sample Forensic Schedule Analysis Deliverables | CPP">
+<meta property="og:description" content="Actual rendered output from the CPP forensic toolkit. Click any sample to open the interactive dashboard. Sample data, fictional project, real methodology.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://criticalpathpartners.ca/samples.html">
+<meta property="og:site_name" content="Critical Path Partners">
+<meta property="og:image" content="https://criticalpathpartners.ca/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sample Forensic Schedule Analysis Deliverables | CPP">
+<meta name="twitter:description" content="Actual rendered output from the CPP forensic toolkit. Sample data, fictional project, real methodology.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/styles/cpp-brand.css">
+<style>
+/* samples.html — page-specific overrides on top of /styles/cpp-brand.css */
+
+/* JetBrains Mono utility (page-specific; not part of canonical brand) */
+.mono {
+    font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+}
+
+/* Nav — wider link gap and an active-state in navy (cpp-brand active is red) */
+.nav-links { gap: 28px; }
+.nav-links a.active { color: var(--navy); font-weight: 700; }
+.nav-cta { font-weight: 600 !important; }
+
+/* Hero — slightly taller padding, tighter line-height + smaller margin, longer
+   tagline scale, paired byline + pill — page-specific */
+.hero { padding: 80px 0 64px; }
+.hero h1 {
+    font-size: clamp(38px, 5.5vw, 56px);
+    line-height: 1.05;
+    margin-bottom: 22px;
+}
+.hero-tagline {
+    font-size: clamp(17px, 1.7vw, 20px);
+    max-width: 760px;
+    line-height: 1.55;
+}
+.hero-byline {
+    font-size: 14px;
+    color: var(--slate-400);
+    margin-top: 24px;
+    letter-spacing: 0.02em;
+    max-width: 760px;
+    line-height: 1.6;
+}
+.hero-byline .pill {
+    display: inline-block;
+    background: rgba(200,57,47,0.18);
+    color: var(--white);
+    padding: 4px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-right: 10px;
+    border-left: 2px solid var(--red);
+}
+
+/* ═══ PROJECT BAND ═══ */
+.project-band {
+    background: var(--off-white);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 22px 0;
+}
+.project-band-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px 40px;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--slate-700);
+}
+.project-band-inner strong { color: var(--navy); font-weight: 700; }
+.project-band-inner .meta-block { display: flex; gap: 6px; align-items: baseline; }
+.project-band-inner .label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px;
+    color: var(--slate-500);
+    font-weight: 600;
+}
+
+/* Section — tighter top/bottom padding + a smaller section title scale */
+.section { padding: 72px 0; }
+.section-title {
+    font-size: clamp(26px, 3.4vw, 34px);
+    line-height: 1.2;
+    margin-bottom: 14px;
+}
+.section-lede {
+    font-size: 16px;
+}
+
+/* ═══ SAMPLES GRID ═══ */
+.samples-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+.sample-card {
+    background: var(--white);
+    border: 1px solid var(--slate-100);
+    border-left: 3px solid var(--navy);
+    padding: 28px 30px 26px;
+    display: flex;
+    flex-direction: column;
+    transition: border-left-color 0.18s, transform 0.18s, box-shadow 0.18s;
+    text-decoration: none;
+    color: inherit;
+}
+.sample-card:hover {
+    border-left-color: var(--red);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -10px rgba(15, 37, 64, 0.12);
+}
+.sample-card.featured {
+    grid-column: span 2;
+    border-left-color: var(--red);
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.sample-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.sample-title {
+    font-size: 21px;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+    line-height: 1.25;
+}
+.sample-card.featured .sample-title {
+    font-size: 26px;
+}
+.sample-body {
+    font-size: 14.5px;
+    color: var(--slate-700);
+    line-height: 1.6;
+    margin-bottom: 22px;
+    flex-grow: 1;
+}
+.sample-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--red);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.01em;
+    transition: gap 0.18s;
+}
+.sample-card:hover .sample-cta { gap: 12px; }
+.sample-cta::after {
+    content: '→';
+    font-size: 18px;
+    line-height: 1;
+}
+
+.sample-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--slate-100);
+    font-size: 11.5px;
+    color: var(--slate-500);
+    font-family: 'JetBrains Mono', monospace;
+}
+.sample-meta span { white-space: nowrap; }
+
+/* ═══ DISCLAIMER BAND ═══ */
+.disclaimer-band {
+    background: var(--off-white);
+    border-top: 1px solid var(--slate-100);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 32px 0;
+}
+.disclaimer-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    max-width: 880px;
+    margin: 0 auto;
+}
+.disclaimer-icon {
+    background: var(--red);
+    color: var(--white);
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    font-size: 14px;
+    flex-shrink: 0;
+    border-left: 3px solid var(--navy);
+    margin-top: 2px;
+}
+.disclaimer-text {
+    font-size: 14px;
+    color: var(--slate-700);
+    line-height: 1.6;
+}
+.disclaimer-text strong { color: var(--navy); }
+
+/* CTA band — page-specific tighter padding + smaller title/body scale.
+   cpp-brand canonical CTA is 70px padding with a red ::before strip;
+   this page wants the calmer/shorter variant without the red strip on top. */
+.cta-band {
+    padding: 64px 0;
+}
+.cta-band::before { content: none; }
+.cta-band h2 {
+    font-size: clamp(24px, 3.4vw, 32px);
+}
+.cta-band p {
+    max-width: 580px;
+    margin: 0 auto 28px;
+    font-size: 16px;
+}
+.cta-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* Footer-bottom narrower than cpp-brand (no flex-wrap on this page) */
+.footer-bottom {
+    flex-wrap: nowrap;
+    gap: 0;
+}
+
+/* ═══ RESPONSIVE — page-specific in addition to /styles/cpp-brand.css ═══ */
+@media (max-width: 900px) {
+    .nav-links { gap: 14px; }
+    .nav-links a:not(.nav-cta):not(:last-child) { display: none; }
+    .hero { padding: 56px 0 50px; }
+    .samples-grid { grid-template-columns: 1fr; }
+    .sample-card.featured { grid-column: span 1; }
+    .sample-card.featured .sample-title { font-size: 21px; }
+    .project-band-inner { gap: 14px 24px; }
+    .disclaimer-inner { flex-direction: column; gap: 12px; }
+}
+
+/* WCAG-AA accessibility — focus-visible, skip-link, mobile nav (added 2026-05-14) */
+a:focus-visible, .btn:focus-visible, .nav a:focus-visible, button:focus-visible, .nav-cta:focus-visible {
+    outline: 2px solid #C8392F;
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+.skip-to-main {
+    position: absolute; left: -9999px; top: 0;
+    background: #0F2540; color: #fff;
+    padding: 12px 20px; z-index: 9999;
+    text-decoration: none; font-weight: 600;
+}
+.skip-to-main:focus { left: 8px; top: 8px; }
+.nav-burger {
+    display: none;
+    background: transparent; border: 1px solid #cbd5e1;
+    width: 44px; height: 44px;
+    border-radius: 4px; cursor: pointer; padding: 0;
+    align-items: center; justify-content: center;
+    color: #0F2540;
+}
+@media (max-width: 780px) {
+    .nav-links { display: none; }
+    .nav-links.open {
+        display: flex; flex-direction: column;
+        position: absolute; top: 100%; left: 0; right: 0;
+        background: #fff; padding: 12px 20px;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 8px 24px rgba(15,37,64,0.06);
+        z-index: 100;
+    }
+    .nav-burger { display: inline-flex !important; }
+}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"Samples","url":"https://criticalpathpartners.ca/samples.html","description":"Sample forensic schedule deliverables — DCMA-14 health, windows analysis, collapsed as-built, Monte Carlo SRA, claim workbench.","publisher":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca"}}</script>
+</head>
+<body>
+<a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+<div class="accent-strip"></div>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nav">
+    <div class="container">
+        <a href="/" class="nav-brand">
+            <div class="nav-brand-mark">CPP</div>
+            <div class="nav-brand-text">Critical Path Partners</div>
+        </a>
+        <button type="button" class="nav-burger" aria-label="Open menu" aria-expanded="false" onclick="var nl=this.parentNode.querySelector('.nav-links'); nl.classList.toggle('open'); this.setAttribute('aria-expanded', nl.classList.contains('open'));"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div class="nav-links">
+            <a href="/schedule-health-report.html"><span class="nav-live-dot"></span>Schedule Health Report</a>
+            <a href="/forensic-schedule-analysis.html"><span class="nav-live-dot"></span>Forensic Schedule Analysis</a>
+            <a href="/samples.html" class="active">Samples</a>
+            <a href="/case-studies/">Case Studies</a>
+            <a href="/blog/">Blog</a>
+            <a href="/ask.html">Ask</a>
+            <a href="/connect.html" class="nav-cta">Talk to CPP</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="main-content" class="hero">
+    <div class="container">
+        <div class="hero-eyebrow">Sample Deliverables</div>
+        <h1>What you actually get,<br>before you book.</h1>
+        <p class="hero-tagline">Five rendered deliverables straight from the CPP forensic toolkit. Click any sample to open the full interactive dashboard. <strong>Sample data, fictional project, real methodology.</strong></p>
+        <p class="hero-byline">
+            <span class="pill">Live HTML</span>
+            Each link opens the actual artifact a CPP engagement produces — not a screenshot. Self-contained pages render offline. AACE-aligned methodology stamped throughout.
+        </p>
+    </div>
+</section>
+
+<!-- ═══ PROJECT BAND ═══ -->
+<section class="project-band">
+    <div class="container">
+        <div class="project-band-inner">
+            <div class="meta-block"><span class="label">Engagement</span><strong>Northern Ontario Industrial Facility Expansion — Phase 2</strong></div>
+            <div class="meta-block"><span class="label">Owner</span><span class="mono">Lakeshore Holdings Ltd.</span></div>
+            <div class="meta-block"><span class="label">Contractor</span><span class="mono">Meridian Construction Group Ltd.</span></div>
+            <div class="meta-block"><span class="label">Contract</span><span class="mono">CCDC2 · ~$45M CAD</span></div>
+            <div class="meta-block"><span class="label">Duration</span><span class="mono">~14 months</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ SAMPLES GRID ═══ -->
+<section class="section">
+    <div class="container">
+        <div class="section-eyebrow">The Five Samples</div>
+        <h2 class="section-title">One coherent forensic engagement, five deliverables.</h2>
+        <p class="section-lede">Each sample below was generated from the same synthetic project — owner-caused RFI delays, contractor-caused crew shortages, and concurrent weather events spread across a 14-month build. The same engagement, viewed through five complementary forensic lenses.</p>
+
+        <div class="samples-grid">
+
+            <!-- Sample 1 (featured) — DCMA-14 Health -->
+            <a href="/samples/sample-dcma14-health.html" class="sample-card featured">
+                <div class="sample-eyebrow">DCMA 14-Point · GAO-16-89G · CPP Quality Overlay</div>
+                <h3 class="sample-title">Schedule Health Dashboard</h3>
+                <p class="sample-body">Full DCMA 14-Point assessment with pass/fail per criterion, GAO 10 Best Practices scoring, CPP Schedule Quality Overlay (A–F grade across six categories), AI Executive Summary, baseline-vs-current slip register, and reproducibility manifest. The same dashboard a federal contracting officer would sign off on.</p>
+                <span class="sample-cta">View sample</span>
+                <div class="sample-meta">
+                    <span>self-contained · 4.0 MB</span>
+                    <span>~80–150 activities</span>
+                    <span>baseline + current XER</span>
+                </div>
+            </a>
+
+            <!-- Sample 2 — Forensic Windows Analysis -->
+            <a href="/samples/sample-windows-analysis.html" class="sample-card">
+                <div class="sample-eyebrow">AACE MIP 3.3 · Windows Analysis</div>
+                <h3 class="sample-title">Forensic Windows Analysis Dashboard</h3>
+                <p class="sample-body">Three-window observational/dynamic/contemporaneous as-is analysis (AACE 29R-03 §3.3) across the project life. Per-window completion shifts, attribution split (Owner/Contractor/Concurrent), critical-path duration growth, milestone slip register with responsible-party assignment.</p>
+                <span class="sample-cta">View sample</span>
+                <div class="sample-meta">
+                    <span>3 windows analyzed</span>
+                    <span>+93d cumulative slip</span>
+                    <span>baseline + 3 update XERs</span>
+                </div>
+            </a>
+
+            <!-- Sample 3 — Collapsed As-Built -->
+            <a href="/samples/sample-collapsed-as-built.html" class="sample-card">
+                <div class="sample-eyebrow">AACE MIP 3.7/3.8 · Modeled / Subtractive</div>
+                <h3 class="sample-title">Collapsed As-Built / But-For Analysis</h3>
+                <p class="sample-body">Independent dual-method validation per AACE 29R-03 §3.8 (Modeled / Subtractive / Single Base — Collapsed As-Built) of the windows result. Eight delay events removed from the as-built network one at a time and cumulatively; per-event but-for finish dates with cross-reference back to the MIP 3.3 windows result.</p>
+                <span class="sample-cta">View sample</span>
+                <div class="sample-meta">
+                    <span>8 delay events</span>
+                    <span>dual-method gap reported</span>
+                    <span>SCL §11.5 · Wickwire Ch. 10</span>
+                </div>
+            </a>
+
+            <!-- Sample 4 — Monte Carlo SRA -->
+            <a href="/samples/sample-monte-carlo-sra.html" class="sample-card">
+                <div class="sample-eyebrow">AACE 122R-22 QRAMM · Monte Carlo</div>
+                <h3 class="sample-title">Monte Carlo Schedule Risk Analysis</h3>
+                <p class="sample-body">5,000-iteration Monte Carlo simulation over duration uncertainty distributions (triangular). P10/P25/P50/P75/P80/P85/P90/P95 completion bands, sensitivity tornado of activity drivers, baseline-vs-mitigated scenario delta showing which mitigations move the P80 needle.</p>
+                <span class="sample-cta">View sample</span>
+                <div class="sample-meta">
+                    <span>5,000 iterations · seed 42</span>
+                    <span>P50/P80 mitigation delta</span>
+                    <span>282 activity drivers ranked</span>
+                </div>
+            </a>
+
+            <!-- Sample 5 — Claim Workbench -->
+            <a href="/samples/sample-claim-workbench.html" class="sample-card">
+                <div class="sample-eyebrow">Forensic Workbench · Evidence Ledger</div>
+                <h3 class="sample-title">Claim Workbench Dashboard</h3>
+                <p class="sample-body">Mixed-evidence intake from one folder: 5 XER updates, 8 PDFs, 4 DOCXs. Produces evidence ledger, schedule chain-diff (TASKPRED edits, retroactive baseline edits, completion reversals), rolling baseline, statistical trust score, and slip-to-evidence pairings auto-keyed by date and activity code.</p>
+                <span class="sample-cta">View sample</span>
+                <div class="sample-meta">
+                    <span>17 evidence items</span>
+                    <span>11 manipulations logged</span>
+                    <span>100% slip-to-evidence pairing</span>
+                </div>
+            </a>
+
+        </div>
+    </div>
+</section>
+
+<!-- ═══ DISCLAIMER BAND ═══ -->
+<section class="disclaimer-band">
+    <div class="container">
+        <div class="disclaimer-inner">
+            <div class="disclaimer-icon">!</div>
+            <div class="disclaimer-text">
+                <strong>Demo preview &mdash; not for litigation use.</strong> The five linked deliverables are rendered from synthetic project data on a fictional engagement (Northern Ontario Industrial Facility Expansion &mdash; Phase 2; Lakeshore Holdings Ltd. &middot; Meridian Construction Group Ltd. are not real entities). The methodology, math, and dashboard format are exactly what a CPP engagement produces. Activity codes, RFI numbers, change orders, and party assignments are illustrative and chosen to exercise the full range of forensic detectors.
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ CTA BAND ═══ -->
+<section class="cta-band" id="contact">
+    <div class="container">
+        <h2>Have a real claim that needs this treatment?</h2>
+        <p>Twenty-five years of construction-schedule practice, the same toolkit you just clicked through, and a fixed-fee engagement scoped to your matter. Send the file or drop a line.</p>
+        <div class="cta-row">
+            <a href="mailto:dana@criticalpathpartners.ca" class="btn-primary">dana@criticalpathpartners.ca →</a>
+            <a href="/case-studies/" class="btn-secondary">Read a Case Study</a>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-row">
+            <div>
+                <div class="footer-brand">Critical Path Partners</div>
+                <p class="footer-tag">Forensic Schedule Analysis · Project Controls · Claims Consulting. Boutique forensic-scheduling practice. Twenty-five years in.</p>
+            </div>
+            <div class="footer-col">
+                <h3>Practice</h3>
+                <a href="/samples.html">Sample Deliverables</a>
+                <a href="/case-studies/">Case Studies</a>
+                <a href="/schedule-health-report.html">Schedule Health Report</a>
+                <a href="/forensic-schedule-analysis.html">Forensic Schedule Analysis</a>
+            </div>
+            <div class="footer-col">
+                <h3>Contact</h3>
+                <a href="mailto:dana@criticalpathpartners.ca">dana@criticalpathpartners.ca</a>
+                <a href="tel:+15195326300">519-532-6300</a>
+                <a href="/connect.html">Talk to CPP</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div>© 2026 Critical Path Partners. All rights reserved.</div>
+            <div>criticalpathpartners.ca</div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
