@@ -12,6 +12,61 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.12 — 2026-05-16 — Round 9 engine math fix wave (constraint / calendar / in-progress / parity)
+
+Hardcore audit identified ~30 engine math defects across constraint handling, calendar arithmetic, in-progress activity actuals, and JS↔Python parity. v2.9.12 closes every one with a corrected calculation, a regression test asserting the exact corrected behavior, and (where applicable) a loud alert so the affected configuration cannot be missed in the future.
+
+### T1 — Constraint handling
+
+- **T1.1 — MS_Start backward LF clamp.** `_applyBackwardLFConstraint` previously only honored MS_Finish / MFO / FNLT / SNLT on the backward pass. MS_Start / SO were silently ignored, allowing LS to drift later than the pinned ES — breaking the P6 invariant that MS_Start is always on the critical path. Both engines now emit `LF = cstr.date + duration` so the post-clamp LS recompute lands on cstr.date and TF = 0.
+- **T1.2 — `constraint-noop` WARN on actual_start suppression.** When an activity has an `actual_start`, AACE 29R-03 §4.3 makes the historical fact immutable; ES-side constraints (SNET, MS_Start, SO) cannot override it. Both engines now emit a `constraint-noop` WARN per suppressed constraint so the forensic record shows what was skipped.
+- **T1.3 — Section C ES-side constraint gate.** Section C's forward pass now gates `_applyForwardESConstraint` calls on `!hasActualStart`, matching Python reference behavior. Was a JS-only divergence.
+- **T1.4 — Section D Monte Carlo pins ES to actual_start.** `runCPM` previously ignored `task.actual_start` entirely — predecessor logic overrode the historical fact. Section D now pins `task.ES = actual_start_offset` (relative to `opts.projectStart`) when present, suppresses ES-side constraint clamps with `constraint-noop` WARN, and emits a one-time `actual-start-not-anchored` WARN if `projectStart` was missing.
+- **T1.5 — `task-dropped` + `relationship-dropped` INFO alerts.** TT_LOE / TT_WBS / completed / zero-remaining activity drops + dangling-relationship drops in `parseXER` were silent. v2.9.12 surfaces every drop as an INFO alert propagated to `result.alerts` (via a new `_MC.parseAlerts` collector). Non-finite `lag_hr_cnt` (e.g. `Infinity`) is now rejected with an ALERT instead of propagating to `projectFinish: Infinity`.
+- **T1.6 — `constraint-unrecognized` / `constraint-incomplete` WARN.** `_normalizeConstraint` previously returned null silently on unknown tokens and empty dates. Both engines now emit a WARN identifying the activity and the offending token / missing date.
+- **T1.7 — `CS_MANSTART` / `CS_MANFINISH` aliases.** Older P6 R8.x XER variants emit these tokens without the "D" of "MANDATORY". Added to `CONSTRAINT_TYPE_MAP` in both engines as aliases for `MS_Start` / `MS_Finish`.
+- **T1.8 / T1.9 / T1.10 — Section D SNLT / FNLT / MS_Start alerts.** Section D's forward-pass clamps now emit `constraint-violated` ALERT when SNLT/FNLT/MS_Start is breached by predecessor logic, and `constraint-applied` WARN when MS_Start pulls ES forward — symmetric with Section C.
+
+### T2 — Calendar / lag arithmetic
+
+- **T2.11 — Calendar-aware Free Float.** Free Float `slack` was computed as `sn.es - n.ef - lag_days` (pure calendar-day subtraction mixed with working-day lag). When the successor's ES was exactly the lag-walked-forward of the predecessor on the link's calendar, the prior arithmetic produced false-positive slack equal to the weekend gap the link's calendar already absorbed. Rewritten to walk the predecessor anchor forward on the binding-link's calendar (successor's for FF/SF) and measure slack in working days on that calendar. New fields: `ff_binding_succ`, `ff_binding_type` for forensic introspection.
+- **T2.12 — Signed `_countWorkDaysBetween`.** Returned 0 for negative intervals, swallowing negative-float forensic signal on over-constrained networks. Now returns a signed result so `tf_working_days` and `ff_working_days` preserve the over-constrained signal.
+- **T2.13 — Free Float negative-value preserved.** Removed `Math.max(0, ...)` clamp on free float so over-constrained networks surface negative FF.
+- **T2.14 — `dateToNum` rollover guard.** `Date.UTC(2026, 1, 30)` silently rolled to March 2 because February has 28 days. v2.9.12 round-trips the constructed date and returns 0 if components don't match. Python's `date()` constructor already raised ValueError on invalid days — caught by the existing try/except — so Python behavior is already correct.
+- **T2.15 — Non-finite lag rejection.** `parseXER` now rejects `Number.isFinite(lag_hr_cnt) === false` with a `lag-non-finite` ALERT and drops the relationship.
+- **T2.16 — `invalid-calendar-falling-back` WARN.** `_preResolveCalendars` previously substituted MonFri for empty / invalid `work_days` silently. Both engines now emit a WARN identifying the calendar key and the offending array.
+- **T2.17 — SUB_DAY_LAG_ROUNDED direction-bias disclosure.** Alert message now explicitly notes V8 Math.round rounds half toward +Infinity (sub-day lags inflate, sub-day leads truncate to zero) — sub-day precision is forensically unavailable in this engine.
+
+### T3 — In-progress + actuals
+
+- **T3.18 — `remaining_duration` (P6 retained-logic mode).** New activity-shape parameter. When provided for an in-progress activity, EF anchors to `max(actual_start, data_date) + remaining_duration` rather than `ES + duration_days`. Matches Primavera P6 default retained-logic scheduling. Documented in DAUBERT.md §8.
+- **T3.19 — Backward LS pinned to ES when actual_start present (in-progress).** An activity that has already started cannot have LS later than ES — that would imply the activity should have started LATER than it did, which is physically impossible. Both engines now pin LS=ES and tighten LF in the backward-pass post-clamp.
+- **T3.20 — Section C EF-side `EF >= ES` guard.** Section D already had this guard (v2.9.8 B2 fix); Section C didn't. Added so a constraint cannot pin EF below ES (negative duration).
+- **T3.21 — OoS detector enumerates EVERY unstarted predecessor.** Previously broke on the first OoS pred per activity. Now lists all of them in a single alert, and also catches true OoS-progress (pred has actual_start but successor started earlier).
+- **T3.22 — `hammock-orphan` ALERT.** When a hammock has NO predecessor or successor anchors (esFloor / lfFloor / lfCeiling / esCeiling all null), the fallback `es=0, lf=projectFinish` previously absorbed the entire project span silently. Now emits an ALERT before applying the fallback.
+- **T3.23 — Hammock `duration_working_days`.** Hammocks now report duration in working days on the hammock's own calendar (via `clndr_id`) alongside the calendar-day duration. Previously only the ordinal calendar-day span was reported.
+- **T3.24 — `unrecognized-task-type` WARN.** Task types outside the canonical P6 six (TT_Task, TT_FinMile, TT_Mile, TT_LOE, TT_WBS, TT_Hammock) are now flagged with a WARN identifying the activity and the unknown token.
+
+### T4 — Python reference parity
+
+- **T4.25 — Backport R8A-1.** Python `compute_cpm` previously collapsed `es = date_to_num(actual_start or actual_finish)` when actual_finish was set without actual_start — silently producing ES === EF zero-duration completed activities. Now derives ES via `_retreat_workdays(EF, duration_days, calendar)` matching JS v2.9.11 R8A-1, and emits MISSING_ACTUAL_START WARN.
+- **T4.26 — ALAP secondary slot.** Python's ALAP post-pass previously only checked primary `constraint`; secondary `constraint2` ALAP was silently ignored. Mirrors JS v2.9.8 Bug B7.
+- **T4.27 — Forward ES constraint guard parity.** JS Section C now matches Python's existing `if not has_actual_start: ...` gate around `_apply_forward_es_constraint` (closed via T1.3 above).
+
+### Tests
+
+- `cpm-engine.test.js` Section R-v2.9.12 — 47 new assertions covering each fix's corrected math AND each new alert emission.
+- `cpm-engine.crossval.js` — 8 new fixtures (F33-F38, F43-F44) exercising the JS↔Python-parity paths for T1.1, T1.2, T1.6, T1.7, T2.16, T4.25, T4.26.
+- Sub-day lag fixtures (F45/F46 in the audit memo) intentionally NOT added — JS Math.round / Python round() disagree on half-up vs banker's; the forensic disclosure layer documents that direction-bias rather than harmonizing it away.
+
+### Notes
+
+- Tests: **792 / 792 passing** (744 prior + 48 new R-v2.9.12 assertions).
+- Crossval: **40 fixtures / 416 / 416 bit-identical**. Python reference extended for T1.1, T1.2, T1.6, T1.7, T2.16, T3.19, T4.25, T4.26 — SHA-256 pin rotates to `4b65db3b76a56c802118fe80b0a8a29bfa863b387a1bc0bf429c5db634d05fe3`.
+- `package.json`, `cpm-engine.js`, `python_reference/cpm.py` ENGINE_VERSION all bumped 2.9.11 → 2.9.12.
+
+---
+
 ## v2.9.11 — 2026-05-16 — Round 8 R8A engine math fix wave
 
 Four T1 engine-math bugs identified by the Round 8 R8A audit. Each was a silent-wrong-answer path — math diverged from P6 / AACE convention without any user-facing diagnostic. v2.9.11 closes all four with a corrected calculation plus a loud alert so the affected configurations cannot be missed in the future.

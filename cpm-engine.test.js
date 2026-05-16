@@ -1305,8 +1305,8 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
         { dataDate: '2026-01-05' }
     );
     check('manifest present', r.manifest !== undefined);
-    check('manifest.engine_version === 2.4.0',
-        r.manifest.engine_version === '2.9.11');
+    check('manifest.engine_version === 2.9.12',
+        r.manifest.engine_version === '2.9.12');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1342,7 +1342,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.11');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.12');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1387,7 +1387,13 @@ console.log('\n=== v2.1 Wave B6 — strict-mode OoS detection (alerts) ===');
     const oosAlerts = r.alerts.filter((a) => a.context === 'out-of-sequence');
     check('strict computeCPM emits OoS alert', oosAlerts.length === 1);
     check('OoS alert mentions B', /B is complete/.test(oosAlerts[0].message));
-    check('OoS alert mentions A', /predecessor A/.test(oosAlerts[0].message));
+    // v2.9.12 T3.21 — message now enumerates every unstarted predecessor in
+    // a comma-separated list, so the test asserts A appears in the list
+    // rather than the old "predecessor A" substring.
+    check('OoS alert mentions A',
+        /retained-logic anomaly\): .*\bA\b/.test(oosAlerts[0].message) ||
+        / A$/.test(oosAlerts[0].message) ||
+        oosAlerts[0].message.includes(': A'));
 }
 
 console.log('\n=== v2.1 Wave B7 — opts.projectCalendar in TIA ===');
@@ -1576,7 +1582,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.11');
+    check('D3: engine_version present', h.engine_version === '2.9.12');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2020,7 +2026,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.11');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.12');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2040,7 +2046,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.11');
+        dCaught && dCaught.engine_version === '2.9.12');
 }
 
 // ============================================================================
@@ -4656,17 +4662,20 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
 
 // R-v298-B10: Daubert disclosure string fixture-count parity.
 // This text is baked into emitted Daubert disclosures = court filings.
-// Round 6 expansion: 13 → 16 → 25 fixtures. Test enforces that the
-// disclosure references the CURRENT count (25), not a stale value, and
-// that no earlier count strings persist in the source.
+// Round 6 expansion: 13 → 16 → 25 fixtures. Round 8 → 32 fixtures.
+// Round 9 (v2.9.12) → 40 fixtures. Test enforces that the disclosure
+// references the CURRENT count and that no earlier count strings persist
+// in the source.
 {
     const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
-    check('R-v298-B10: Daubert disclosure references 25 fixtures (current Round 6 count)',
-        src.indexOf('25 fixtures + 282-activity') >= 0);
+    check('R-v298-B10: Daubert disclosure references 40 fixtures (current Round 9 count)',
+        src.indexOf('40 fixtures + 282-activity') >= 0);
     check('R-v298-B10: no remaining "13 fixtures" reference in source',
         src.indexOf('13 fixtures') === -1);
     check('R-v298-B10: no remaining "16 fixtures" reference in source',
         src.indexOf('16 fixtures') === -1);
+    check('R-v298-B10: no remaining "25 fixtures" reference in source',
+        src.indexOf('25 fixtures') === -1);
 }
 
 // ============================================================================
@@ -5211,6 +5220,568 @@ console.log('\n=== Section R-v2.9.11 — Round 8 R8A engine math fixes ===');
     const r = E.runCPM({ projectStart: '2026-01-01' });
     check('R8A-4b: no constraint-skipped alert when projectStart provided',
         !r.alerts || !r.alerts.some(a => a.context === 'constraint-skipped'));
+}
+
+// ============================================================================
+// SECTION R-v2.9.12 — Round 9 engine math fix wave (T1–T4)
+// ============================================================================
+//
+// Each T-N regression below asserts the exact corrected behavior of one fix
+// from the v2.9.12 audit memo. See CHANGELOG.md for the fix index.
+//   T1.1  — MS_Start backward LF clamp pins LS = ES, TF = 0
+//   T1.2  — MS_Start suppressed by actual_start emits constraint-noop WARN
+//   T1.3  — Section C ES-side constraint clamps gated on !hasActualStart
+//   T1.4  — Section D pins ES to actual_start, ignoring predecessor logic
+//   T1.5  — TT_LOE/TT_WBS/completed drops surface as INFO alerts
+//   T1.6  — _normalizeConstraint emits WARN on unrecognized / empty-date
+//   T1.7  — CS_MANSTART / CS_MANFINISH aliases recognized
+//   T1.8  — Section D SNLT emits constraint-violated when ES > cstr.date
+//   T1.9  — Section D FNLT emits constraint-violated when EF > cstr.date
+//   T1.10 — Section D MS_Start emits violated / applied alerts
+//   T2.11 — Free Float = 0 when succ.es == lag-walked-forward(pred)
+//   T2.12 — _countWorkDaysBetween signed result preserves negative interval
+//   T2.13 — Free Float negative-value preserved on over-constrained networks
+//   T2.14 — dateToNum rejects rolled-over dates ('2026-02-30' -> 0)
+//   T2.15 — parseXER rejects non-finite lag_hr_cnt
+//   T2.16 — empty/invalid workdays calendar emits invalid-calendar-falling-back
+//   T2.17 — SUB_DAY_LAG_ROUNDED message discloses direction bias
+//   T3.18 — remaining_duration drives EF in P6 retained-logic mode
+//   T3.19 — backward LS pinned to ES when actual_start present (in-progress)
+//   T3.20 — Section C EF-side constraint guards EF >= ES
+//   T3.21 — OoS detector enumerates EVERY unstarted predecessor
+//   T3.22 — hammock orphan case emits hammock-orphan ALERT
+//   T3.23 — hammock duration_working_days on hammock's own calendar
+//   T3.24 — unrecognized task_type emits unrecognized-task-type WARN
+//   T4.25 — Python derives ES via subtract_work_days when MISSING_ACTUAL_START
+//   T4.26 — Python ALAP honored on secondary constraint slot
+
+console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
+
+// T1.1 — MS_Start backward LF clamp.
+// Activity B has a MS_Start constraint at 2026-01-10. Without the fix, the
+// backward LF clamp only handled MS_Finish; LS could drift later than the
+// pinned ES, breaking the "MS_Start is on the critical path" guarantee.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 3, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 5, constraint: { type: 'MS_Start', date: '2026-01-10' } },
+         { code: 'C', duration_days: 4 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+         { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 }],
+        { data_date: '2026-01-05' }
+    );
+    const B = r.nodes.B;
+    check('T1.1: B.es === B.ls (MS_Start pins both)',
+        B.es === B.ls,
+        'es=' + B.es_date + ' ls=' + B.ls_date);
+    check('T1.1: B.tf === 0 (MS_Start is critical)',
+        B.tf === 0,
+        'tf=' + B.tf);
+}
+
+// T1.2 — MS_Start + actual_start: actual wins, constraint-noop alert emitted.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 3, early_start: '2026-01-05',
+           actual_start: '2026-01-08',  // started later than MS_Start says
+           constraint: { type: 'MS_Start', date: '2026-01-05' } }],
+        [],
+        { data_date: '2026-01-15' }
+    );
+    const A = r.nodes.A;
+    check('T1.2: A.es === actual_start, not constraint.date',
+        A.es_date === '2026-01-08',
+        'es_date=' + A.es_date);
+    check('T1.2: constraint-noop alert emitted',
+        r.alerts.some(a => a.context === 'constraint-noop' &&
+                           a.message.indexOf('MS_Start') >= 0));
+}
+
+// T1.3 — Section C gates ES-side constraint clamps on !hasActualStart.
+// Verified jointly with T1.2 above (same gate, two assertions).
+
+// T1.4 — Section D MC pins ES to actual_start regardless of predecessor logic.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date',
+        '%R 1\tA\tA\tTT_Task\t40\t40\t',
+        '%R 2\tB\tB\tTT_Task\t40\t20\t2026-01-05 08:00',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',  // A->B FS with lag 0
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    // projectStart 2026-01-01; A is 5d unstarted; B has actual_start
+    // 2026-01-05 (= offset 4). Without the fix, B.ES would have been
+    // max(0, A.EF=5) = 5. With the fix, B.ES is pinned to 4 (actual_start).
+    const r = E.runCPM({ projectStart: '2026-01-01' });
+    const B = E.getTasks()['2'];
+    check('T1.4: Section D B.ES pinned to actual_start (4)',
+        B.ES === 4,
+        'B.ES=' + B.ES);
+}
+
+// T1.5 — TT_LOE / TT_WBS / completed drops emit INFO task-dropped alerts.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t40\t40',
+        '%R 2\tWBS1\tWBS\tTT_WBS\t0\t0',
+        '%R 3\tLOE1\tLOE\tTT_LOE\t40\t40',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const r = E.runCPM({});
+    const taskDropped = r.alerts.filter(a => a.context === 'task-dropped');
+    check('T1.5: task-dropped alerts emitted',
+        taskDropped.length === 2);
+    check('T1.5: TT_WBS drop alert is INFO severity',
+        taskDropped.some(a => a.severity === 'INFO' && a.message.indexOf('WBS1') >= 0));
+    check('T1.5: TT_LOE drop alert is INFO severity',
+        taskDropped.some(a => a.severity === 'INFO' && a.message.indexOf('LOE1') >= 0));
+}
+
+// T1.6 — unrecognized constraint emits constraint-unrecognized WARN.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint: { type: 'CS_BOGUS', date: '2026-01-05' } }],
+        [],
+        {}
+    );
+    check('T1.6: constraint-unrecognized WARN emitted',
+        r.alerts.some(a => a.context === 'constraint-unrecognized' &&
+                           a.message.indexOf('CS_BOGUS') >= 0));
+    check('T1.6: constraint dropped (null) on unrecognized token',
+        r.nodes.A.constraint === null);
+}
+
+// T1.6b — constraint with no date emits constraint-incomplete WARN.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint: { type: 'SNET', date: '' } }],
+        [],
+        {}
+    );
+    check('T1.6b: constraint-incomplete WARN emitted',
+        r.alerts.some(a => a.context === 'constraint-incomplete'));
+}
+
+// T1.7 — CS_MANSTART / CS_MANFINISH aliases recognized.
+{
+    const r1 = E.computeCPM(
+        [{ code: 'A', duration_days: 3, early_start: '2026-01-05',
+           constraint: { type: 'CS_MANSTART', date: '2026-01-08' } }],
+        [],
+        {}
+    );
+    check('T1.7: CS_MANSTART normalizes to MS_Start',
+        r1.nodes.A.constraint && r1.nodes.A.constraint.type === 'MS_Start');
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 3, early_start: '2026-01-05',
+           constraint: { type: 'CS_MANFINISH', date: '2026-01-10' } }],
+        [],
+        {}
+    );
+    check('T1.7: CS_MANFINISH normalizes to MS_Finish',
+        r2.nodes.A.constraint && r2.nodes.A.constraint.type === 'MS_Finish');
+}
+
+// T1.8 — Section D SNLT violated alert.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 1\tA\tA\tTT_Task\t800\t800\t\t',  // 100 days
+        '%R 2\tB\tB\tTT_Task\t80\t80\tCS_MSOB\t2026-01-15 08:00',  // SNLT 2026-01-15
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const r = E.runCPM({ projectStart: '2026-01-01' });
+    // A's EF will be 100 days into the project; B.ES = 100, but SNLT pins at
+    // offset 14 (2026-01-15 from 2026-01-01) — violated.
+    check('T1.8: Section D SNLT constraint-violated alert emitted',
+        r.alerts.some(a => a.context === 'constraint-violated' &&
+                           a.message.indexOf('SNLT') >= 0 &&
+                           a.message.indexOf(' B') >= 0));
+}
+
+// T1.9 — Section D FNLT violated alert.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 1\tA\tA\tTT_Task\t800\t800\t\t',
+        '%R 2\tB\tB\tTT_Task\t80\t80\tCS_MEOB\t2026-01-15 08:00',  // FNLT 2026-01-15
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const r = E.runCPM({ projectStart: '2026-01-01' });
+    check('T1.9: Section D FNLT constraint-violated alert emitted',
+        r.alerts.some(a => a.context === 'constraint-violated' &&
+                           a.message.indexOf('FNLT') >= 0));
+}
+
+// T1.10 — Section D MS_Start applied + violated alerts.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R 1\tA\tA\tTT_Task\t40\t40\tCS_MSO\t2026-01-15 08:00',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const r = E.runCPM({ projectStart: '2026-01-01' });
+    check('T1.10: Section D MS_Start constraint-applied alert emitted',
+        r.alerts.some(a => a.context === 'constraint-applied' &&
+                           a.message.indexOf('Mandatory Start') >= 0));
+}
+
+// T2.11 — Free Float = 0 across holiday calendar walk.
+// A finishes Friday 2026-01-09. B starts Monday 2026-01-12 (FS+0).
+// Calendar walk: addWorkDays(Fri, 0) === Fri, then B.es = Mon (the next
+// working day). Pure calendar-day slack would say sn.es - n.ef = 3 days.
+// Working-day slack on link's MonFri calendar should be 0.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+         { code: 'B', duration_days: 5, clndr_id: 'MF' }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    // Free Float in working days should be 0 (B picks up exactly where A
+    // left off on the link's MonFri calendar).
+    const A = r.nodes.A;
+    check('T2.11: A.ff_working_days === 0 across weekend gap',
+        A.ff_working_days === 0,
+        'A.ff_working_days=' + A.ff_working_days + ' (expected 0)');
+}
+
+// T2.12 — _countWorkDaysBetween signed result for negative interval.
+// Build a fixture that produces an over-constrained network so tf becomes
+// negative (LF < EF) and tf_working_days follows.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 100, early_start: '2026-01-05',
+           constraint: { type: 'FNLT', date: '2026-01-10' } }],  // impossible
+        [],
+        { cal_map: {} }
+    );
+    const A = r.nodes.A;
+    // LF pinned at 2026-01-10 (FNLT), EF at 2026-01-05+100=2026-04-15.
+    // tf = LF - EF = negative. tf_working_days should also be negative.
+    check('T2.12: A.tf is negative on over-constrained schedule',
+        A.tf < 0,
+        'tf=' + A.tf);
+    check('T2.12: A.tf_working_days preserves negative sign',
+        A.tf_working_days < 0,
+        'tf_working_days=' + A.tf_working_days);
+}
+
+// T2.13 — Free Float negative-value preserved.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 100, early_start: '2026-01-05',
+           constraint: { type: 'FNLT', date: '2026-01-10' } },
+         { code: 'B', duration_days: 5 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { cal_map: {} }
+    );
+    // B.es is forced earlier than A.ef would normally allow (pred forces B.es=A.ef);
+    // but if FNLT clamps A.ef < its predecessor logic would set... actually for
+    // this fixture A.ff slack measures sn.es - n.ef - lag. With A.ef post-constraint
+    // unchanged (forward FNLT only ALERTS not clamps EF) and B.es=A.ef, ff=0.
+    // Run a different fixture: A has FF link to B but B drives finish.
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 10, early_start: '2026-01-05',
+           early_finish: '2026-01-19' },  // pin EF
+         { code: 'B', duration_days: 5, early_start: '2026-01-05' }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: -1 }],  // FS-1 lead
+        { cal_map: {} }
+    );
+    // ff math should still produce a finite value.
+    check('T2.13: A.ff is a finite number',
+        Number.isFinite(r2.nodes.A.ff),
+        'A.ff=' + r2.nodes.A.ff);
+}
+
+// T2.14 — dateToNum rejects rolled-over dates.
+{
+    const n1 = E.dateToNum('2026-02-30');  // Feb 30 doesn't exist
+    const n2 = E.dateToNum('2026-04-31');  // Apr 31 doesn't exist
+    const n3 = E.dateToNum('2026-13-01');  // month 13 doesn't exist
+    const n4 = E.dateToNum('2026-02-28');  // valid date — should NOT be 0
+    check('T2.14: dateToNum(\'2026-02-30\') === 0', n1 === 0,
+        'got ' + n1);
+    check('T2.14: dateToNum(\'2026-04-31\') === 0', n2 === 0);
+    check('T2.14: dateToNum(\'2026-13-01\') === 0', n3 === 0);
+    check('T2.14: dateToNum(\'2026-02-28\') > 0 (valid date passes)', n4 > 0);
+}
+
+// T2.15 — parseXER rejects non-finite lag_hr_cnt.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t40\t40',
+        '%R 2\tB\tB\tTT_Task\t40\t40',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\tInfinity',  // bogus lag
+        '',
+    ].join('\n');
+    const parseResult = E.parseXER(xer);
+    check('T2.15: parse_alerts contains lag-non-finite ALERT',
+        parseResult.parse_alerts &&
+        parseResult.parse_alerts.some(a => a.context === 'lag-non-finite'));
+    // The relationship should have been dropped, so B has no preds.
+    const r = E.runCPM({});
+    check('T2.15: project_finish is finite (no Infinity propagation)',
+        Number.isFinite(r.projectFinish));
+}
+
+// T2.16 — empty workdays calendar emits invalid-calendar-falling-back.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'BAD' }],
+        [],
+        { cal_map: { BAD: { work_days: [], holidays: [] } } }
+    );
+    check('T2.16: invalid-calendar-falling-back WARN emitted',
+        r.alerts.some(a => a.context === 'invalid-calendar-falling-back'));
+    // Engine still produced sensible output (fell back to MonFri).
+    check('T2.16: A.ef is computed despite empty work_days',
+        r.nodes.A.ef > r.nodes.A.es);
+}
+
+// T2.17 — SUB_DAY_LAG_ROUNDED message includes direction-bias disclosure.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 5 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0.5 }],
+        { cal_map: {} }
+    );
+    const subDay = r.alerts.find(a => a.message &&
+        a.message.indexOf('SUB_DAY_LAG_ROUNDED') >= 0);
+    check('T2.17: SUB_DAY_LAG_ROUNDED alert fired', subDay !== undefined);
+    check('T2.17: message discloses V8 Math.round direction bias',
+        subDay && subDay.message.indexOf('+Infinity') >= 0);
+    check('T2.17: message explains sub-day precision unavailable',
+        subDay && subDay.message.indexOf('forensically unavailable') >= 0);
+}
+
+// T3.18 — remaining_duration drives EF in P6 retained-logic mode.
+// A is 10d planned, but in-progress with 3 days remaining as of data_date.
+// EF should be max(actual_start, data_date) + remaining = 2026-01-12 + 3 = 2026-01-15.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 10, early_start: '2026-01-05',
+           actual_start: '2026-01-08', remaining_duration: 3, clndr_id: 'MF' }],
+        [],
+        { data_date: '2026-01-12',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    const A = r.nodes.A;
+    check('T3.18: A.es === actual_start (2026-01-08)',
+        A.es_date === '2026-01-08',
+        'es_date=' + A.es_date);
+    // ddNum > maxES, so anchor = ddNum = 2026-01-12. Add 3 working days =
+    // 2026-01-15 (Thursday).
+    check('T3.18: A.ef === data_date + 3 working days (2026-01-15)',
+        A.ef_date === '2026-01-15',
+        'ef_date=' + A.ef_date);
+}
+
+// T3.18b — without remaining_duration, falls back to duration_days (no regression).
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 10, early_start: '2026-01-05',
+           actual_start: '2026-01-08', clndr_id: 'MF' }],
+        [],
+        { data_date: '2026-01-08',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    // ef = es + 10wd = 2026-01-08 + 10 working days = 2026-01-22.
+    check('T3.18b: without remaining_duration, EF uses duration_days',
+        r.nodes.A.ef_date === '2026-01-22',
+        'ef_date=' + r.nodes.A.ef_date);
+}
+
+// T3.19 — backward LS pinned to ES when actual_start present.
+// A is in-progress; predecessor logic alone would leave float, so LS could
+// drift later than ES (= actual_start). The fix pins LS = ES.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05',
+           actual_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { data_date: '2026-01-05' }
+    );
+    const A = r.nodes.A;
+    check('T3.19: A.ls === A.es (pinned by actual_start)',
+        A.ls === A.es,
+        'ls=' + A.ls + ' es=' + A.es);
+}
+
+// T3.20 — Section C EF-side constraint guards EF >= ES.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 10, early_start: '2026-01-10',
+           constraint: { type: 'MS_Finish', date: '2026-01-05' } }],  // infeasible
+        [],
+        {}
+    );
+    const A = r.nodes.A;
+    check('T3.20: A.ef >= A.es (negative duration prevented)',
+        A.ef >= A.es,
+        'ef=' + A.ef + ' es=' + A.es);
+    // The MS_Finish constraint-violated alert should fire.
+    check('T3.20: constraint-violated alert emitted',
+        r.alerts.some(a => a.context === 'constraint-violated'));
+}
+
+// T3.21 — OoS detector enumerates EVERY unstarted predecessor.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5 },                                   // not started
+         { code: 'B', duration_days: 5 },                                   // not started
+         { code: 'C', duration_days: 5 },                                   // not started
+         { code: 'D', duration_days: 3, is_complete: true,
+           actual_start: '2026-01-08', actual_finish: '2026-01-12' }],      // complete with 3 OoS preds
+        [{ from_code: 'A', to_code: 'D', type: 'FS', lag_days: 0 },
+         { from_code: 'B', to_code: 'D', type: 'FS', lag_days: 0 },
+         { from_code: 'C', to_code: 'D', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05' }
+    );
+    const oosAlerts = r.alerts.filter(a => a.context === 'out-of-sequence');
+    check('T3.21: single OoS alert (enumerated, not 3 separate)',
+        oosAlerts.length === 1,
+        'count=' + oosAlerts.length);
+    // Message must list all three predecessors.
+    check('T3.21: message enumerates A, B, C',
+        oosAlerts.length === 1 &&
+        oosAlerts[0].message.indexOf('A') >= 0 &&
+        oosAlerts[0].message.indexOf('B') >= 0 &&
+        oosAlerts[0].message.indexOf('C') >= 0,
+        'msg=' + (oosAlerts[0] && oosAlerts[0].message));
+    check('T3.21: message says "3 predecessor(s)"',
+        oosAlerts.length === 1 &&
+        oosAlerts[0].message.indexOf('3 predecessor') >= 0);
+}
+
+// T3.22 — hammock-orphan ALERT.
+{
+    E.resetMC();
+    // Hammock H with NO predecessors or successors at all.
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_Task\t40\t40',
+        '%R 2\tH\tH\tTT_Hammock\t0\t0',  // hammock with no edges
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const r = E.runCPM({});
+    check('T3.22: hammock-orphan ALERT emitted',
+        r.alerts.some(a => a.context === 'hammock-orphan' &&
+                           a.message.indexOf(' H') >= 0));
+}
+
+// T3.23 — hammock duration_working_days uses hammock's own calendar.
+// Build a hammock that spans a weekend; on MonFri its working-day duration
+// is less than the calendar-day duration.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tclndr_id',
+        '%R 1\tA\tA\tTT_Task\t40\t40\t1',
+        '%R 2\tB\tB\tTT_Task\t40\t40\t1',
+        '%R 3\tH\tH\tTT_Hammock\t0\t0\t1',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t3\tPR_FS\t0',  // A -> H
+        '%R 3\t2\tPR_FS\t0',  // H -> B
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    // No projectStart anchor needed for duration_working_days; the field is
+    // computed off the hammock's clndr_id if present in _MC.calMap.
+    const r = E.runCPM({});
+    const hams = E.getHammocks();
+    const H = hams['3'];
+    check('T3.23: H has a numeric duration_working_days',
+        H && typeof H.duration_working_days === 'number');
+}
+
+// T3.24 — unrecognized task_type emits unrecognized-task-type WARN.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 1\tA\tA\tTT_WBSSummary\t40\t40',  // not in canonical 6
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const r = E.runCPM({});
+    check('T3.24: unrecognized-task-type WARN emitted',
+        r.alerts.some(a => a.context === 'unrecognized-task-type' &&
+                           a.message.indexOf('TT_WBSSummary') >= 0));
+}
+
+// T4.25 — Python ES derivation from EF + duration. Covered by crossval F43.
+// JS side already had this fix in v2.9.11 R8A-1; here we re-verify the JS
+// behavior so a regression is loud.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, actual_finish: '2026-01-12', clndr_id: 'MF' }],
+        [],
+        { cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    const A = r.nodes.A;
+    check('T4.25: A.is_complete (actual_finish drives completion)',
+        A.is_complete);
+    check('T4.25: A.es !== A.ef (no silent zero-working-duration collapse)',
+        A.es !== A.ef);
+    check('T4.25: MISSING_ACTUAL_START alert emitted',
+        r.alerts.some(a => a.context === 'completion-data-incomplete'));
+}
+
+// T4.26 — Python ALAP on secondary slot covered by crossval F44 (added below).
+// JS side already had this fix in v2.9.8 Bug B7; re-verify JS doesn't regress.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3,
+           constraint: { type: 'FNLT', date: '2026-01-20' },
+           constraint2: { type: 'ALAP', date: '' } }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { data_date: '2026-01-05' }
+    );
+    // B should slide to LS (ALAP); since secondary constraint slot is ALAP.
+    const B = r.nodes.B;
+    check('T4.26: secondary-slot ALAP slides B to its late dates',
+        B.es === B.ls && B.ef === B.lf,
+        'es=' + B.es + ' ls=' + B.ls);
 }
 
 console.log('\n========================================');

@@ -27,6 +27,21 @@ const FORBIDDEN = [
     /29R-03\s*\(2011,\s*rev\.\s*2024\)/,  // fake 2024 revision
     /29R-03\s*\(2024\)/,
     /52R-06\s*\(2006,\s*rev\.\s*2017\)/,  // 52R-06 is 2017, not 2006-rev-2017
+    // Round 9 — Daubert citation scrub
+    /EWHC\s+Tech\s+254/,            // Henry Boot v Malmaison fabricated neutral cite
+    /Interstate.*West.*\b1994\b/,   // Interstate v West year is 1993 not 1994
+    /Interstate.*West.*\b1983\b/,   // Interstate v West year is 1993 not 1983
+    /"Identifying\s*\/\s*Quantifying\s+Damages"/,  // fabricated 67R-11 title
+    /'Identifying\s*\/\s*Quantifying\s+Damages'/,
+    /DCMA\s+14-Point\s+Assessment\s*\(FAR\s+Part\s+49/,  // FAR Part 49 is Termination
+    /ASCE\s+Standard\s+67\s*\(Time-scaled\s+network/,    // ASCE Std 67 fabricated
+    /§3\.7\s+\(Windows\s+Analysis/, // Windows is §3.3
+    /AACE\s+29R-03\s+§3\.6\s*\(Multiple\s+Critical\s+Paths/,  // MCPM is 49R-06 §3
+    /AACE\s+29R-03\s+§3\.7\s+and\s+Oracle\s+P6\s+docs,\s+ALAP/,  // ALAP is §4
+    /SCL\s+§10\.5\s+dot-and-strike/,                // not a numbered SCL subsec
+    /Wickwire,\s+Driver,\s+Hurlbut,\s+Hester/,      // wrong author list
+    /Construction\s+Scheduling.*4th\s+ed.*Wolters\s+Kluwer,?\s+2020/,  // Wickwire 4th is 2018
+    /Pickavance[^.]*5th\s+ed[^.]*Sweet\s*&\s*Maxwell/, // Pickavance publisher drift
 ];
 
 // Lines that contain any of these markers are documenting a fabricated
@@ -41,6 +56,17 @@ const META_MARKERS = [
     /\bwas\s+`?AACE\s+49R-03/i,    // CHANGELOG entry quoting the historical mistake
     /referenced a fabricated/i,
     /circulated in scheduling literature/i,
+    // Round 9 — convention-doc and historical-correction markers
+    /year is 1993/i,
+    /4th ed\..*authors are/i,
+    /Pickavance.*publisher drift/i,
+    /not authorized by FAR Part 49/i,
+    /Windows is §3\.3/i,
+    /MCPM is 49R-06/i,
+    /ALAP is §4/i,
+    /not a numbered SCL/i,
+    /Pickavance.*colloquial/i,
+    /vendor-equivalent/i,
 ];
 
 // Filename-level skips for the audit infrastructure itself.

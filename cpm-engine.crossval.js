@@ -707,7 +707,7 @@ compareFixture('F20 — Out-of-sequence (completed B before A starts)', {
 // FIXTURE 21 — ALAP slide SUPPRESSED when actual_start set
 // =====================================================================
 // ALAP normally slides ES forward to consume float. But per AACE 29R-03
-// §3.7, ALAP MUST NOT override actual_start (immutable historical fact).
+// §4.3 (immutability), ALAP MUST NOT override actual_start (immutable historical fact).
 // Both engines guard the post-pass with `if not n.actual_start`. B has
 // actual_start in the past — ALAP slide is suppressed and ES locks to
 // actual_start.
@@ -1004,6 +1004,115 @@ compareFixture('F32 — Far-future date arithmetic (2037-12-15 + 100d, post-Y203
     ],
     relationships: [],
     data_date: '2037-12-15',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// v2.9.12 Round 9 — engine math fix wave expansion (F33-F44)
+// =====================================================================
+// New fixtures exercise paths corrected in the v2.9.12 audit memo. Each
+// fixture is calibrated to be bit-identical between JS and the Python
+// reference for es/ef/ls/lf/tf and for severity-counts when the alerts
+// surface symmetrically across both engines. Sub-day-lag rounding (F45-F46
+// in the audit memo) is intentionally NOT added to crossval — JS
+// Math.round and Python round() disagree on half-up vs banker's; the
+// forensic disclosure (DAUBERT.md §8 + SUB_DAY_LAG_ROUNDED alert) documents
+// that direction-bias rather than harmonizing it away.
+
+// F33 — MS_Start primary backward LF clamp (T1.1).
+compareFixture('F33 — MS_Start primary pins LS=ES, TF=0 (v2.9.12 T1.1)', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 5, clndr_id: 'MF',
+          constraint: { type: 'MS_Start', date: '2026-01-12' } },
+        { code: 'C', duration_days: 4, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F34 — actual_start immutability suppresses MS_Start (T1.2 / T1.3).
+compareFixture('F34 — MS_Start suppressed by actual_start (v2.9.12 T1.2)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05',
+          actual_start: '2026-01-08',
+          constraint: { type: 'MS_Start', date: '2026-01-05' }, clndr_id: 'MF' },
+    ],
+    relationships: [],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F35 — unrecognized constraint token drops with WARN (T1.6).
+compareFixture('F35 — unrecognized constraint token (v2.9.12 T1.6)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF',
+          constraint: { type: 'CS_UNKNOWN_TOKEN', date: '2026-01-10' } },
+    ],
+    relationships: [],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F36 — empty work_days falls back to MonFri with WARN (T2.16).
+compareFixture('F36 — empty work_days falls back to MonFri (v2.9.12 T2.16)', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'EMPTY' },
+    ],
+    relationships: [],
+    data_date: '2026-01-05',
+    cal_map: { EMPTY: { work_days: [], holidays: [] } },
+});
+
+// F37 — CS_MANSTART alias normalizes to MS_Start (T1.7).
+compareFixture('F37 — CS_MANSTART alias (v2.9.12 T1.7)', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'MF',
+          constraint: { type: 'CS_MANSTART', date: '2026-01-10' } },
+    ],
+    relationships: [],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F38 — CS_MANFINISH alias normalizes to MS_Finish (T1.7).
+compareFixture('F38 — CS_MANFINISH alias (v2.9.12 T1.7)', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'MF',
+          constraint: { type: 'CS_MANFINISH', date: '2026-01-15' } },
+    ],
+    relationships: [],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F43 — actual_finish without actual_start: ES derived via subtract_work_days
+// + MISSING_ACTUAL_START WARN (T4.25 — Python backport of v2.9.11 R8A-1).
+compareFixture('F43 — actual_finish without actual_start (v2.9.12 T4.25)', {
+    activities: [
+        { code: 'A', duration_days: 5, actual_finish: '2026-01-12', clndr_id: 'MF' },
+    ],
+    relationships: [],
+    data_date: '2026-01-15',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F44 — ALAP on secondary constraint slot (T4.26 — Python backport of v2.9.8 B7).
+compareFixture('F44 — ALAP on secondary slot (v2.9.12 T4.26)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF',
+          constraint: { type: 'FNLT', date: '2026-01-20' },
+          constraint2: { type: 'ALAP', date: '' } },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
 });
 

@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **346 / 346 bit-identical** claim reported in [`DAUBERT.md`](../DAUBERT.md) §3 without depending on a private CPP-internal codebase.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **416 / 416 bit-identical** claim reported in [`DAUBERT.md`](../DAUBERT.md) §3 without depending on a private CPP-internal codebase.
 
 ## Provenance
 
@@ -23,12 +23,23 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  9779f268276fd9def00040b3bef4ebe3d56cda0d0996b2d29c2d72f0ba016e24
+cpm.py  SHA-256:  4b65db3b76a56c802118fe80b0a8a29bfa863b387a1bc0bf429c5db634d05fe3
 ```
 
-(v2.9.11 Round 8 R8A — bumped from 924a8bb2 with ENGINE_VERSION sync only
-(2.9.10 → 2.9.11). The R8A engine math fix wave is JS-only — see CHANGELOG.md
-v2.9.11 entry for the four T1 fixes. No Python math changes.
+(v2.9.12 Round 9 — bumped from 9779f268 with substantial Python parity edits:
+T1.1 MS_Start hard-pin on backward LF, T1.2 constraint-noop WARN on
+actual_start suppression, T1.6 constraint-unrecognized / constraint-incomplete
+WARN with optional alerts parameter, T1.7 CS_MANSTART / CS_MANFINISH alias,
+T2.16 invalid-calendar-falling-back WARN, T3.19 backward LS=ES pin for
+in-progress, T4.25 MISSING_ACTUAL_START ES derivation, T4.26 ALAP secondary
+slot. JS-only fixes (free float, Section D MC, OoS enumeration, hammock,
+dateToNum rollover, SUB_DAY_LAG message, EF>=ES guard in Section C, etc.)
+intentionally remain JS-only. See CHANGELOG.md v2.9.12 entry for the full
+T1-T4 fix index.
+
+Prior v2.9.11 Round 8 R8A — bumped from 924a8bb2 with ENGINE_VERSION sync
+only (2.9.10 → 2.9.11). The R8A engine math fix wave is JS-only — see
+CHANGELOG.md v2.9.11 entry for the four T1 fixes. No Python math changes.
 
 Prior v2.9.10 Round 8 — bumped from 0602e50d with two changes: ENGINE_VERSION
 2.9.8 → 2.9.10 sync (matches the JS engine), and AACE 29R-03 §4.3
@@ -93,14 +104,14 @@ npm run crossval
 Expected output (Node 18+, Python 3.8+):
 
 ```
-Loaded python_reference/cpm.py @ SHA-256 9779f268...
+Loaded python_reference/cpm.py @ SHA-256 4b65db3b...
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 32 passed, 0 failed
-  Checks:   346 / 346
+  Fixtures: 40 passed, 0 failed
+  Checks:   416 / 416
 =========================================
 ```
 

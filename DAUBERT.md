@@ -1,4 +1,4 @@
-# Daubert / Proposed FRE 707 Disclosure — `cpm-engine` v2.9.11
+# Daubert / Proposed FRE 707 Disclosure — `cpm-engine` v2.9.12
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
 
@@ -31,14 +31,14 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard, Round 6 strong-assertion strengthening (HAM-3/4, MC-2 exact, MS_Start hard-pin, FNLT per-trial, Q-3 SF backward exact dates, B1 exact working-day float), Round 7 full hammock SS/FF/SF semantics (HAM-SS-1, HAM-FF-1, HAM-SF-1, HAM-SS-succ-1, HAM-MIXED-1, HAM-CONVERGE-1, HAM-CYCLE-1), Round 8 R8A engine math fix wave (R8A-1 actual_finish without actual_start ES derivation + MISSING_ACTUAL_START alert + salvage parity, R8A-2 sub-day fractional lag SUB_DAY_LAG_ROUNDED ALERT, R8A-3 FF/SF Free Float successor-calendar correction, R8A-4 Section D constraint-skipped WARN when projectStart missing) | **744 / 744 passing** |
-| Cross-validation suite     | `cpm-engine.crossval.js` — 32 fixtures × 346 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures plus Round 6 expansion (SNLT, FNET, MS_Finish, secondary constraint pair, OoS, ALAP-with-actual_start, calendar fallback, cycle, free-float documented gap) plus Round 8 edge-case expansion (multi-id calendar fallback, actual_start AACE-immutability, ALAP+FNLT compound, mixed FF+SS, negative-lag ordinal, cycle-in-sub-network, far-future date arithmetic). Severity-level alert parity asserted (not just count). | **346 / 346 bit-identical** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard, Round 6 strong-assertion strengthening (HAM-3/4, MC-2 exact, MS_Start hard-pin, FNLT per-trial, Q-3 SF backward exact dates, B1 exact working-day float), Round 7 full hammock SS/FF/SF semantics (HAM-SS-1, HAM-FF-1, HAM-SF-1, HAM-SS-succ-1, HAM-MIXED-1, HAM-CONVERGE-1, HAM-CYCLE-1), Round 8 R8A engine math fix wave (R8A-1 actual_finish without actual_start ES derivation + MISSING_ACTUAL_START alert + salvage parity, R8A-2 sub-day fractional lag SUB_DAY_LAG_ROUNDED ALERT, R8A-3 FF/SF Free Float successor-calendar correction, R8A-4 Section D constraint-skipped WARN when projectStart missing), Round 9 v2.9.12 engine math fix wave (T1.1 MS_Start backward LF clamp, T1.2-T1.3 actual_start ES-side constraint suppression with constraint-noop WARN, T1.4 Section D actual_start pinning, T1.5 INFO task-dropped + relationship-dropped alerts, T1.6 constraint-unrecognized / constraint-incomplete WARN, T1.7 CS_MANSTART/CS_MANFINISH alias, T1.8-T1.10 Section D SNLT/FNLT/MS_Start alerts, T2.11 calendar-aware Free Float on binding link, T2.12 signed _countWorkDaysBetween for negative-float forensic signal, T2.13 negative-FF preserved, T2.14 dateToNum rollover guard, T2.15 non-finite lag_hr_cnt rejection, T2.16 invalid-calendar-falling-back WARN, T2.17 SUB_DAY_LAG_ROUNDED direction-bias disclosure, T3.18 remaining_duration P6 retained-logic, T3.19 backward LS pinned to ES for in-progress, T3.20 EF >= ES guard in Section C, T3.21 OoS enumerates every unstarted predecessor, T3.22 hammock-orphan ALERT, T3.23 hammock duration_working_days, T3.24 unrecognized-task-type WARN, T4.25/T4.26 Python parity backports) | **792 / 792 passing** |
+| Cross-validation suite     | `cpm-engine.crossval.js` — 40 fixtures × 416 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures plus Round 6 expansion (SNLT, FNET, MS_Finish, secondary constraint pair, OoS, ALAP-with-actual_start, calendar fallback, cycle, free-float documented gap) plus Round 8 edge-case expansion (multi-id calendar fallback, actual_start AACE-immutability, ALAP+FNLT compound, mixed FF+SS, negative-lag ordinal, cycle-in-sub-network, far-future date arithmetic) plus Round 9 v2.9.12 fix-wave fixtures (F33 MS_Start backward LF, F34 actual_start suppresses MS_Start, F35 unrecognized constraint token, F36 empty work_days fallback, F37 CS_MANSTART alias, F38 CS_MANFINISH alias, F43 actual_finish without actual_start, F44 ALAP on secondary slot). Severity-level alert parity asserted (not just count). | **416 / 416 bit-identical** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
 | Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
 
 Performance benchmarks (Node 18, M1 Mac):
 
-- 744 unit tests
+- 792 unit tests
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
@@ -51,12 +51,12 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite. The Python implementation is exercised by 1,800+ tests across 18 Python suites (forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review).
 - Made publicly available at <https://github.com/danafitkowski/cpp-cpm-engine>. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
-- **Externally reproducible cross-validation (v2.9.11).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`9779f268276fd9def00040b3bef4ebe3d56cda0d0996b2d29c2d72f0ba016e24`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "346 / 346" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules. v2.9.8 Round 6 expanded the fixture set from 16 to 25 — adding SNLT primary, FNET, MS_Finish, secondary constraint pair, OoS regression, ALAP-with-actual_start suppression, calendar-fallback symmetry, cycle-error symmetry, and free-float documented gap — and extended `compareFixture` to assert alert SEVERITY-level parity, not just count. v2.9.9 closed the hammock SS/FF/SF FS-only limitation per Round 7 A1+A3, shipping a four-walker design with cross-axis recursion that handles all four relationship types and DAG diamond joins. v2.9.10 Round 8 added 7 edge-case fixtures (F26-F32) — multi-id calendar fallback, AACE 29R-03 §4.3 in-progress actual_start immutability (with a matching extension to the Python reference, rotating the SHA-256 pin), ALAP+FNLT secondary compound, mixed FF+SS predecessors, negative-lag ordinal arithmetic, cycle-in-sub-network detection, and far-future date arithmetic stress — taking the fixture set from 25 to 32 and the check count from 281 to 346. v2.9.11 Round 8 R8A added the engine math fix wave — four T1 fixes documented per-fix in CHANGELOG.md — with 16 new unit tests covering each fix's corrected math AND its new alert emission; crossval remained at 32/346 (R8A fixes are JS-only — Python reference is byte-identical apart from the ENGINE_VERSION constant bump).)
+- **Externally reproducible cross-validation (v2.9.12).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`4b65db3b76a56c802118fe80b0a8a29bfa863b387a1bc0bf429c5db634d05fe3`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "416 / 416" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules. v2.9.8 Round 6 expanded the fixture set from 16 to 25 and extended `compareFixture` to assert alert SEVERITY-level parity, not just count. v2.9.9 closed the hammock SS/FF/SF FS-only limitation per Round 7 A1+A3. v2.9.10 Round 8 added 7 edge-case fixtures (F26-F32). v2.9.11 Round 8 R8A added the engine math fix wave with 16 new unit tests. v2.9.12 Round 9 layered ~30 engine math fixes across constraint handling, calendar arithmetic, in-progress actuals, and JS/Python parity, adding 8 new crossval fixtures (F33-F38, F43-F44) plus 47 new unit-test assertions in Section R-v2.9.12 — taking the fixture set from 32 to 40 and the check count from 346 to 416. The Python reference was extended for T1.1, T1.2, T1.6, T1.7, T2.16, T3.19, T4.25, T4.26 — rotating the SHA-256 pin.)
 - Live-deployed at <https://mcp.criticalpathpartners.ca/try> where any party can run it against their own schedule.
 
-### §3.1 Independent Verification (v2.9.10 — Round 7 Daubert hardening)
+### §3.1 Independent Verification (v2.9.12 — Round 9 Daubert hardening)
 
-The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. v2.9.11 promotes the Round 7 independent-verification infrastructure from `Unreleased` to a tagged release and adds three layers of mitigation:
+The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. v2.9.12 carries forward the v2.9.11 Round 7 independent-verification infrastructure with three layers of mitigation:
 
 **Layer 1 — Public Continuous Integration.** Every push to `main` and every PR triggers `.github/workflows/verify.yml`, which runs:
 
@@ -101,12 +101,12 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 ## §4 Error Rate
 
-**Cross-validation reports 346 / 346 = 0% deviation across 32 fixtures.**
+**Cross-validation reports 416 / 416 = 0% deviation across 40 fixtures.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
 
 Performance characteristics:
 
-- 744 unit tests run on Node 18.
+- 792 unit tests run on Node 18.
 - 5,000-node linear chain Tarjan SCC in **~8 ms**.
 - A 25,000-activity Mon-Fri schedule (full forward + backward pass) runs in **~1.6 s** after the v2.1-C1 / v2.1-C2 optimizations.
 
@@ -142,7 +142,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.10',                   // Synchronized with package.json
+    engine_version: '2.9.12',                   // Synchronized with package.json
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -200,17 +200,17 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 744 + 346 = 1,090 verifications. Or `npm run verify` for the full attestation-witness flow.
+2. Run `npm run test:all` to reproduce the 792 + 416 = 1,208 verifications. Or `npm run verify` for the full attestation-witness flow.
 3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
-4. Inspect the source — it is intentionally readable and well-commented (4,326 lines including narrative comments).
+4. Inspect the source — it is intentionally readable and well-commented (6,137 lines including narrative comments).
 
 ---
 
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.10`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-16, refreshed with v2.9.11 Round 7 independent-verification infrastructure tag, v2.9.9 full hammock SS/FF/SF semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard), Round 7 full hammock semantics (four axis-specific transitive walkers with per-axis memoization), and Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction))
+`engine_version: 2.9.12`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-16, refreshed for v2.9.12 Round 9 engine math fix wave — ~30 corrections across constraint handling (T1.1-T1.10), calendar/lag arithmetic (T2.11-T2.17), in-progress + actuals (T3.18-T3.24), and JS/Python parity (T4.25-T4.27). Prior milestones preserved: v2.9.11 Round 7 independent-verification infrastructure tag, v2.9.9 full hammock SS/FF/SF semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard), Round 7 full hammock semantics (four axis-specific transitive walkers with per-axis memoization), and Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
 
 ---
 
@@ -250,7 +250,7 @@ Callers may override `nearCriticalThreshold` via `opts`. The DCMA-14 Logic check
 
 ---
 
-## §8 Constraint Handling (v2.9.11)
+## §8 Constraint Handling (v2.9.12)
 
 The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (primary) and `task.constraint2 = {type, date}` (secondary, v2.9.7+), or the equivalent `cstr_type` / `cstr_date2` (primary) and `cstr_type2` / `cstr_date` (secondary) long-form XER tokens, automatically normalized. Primary and secondary are applied sequentially per the Oracle P6 spec (primary first, secondary tightens further). Both Section C (`computeCPM`) and Section D (`runCPM`, used by the per-iteration Monte Carlo hot loop — see §D below) enforce constraints when an absolute `projectStart` anchor is supplied.
 
@@ -280,7 +280,9 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Hammock-cycle topology emits `{severity:'ALERT', context:'hammock-cycle'}`. Hammock negative-span emits `{severity:'ALERT', context:'hammock-negative-span'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.10'` to confirm the constraint module was active. (Engine math byte-identical to v2.9.9; only the version constant changed.)
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.12'` to confirm the constraint module was active.
+
+**v2.9.12 — Round 9 engine math fix wave.** The audit memo identified ~30 substantive math defects across constraint handling, calendar arithmetic, in-progress + actuals, and JS/Python parity. T1.1 added MS_Start hard-pin on backward LF clamp (was JS+Python silent gap). T1.2-T1.3 emit `constraint-noop` WARN and suppress ES-side constraint clamps when an `actual_start` is present (AACE 29R-03 §4.3 immutability — both engines). T1.4 added Section D actual_start pinning with one-time `actual-start-not-anchored` WARN when `projectStart` is missing. T1.5 surfaces TT_LOE/TT_WBS/completed/zero-remaining drops + dangling-relationship drops + non-finite-lag rejections as INFO/ALERT alerts. T1.6 emits `constraint-unrecognized` / `constraint-incomplete` WARN on unknown tokens / missing dates. T1.7 added `CS_MANSTART` / `CS_MANFINISH` aliases. T1.8-T1.10 added Section D SNLT/FNLT/MS_Start violated+applied alerts symmetric with Section C. T2.11 rewrote Free Float on the binding-link's calendar so coincident lag-walked-forward pairs produce 0 slack. T2.12 made `_countWorkDaysBetween` signed (preserves negative-float forensic signal). T2.13 removed the `Math.max(0, ...)` FF clamp. T2.14 added `dateToNum` rollover guard (Feb 30 → 0 instead of silent rewrite to Mar 2). T2.15 rejects non-finite `lag_hr_cnt` from parseXER. T2.16 emits `invalid-calendar-falling-back` WARN when work_days is empty/invalid. T2.17 updated SUB_DAY_LAG_ROUNDED message to disclose V8 Math.round direction-bias. T3.18 added `remaining_duration` for P6 retained-logic EF anchoring. T3.19 pins LS=ES on backward pass when actual_start is present (in-progress, both engines). T3.20 guards `EF >= ES` in Section C EF-side helpers. T3.21 enumerates every unstarted predecessor + catches premature-start OoS. T3.22 emits `hammock-orphan` ALERT when no anchors resolve. T3.23 adds `duration_working_days` to hammocks. T3.24 emits `unrecognized-task-type` WARN. T4.25-T4.26 backport R8A-1 (MISSING_ACTUAL_START ES derivation) and ALAP-secondary-slot guard to the Python reference, rotating the SHA-256 pin. T4.27 was already in place on the JS side from T1.3.
 
 ### §D Section D thread-safety
 

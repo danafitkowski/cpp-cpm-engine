@@ -5,7 +5,7 @@
 # Frozen Python reference implementation of compute_cpm — used only by the
 # cross-validation harness in cpm-engine.crossval.js. The production engine
 # is the JavaScript module cpm-engine.js at the repo root; this Python file
-# exists so external auditors (and CI) can reproduce the "186 / 186
+# exists so external auditors (and CI) can reproduce the "416 / 416
 # bit-identical" headline reported in DAUBERT.md §3.
 #
 # Source provenance: derived from the CPP suite's canonical Python CPM
@@ -42,14 +42,24 @@ EPOCH_MONTH = 1
 EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
 
-# Synchronized with cpm-engine.js ENGINE_VERSION. v2.9.11 (Round 8 R8A fix
-# wave) is JS-only — the Python reference is bumped to track the JS engine
-# but contains no Python math changes: the four fixes are JS-side (additional
-# ALERT emissions + a JS-only FF/SF working-day calendar correction). Crossval
-# continues to compare es/ef/ls/lf/tf only; the new alerts are flagged via the
-# existing severity-count parity check and the existing crossval fixtures
-# intentionally avoid the newly-loud configurations.
-ENGINE_VERSION = '2.9.11'
+# Synchronized with cpm-engine.js ENGINE_VERSION. v2.9.12 (Round 9 engine
+# math fix wave) backports several JS-only fixes from the audit memo:
+#   T1.1 — MS_Start hard-pin on backward LF clamp (mirrors JS).
+#   T1.2 — constraint-noop WARN emitted when ES-side constraints are
+#          suppressed by an actual_start (AACE 29R-03 §4.3 immutability).
+#   T1.6 — _normalize_constraint emits constraint-unrecognized /
+#          constraint-incomplete WARN with optional alerts parameter.
+#   T1.7 — CS_MANSTART / CS_MANFINISH alias tokens recognized.
+#   T2.16 — invalid/empty work_days emits invalid-calendar-falling-back WARN.
+#   T3.19 — backward pass pins LS = ES when actual_start is present.
+#   T4.25 — derive ES via subtract_work_days(EF, duration) when actual_finish
+#          is set but actual_start is missing; emit MISSING_ACTUAL_START WARN.
+#   T4.26 — ALAP honored on EITHER primary or secondary constraint slot.
+# All JS-only paths (free-float math, Section D Monte Carlo, OoS enumeration,
+# hammock orphan / duration_working_days, dateToNum rollover guard,
+# SUB_DAY_LAG_ROUNDED disclosure update) intentionally remain JS-only —
+# Python reference doesn't implement those surfaces.
+ENGINE_VERSION = '2.9.12'
 
 
 # =============================================================================
@@ -65,6 +75,10 @@ CONSTRAINT_TYPE_MAP = {
     'CS_MEOB':     'FNLT',
     'CS_MANDSTART':'MS_Start',
     'CS_MANDFIN':  'MS_Finish',
+    # v2.9.12 T1.7 — older P6 R8.x XER variant tokens (CS_MANSTART /
+    # CS_MANFINISH without the "D" of "MANDATORY"). Mirror JS engine.
+    'CS_MANSTART': 'MS_Start',
+    'CS_MANFINISH':'MS_Finish',
     'CS_ALAP':     'ALAP',
     'CS_SO':       'SO',
     'SNET':        'SNET',
@@ -93,8 +107,13 @@ CANONICAL_CONSTRAINT_TYPES = frozenset([
 ])
 
 
-def _normalize_constraint(c):
-    """Primary constraint normalization (cstr_type + cstr_date2)."""
+def _normalize_constraint(c, alerts=None, ctx=None):
+    """Primary constraint normalization (cstr_type + cstr_date2).
+
+    v2.9.12 T1.6 — when alerts is provided, emit a WARN for unrecognized
+    tokens and incomplete (missing-date) constraints instead of silently
+    returning None. Mirrors the JS engine.
+    """
     if not c or not isinstance(c, dict):
         return None
     raw_type = c.get('type') or c.get('cstr_type') or ''
@@ -103,18 +122,39 @@ def _normalize_constraint(c):
     canonical = CONSTRAINT_TYPE_MAP.get(raw_type) or (
         raw_type if raw_type in CANONICAL_CONSTRAINT_TYPES else None)
     if not canonical:
+        if alerts is not None:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-unrecognized',
+                'message': (
+                    f'Constraint type {raw_type!r} on {ctx or "activity"} is '
+                    'not a recognized P6 token; constraint dropped.'
+                ),
+            })
         return None
     raw_date = c.get('date') or c.get('cstr_date2') or c.get('cstr_date') or ''
     if canonical == 'ALAP':
         return {'type': 'ALAP', 'date': ''}
     date_str = str(raw_date)[:10]
     if not date_str:
+        if alerts is not None:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-incomplete',
+                'message': (
+                    f'Constraint {canonical} on {ctx or "activity"} has no '
+                    'date; constraint dropped.'
+                ),
+            })
         return None
     return {'type': canonical, 'date': date_str}
 
 
-def _normalize_constraint2(c):
-    """Secondary constraint normalization (cstr_type2 + cstr_date)."""
+def _normalize_constraint2(c, alerts=None, ctx=None):
+    """Secondary constraint normalization (cstr_type2 + cstr_date).
+
+    v2.9.12 T1.6 — optional alerts emission, mirroring primary.
+    """
     if not c or not isinstance(c, dict):
         return None
     raw_type = c.get('type') or c.get('cstr_type2') or ''
@@ -123,12 +163,31 @@ def _normalize_constraint2(c):
     canonical = CONSTRAINT_TYPE_MAP.get(raw_type) or (
         raw_type if raw_type in CANONICAL_CONSTRAINT_TYPES else None)
     if not canonical:
+        if alerts is not None:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-unrecognized',
+                'message': (
+                    f'Secondary constraint type {raw_type!r} on '
+                    f'{ctx or "activity"} is not a recognized P6 token; '
+                    'secondary constraint dropped.'
+                ),
+            })
         return None
     raw_date = c.get('date') or c.get('cstr_date') or ''
     if canonical == 'ALAP':
         return {'type': 'ALAP', 'date': ''}
     date_str = str(raw_date)[:10]
     if not date_str:
+        if alerts is not None:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-incomplete',
+                'message': (
+                    f'Secondary constraint {canonical} on {ctx or "activity"} '
+                    'has no date; secondary constraint dropped.'
+                ),
+            })
         return None
     return {'type': canonical, 'date': date_str}
 
@@ -450,7 +509,13 @@ def _apply_forward_ef_constraint(code, ef, cstr, label, alerts):
 
 
 def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, alerts):
-    """Backward-pass LF-side clamp."""
+    """Backward-pass LF-side clamp.
+
+    v2.9.12 T1.1 — MS_Start / SO hard-pin LS = cstr.date on backward pass
+    (P6 mandatory-start semantics). Mirrors the JS engine. LF is advanced
+    from cstr.date by duration_days so the post-clamp LS recompute lands
+    on cstr.date and TF = LF - EF = 0.
+    """
     if not cstr:
         return min_lf
     cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
@@ -467,6 +532,11 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
             alerts=alerts, ctx=f'SNLT LF {code}')
         if lf_from_snlt < min_lf:
             return lf_from_snlt
+    elif ctype in ('MS_Start', 'SO') and cd_num > 0:
+        # v2.9.12 T1.1 — Mandatory Start hard-pin on backward pass.
+        return _advance_workdays(
+            cd_num, duration_days, node_cal,
+            alerts=alerts, ctx=f'MS_Start LF {code}')
     return min_lf
 
 
@@ -500,6 +570,41 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
     cal_map = cal_map or {}
     alerts = []
 
+    # v2.9.12 T2.16 — emit WARN when a calendar's work_days is empty or
+    # invalid (all entries outside 0..6). Mirror JS _preResolveCalendars.
+    # The downstream add_work_days/subtract_work_days helpers fall back to
+    # MonFri silently; this surfaces the substitution.
+    for _cal_key, _cal_info in (cal_map or {}).items():
+        if not _cal_info:
+            continue
+        _wd_raw = _cal_info.get('work_days') if isinstance(_cal_info, dict) else None
+        if _wd_raw is None:
+            continue
+        if not isinstance(_wd_raw, list):
+            continue
+        _wd_valid = [d for d in _wd_raw if isinstance(d, int) and 0 <= d <= 6]
+        if len(_wd_raw) > 0 and len(_wd_valid) == 0:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'invalid-calendar-falling-back',
+                'message': (
+                    f'Calendar {_cal_key!r} has work_days={_wd_raw!r} with no '
+                    'valid P6 weekday indices (0=Sun..6=Sat); falling back to '
+                    'MonFri [1,2,3,4,5]. Verify the cal_map entry against the '
+                    'P6 source schedule.'
+                ),
+            })
+        elif len(_wd_raw) == 0:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'invalid-calendar-falling-back',
+                'message': (
+                    f'Calendar {_cal_key!r} has empty work_days; falling back '
+                    'to MonFri [1,2,3,4,5]. Verify the cal_map entry against '
+                    'the P6 source schedule.'
+                ),
+            })
+
     nodes = {}
     for a in activities:
         if a is None:
@@ -528,8 +633,32 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         es = date_to_num(a.get('early_start', '')) if a.get('early_start') else 0
         ef = date_to_num(a.get('early_finish', '')) if a.get('early_finish') else 0
         if is_complete and actual_finish:
-            es = date_to_num(actual_start or actual_finish)
             ef = date_to_num(actual_finish)
+            if actual_start:
+                es = date_to_num(actual_start)
+            else:
+                # v2.9.12 T4.25 — backport R8A-1 from JS. Previously this
+                # collapsed ES = EF when actual_start was missing, producing
+                # a zero-working-duration completed activity that silently
+                # appeared critical. Derive ES via _retreat_workdays(EF,
+                # duration_days) on the activity's calendar — uses the
+                # integer-offset wrapper around subtract_work_days.
+                _clndr_id = a.get('clndr_id', '') or ''
+                _cal_info = cal_map.get(_clndr_id) if _clndr_id else None
+                es = _retreat_workdays(ef, dur, _cal_info,
+                                       alerts=alerts,
+                                       ctx=f'MISSING_ACTUAL_START ES derive {code}')
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'completion-data-incomplete',
+                    'message': (
+                        f'MISSING_ACTUAL_START on {code}: activity has '
+                        f'actual_finish={actual_finish} but no actual_start; '
+                        f'ES derived as subtract_work_days(EF, duration) = '
+                        f'{num_to_date(es)}. Provide actual_start for '
+                        f'forensic accuracy.'
+                    ),
+                })
         nodes[code] = {
             'code': code,
             'name': a.get('name', ''),
@@ -544,8 +673,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             'is_fragnet': bool(a.get('is_fragnet', False)),
             'actual_start': actual_start,
             # v2.9.7 — P6 constraint normalization
-            'constraint': _normalize_constraint(a.get('constraint')),
-            'constraint2': _normalize_constraint2(a.get('constraint2')),
+            # v2.9.12 T1.6 — thread alerts + code for unrecognized / empty-date WARN.
+            'constraint': _normalize_constraint(a.get('constraint'), alerts, code),
+            'constraint2': _normalize_constraint2(a.get('constraint2'), alerts, code),
             'actual_finish': actual_finish,
             'clndr_id': a.get('clndr_id', '') or '',
         }
@@ -584,7 +714,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # When an activity has an actual_start but is NOT complete, that
         # historical event is immutable: neither the data_date floor nor
         # predecessor logic may push ES forward of it. Mirrors the JS engine
-        # (cpm-engine.js Section ~931). The OoS-style behavior — predecessor
+        # (cpm-engine.js Section C, ~line 1109). The OoS-style behavior — predecessor
         # would push later — is silent on the Python side (the JS engine
         # emits OUT_OF_SEQUENCE alerts, which is a documented JS-only
         # surface — see F20 / F21 fixtures).
@@ -640,9 +770,30 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         cstr = node.get('constraint')
         cstr2 = node.get('constraint2')
         # AACE 29R-03 §4.3 — constraints also cannot override actual_start.
+        # v2.9.12 T1.2 — emit constraint-noop WARN when ES-side constraints
+        # are suppressed by actual_start. Mirrors JS Section C.
         if not has_actual_start:
             max_es = _apply_forward_es_constraint(code, max_es, cstr, 'primary', alerts)
             max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts)
+        else:
+            if cstr and cstr.get('type') in ('SNET', 'MS_Start', 'SO'):
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'constraint-noop',
+                    'message': (
+                        f"{cstr['type']} on {code} suppressed by "
+                        'actual_start (AACE 29R-03 §4.3 immutability)'
+                    ),
+                })
+            if cstr2 and cstr2.get('type') in ('SNET', 'MS_Start', 'SO'):
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'constraint-noop',
+                    'message': (
+                        f"{cstr2['type']} (secondary) on {code} suppressed "
+                        'by actual_start (AACE 29R-03 §4.3 immutability)'
+                    ),
+                })
 
         node['es'] = max_es
         node['ef'] = _advance_workdays(
@@ -730,15 +881,31 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         node['ls'] = _retreat_workdays(
             node['lf'], node['duration_days'], node_cal,
             alerts=alerts, ctx=f'backward {code}.LS')
+        # v2.9.12 T3.19 — AACE 29R-03 §4.3 immutability on backward pass.
+        # An activity with actual_start cannot have LS later than ES (it
+        # already started — drifting LS through float-rich successor logic
+        # is physically impossible). Pin LS = ES, tighten LF.
+        if node.get('actual_start') and not node['is_complete']:
+            a_s_num = date_to_num(node['actual_start'])
+            if a_s_num > 0 and node['ls'] > node['es']:
+                node['ls'] = node['es']
+                node['lf'] = _advance_workdays(
+                    node['es'], node['duration_days'], node_cal,
+                    alerts=alerts, ctx=f'in-progress LF pin {code}')
         node['tf'] = round(node['lf'] - node['ef'], 3)
 
-    # v2.9.7 — ALAP post-pass. Per AACE 29R-03 §3.7 and Oracle P6 docs, ALAP
+    # v2.9.7 — ALAP post-pass. Per AACE 29R-03 §4 (Technical Considerations) and Oracle P6 docs, ALAP
     # activities slide their early dates to match their late dates (consume
     # float). Only applied when the activity has no actual_start and is not
     # complete.
+    # v2.9.12 T4.26 — ALAP honored on EITHER primary or secondary slot.
+    # Mirrors JS v2.9.8 Bug B7.
     for c, n in nodes.items():
         cstr = n.get('constraint')
-        if not cstr or cstr.get('type') != 'ALAP':
+        cstr2 = n.get('constraint2')
+        is_alap = ((cstr and cstr.get('type') == 'ALAP') or
+                   (cstr2 and cstr2.get('type') == 'ALAP'))
+        if not is_alap:
             continue
         if n['is_complete'] or n['actual_start']:
             continue

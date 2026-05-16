@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.11';
+const ENGINE_VERSION = '2.9.12';
 
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
@@ -168,6 +168,13 @@ const CONSTRAINT_TYPE_MAP = {
     'CS_MEOB':     'FNLT',         // Finish On or Before (Finish No Later Than)
     'CS_MANDSTART':'MS_Start',
     'CS_MANDFIN':  'MS_Finish',
+    // v2.9.12 T1.7 — older P6 R8.x XER variant tokens. Some P6 exports
+    // (notably mid-period R8 builds) write `CS_MANSTART` / `CS_MANFINISH`
+    // without the `D` of "MANDATORY". Previously unrecognized → constraint
+    // silently dropped. Now alias to the canonical mandatory-start / -finish
+    // names so the same forensic semantics apply.
+    'CS_MANSTART': 'MS_Start',
+    'CS_MANFINISH':'MS_Finish',
     'CS_ALAP':     'ALAP',
     'CS_SO':       'SO',           // Start On (treated as MS_Start)
     // Short tokens (already canonical or P6 GUI labels)
@@ -196,17 +203,51 @@ const CANONICAL_CONSTRAINT_TYPES = new Set([
     'SNET','SNLT','FNET','FNLT','MS_Start','MS_Finish','ALAP','MFO','SO',
 ]);
 
-function _normalizeConstraint(c) {
+// v2.9.12 T1.6 — Optional `alerts` array. Previously the function silently
+// returned null on (a) unrecognized constraint token or (b) recognized token
+// with empty date — both forensically interesting (someone wrote a constraint
+// the engine cannot honor). Now: emit a labelled WARN so the caller can see
+// what was dropped. Backward-compatible: when alerts is omitted, the function
+// returns null silently as before (used by Section D parseXER which builds
+// its own alerts via a different path; see also the constraint-unrecognized
+// emission in parseXER for the XER-row path).
+function _normalizeConstraint(c, alerts, _ctx) {
     if (!c || typeof c !== 'object') return null;
     const rawType = c.type || c.cstr_type || '';
     if (!rawType) return null;
     const canonical = CONSTRAINT_TYPE_MAP[rawType] || (CANONICAL_CONSTRAINT_TYPES.has(rawType) ? rawType : null);
-    if (!canonical) return null;
+    if (!canonical) {
+        if (alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-unrecognized',
+                message: 'Constraint type ' + JSON.stringify(rawType) +
+                    ' on ' + (_ctx || 'activity') +
+                    ' is not a recognized P6 token; constraint dropped. ' +
+                    'Engine honors: ' +
+                    Array.from(CANONICAL_CONSTRAINT_TYPES).join(', ') +
+                    ' (long-form: CS_MSO, CS_MEO, CS_MSOA/B, CS_MEOA/B, CS_MANDSTART, CS_MANDFIN, ' +
+                    'CS_MANSTART, CS_MANFINISH, CS_ALAP, CS_SO).',
+            });
+        }
+        return null;
+    }
     const rawDate = c.date || c.cstr_date2 || c.cstr_date || '';
     // ALAP has no date.
     if (canonical === 'ALAP') return { type: 'ALAP', date: '' };
     const dateStr = String(rawDate).slice(0, 10);
-    if (!dateStr) return null;
+    if (!dateStr) {
+        if (alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-incomplete',
+                message: 'Constraint ' + canonical + ' on ' + (_ctx || 'activity') +
+                    ' has no date; constraint dropped. P6 requires a cstr_date for ' +
+                    'all non-ALAP constraint types.',
+            });
+        }
+        return null;
+    }
     return { type: canonical, date: dateStr };
 }
 
@@ -216,17 +257,42 @@ function _normalizeConstraint(c) {
 // present, P6 applies them sequentially in forward/backward passes — primary
 // first, then secondary tightens further (secondary "wins" on conflict because
 // it's the second clamp). Common pairing: SNET (cstr_type) + FNLT (cstr_type2).
-function _normalizeConstraint2(c) {
+// v2.9.12 T1.6 — Optional `alerts` parameter, mirroring `_normalizeConstraint`.
+// When provided, unrecognized tokens or non-ALAP constraints with empty dates
+// emit a forensic WARN; the function still returns null so downstream skip
+// behavior is preserved.
+function _normalizeConstraint2(c, alerts, _ctx) {
     if (!c || typeof c !== 'object') return null;
     // Accept either a separate object with type/date or fields off the parent.
     const rawType = c.type || c.cstr_type2 || '';
     if (!rawType) return null;
     const canonical = CONSTRAINT_TYPE_MAP[rawType] || (CANONICAL_CONSTRAINT_TYPES.has(rawType) ? rawType : null);
-    if (!canonical) return null;
+    if (!canonical) {
+        if (alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-unrecognized',
+                message: 'Secondary constraint type ' + JSON.stringify(rawType) +
+                    ' on ' + (_ctx || 'activity') +
+                    ' is not a recognized P6 token; secondary constraint dropped.',
+            });
+        }
+        return null;
+    }
     const rawDate = c.date || c.cstr_date || '';
     if (canonical === 'ALAP') return { type: 'ALAP', date: '' };
     const dateStr = String(rawDate).slice(0, 10);
-    if (!dateStr) return null;
+    if (!dateStr) {
+        if (alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-incomplete',
+                message: 'Secondary constraint ' + canonical + ' on ' + (_ctx || 'activity') +
+                    ' has no date; secondary constraint dropped.',
+            });
+        }
+        return null;
+    }
     return { type: canonical, date: dateStr };
 }
 
@@ -352,7 +418,16 @@ function dateToNum(s) {
     if (y < 1000) return 0;
     // Use _safeDateUTC (defined in Section H) to avoid the Date.UTC(y, m, d)
     // silent-rewrite path entirely for any year < 100 that might slip through.
-    return _msToOffset(_safeDateUTC(y, m - 1, d).getTime());
+    const dt = _safeDateUTC(y, m - 1, d);
+    // v2.9.12 T2.14 — rollover guard. Date.UTC(2026, 1, 30) silently rolls
+    // to March 2 because February has 28 days. Forensic dates with invalid
+    // day-of-month components (Feb 30, Apr 31, etc.) must be rejected, not
+    // silently rewritten to a different month. Round-trip the constructed
+    // date and reject if it doesn't match the input components.
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+        return 0;
+    }
+    return _msToOffset(dt.getTime());
 }
 
 function numToDate(n) {
@@ -410,7 +485,7 @@ function _resolveCalendar(calendarInfo) {
 // subtractWorkDays calls skip the per-call new Set(holidays) construction.
 // The caller's original calMap is NOT mutated; original work_days / holidays
 // are preserved on the resolved struct for any downstream introspection.
-function _preResolveCalendars(calMap) {
+function _preResolveCalendars(calMap, alerts) {
     if (!calMap) return calMap;
     const out = Object.create(null);
     for (const k of Object.keys(calMap)) {
@@ -421,6 +496,31 @@ function _preResolveCalendars(calMap) {
         const hl = orig.holidays || [];
         const wd = (Array.isArray(wdRaw) ? wdRaw : [])
             .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+        // v2.9.12 T2.16 — silent fallback to MonFri was forensically opaque.
+        // If the caller supplied an empty or invalid work_days array
+        // (`[]`, `[7, 8]`, etc.), we still fall back so the engine remains
+        // usable, but we emit a WARN so the analyst sees the substitution.
+        // An empty/invalid work_days on a calendar referenced by activities
+        // would otherwise produce phantom MonFri dates the schedule was
+        // never authored against.
+        if (alerts && Array.isArray(wdRaw) && wdRaw.length > 0 && wd.length === 0) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'invalid-calendar-falling-back',
+                message: 'Calendar ' + JSON.stringify(k) + ' has work_days=' +
+                    JSON.stringify(wdRaw) + ' with no valid P6 weekday indices ' +
+                    '(0=Sun..6=Sat); falling back to MonFri [1,2,3,4,5]. ' +
+                    'Verify the cal_map entry against the P6 source schedule.',
+            });
+        } else if (alerts && Array.isArray(wdRaw) && wdRaw.length === 0) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'invalid-calendar-falling-back',
+                message: 'Calendar ' + JSON.stringify(k) + ' has empty work_days; ' +
+                    'falling back to MonFri [1,2,3,4,5]. Verify the cal_map ' +
+                    'entry against the P6 source schedule.',
+            });
+        }
         out[k] = {
             _resolved: true,
             workDays: wd.length ? wd : [1, 2, 3, 4, 5],
@@ -497,7 +597,12 @@ function subtractWorkDays(endNum, nDays, calendarInfo) {
 // "tf=13" on a MonFri-calendar activity will be impeached when P6 shows 10.
 function _countWorkDaysBetween(fromNum, toNum, calendarInfo) {
     if (!Number.isFinite(fromNum) || !Number.isFinite(toNum)) return 0;
-    if (toNum <= fromNum) return 0;
+    // v2.9.12 T2.12 — return signed result so callers (notably
+    // tf_working_days and ff_working_days) can preserve negative-float
+    // forensic signal on over-constrained networks. Previously the
+    // `<= fromNum` clamp swallowed every negative interval to 0.
+    if (toNum === fromNum) return 0;
+    if (toNum < fromNum) return -_countWorkDaysBetween(toNum, fromNum, calendarInfo);
     if (!calendarInfo) return Math.round(toNum - fromNum);
     const { workDays, holidaysSet } = _resolveCalendar(calendarInfo);
     if (workDays.length === 0) return 0;
@@ -527,10 +632,20 @@ function _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx) {
     alerts.push({
         severity: 'ALERT',
         context: ctx,
+        // v2.9.12 T2.17 — disclose the V8 Math.round direction bias. JS
+        // Math.round rounds half toward +Infinity (Math.round(0.5) === 1,
+        // Math.round(-0.5) === 0), so sub-day positive lags INFLATE by up
+        // to a full day, while sub-day leads (negative lags) between -0.5
+        // and 0 TRUNCATE to zero. This asymmetric loss is forensically
+        // material on schedules with many short lags; the engine cannot
+        // honor sub-day precision under day-granular arithmetic.
         message: 'SUB_DAY_LAG_ROUNDED: lag/duration value ' + raw +
             ' is fractional; engine rounds to ' + Math.round(raw) +
-            ' day(s). P6 typically stores hours; sub-day precision is lost in this engine. ' +
-            'Re-run with full-day lags or accept the documented drift.',
+            ' day(s). V8 Math.round rounds half toward +Infinity; sub-day ' +
+            'lags inflate, sub-day leads truncate to zero — sub-day ' +
+            'precision is forensically unavailable in this engine. P6 ' +
+            'typically stores lags in hours; re-run with full-day lags or ' +
+            'accept the documented drift.',
     });
 }
 
@@ -753,10 +868,31 @@ function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
 }
 
 // v2.9.7 — Forward-pass EF-side constraint clamp helper.
-function _applyForwardEFConstraint(code, ef, cstr, label, alerts) {
+// v2.9.12 T3.20 — optional `es` parameter. When provided, the function
+// guarantees EF >= ES on the returned value so a constraint cannot pin EF
+// below ES (which would produce a physically impossible negative-duration
+// activity). Section D already enforced this invariant (Bug B2 in v2.9.8);
+// Section C did not. Backward-compat: callers that don't pass es are
+// unaffected.
+function _applyForwardEFConstraint(code, ef, cstr, label, alerts, es) {
     if (!cstr) return ef;
     const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
     const tag = label === 'secondary' ? ' (secondary)' : '';
+    // v2.9.12 T3.20 — guard helper that preserves EF >= ES.
+    function _guardEF(candidate) {
+        if (es !== undefined && Number.isFinite(es) && candidate < es) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'constraint-violated',
+                message: 'Constraint ' + cstr.type + tag + ' on ' + code +
+                    ' would pin EF=' + numToDate(candidate) + ' below ES=' +
+                    numToDate(es) + ' (negative duration). Clamped EF >= ES ' +
+                    'to preserve duration invariant.',
+            });
+            return es;
+        }
+        return candidate;
+    }
     if (cstr.type === 'FNET' && cdNum > 0) {
         if (cdNum > ef) {
             alerts.push({
@@ -765,7 +901,7 @@ function _applyForwardEFConstraint(code, ef, cstr, label, alerts) {
                 message: 'FNET' + tag + ' on ' + code + ' pushes EF from ' +
                     numToDate(ef) + ' to ' + cstr.date,
             });
-            return cdNum;
+            return _guardEF(cdNum);
         }
     } else if (cstr.type === 'FNLT' && cdNum > 0) {
         if (ef > cdNum) {
@@ -792,13 +928,20 @@ function _applyForwardEFConstraint(code, ef, cstr, label, alerts) {
                     message: 'Mandatory Finish' + tag + ' on ' + code + ' pins EF to ' + cstr.date,
                 });
             }
-            return cdNum; // forced regardless of pred logic
+            return _guardEF(cdNum); // forced regardless of pred logic, but EF >= ES
         }
     }
     return ef;
 }
 
 // v2.9.7 — Backward-pass LF-side constraint clamp helper.
+// v2.9.12 T1.1 — MS_Start / SO must also pin the backward pass: P6 mandatory-
+// start hard-pins LS = cstr.date. Previously only the forward pass enforced
+// this; on backward pass the constraint was silently ignored and LS could
+// drift backward through float-rich predecessor logic, breaking the
+// MS_Start guarantee (LS === ES, TF === 0). The fix mirrors the MS_Finish
+// branch: LF is set to cstr.date + duration so the LS recompute lands on
+// cstr.date.
 function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, alerts) {
     if (!cstr) return minLF;
     const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
@@ -811,6 +954,14 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
         const lfFromSnlt = _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
             'SNLT LF ' + code);
         if (lfFromSnlt < minLF) return lfFromSnlt;
+    } else if ((cstr.type === 'MS_Start' || cstr.type === 'SO') && cdNum > 0) {
+        // v2.9.12 T1.1 — Mandatory Start hard-pins LS = cstr.date.
+        // Achieve by setting LF = cstr.date + duration so that the
+        // post-clamp `LS = retreat(LF, duration)` recompute lands on
+        // cstr.date. Forward pass has already pinned ES = cstr.date, so
+        // TF = LF - EF = 0 (critical, as intended by P6).
+        return _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
+            'MS_Start LF ' + code);
     }
     return minLF;
 }
@@ -818,14 +969,16 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
 function computeCPM(activities, relationships, opts) {
     opts = opts || {};
     const dataDate = opts.dataDate || opts.data_date || '';
+    // v2.9.12 T2.16 — declare alerts collector before _preResolveCalendars so
+    // invalid-work_days substitutions surface as WARNs in the same result.
+    const alerts = [];
     // v2.1-C2: Pre-resolve all calendars once at the top of each CPM run.
     // _resolveCalendar fast-returns when it sees the _resolved sentinel, so
     // every addWorkDays/subtractWorkDays call in the forward/backward passes
     // avoids rebuilding new Set(holidays). Caller's calMap is not mutated.
     const rawCalMap = opts.calMap || opts.cal_map || {};
-    const calMap = _preResolveCalendars(rawCalMap);
+    const calMap = _preResolveCalendars(rawCalMap, alerts);
     const ddNum = dataDate ? dateToNum(dataDate) : 0;
-    const alerts = [];
 
     // Build node map.
     // We track insertion order in a separate array because JavaScript's
@@ -891,10 +1044,21 @@ function computeCPM(activities, relationships, opts) {
                 });
             }
         }
+        // v2.9.12 T3.18 — remaining_duration (P6 retained-logic mode). When
+        // supplied for an in-progress activity, EF anchors to
+        // max(actual_start, data_date) + remaining_duration rather than
+        // ES + duration_days. Non-finite / negative values are coerced to
+        // undefined so the legacy fallback applies.
+        let remDur;
+        const _remParsed = parseFloat(a.remaining_duration);
+        if (Number.isFinite(_remParsed) && _remParsed >= 0) {
+            remDur = _remParsed;
+        }
         nodes[code] = {
             code,
             name: a.name || '',
             duration_days: dur,
+            remaining_duration: remDur,
             es, ef,
             ls: 0, lf: 0,
             tf: 0,
@@ -903,11 +1067,15 @@ function computeCPM(activities, relationships, opts) {
             actual_start: actualStart,
             actual_finish: actualFinish,
             clndr_id: a.clndr_id || '',
-            constraint: _normalizeConstraint(a.constraint),
+            // v2.9.12 T1.6 — thread `alerts` + activity code so unrecognized
+            // tokens / incomplete dates emit a forensically-visible WARN
+            // instead of silently dropping. Backward-compat: callers that
+            // construct activities without constraint fields are unaffected.
+            constraint: _normalizeConstraint(a.constraint, alerts, code),
             // v2.9.7 — Secondary constraint (cstr_type2 / cstr_date). Stored as
             // an independent {type, date} record. Applied AFTER the primary in
             // forward/backward passes; tightens further (P6 spec).
-            constraint2: _normalizeConstraint2(a.constraint2),
+            constraint2: _normalizeConstraint2(a.constraint2, alerts, code),
         };
     }
 
@@ -1040,18 +1208,60 @@ function computeCPM(activities, relationships, opts) {
         // and cstr_type2 / cstr_date (secondary). Per P6 spec, both apply
         // independently; secondary tightens after primary so it "wins" on
         // conflict. See `CONSTRAINT_TYPE_MAP` for canonical short codes.
+        // v2.9.12 T1.2 / T1.3 — AACE 29R-03 §4.3 immutability. When an
+        // activity has an actual_start, that historical fact is immutable;
+        // ES-side constraints (including MS_Start / SO hard-pin) cannot
+        // override the actual. This matches the Python reference, which
+        // already had `if not has_actual_start` around the ES-constraint
+        // calls. A WARN is emitted per-constraint so opposing experts can
+        // see what was suppressed.
         const cstr = node.constraint;
         const cstr2 = node.constraint2;
-        maxES = _applyForwardESConstraint(code, maxES, cstr, 'primary', alerts);
-        maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts);
+        if (!hasActualStart) {
+            maxES = _applyForwardESConstraint(code, maxES, cstr, 'primary', alerts);
+            maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts);
+        } else {
+            if (cstr && (cstr.type === 'SNET' || cstr.type === 'MS_Start' || cstr.type === 'SO')) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-noop',
+                    message: cstr.type + ' on ' + code + ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                });
+            }
+            if (cstr2 && (cstr2.type === 'SNET' || cstr2.type === 'MS_Start' || cstr2.type === 'SO')) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-noop',
+                    message: cstr2.type + ' (secondary) on ' + code + ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                });
+            }
+        }
 
         node.es = maxES;
-        node.ef = _advanceWithAlerts(node.es, node.duration_days, nodeCal, alerts,
-            'forward ' + code + '.EF');
+        // v2.9.12 T3.18 — P6 retained-logic mode. When an in-progress
+        // activity carries a `remaining_duration` value (the work left after
+        // the data date), EF is anchored to max(actual_start, data_date) +
+        // remaining_duration, not duration_days. This matches Primavera P6's
+        // default "retained logic" scheduling mode for in-progress activities.
+        // Backward-compat: when remaining_duration is undefined or non-finite,
+        // we fall back to the legacy duration_days formula. See DAUBERT.md §8.
+        const _remRaw = node.remaining_duration;
+        const _hasRem = Number.isFinite(_remRaw) && _remRaw >= 0;
+        if (hasActualStart && !node.is_complete && _hasRem) {
+            // Retained-logic mode: EF = max(actual_start, data_date) + rem.
+            // ES has already been pinned to actual_start above (line ~1114).
+            const efAnchor = (ddNum > 0 && ddNum > maxES) ? ddNum : maxES;
+            node.ef = _advanceWithAlerts(efAnchor, _remRaw, nodeCal, alerts,
+                'forward ' + code + '.EF (retained-logic rem=' + _remRaw + ')');
+        } else {
+            node.ef = _advanceWithAlerts(node.es, node.duration_days, nodeCal, alerts,
+                'forward ' + code + '.EF');
+        }
 
         // Forward-pass EF-side constraint clamps (FNET, FNLT, MS_Finish, MFO).
-        node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts);
-        node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts);
+        // v2.9.12 T3.20 — pass node.es so the helper guarantees EF >= ES.
+        node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts, node.es);
+        node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts, node.es);
 
         node.driving_predecessor = drivingPred;
     }
@@ -1134,6 +1344,21 @@ function computeCPM(activities, relationships, opts) {
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
             'backward ' + code + '.LS');
+        // v2.9.12 T3.19 — AACE 29R-03 §4.3 immutability on backward pass.
+        // When the activity has an actual_start (in-progress, not yet
+        // complete), LS cannot drift later than ES — that would imply the
+        // activity should have started LATER than it actually did, which is
+        // physically impossible (the work already started). Pin LS = ES and
+        // tighten LF = ES + duration_days; the activity is on the critical
+        // path of its own historical fact.
+        if (node.actual_start && !node.is_complete) {
+            const _aSNum = dateToNum(node.actual_start);
+            if (_aSNum > 0 && node.ls > node.es) {
+                node.ls = node.es;
+                node.lf = _advanceWithAlerts(node.es, node.duration_days, nodeCal, alerts,
+                    'in-progress LF pin ' + code);
+            }
+        }
         node.tf = Math.round((node.lf - node.ef) * 1000) / 1000;
     }
 
@@ -1263,6 +1488,13 @@ function computeCPM(activities, relationships, opts) {
         // anomaly mid-project.
         if (!a.actual_start && !a.is_complete) continue;
         const preds = predMap[a.code] || [];
+        // v2.9.12 T3.21 — enumerate every unstarted predecessor (was: break
+        // after first). A late activity with three out-of-sequence preds is
+        // a different forensic story than one with a single OoS pred; the
+        // analyst needs to see every retained-logic anomaly.
+        const _unstartedPreds = [];
+        const _prematureStartPreds = [];
+        const _aStartNum = a.actual_start ? dateToNum(a.actual_start) : 0;
         for (const p of preds) {
             const pred = nodes[p.from_code];
             if (!pred) continue;
@@ -1270,16 +1502,47 @@ function computeCPM(activities, relationships, opts) {
             const predAct = _actByCode.get(p.from_code);
             if (!predAct) continue;
             if (!predAct.actual_start && !predAct.is_complete) {
-                const label = a.is_complete ? 'is complete' : 'is in progress';
-                alerts.push({
-                    severity: 'ALERT',
-                    context: 'out-of-sequence',
-                    message: 'Activity ' + a.code +
-                        ' ' + label + ' but predecessor ' + p.from_code +
-                        ' has no actual_start (retained-logic anomaly)',
-                });
-                break; // one alert per OoS activity
+                _unstartedPreds.push(p.from_code);
+                continue;
             }
+            // v2.9.12 T3.21 — also catch true OoS-progress: pred has
+            // actual_start but the successor started EARLIER than the
+            // predecessor did. Both in-progress is the common case; both
+            // complete with successor finishing first is another forensic
+            // signal.
+            if (_aStartNum > 0 && predAct.actual_start) {
+                const _pStartNum = dateToNum(predAct.actual_start);
+                if (_pStartNum > 0 && _pStartNum > _aStartNum) {
+                    _prematureStartPreds.push({
+                        code: p.from_code,
+                        pred_start: predAct.actual_start,
+                    });
+                }
+            }
+        }
+        if (_unstartedPreds.length > 0) {
+            const label = a.is_complete ? 'is complete' : 'is in progress';
+            alerts.push({
+                severity: 'ALERT',
+                context: 'out-of-sequence',
+                message: 'Activity ' + a.code + ' ' + label +
+                    ' but ' + _unstartedPreds.length + ' predecessor(s) have ' +
+                    'no actual_start (retained-logic anomaly): ' +
+                    _unstartedPreds.join(', '),
+            });
+        }
+        if (_prematureStartPreds.length > 0) {
+            const _premList = _prematureStartPreds
+                .map(x => x.code + ' (started ' + x.pred_start + ')')
+                .join(', ');
+            alerts.push({
+                severity: 'ALERT',
+                context: 'out-of-sequence',
+                message: 'Activity ' + a.code +
+                    ' started ' + a.actual_start +
+                    ' but ' + _prematureStartPreds.length + ' predecessor(s) ' +
+                    'started AFTER it (retained-logic anomaly): ' + _premList,
+            });
         }
     }
 
@@ -1329,12 +1592,20 @@ const _MC = {
     // They are resolved in runCPM's Pass-2 after the normal pass finishes.
     // See SECTION D, _resolveHammocks() for the resolution semantics.
     hammocks: {},     // { hammockId: { id, code, name, task_type, preds, succs, ... } }
+    // v2.9.12 T1.5 — parseXER-stage alerts. Previously TT_LOE / TT_WBS /
+    // completed-activity drops + silently-dropped dangling relationships
+    // were not surfaced through runCPM().alerts (only through the parseXER
+    // return value, which most callers ignore). v2.9.12 collects them here
+    // so runCPM can drain them into result.alerts. INFO severity — these
+    // are informational, not violations of forensic math.
+    parseAlerts: [],
 };
 
 function parseXER(content) {
     _MC.tasks = {};
     _MC.predecessors = [];
     _MC.hammocks = {};
+    _MC.parseAlerts = [];
     // v2.9.3 — track silently-dropped activities so callers can surface them.
     // Previously TT_LOE / TT_WBS / fully-completed (remaining<=0) rows were
     // discarded without leaving a trace; now every drop is enumerated below.
@@ -1368,10 +1639,40 @@ function parseXER(content) {
                 // TT_Hammock is supported via two-pass resolution (see
                 // _resolveHammocks below); it is NOT dropped.
                 const isMilestone = (_taskType === 'TT_Mile' || _taskType === 'TT_FinMile');
+                // v2.9.12 T3.24 — six canonical P6 task_type tokens per the
+                // Oracle P6 Database Reference: TT_Task, TT_FinMile, TT_Mile,
+                // TT_LOE, TT_WBS, TT_Hammock. Anything outside this set is a
+                // P6 schema drift (newer P6 build, or hand-edited XER). Emit
+                // a WARN so opposing experts can see the unknown type was
+                // silently treated as TT_Task.
+                const _CANONICAL_TASK_TYPES = ['TT_Task', 'TT_FinMile', 'TT_Mile', 'TT_LOE', 'TT_WBS', 'TT_Hammock'];
+                if (_taskType && _CANONICAL_TASK_TYPES.indexOf(_taskType) === -1) {
+                    _MC.parseAlerts.push({
+                        severity: 'WARN',
+                        context: 'unrecognized-task-type',
+                        message: 'Task ' + (row.task_code || taskId) +
+                            ' has task_type=' + JSON.stringify(_taskType) +
+                            ' which is not one of the canonical P6 tokens (' +
+                            _CANONICAL_TASK_TYPES.join(', ') +
+                            '). Treated as TT_Task; verify against the source schedule.',
+                    });
+                }
                 if (_taskType === 'TT_LOE') {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'level-of-effort' });
+                    _MC.parseAlerts.push({
+                        severity: 'INFO',
+                        context: 'task-dropped',
+                        message: 'Task ' + (row.task_code || taskId) +
+                            ' dropped: reason=level-of-effort (task_type=TT_LOE)',
+                    });
                 } else if (_taskType === 'TT_WBS') {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'wbs-summary' });
+                    _MC.parseAlerts.push({
+                        severity: 'INFO',
+                        context: 'task-dropped',
+                        message: 'Task ' + (row.task_code || taskId) +
+                            ' dropped: reason=wbs-summary (task_type=TT_WBS)',
+                    });
                 } else if (_taskType === 'TT_Hammock') {
                     // v2.9.7 — hammocks are NO LONGER dropped. Captured into
                     // _MC.hammocks for two-pass resolution in runCPM.
@@ -1392,8 +1693,21 @@ function parseXER(content) {
                 } else if (remaining <= 0 && !isMilestone && !row.act_end_date) {
                     // Zero-remaining non-milestone with no actual finish — degenerate row.
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'zero-remaining' });
+                    _MC.parseAlerts.push({
+                        severity: 'INFO',
+                        context: 'task-dropped',
+                        message: 'Task ' + (row.task_code || taskId) +
+                            ' dropped: reason=zero-remaining (no actual finish, zero remain_drtn_hr_cnt)',
+                    });
                 } else if (remaining <= 0 && !isMilestone && row.act_end_date) {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'completed' });
+                    _MC.parseAlerts.push({
+                        severity: 'INFO',
+                        context: 'task-dropped',
+                        message: 'Task ' + (row.task_code || taskId) +
+                            ' dropped: reason=completed (act_end_date=' +
+                            (row.act_end_date || '') + ')',
+                    });
                 }
 
                 const isDroppedType = (_taskType === 'TT_LOE' || _taskType === 'TT_WBS' || _taskType === 'TT_Hammock');
@@ -1414,31 +1728,27 @@ function parseXER(content) {
                     // a secondary constraint applied independently. v2.9.7
                     // honors both and applies them sequentially in
                     // forward/backward passes (secondary tightens further).
+                    // v2.9.12 T1.6 — route via _normalizeConstraint with
+                    // parseAlerts so unrecognized tokens and missing dates
+                    // emit a forensic WARN instead of dropping silently.
                     const cstrType = row.cstr_type || '';
                     const cstrDate = (row.cstr_date2 || '').slice(0, 10);
                     let constraint = null;
                     if (cstrType) {
-                        // _normalizeConstraint handles tokens we don't recognize
-                        // by returning null (drops them silently). ALAP needs
-                        // no date.
-                        const canonical = CONSTRAINT_TYPE_MAP[cstrType] || null;
-                        if (canonical === 'ALAP') {
-                            constraint = { type: 'ALAP', date: '' };
-                        } else if (canonical && cstrDate) {
-                            constraint = { type: canonical, date: cstrDate };
-                        }
+                        constraint = _normalizeConstraint(
+                            { type: cstrType, date: cstrDate },
+                            _MC.parseAlerts,
+                            (row.task_code || taskId));
                     }
                     // v2.9.7 — Secondary constraint (cstr_type2 + cstr_date).
                     const cstrType2 = row.cstr_type2 || '';
                     const cstrDate2nd = (row.cstr_date || '').slice(0, 10);
                     let constraint2 = null;
                     if (cstrType2) {
-                        const canonical2 = CONSTRAINT_TYPE_MAP[cstrType2] || null;
-                        if (canonical2 === 'ALAP') {
-                            constraint2 = { type: 'ALAP', date: '' };
-                        } else if (canonical2 && cstrDate2nd) {
-                            constraint2 = { type: canonical2, date: cstrDate2nd };
-                        }
+                        constraint2 = _normalizeConstraint2(
+                            { type: cstrType2, date: cstrDate2nd },
+                            _MC.parseAlerts,
+                            (row.task_code || taskId));
                     }
                     _MC.tasks[taskId] = {
                         id: taskId,
@@ -1474,11 +1784,32 @@ function parseXER(content) {
                 if (predType === 'PR_SS') relType = 'SS';
                 else if (predType === 'PR_FF') relType = 'FF';
                 else if (predType === 'PR_SF') relType = 'SF';
+                // v2.9.12 T2.15 — reject non-finite lag values. Previously
+                // `parseFloat('Infinity')` etc. propagated to ES/EF arithmetic
+                // and project_finish silently came out as Infinity. A real
+                // XER never emits a non-finite lag; if we see one, the file
+                // is corrupt or hand-edited and the relationship must be
+                // dropped with a loud ALERT.
+                const _rawLag = parseFloat(row.lag_hr_cnt);
+                let _lagDays;
+                if (!Number.isFinite(_rawLag)) {
+                    _MC.parseAlerts.push({
+                        severity: 'ALERT',
+                        context: 'lag-non-finite',
+                        message: 'TASKPRED row from=' + (row.pred_task_id || '?') +
+                            ' to=' + (row.task_id || '?') +
+                            ' has non-finite lag_hr_cnt=' + JSON.stringify(row.lag_hr_cnt) +
+                            '; relationship dropped to prevent Infinity propagation. ' +
+                            'Verify the XER row was not corrupted on export.',
+                    });
+                    continue;
+                }
+                _lagDays = _rawLag / 8;
                 _MC.predecessors.push({
                     predTaskId: row.pred_task_id,
                     taskId: row.task_id,
                     type: relType,
-                    lag: (parseFloat(row.lag_hr_cnt) || 0) / 8,
+                    lag: _lagDays,
                 });
             }
         }
@@ -1549,7 +1880,17 @@ function parseXER(content) {
             hammockRels.push(pred);
             continue;
         }
-        // Otherwise both endpoints missing — silently dropped (same as v2.9.6).
+        // v2.9.12 T1.5 — both endpoints missing was previously a silent drop.
+        // Surface as INFO so the forensic record reflects every relationship
+        // that didn't make it into the network.
+        _MC.parseAlerts.push({
+            severity: 'INFO',
+            context: 'relationship-dropped',
+            message: 'TASKPRED dropped: pred_task_id=' + (pred.predTaskId || '?') +
+                ' task_id=' + (pred.taskId || '?') +
+                ' — both endpoints missing from network (likely TT_LOE/TT_WBS/' +
+                'completed/zero-remaining predecessor or successor).',
+        });
     }
     _MC.predecessors = validPreds;
     return {
@@ -1557,6 +1898,9 @@ function parseXER(content) {
         relCount: validPreds.length,
         dropped_activities: droppedActivities,
         hammock_count: Object.keys(_MC.hammocks).length,
+        // v2.9.12 T1.5 — expose parse-time alerts so callers that don't go
+        // through runCPM can still see what was dropped.
+        parse_alerts: _MC.parseAlerts.slice(),
     };
 }
 
@@ -1630,7 +1974,10 @@ function runCPM(opts) {
     // v2.9.8 — Section D alerts collector. Previously Section D was silent on
     // constraint violations and unsupported relations; Round 6 audit found
     // multiple silent-wrong-answer paths (Bugs B1, B2, B8). Surfaced now.
-    const alerts = [];
+    // v2.9.12 T1.5 — seed with the parseXER-stage drops (TT_LOE / TT_WBS /
+    // completed / zero-remaining / dangling-rel) so opposing experts see
+    // every activity and relationship that didn't make it into the network.
+    const alerts = (_MC.parseAlerts || []).slice();
     // v2.9.7 — Convert constraint date to Section D's day-number scale.
     // Returns -1 if conversion impossible (no projectStart or invalid date).
     function _cstrDayOffset(cstrDate) {
@@ -1655,12 +2002,39 @@ function runCPM(opts) {
     const { sorted, excluded } = _mcTopologicalSort();
     const sortedLen = sorted.length;
 
+    // v2.9.12 T1.4 — AACE 29R-03 §4.3 in-progress immutability for Section D.
+    // The per-iteration Monte Carlo engine previously ignored task.actual_start
+    // entirely: predecessor logic overrode the historical fact, and
+    // constraints layered on top. This is wrong for any mid-project schedule
+    // — an activity that started yesterday cannot have a forecast ES three
+    // days from now.
+    //
+    // Section D operates in relative day-number time; projectStart anchors
+    // actual_start (a calendar date) into that scale. Without projectStart,
+    // we cannot anchor actuals safely, so we fall back to the pre-v2.9.12
+    // behavior AND emit a one-time WARN so the analyst sees the silent gap.
+    let _actualStartClashAlerted = false;
+    function _actOffset(actStartStr) {
+        if (!actStartStr || !projectStart) return -1;
+        const psNum = dateToNum(projectStart);
+        const aNum = dateToNum(actStartStr);
+        if (psNum <= 0 || aNum <= 0) return -1;
+        return aNum - psNum;
+    }
+    let _projectStartMissingClashCount = 0;
+
     // Forward pass.
     for (let __si = 0; __si < sortedLen; __si++) {
         const taskId = sorted[__si];
         const task = tasks[taskId];
         let maxES = 0;
         const preds = task.preds;
+        // v2.9.12 T1.4 — Pin ES to actual_start when present.
+        const actOff = _actOffset(task.actual_start);
+        const hasActualStart = actOff >= 0;
+        if (task.actual_start && !hasActualStart) {
+            _projectStartMissingClashCount += 1;
+        }
         for (let __pi = 0; __pi < preds.length; __pi++) {
             const pred = preds[__pi];
             const predTask = tasks[pred.predTaskId];
@@ -1688,7 +2062,13 @@ function runCPM(opts) {
             }
             if (predContribution > maxES) maxES = predContribution;
         }
-        task.ES = Math.max(0, maxES);
+        if (hasActualStart) {
+            // AACE 29R-03 §4.3 — actual_start is immutable; predecessor
+            // logic cannot push ES later than the recorded actual.
+            task.ES = actOff;
+        } else {
+            task.ES = Math.max(0, maxES);
+        }
 
         // v2.9.7 — Apply constraint clamps on ES side (forward pass).
         // Primary then secondary. Section D operates in day-number relative
@@ -1699,9 +2079,13 @@ function runCPM(opts) {
         // because cOff<0 (projectStart missing or invalid cstr.date).
         function _clampESForward(cstr) {
             if (!cstr) return;
+            // v2.9.12 T1.8 — SNLT is an ES-side validation type even though
+            // it does not move ES forward. Add it here so violations are
+            // alerted symmetrically with Section C.
             const isESType = (cstr.type === 'SNET' ||
                               cstr.type === 'MS_Start' ||
-                              cstr.type === 'SO');
+                              cstr.type === 'SO' ||
+                              cstr.type === 'SNLT');
             if (!isESType) return;
             const cOff = _cstrDayOffset(cstr.date);
             if (cOff < 0) {
@@ -1718,13 +2102,71 @@ function runCPM(opts) {
             }
             if (cstr.type === 'SNET') {
                 if (cOff > task.ES) task.ES = cOff;
+            } else if (cstr.type === 'SNLT') {
+                // v2.9.12 T1.8 — SNLT: ES violation when pred logic pushed
+                // ES beyond cstr.date. Mirrors Section C lines 727-731.
+                if (task.ES > cOff) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'Section D SNLT on ' + task.code +
+                            ' violated: ES=' + task.ES.toFixed(1) +
+                            ' is after constraint offset ' + cOff.toFixed(1) +
+                            ' (days from project start).',
+                    });
+                }
             } else {
+                // v2.9.12 T1.10 — MS_Start / SO emit alerts symmetric with
+                // Section C: ALERT when pred logic pushed past cstr.date
+                // (violated); WARN when constraint pulls ES forward (applied).
+                if (task.ES > cOff) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'Section D Mandatory Start (' + cstr.type + ') on ' + task.code +
+                            ' violated: predecessor logic forces ES=' + task.ES.toFixed(1) +
+                            ' which is after mandatory offset ' + cOff.toFixed(1) +
+                            '. Section D pins ES = cstr.date regardless.',
+                    });
+                } else if (task.ES < cOff) {
+                    alerts.push({
+                        severity: 'WARN',
+                        context: 'constraint-applied',
+                        message: 'Section D Mandatory Start (' + cstr.type + ') on ' + task.code +
+                            ' pins ES to offset ' + cOff.toFixed(1) + '.',
+                    });
+                }
                 // MS_Start / SO — forced.
                 task.ES = cOff;
             }
         }
-        _clampESForward(task.constraint);
-        _clampESForward(task.constraint2);
+        // v2.9.12 T1.4 — AACE 29R-03 §4.3 immutability also applies to
+        // Section D ES-side constraint clamps. When actual_start is present,
+        // SNET/MS_Start/SO cannot override it. Emit constraint-noop WARN per
+        // suppressed constraint so the forensic record shows the skip.
+        if (!hasActualStart) {
+            _clampESForward(task.constraint);
+            _clampESForward(task.constraint2);
+        } else {
+            const _cstr = task.constraint;
+            const _cstr2 = task.constraint2;
+            if (_cstr && (_cstr.type === 'SNET' || _cstr.type === 'MS_Start' || _cstr.type === 'SO')) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-noop',
+                    message: 'Section D ' + _cstr.type + ' on ' + task.code +
+                        ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                });
+            }
+            if (_cstr2 && (_cstr2.type === 'SNET' || _cstr2.type === 'MS_Start' || _cstr2.type === 'SO')) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-noop',
+                    message: 'Section D ' + _cstr2.type + ' (secondary) on ' + task.code +
+                        ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                });
+            }
+        }
 
         task.EF = task.ES + task.remaining;
 
@@ -1738,9 +2180,12 @@ function runCPM(opts) {
         // because cOff<0 (projectStart missing or invalid cstr.date).
         function _clampEFForward(cstr) {
             if (!cstr) return;
+            // v2.9.12 T1.9 — FNLT is an EF-side validation type (deadline).
+            // Add it here so violations alert symmetrically with Section C.
             const isEFType = (cstr.type === 'FNET' ||
                               cstr.type === 'MS_Finish' ||
-                              cstr.type === 'MFO');
+                              cstr.type === 'MFO' ||
+                              cstr.type === 'FNLT');
             if (!isEFType) return;
             const cOff = _cstrDayOffset(cstr.date);
             if (cOff < 0) {
@@ -1757,6 +2202,20 @@ function runCPM(opts) {
             }
             if (cstr.type === 'FNET') {
                 if (cOff > task.EF) task.EF = cOff;
+            } else if (cstr.type === 'FNLT') {
+                // v2.9.12 T1.9 — FNLT: ALERT if pred logic pushed EF past
+                // cstr.date. Mirrors Section C lines 770-778. Backward pass
+                // (_clampLFBackward) already tightens LF via FNLT.
+                if (task.EF > cOff) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'Section D FNLT on ' + task.code +
+                            ' violated: EF=' + task.EF.toFixed(1) +
+                            ' is after constraint offset ' + cOff.toFixed(1) +
+                            ' (days from project start).',
+                    });
+                }
             } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
                 const requiredEF = task.ES + task.remaining;
                 if (cOff < requiredEF) {
@@ -1792,6 +2251,23 @@ function runCPM(opts) {
         if (logOutput) {
             log.push('FWD: ' + task.code + ' ES=' + task.ES.toFixed(1) + ' EF=' + task.EF.toFixed(1));
         }
+    }
+
+    // v2.9.12 T1.4 — one-time WARN if any tasks had actual_start but
+    // projectStart was missing (so we couldn't pin ES to the historical
+    // fact). Emitted once per runCPM call to avoid alert flooding on
+    // large schedules.
+    if (_projectStartMissingClashCount > 0) {
+        alerts.push({
+            severity: 'WARN',
+            context: 'actual-start-not-anchored',
+            message: 'Section D could not pin ES to actual_start for ' +
+                _projectStartMissingClashCount + ' task(s) because ' +
+                'opts.projectStart is missing or invalid. Predecessor logic ' +
+                'overrode the historical fact — this is the pre-v2.9.12 ' +
+                'behavior. Pass opts.projectStart=\'YYYY-MM-DD\' to enforce ' +
+                'AACE 29R-03 §4.3 actual-start immutability in Section D.',
+        });
     }
 
     // Project finish = max EF. v2.9.11 OPT-2: walk sorted[] (array) not
@@ -2223,6 +2699,29 @@ function _resolveHammocks(projectFinish, log, alerts) {
         const lfCeiling = _lfCeiling(h);
         const esCeiling = _esCeiling(h);
 
+        // v2.9.12 T3.22 — hammock orphan detection. When NONE of the four
+        // anchor sets resolve (both esFloor + lfCeiling are null and the
+        // backup pair lfFloor + esCeiling are also null), the hammock has
+        // no logic at all — neither preds nor succs survived parseXER, or
+        // every connecting edge was hammock-internal cycle. Previously the
+        // fallback `es=0, lf=projectFinish` silently absorbed the entire
+        // project span as the hammock's duration, masking the topology
+        // defect. Emit an ALERT before applying the fallback.
+        const _orphan = (esFloor === null && lfCeiling === null &&
+                         lfFloor === null && esCeiling === null);
+        if (_orphan && alerts) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'hammock-orphan',
+                message: 'Hammock ' + h.code + ' has no resolved predecessor or ' +
+                    'successor anchors (esFloor/lfFloor/lfCeiling/esCeiling all null). ' +
+                    'Falling back to es=0, lf=projectFinish which silently absorbs ' +
+                    'the entire project span as the hammock duration. Verify the ' +
+                    'hammock has at least one TASKPRED row connecting it to a ' +
+                    'non-hammock activity.',
+            });
+        }
+
         let es = esFloor !== null ? esFloor : 0;
         if (esCeiling !== null && esCeiling < es) es = esCeiling;
 
@@ -2251,10 +2750,22 @@ function _resolveHammocks(projectFinish, log, alerts) {
         h.LF = h.EF;
         h.TF = 0;
         h.duration = duration;
+        // v2.9.12 T3.23 — duration_working_days uses the hammock's own
+        // calendar (via clndr_id) so reports reflect the calendar the
+        // hammock was authored against. Previously duration was reported
+        // only as an ordinal day count (calendar-day span), which on a
+        // MonFri-calendar hammock over-reports vs P6.
+        if (h.clndr_id && _MC.calMap && _MC.calMap[h.clndr_id]) {
+            h.duration_working_days = _countWorkDaysBetween(
+                es, es + duration, _MC.calMap[h.clndr_id]);
+        } else {
+            h.duration_working_days = Math.round(duration);
+        }
         h.resolved = true;
         if (log) {
             log.push('HAM: ' + h.code + ' ES=' + h.ES.toFixed(1) +
-                ' EF=' + h.EF.toFixed(1) + ' dur=' + duration.toFixed(1));
+                ' EF=' + h.EF.toFixed(1) + ' dur=' + duration.toFixed(1) +
+                ' dur_working=' + h.duration_working_days);
         }
     }
 
@@ -2279,7 +2790,15 @@ function _resolveHammocks(projectFinish, log, alerts) {
 function getTasks() { return _MC.tasks; }
 function getRelationships() { return _MC.predecessors; }
 function getHammocks() { return _MC.hammocks; }
-function resetMC() { _MC.tasks = {}; _MC.predecessors = []; _MC.hammocks = {}; }
+function resetMC() {
+    _MC.tasks = {};
+    _MC.predecessors = [];
+    _MC.hammocks = {};
+    // v2.9.12 T1.5 — clear parseAlerts on reset so a follow-on parse+run
+    // doesn't see stale alerts from the previous file.
+    _MC.parseAlerts = [];
+    _MC.calMap = null;
+}
 
 // ============================================================================
 // SECTION F — Salvage mode (cycle-break + degraded-input logging)
@@ -3675,7 +4194,7 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '25 cross-validation fixtures × 281 checks bit-identical (including ' +
+                '40 cross-validation fixtures × 416 checks bit-identical (including ' +
                 'severity-level alert parity). Real XER (282 activities) 0 mismatches. ' +
                 testCountStr +
                 ' unit tests passing in CI. Test suite hash and source available on request.',
@@ -3696,7 +4215,7 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Zero on validation suite; not formally characterized on adversarial inputs.',
             evidence: 'Engine produces bit-identical output to Python reference implementation ' +
-                'on 25 fixtures + 282-activity real XER (0 mismatches). Edge-case torture ' +
+                'on 40 fixtures + 282-activity real XER (0 mismatches). Edge-case torture ' +
                 'audit identified pre-flight conditions (NEGATIVE_DURATION, OUT_OF_SEQUENCE, ' +
                 'DISCONNECTED) where strict mode now throws; salvage mode logs and continues. ' +
                 'No silent wrong-answer paths after v2.1.0. ' +

@@ -61,7 +61,7 @@ We follow a **90-day coordinated-disclosure timeline**:
 
 1. **Day 0** — report received, reporter acknowledged within 72 hours.
 2. **Day 0-7** — triage, severity assignment, fix plan.
-3. **Day 7-60** — fix developed, tested against the full 744-unit / 346-crossval suite, and against any new regression test the reporter supplies.
+3. **Day 7-60** — fix developed, tested against the full 792-unit / 416-crossval suite, and against any new regression test the reporter supplies.
 4. **Day 60-90** — release coordinated with the reporter. Both sides agree a public-disclosure date.
 5. **Day 90** — public disclosure (CHANGELOG entry, GitHub Security Advisory, optional CVE) regardless of whether all downstream consumers have upgraded. The engine is open-source; closed downstream consumers are responsible for their own patch windows.
 
