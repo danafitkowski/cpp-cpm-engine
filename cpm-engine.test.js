@@ -2567,7 +2567,7 @@ const _daubert_disc = E.buildDaubertDisclosure(null, {
 {
     // O-T5: AACE/Sanders citations appear in output.
     // Round 6: tautology removed — buildDaubertDisclosure ALWAYS emits Sanders
-    // in prong_4_general_acceptance.evidence (see cpm-engine.js line ~3428).
+    // in prong_4_general_acceptance.evidence (see cpm-engine.js ~line 3593).
     // The previous "if Sanders ∈ evidence then check, else assert true" was a
     // dead-code skip that masked a regression. Now we assert disclosure
     // evidence directly + both renderers, unconditionally.
