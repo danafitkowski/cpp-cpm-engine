@@ -213,10 +213,10 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — e
 
 ## Companion repositories
 
-Two companion repositories are public and consume this engine:
+Two companion repositories are public:
 
-- **[cpp-xer-parser](https://github.com/danafitkowski/cpp-xer-parser)** — Canonical Primavera P6 XER parser and generator
-- **[cpp-critical-path-validator](https://github.com/danafitkowski/cpp-critical-path-validator)** — Critical path validation and logic health assessment
+- **[cpp-xer-parser](https://github.com/danafitkowski/cpp-xer-parser)** — the canonical Primavera P6 XER parser. The engine consumes its parse output as the canonical XER → JS-object layer; `cpp-xer-parser` has no dependency on this engine.
+- **[cpp-critical-path-validator](https://github.com/danafitkowski/cpp-critical-path-validator)** — critical path validation and DCMA-14 assessment. Optionally consumes this engine for the LPM cross-check; degrades gracefully when absent.
 
 Additional CPP skills (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, collapsed-as-built, counter-claim-analysis, schedule-risk-analysis) are private; contact Critical Path Partners for access.
 

@@ -127,37 +127,35 @@ for (const f of r.per_fragnet) {
 
 ## Example 4 — Bayesian update across windows
 
-Use historical actuals to update activity-duration priors.
+Use historical actuals to update activity-duration priors via a conjugate Normal-Normal posterior, with optional hierarchical pooling by WBS group.
 
-See [`../examples/04_bayesian.js`](../examples/04_bayesian.js).
+See [`../examples/04_bayesian.js`](../examples/04_bayesian.js) for the runnable script. A short excerpt:
 
 ```js
 const E = require('@critical-path-partners/cpm-engine');
 
-// Prior schedule: 4 activities, all expected at 10 days each.
-const prior = [
-    { code: 'A', duration_days: 10 },
-    { code: 'B', duration_days: 10 },
-    { code: 'C', duration_days: 10 },
-    { code: 'D', duration_days: 10 },
+const priorActivities = [
+    { code: 'A', duration_days: 10, optimistic: 8, pessimistic: 14 },
+    { code: 'B', duration_days: 10, optimistic: 8, pessimistic: 14 },
+    { code: 'C', duration_days: 10, optimistic: 8, pessimistic: 14 },
+    { code: 'D', duration_days: 10, optimistic: 8, pessimistic: 14 },
 ];
 
-// Window-1 actuals show A & B both ran 14 days. B has not started yet.
-const actuals = {
-    A: { actual_duration_days: 14 },
-    B: { actual_duration_days: 14 },
-};
+// actualsByCode is a flat { code: observed_duration_days } map.
+const actualsByCode = { A: 14, B: 13 };
 
-const updated = E.computeBayesianUpdate(prior, actuals, {
-    pooling_strength: 0.5,    // 0 = no pooling, 1 = full pooling
+const updated = E.computeBayesianUpdate(priorActivities, actualsByCode, {
+    credible_interval: 0.95,
+    prior_strength: 1.0,
 });
 
-console.log('Updated posterior estimates:');
-for (const a of updated.posterior) {
-    console.log(`  ${a.code}: prior ${a.prior_duration} → posterior ${a.posterior_duration}d`);
+for (const code of ['A', 'B', 'C', 'D']) {
+    const p = updated.posterior_by_code[code];
+    console.log(`${code}: ${p.mean.toFixed(2)} ± ${p.std.toFixed(2)}`);
 }
-console.log('Pooled global slip rate:', updated.pooled_slip_rate);
 ```
+
+The runnable script also demonstrates hierarchical pooling via `wbs_groups` — when present, no-actual activities are pulled toward the group posterior. Run it with `node examples/04_bayesian.js`.
 
 ---
 

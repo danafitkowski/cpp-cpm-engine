@@ -45,3 +45,19 @@ yarn.lock
 # CI-generated witnesses are published as workflow artifacts + release assets.
 attestations/latest.json
 attestations/witness-*.json
+
+# Defensive secret-pattern blocklist — these should never be committed.
+# Reflects the SECURITY.md scope: zero runtime deps means zero accidental
+# secret material in the tree either.
+*.key
+*.pem
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+credentials
+credentials.*
+secrets
+secrets.*
+.netrc
+.npmrc
