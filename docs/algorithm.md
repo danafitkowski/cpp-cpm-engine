@@ -134,7 +134,7 @@ The engine emits AACE-canonical method labels in `result.manifest.methodology`:
 | `computeCPM`                          | "CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03"        |
 | `computeCPMSalvaging`                 | "AACE 29R-03 source validation + iterative cycle-break ..."               |
 | `computeCPMWithStrategies`            | "AACE 49R-06 §3 + AACE TFM + P6 native MFP ..."                            |
-| `computeTIA` (`mode='isolated'`)      | "AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base)"                   |
+| `computeTIA` (`mode='isolated'`)      | "AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)" |
 | `computeTIA` (`mode='cumulative-additive'`) | "AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base)"           |
 
 These strings are the ones AACE peer-reviewers and opposing experts expect to see in an expert report. The engine emits them automatically — you do not have to remember which RP applies to which method.

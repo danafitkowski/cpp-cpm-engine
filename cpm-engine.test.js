@@ -1949,7 +1949,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
             computed_at: new Date().toISOString(),
             activity_count: 50,
             relationship_count: 48,
-            methodology: 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base)',
+            methodology: 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)',
         },
     };
     const d = E.buildDaubertDisclosure(tiaMockResult, { test_count: 265 });

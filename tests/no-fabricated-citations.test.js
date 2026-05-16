@@ -42,6 +42,13 @@ const FORBIDDEN = [
     /Wickwire,\s+Driver,\s+Hurlbut,\s+Hester/,      // wrong author list
     /Construction\s+Scheduling.*4th\s+ed.*Wolters\s+Kluwer,?\s+2020/,  // Wickwire 4th is 2018
     /Pickavance[^.]*5th\s+ed[^.]*Sweet\s*&\s*Maxwell/, // Pickavance publisher drift
+    // F7 — AACE MIP descriptor scrub. The canonical AACE 29R-03 descriptors are
+    // "Single Simulation" (3.6 / 3.8) and "Multiple Base" (3.7). The legacy
+    // "Single Base" wording and the colloquial "Impacted As-Planned" subtitle
+    // are non-canonical and should not appear in live citation strings.
+    /MIP\s*3\.6\s*\([^)]*Single\s+Base/,
+    /MIP\s*3\.6\s*\([^)]*Impacted\s+As-Planned/,
+    /MIP\s*3\.8\s*\([^)]*Single\s+Base/,
 ];
 
 // Lines that contain any of these markers are documenting a fabricated
@@ -67,6 +74,9 @@ const META_MARKERS = [
     /not a numbered SCL/i,
     /Pickavance.*colloquial/i,
     /vendor-equivalent/i,
+    // F7 — historical CHANGELOG entries that quote the now-superseded
+    // "Single Base" wording when documenting that it was replaced.
+    /TIA disambiguation/i,
 ];
 
 // Filename-level skips for the audit infrastructure itself.
@@ -75,8 +85,8 @@ const SKIP_FILES = new Set([
 ]);
 
 const SCAN_DIRS = ['.', 'docs'];
-const SCAN_EXTENSIONS = ['.md', '.js', '.html'];
-const SKIP = ['node_modules', '.git', 'python_reference', 'tests'];
+const SCAN_EXTENSIONS = ['.md', '.js', '.html', '.py'];
+const SKIP = ['node_modules', '.git', 'tests'];
 
 const failures = [];
 

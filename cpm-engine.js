@@ -3715,7 +3715,7 @@ function computeTIA(activities, relationships, fragnets, opts) {
             method_id: 'computeTIA',
             methodology: mode === 'cumulative-additive'
                 ? 'AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base)'
-                : 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base)',
+                : 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)',
             method_caveat: 'SCL Protocol 2nd Ed (2017) and AACE recommend fragnet TIA for contemporaneous analysis. Retrospective TIA has limited forensic acceptance (cf. Sanders, M.C. 2024-07-25, "Junk science: the fallacy of retrospective time impact analysis," International Bar Association). Caller is responsible for method selection.',
             activity_count: activities.length,
             relationship_count: (relationships || []).length,
@@ -4312,7 +4312,7 @@ function buildDaubertDisclosure(result, opts) {
     // Derive methodology description from method_id if not in manifest.
     const methodology = manifest.methodology || (function () {
         const id = manifest.method_id || 'computeCPM';
-        if (id === 'computeTIA') return 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base)';
+        if (id === 'computeTIA') return 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)';
         if (id === 'computeCPMWithStrategies') return 'AACE 49R-06 §3 + AACE TFM + P6 native MFP (multi-method critical-path identification with divergence analysis)';
         if (id === 'computeCPMSalvaging') return 'AACE 29R-03 source validation + iterative cycle-break (highest-|lag| heuristic with alphabetical tiebreak)';
         return 'CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03';
@@ -4328,7 +4328,7 @@ function buildDaubertDisclosure(result, opts) {
         : 'unit-test count';
 
     return {
-        rule: 'Proposed FRE 707 / Daubert v. Merrell Dow Pharmaceuticals (1993) / FRCP 26(a)(2)(B)',
+        rule: 'FRE 702 (Dec 1, 2023 amendment) / Daubert v. Merrell Dow Pharmaceuticals (1993) / FRCP 26(a)(2)(B); also forward-compatible with proposed FRE 707.',
         methodology: {
             description: methodology,
             method_id: manifest.method_id || 'unknown',
@@ -4368,8 +4368,10 @@ function buildDaubertDisclosure(result, opts) {
         prong_4_general_acceptance: {
             answer: 'Yes',
             evidence: 'Methodology cited in AACE PPG #20 2nd Ed (2024) Forensic Schedule Analysis ' +
-                'practice guide. Used by Long International, HKA, Pickavance Consulting, and ' +
-                'major delay-claim consultancies. SCL Protocol 2nd Edition endorses TIA for ' +
+                'practice guide. The MIP 3.3/3.6/3.7/3.8 methodology is used by major ' +
+                'delay-claim consultancies. The CPP engine is one implementation of that ' +
+                'shared methodology; engine-level adoption is the open-source release goal ' +
+                '(§10 roadmap). SCL Protocol 2nd Edition endorses TIA for ' +
                 'contemporaneous analysis (Sanders, M.C. 2024-07-25 IBA "Junk science: the ' +
                 'fallacy of retrospective time impact analysis" — caveat acknowledged for ' +
                 'retrospective TIA acceptance limits).',
