@@ -4,6 +4,14 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
+## Tag history note (2026-05-16)
+
+Tags for `v2.9.2` through `v2.9.7` were created on 2026-05-16 as part of an OSS hygiene sweep and point at the original commits dated 2026-05-14. The CHANGELOG entries for those versions were authored at the time but the annotated tags were not pushed until the sweep. Each tag points at the final commit of its named wave (`v2.9.7` points at the Feature 5 commit, the last of five features in the v2.9.7 wave; rc1-rc4 covered the prior features). The previous tag jump from `cpm-engine-v2.9.1` straight to `v2.9.8` has been closed.
+
+A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG entry; used briefly for a Hostinger staging push) has been removed from both local and remote.
+
+---
+
 ## v2.9.11 — 2026-05-16 — Round 8 R8A engine math fix wave
 
 Four T1 engine-math bugs identified by the Round 8 R8A audit. Each was a silent-wrong-answer path — math diverged from P6 / AACE convention without any user-facing diagnostic. v2.9.11 closes all four with a corrected calculation plus a loud alert so the affected configurations cannot be missed in the future.
