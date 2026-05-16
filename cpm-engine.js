@@ -1036,8 +1036,44 @@ function computeCPM(activities, relationships, opts) {
     const nodeCodesOrdered = [];
     for (const a of activities) {
         if (!a) continue;
-        const code = a.code || '';
+        // F10 — trim whitespace on activity code. P6/XER round-trips sometimes
+        // emit codes with leading/trailing spaces that silently break
+        // adjacency lookups in the predMap / succMap. Emit an INFO so the
+        // trim is visible to forensic reviewers.
+        const codeRaw = a.code || '';
+        const code = String(codeRaw).trim();
         if (!code) continue;
+        if (code !== String(codeRaw)) {
+            alerts.push({
+                severity: 'INFO',
+                context: 'activity-code-trimmed',
+                message: 'Activity code ' + JSON.stringify(codeRaw) +
+                    ' had leading/trailing whitespace; trimmed to ' +
+                    JSON.stringify(code) + '. Source XER should be cleaned.',
+            });
+        }
+        // F10 — duplicate activity code. Previously a second activity with the
+        // same code silently overwrote the first; the original ES/EF/preds
+        // were discarded with no audit trail. Now emit a loud ALERT. When
+        // opts.strict is set, throw — claim-package builds should never
+        // proceed with a duplicate-code ambiguity.
+        if (code in nodes) {
+            const dupMsg = 'DUPLICATE_ACTIVITY_CODE: activity code ' + code +
+                ' appears more than once in the input set; the later record ' +
+                'silently overwrites the earlier one. Forensic ambiguity — ' +
+                'split codes or reject the second record before forensic use.';
+            if (opts.strict) {
+                const err = new Error(dupMsg);
+                err.code = 'DUPLICATE_ACTIVITY_CODE';
+                err.activity_code = code;
+                throw err;
+            }
+            alerts.push({
+                severity: 'ALERT',
+                context: 'duplicate-activity-code',
+                message: dupMsg,
+            });
+        }
         if (!(code in nodes)) nodeCodesOrdered.push(code);
         const durRaw = parseFloat(a.duration_days);
         if (!Number.isFinite(durRaw)) {
@@ -1165,9 +1201,37 @@ function computeCPM(activities, relationships, opts) {
     for (const r of relationships) {
         const fc = r.from_code;
         const tc = r.to_code;
-        let rtype = (r.type || 'FS').toUpperCase();
-        if (VALID_REL_TYPES.indexOf(rtype) === -1) rtype = 'FS';
-        const lag = parseFloat(r.lag_days) || 0;
+        const _rtypeRaw = (r.type || 'FS').toUpperCase();
+        let rtype = _rtypeRaw;
+        // F10 — invalid relationship type. Previously coerced to FS silently.
+        // Emit a WARN so the analyst can fix the source XER or accept the FS
+        // default with a visible audit trail.
+        if (VALID_REL_TYPES.indexOf(rtype) === -1) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'invalid-rel-type',
+                message: 'Relationship ' + fc + '->' + tc + ' has type=' +
+                    JSON.stringify(r.type) + ' which is not one of ' +
+                    VALID_REL_TYPES.join(', ') + '. Coerced to FS.',
+            });
+            rtype = 'FS';
+        }
+        // F10 — non-finite lag silently coerced to 0 prior. A real XER never
+        // emits Infinity/NaN as lag_days; if we see one the file is corrupt
+        // or hand-edited and the analyst must be told.
+        const _lagRaw = parseFloat(r.lag_days);
+        let lag = 0;
+        if (Number.isFinite(_lagRaw)) {
+            lag = _lagRaw;
+        } else if (r.lag_days !== undefined && r.lag_days !== null && r.lag_days !== '') {
+            alerts.push({
+                severity: 'WARN',
+                context: 'lag-non-finite',
+                message: 'Relationship ' + fc + '->' + tc + ' ' + rtype +
+                    ' has non-finite lag_days=' + JSON.stringify(r.lag_days) +
+                    '; coerced to 0. Verify the source XER row.',
+            });
+        }
         if (!(fc in nodes) || !(tc in nodes)) {
             // Audit T1 fix: emit a non-blocking ALERT so DAUBERT.md's
             // "No silent wrong-answer paths" claim holds for strict mode.
@@ -5482,7 +5546,11 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
             'x2="' + px.toFixed(1) + '" y2="' + (PLOT_Y2 + 5) + '" ' +
             'stroke="' + AXIS_COLOR + '" stroke-width="1.5"/>'
         );
-        const label = String(windows[wi]).slice(0, 12);
+        // F10 — render full window label. Prior `.slice(0, 12)` silently
+        // truncated forensic window IDs like "2026-01-W01-blocking" to
+        // "2026-01-W01" — invisible data loss in user-facing SVG. Dana's #1
+        // forensic rule: never truncate user-facing data.
+        const label = String(windows[wi]);
         parts.push(
             '<text x="' + px.toFixed(1) + '" y="' + (PLOT_Y2 + 18) + '" ' +
             'text-anchor="middle" font-size="10" fill="' + AXIS_COLOR + '" ' +

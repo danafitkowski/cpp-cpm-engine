@@ -6000,6 +6000,98 @@ console.log('\n=== v2.9.13 Bug F1 — In-progress retained-logic correctness ===
         'LF=' + (taskA && taskA.LF) + ' EF=' + (taskA && taskA.EF));
 }
 
+console.log('\n=== v2.9.14 Bug F10 — Input validation hardening ===');
+
+// T-FIX-F10-1 — Duplicate activity code emits ALERT (non-strict mode).
+// Previously the second record silently overwrote the first; the original
+// ES/EF/preds were discarded with no audit trail.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5 },
+         { code: 'A', duration_days: 10 }],
+        []
+    );
+    const has = (r.alerts || []).some(a =>
+        a && a.context === 'duplicate-activity-code' &&
+        /DUPLICATE_ACTIVITY_CODE/.test(a.message || ''));
+    check('T-FIX-F10-1: DUPLICATE_ACTIVITY_CODE alert emitted',
+        has, 'alerts=' + JSON.stringify(r.alerts));
+    check('T-FIX-F10-1: severity is ALERT',
+        (r.alerts || []).find(a => a && a.context === 'duplicate-activity-code')
+            .severity === 'ALERT');
+}
+
+// T-FIX-F10-2 — opts.strict throws on duplicate.
+{
+    let threw = null;
+    try {
+        E.computeCPM(
+            [{ code: 'A', duration_days: 5 },
+             { code: 'A', duration_days: 10 }],
+            [],
+            { strict: true }
+        );
+    } catch (e) { threw = e; }
+    check('T-FIX-F10-2: strict mode throws on duplicate',
+        threw && threw.code === 'DUPLICATE_ACTIVITY_CODE',
+        'threw=' + (threw && threw.message));
+}
+
+// T-FIX-F10-3 — Non-finite relationship lag emits WARN, coerced to 0.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5 },
+         { code: 'B', duration_days: 5 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 'Infinity' }]
+    );
+    const has = (r.alerts || []).some(a =>
+        a && a.context === 'lag-non-finite' && a.severity === 'WARN');
+    check('T-FIX-F10-3: non-finite lag emits WARN',
+        has, 'alerts=' + JSON.stringify(r.alerts));
+}
+
+// T-FIX-F10-4 — Activity code with whitespace emits INFO and gets trimmed.
+{
+    const r = E.computeCPM(
+        [{ code: '  A  ', duration_days: 5 }],
+        []
+    );
+    const has = (r.alerts || []).some(a =>
+        a && a.context === 'activity-code-trimmed' && a.severity === 'INFO');
+    check('T-FIX-F10-4: trimmed-code INFO emitted',
+        has, 'alerts=' + JSON.stringify(r.alerts));
+    check('T-FIX-F10-4: trimmed code present in nodes',
+        r.nodes && r.nodes.A);
+}
+
+// T-FIX-F10-5 — Invalid relationship type emits WARN and defaults to FS.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5 },
+         { code: 'B', duration_days: 5 }],
+        [{ from_code: 'A', to_code: 'B', type: 'BOGUS' }]
+    );
+    const has = (r.alerts || []).some(a =>
+        a && a.context === 'invalid-rel-type' && a.severity === 'WARN');
+    check('T-FIX-F10-5: invalid-rel-type WARN emitted',
+        has, 'alerts=' + JSON.stringify(r.alerts));
+}
+
+// T-FIX-F10-6 — Non-finite duration throws INVALID_DURATION (already
+// guarded; pin behaviour for regression).
+{
+    let threw = null;
+    try {
+        E.computeCPM(
+            [{ code: 'A', duration_days: 'NaN' }],
+            []
+        );
+    } catch (e) { threw = e; }
+    check('T-FIX-F10-6: non-finite duration throws INVALID_DURATION',
+        threw && threw.code === 'INVALID_DURATION',
+        'threw=' + (threw && threw.message));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
