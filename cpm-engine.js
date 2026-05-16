@@ -454,6 +454,32 @@ function _isWorkDayOffset(offset, workDays, holidaysSet) {
     return !holidaysSet.has(_dateStringFromOffset(offset));
 }
 
+// v2.9.12 F2.1 — Snap a calendar offset to the nearest working day.
+// Used by the zero-advance / zero-retreat short-circuit in addWorkDays /
+// subtractWorkDays so FS-0 / SS-0 / FF-0 / SF-0 forwarders never inherit
+// a Sat / Sun / holiday anchor verbatim. Cap the walk at 366 days as a
+// safety bound — an all-holiday calendar would otherwise hang.
+function _roundForwardToWorkday(num, workDays, holidaysSet) {
+    if (!Number.isFinite(num) || num <= 0) return num;
+    let cur = Math.round(num);
+    let guard = 0;
+    while (!_isWorkDayOffset(cur, workDays, holidaysSet)) {
+        cur += 1;
+        if (++guard > 366) return Math.round(num);
+    }
+    return cur;
+}
+function _roundBackwardToWorkday(num, workDays, holidaysSet) {
+    if (!Number.isFinite(num) || num <= 0) return num;
+    let cur = Math.round(num);
+    let guard = 0;
+    while (!_isWorkDayOffset(cur, workDays, holidaysSet)) {
+        cur -= 1;
+        if (++guard > 366) return Math.round(num);
+    }
+    return cur;
+}
+
 function _resolveCalendar(calendarInfo) {
     // v2.1-C2 fast-return: when computeCPM pre-resolves the calMap at the top
     // of its run, every calFor(node) call passes an already-resolved struct.
@@ -538,7 +564,18 @@ function addWorkDays(startNum, nDays, calendarInfo) {
     if (nDays === null || nDays === undefined) nDays = 0;
     let n = Math.round(Number(nDays) || 0);
     if (n < 0) return subtractWorkDays(startNum, -n, calendarInfo);
-    if (n === 0) return startNum;
+    // v2.9.12 F2.1 — zero-advance snap. When n === 0 with a real calendar,
+    // a startNum that lies on a non-workday must be snapped FORWARD to the
+    // next working day. Without this, FS-0 / SS-0 / FF-0 / SF-0 forwarders
+    // inherit a Sat / Sun / holiday anchor verbatim and stamp the
+    // successor's ES/EF on a non-working day. Bare zero with no calendar
+    // stays identity (preserves Section D ordinal-arithmetic callers).
+    if (n === 0) {
+        if (!calendarInfo || startNum <= 0) return startNum;
+        const { workDays: wd0, holidaysSet: hs0 } = _resolveCalendar(calendarInfo);
+        if (!wd0 || wd0.length === 0) return startNum;
+        return _roundForwardToWorkday(startNum, wd0, hs0);
+    }
     if (startNum <= 0) return startNum + n;  // no anchor — ordinal fallback
 
     const { workDays, holidaysSet } = _resolveCalendar(calendarInfo);
@@ -566,7 +603,15 @@ function subtractWorkDays(endNum, nDays, calendarInfo) {
     if (nDays === null || nDays === undefined) nDays = 0;
     let n = Math.round(Number(nDays) || 0);
     if (n < 0) return addWorkDays(endNum, -n, calendarInfo);
-    if (n === 0) return endNum;
+    // v2.9.12 F2.1 — symmetric zero-retreat snap (see addWorkDays). When
+    // n === 0 with a real calendar, a non-workday anchor snaps BACKWARD to
+    // the prior working day. Used by FF-0 / SF-0 anchor → succ.ES retreat.
+    if (n === 0) {
+        if (!calendarInfo || endNum <= 0) return endNum;
+        const { workDays: wd0, holidaysSet: hs0 } = _resolveCalendar(calendarInfo);
+        if (!wd0 || wd0.length === 0) return endNum;
+        return _roundBackwardToWorkday(endNum, wd0, hs0);
+    }
     if (endNum <= 0) return endNum - n;
 
     const { workDays, holidaysSet } = _resolveCalendar(calendarInfo);
@@ -1020,7 +1065,42 @@ function computeCPM(activities, relationships, opts) {
         let ef = a.early_finish ? dateToNum(a.early_finish) : 0;
         if (isComplete && actualFinish) {
             ef = dateToNum(actualFinish);
-            if (actualStart) {
+            // v2.9.13 F1-Bug3 — Forensic data-quality check: actual_finish
+            // after data_date is a P6 red flag (claim-fabrication / retro-
+            // edit signature). Engine no longer swallows it — emit ALERT
+            // and continue (don't reject; let downstream analyst decide).
+            if (ddNum > 0 && ef > ddNum) {
+                alerts.push({
+                    severity: 'ALERT',
+                    context: 'future-actual-finish',
+                    message: 'FUTURE_ACTUAL_FINISH on ' + code +
+                        ': actual_finish=' + actualFinish +
+                        ' is after data_date=' + dataDate +
+                        '. Completed activities cannot finish in the future relative ' +
+                        'to the schedule update — likely retroactive baseline edit or ' +
+                        'P6 data-entry error. Investigate.',
+                });
+            }
+            // v2.9.13 F1-Bug4 — Inverted actuals (AS > AF) silently flipped
+            // ES > EF, producing a negative-working-duration completed
+            // activity. Refuse to seed ES from the inverted AS — derive ES
+            // via subtractWorkDays(EF, duration) (same recovery as
+            // MISSING_ACTUAL_START) so downstream date math has a valid
+            // ES <= EF — and emit ALERT so the analyst sees the error.
+            if (actualStart && dateToNum(actualStart) > ef) {
+                const _calInv = (a.clndr_id && calMap) ? calMap[a.clndr_id] : null;
+                es = subtractWorkDays(ef, dur, _calInv);
+                alerts.push({
+                    severity: 'ALERT',
+                    context: 'inverted-actuals',
+                    message: 'INVERTED_ACTUALS on ' + code +
+                        ': actual_start=' + actualStart +
+                        ' is AFTER actual_finish=' + actualFinish +
+                        '. Negative-duration completed activity; ES derived ' +
+                        'via subtractWorkDays(EF, duration) = ' + numToDate(es) +
+                        '. Investigate P6 data-entry error.',
+                });
+            } else if (actualStart) {
                 es = dateToNum(actualStart);
             } else {
                 // v2.9.11 R8A-1 — actual_finish without actual_start. Previously
@@ -1151,14 +1231,28 @@ function computeCPM(activities, relationships, opts) {
             maxES = actStartNum;
         } else {
             // No actual — forecasts cannot precede dataDate.
-            maxES = Math.max(node.es, ddNum);
+            // v2.9.13 F1-Bug5 — DROPPED node.es floor. Input `early_start` is
+            // an initialization hint only, not a SNET floor. The previous
+            // Math.max(node.es, ddNum) silently anchored every recompute at
+            // the previously-computed ES, so round-tripping (parseXER →
+            // computeCPM → save → re-run) silently pinned each activity at
+            // its prior ES. To enforce an ES floor, use constraint:
+            // {type:'SNET', date:...} explicitly.
+            maxES = ddNum;
         }
         let drivingPred = null;  // tracks which pred (if any) gave maxES
+        // v2.9.12 F2.2 — FF/SF finish-anchor identity. Round-tripping
+        // retreat→advance through duration drifts off the anchor whenever
+        // the anchor lies on a non-workday under nodeCal. Capture the
+        // winning pred's anchor and replay it directly when node.ef is
+        // computed below; preserves FF-0 identity (succ.EF === pred.EF).
+        let finishAnchorEF = null;
         for (const p of preds) {
             const pnode = nodes[p.from_code];
             if (!pnode) continue;
             let drive = 0;
             const lag = p.lag_days;
+            let thisAnchorEF = null;  // FF/SF only; null otherwise
             if (p.type === 'FS') {
                 drive = _advanceWithAlerts(pnode.ef, lag, nodeCal, alerts,
                     'FS lag ' + pnode.code + '->' + code);
@@ -1170,11 +1264,13 @@ function computeCPM(activities, relationships, opts) {
                     'FF lag ' + pnode.code + '->' + code);
                 drive = _retreatWithAlerts(ffAnchor, node.duration_days, nodeCal, alerts,
                     'FF duration ' + code);
+                thisAnchorEF = ffAnchor;
             } else if (p.type === 'SF') {
                 const sfAnchor = _advanceWithAlerts(pnode.es, lag, nodeCal, alerts,
                     'SF lag ' + pnode.code + '->' + code);
                 drive = _retreatWithAlerts(sfAnchor, node.duration_days, nodeCal, alerts,
                     'SF duration ' + code);
+                thisAnchorEF = sfAnchor;
             } else {
                 drive = _advanceWithAlerts(pnode.ef, lag, nodeCal, alerts,
                     'FS-default lag ' + pnode.code + '->' + code);
@@ -1200,6 +1296,8 @@ function computeCPM(activities, relationships, opts) {
                     type: p.type,
                     lag_days: lag,
                 };
+                // v2.9.12 F2.2 — capture FF/SF anchor of WINNING driver.
+                finishAnchorEF = thisAnchorEF;
             }
         }
 
@@ -1237,6 +1335,10 @@ function computeCPM(activities, relationships, opts) {
             }
         }
 
+        // v2.9.12 F2.2 — FF/SF anchor identity flag. Used below to stamp
+        // node.ef directly from the anchor, bypassing the advance/retreat
+        // round-trip that drifts on non-workday anchors.
+        const _useFinishAnchor = finishAnchorEF !== null && !hasActualStart;
         node.es = maxES;
         // v2.9.12 T3.18 — P6 retained-logic mode. When an in-progress
         // activity carries a `remaining_duration` value (the work left after
@@ -1253,6 +1355,13 @@ function computeCPM(activities, relationships, opts) {
             const efAnchor = (ddNum > 0 && ddNum > maxES) ? ddNum : maxES;
             node.ef = _advanceWithAlerts(efAnchor, _remRaw, nodeCal, alerts,
                 'forward ' + code + '.EF (retained-logic rem=' + _remRaw + ')');
+        } else if (_useFinishAnchor) {
+            // v2.9.12 F2.2 — FF/SF identity path: stamp EF from the
+            // captured anchor, then retreat to derive ES (matches maxES;
+            // explicit reassignment is intentional for clarity).
+            node.ef = finishAnchorEF;
+            node.es = _retreatWithAlerts(node.ef, node.duration_days, nodeCal, alerts,
+                'forward ' + code + '.ES (FF/SF anchor)');
         } else {
             node.ef = _advanceWithAlerts(node.es, node.duration_days, nodeCal, alerts,
                 'forward ' + code + '.EF');
@@ -1349,14 +1458,23 @@ function computeCPM(activities, relationships, opts) {
         // complete), LS cannot drift later than ES — that would imply the
         // activity should have started LATER than it actually did, which is
         // physically impossible (the work already started). Pin LS = ES and
-        // tighten LF = ES + duration_days; the activity is on the critical
-        // path of its own historical fact.
+        // LF = EF (mirror of the completed-activity branch at lines
+        // ~1294-1298); the in-progress activity is on the critical path of
+        // its own historical fact.
+        //
+        // v2.9.13 F1-Bug1 — under P6 retained-logic (T3.18), EF was anchored
+        // at max(actual_start, data_date) + remaining_duration. The previous
+        // pin re-derived LF as ES + duration_days, which is LARGER than EF
+        // for any partly-complete activity (rem < dur). That produced bogus
+        // positive TF = duration_days - remaining_duration on in-progress
+        // critical activities, dropping them OFF the critical path. Pinning
+        // LF = EF directly preserves the retained-logic EF anchor and forces
+        // TF = 0 as required for an immutable in-progress activity.
         if (node.actual_start && !node.is_complete) {
             const _aSNum = dateToNum(node.actual_start);
             if (_aSNum > 0 && node.ls > node.es) {
                 node.ls = node.es;
-                node.lf = _advanceWithAlerts(node.es, node.duration_days, nodeCal, alerts,
-                    'in-progress LF pin ' + code);
+                node.lf = node.ef;
             }
         }
         node.tf = Math.round((node.lf - node.ef) * 1000) / 1000;
@@ -1448,7 +1566,13 @@ function computeCPM(activities, relationships, opts) {
                 bindingSuccType = s.type;
             }
         }
-        const ff = (minSlack === Infinity) ? n.tf : Math.max(0, Math.round(minSlack * 1000) / 1000);
+        // v2.9.13 Bug F4-4 — Free Float is signed. Terminals already produce a
+        // signed FF (= TF, made signed in v2.9.12 T2.12); non-terminals had a
+        // Math.max(0, …) clamp that masked over-constrained networks (FNLT
+        // violations, FS-lead pulls, SS/FF leads). Drop the clamp so an
+        // over-constrained activity reports negative FF — same forensic
+        // disclosure rule we use for TF / tf_working_days.
+        const ff = (minSlack === Infinity) ? n.tf : Math.round(minSlack * 1000) / 1000;
         n.ff = ff;
         // v2.9.11 R8A-3 — Use binding successor's calendar for FF / SF.
         let ffCal;
@@ -2385,6 +2509,17 @@ function runCPM(opts) {
         // shrinks via the constraint clamp, LS must follow (LS = LF - duration).
         const lsFromLF = task.LF - task.remaining;
         if (lsFromLF < task.LS) task.LS = lsFromLF;
+        // v2.9.13 F1-Bug6 — AACE 29R-03 §4.3 in-progress LS pin (mirror of
+        // Section C T3.19). Section D's MC per-iteration backward pass
+        // previously omitted this pin, so any in-progress activity with
+        // float-rich successors silently appeared non-critical in the MC
+        // distribution. Forward pass at line ~2065-2068 already pins ES to
+        // actual_start; pin LS = ES and LF = EF here to preserve the
+        // immutability invariant on the backward leg.
+        if (task.actual_start && !task.is_complete && task.LS > task.ES) {
+            task.LS = task.ES;
+            task.LF = task.ES + task.remaining;
+        }
         task.TF = task.LF - task.EF;
         if (logOutput) {
             log.push('BWD: ' + task.code + ' LS=' + task.LS.toFixed(1) +
@@ -3028,19 +3163,27 @@ function computeCPMSalvaging(activities, relationships, opts) {
 
 // ── MFP helper: find activity with latest EF (project finish candidate) ──────
 //
-// Returns the activity code with the maximum EF value among all nodes.
-// This mirrors P6's default end-milestone selection when no target is specified.
+// Returns the activity code with the maximum EF value among all nodes, with
+// deterministic tie-break — v2.9.13 Bug F4-3:
+//   1. Filter out is_complete nodes (an in-progress end milestone outranks a
+//      finished historical one — the forecast side is what callers care about).
+//   2. Among nodes at the global max EF, return the alphabetically-first code.
+// If every node is complete (an all-historical schedule), fall back to the
+// alphabetical pick across the complete set so we still produce a value.
 function _findLatestFinish(nodes) {
-    let best = null;
     let bestEF = -Infinity;
     for (const c of Object.keys(nodes)) {
         const n = nodes[c];
-        if (n && n.ef > bestEF) {
-            bestEF = n.ef;
-            best = c;
-        }
+        if (n && Number.isFinite(n.ef) && n.ef > bestEF) bestEF = n.ef;
     }
-    return best;
+    if (!Number.isFinite(bestEF)) return null;
+    const tied = [];
+    for (const c of Object.keys(nodes)) {
+        if (nodes[c] && nodes[c].ef === bestEF) tied.push(c);
+    }
+    const live = tied.filter((c) => !nodes[c].is_complete);
+    const pool = (live.length ? live : tied).slice().sort();
+    return pool[0] || null;
 }
 
 // ── MFP helper: P6 Multiple Float Path algorithm (Total-Float mode) ───────────
@@ -6093,6 +6236,8 @@ const _api = {
     computeCPMSalvaging,
     // Section G
     computeCPMWithStrategies,
+    // Section G — internal helper exposed for v2.9.13 Bug F4-3 test only.
+    _findLatestFinish,
     // Section H
     computeTIA,
     // Section I

@@ -1116,6 +1116,55 @@ compareFixture('F44 — ALAP on secondary slot (v2.9.12 T4.26)', {
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
 });
 
+// F45 — v2.9.13 F1-Bug1/F1-Bug2 — In-progress retained-logic correctness.
+// A is in-progress (dur=10, rem=3, AS=2026-01-08). B is a parallel critical
+// chain (dur=20) so A has float-rich successors that would otherwise let
+// A.LS drift later than A.ES. The fixture pins JS/Python parity on the
+// retained-logic EF anchor (Bug 2 — Python T3.18 backport) AND on the
+// in-progress LF=EF pin (Bug 1 — JS regression).
+compareFixture('F45 — in-progress retained-logic LF=EF pin (F1-Bug1/F1-Bug2)', {
+    activities: [
+        { code: 'A', duration_days: 10, early_start: '2026-01-05',
+          actual_start: '2026-01-08', remaining_duration: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 20, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'D', duration_days: 1, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'D', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'D', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F46 — v2.9.13 F1-Bug2 — Python T3.18 single-activity retained-logic EF.
+// Pin JS/Python parity on the EF anchor formula
+// EF = advance(max(actual_start, data_date), remaining_duration).
+compareFixture('F46 — single in-progress activity retained-logic EF (F1-Bug2)', {
+    activities: [
+        { code: 'A', duration_days: 10, early_start: '2026-01-05',
+          actual_start: '2026-01-08', remaining_duration: 3, clndr_id: 'MF' },
+    ],
+    relationships: [],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F47 — v2.9.13 F1-Bug5 — Stored early_start does NOT defeat data_date floor.
+// X has early_start=2026-01-01 but data_date=2026-02-01. Pre-fix the
+// max(node.es, ddNum) floor in JS and the analogous max(node['es'], dd_num)
+// in Python pinned ES = early_start (= 2026-01-01) by accident — silently
+// SNET-anchoring the schedule one month early. Post-fix dataDate is the
+// floor; early_start is an initialization hint only.
+compareFixture('F47 — stored early_start NOT a SNET floor (F1-Bug5)', {
+    activities: [
+        { code: 'X', duration_days: 5, early_start: '2026-01-01', clndr_id: 'MF' },
+    ],
+    relationships: [],
+    data_date: '2026-02-01',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
 console.log('\n=========================================');
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks);

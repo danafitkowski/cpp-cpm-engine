@@ -5784,6 +5784,222 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         'es=' + B.es + ' ls=' + B.ls);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// v2.9.13 Bug F1 — In-progress activity retained-logic correctness wave
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n=== v2.9.13 Bug F1 — In-progress retained-logic correctness ===');
+
+// T-FIX-F1-1 — Retained-logic LF must pin to EF, not to ES + duration_days.
+// A is in-progress (duration_days=10, remaining=3, AS=2026-01-08). B is a
+// parallel critical chain (duration=20) so A has float-rich successor logic
+// that would otherwise let A.LS drift later than A.ES, triggering the
+// in-progress pin. Pre-fix the pin set LF = ES + duration_days, producing
+// bogus TF = duration_days - remaining_duration = 7 wd and dropping A off
+// the critical path.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 10, early_start: '2026-01-05',
+           actual_start: '2026-01-08', remaining_duration: 3, clndr_id: 'MF' },
+         { code: 'B', duration_days: 20, early_start: '2026-01-05', clndr_id: 'MF' },
+         { code: 'D', duration_days: 1, clndr_id: 'MF' }],
+        [{ from_code: 'A', to_code: 'D', type: 'FS', lag_days: 0 },
+         { from_code: 'B', to_code: 'D', type: 'FS', lag_days: 0 }],
+        { data_date: '2026-01-12',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    const A = r.nodes.A;
+    check('T-FIX-F1-1: A.tf === 0 (in-progress immutability — was 7 pre-fix)',
+        A.tf === 0,
+        'tf=' + A.tf);
+    check('T-FIX-F1-1: A.lf === A.ef (mirror of completed branch)',
+        A.lf === A.ef,
+        'lf=' + A.lf + ' ef=' + A.ef);
+    check('T-FIX-F1-1: A.ls === A.es (LS pinned to AS)',
+        A.ls === A.es,
+        'ls=' + A.ls + ' es=' + A.es);
+    check('T-FIX-F1-1: A on critical path (in-progress critical activity)',
+        r.critical_codes && r.critical_codes.indexOf('A') >= 0,
+        'critical_codes=' + JSON.stringify(r.critical_codes));
+}
+
+// T-FIX-F1-2 — Python T3.18 backport coverage (JS side). The retained-logic
+// EF formula uses max(actual_start, data_date) + remaining_duration. JS has
+// always shipped this; the regression test pins the JS behavior so the
+// Python backport can be cross-validated against it via cpm-engine.crossval.js
+// fixture F45.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 10, early_start: '2026-01-05',
+           actual_start: '2026-01-08', remaining_duration: 3, clndr_id: 'MF' }],
+        [],
+        { data_date: '2026-01-12',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    const A = r.nodes.A;
+    // EF anchor = max(AS=01-08, DD=01-12) = 01-12 (Monday); advance 3 wd = 01-15 (Thursday).
+    check('T-FIX-F1-2: EF anchored at data_date + remaining_duration',
+        A.ef_date === '2026-01-15',
+        'ef_date=' + A.ef_date);
+    // Without remaining_duration the legacy branch fires: ef = es + duration_days.
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 10, early_start: '2026-01-05',
+           actual_start: '2026-01-08', clndr_id: 'MF' }],
+        [],
+        { data_date: '2026-01-12',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    check('T-FIX-F1-2: legacy branch fires without remaining_duration',
+        r2.nodes.A.ef_date === '2026-01-22',
+        'ef_date=' + r2.nodes.A.ef_date);
+}
+
+// T-FIX-F1-3 — FUTURE_ACTUAL_FINISH alert on actual_finish > data_date.
+// A reports complete at 2026-01-20 but data_date is 2026-01-12 — a P6 red
+// flag for retro-edited or fabricated claim schedules. Engine must emit
+// ALERT (not WARN — this is high-severity forensic signal) and continue.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           actual_start: '2026-01-05', actual_finish: '2026-01-20',
+           clndr_id: 'MF' }],
+        [],
+        { data_date: '2026-01-12',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    const alert = r.alerts.find(a => a.context === 'future-actual-finish');
+    check('T-FIX-F1-3: FUTURE_ACTUAL_FINISH alert emitted',
+        !!alert,
+        'alert=' + JSON.stringify(alert));
+    check('T-FIX-F1-3: severity is ALERT (not WARN — forensic-grade signal)',
+        alert && alert.severity === 'ALERT',
+        'severity=' + (alert && alert.severity));
+    check('T-FIX-F1-3: message names activity code A',
+        alert && alert.message.indexOf('FUTURE_ACTUAL_FINISH on A') >= 0,
+        'message=' + (alert && alert.message));
+    // When data_date is missing (ddNum=0) the check is skipped (cannot validate).
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           actual_start: '2026-01-05', actual_finish: '2026-01-20', clndr_id: 'MF' }],
+        [],
+        { cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    check('T-FIX-F1-3: no FUTURE_ACTUAL_FINISH alert when dataDate missing',
+        !r2.alerts.some(a => a.context === 'future-actual-finish'));
+}
+
+// T-FIX-F1-4 — INVERTED_ACTUALS alert when actual_start > actual_finish.
+// A.AS=2026-03-15, A.AF=2026-03-10 — negative-duration completed activity.
+// Engine must emit ALERT, refuse to seed ES from inverted AS, and recover
+// by deriving ES via subtractWorkDays(EF, duration) so downstream date math
+// has a valid ES <= EF.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           actual_start: '2026-03-15', actual_finish: '2026-03-10',
+           clndr_id: 'MF' }],
+        [],
+        { data_date: '2026-03-20',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    const A = r.nodes.A;
+    const alert = r.alerts.find(a => a.context === 'inverted-actuals');
+    check('T-FIX-F1-4: INVERTED_ACTUALS alert emitted',
+        !!alert,
+        'alert=' + JSON.stringify(alert));
+    check('T-FIX-F1-4: severity is ALERT (data-entry error signal)',
+        alert && alert.severity === 'ALERT');
+    check('T-FIX-F1-4: A.es <= A.ef (no negative-duration leak)',
+        A.es <= A.ef,
+        'es=' + A.es + ' ef=' + A.ef);
+    check('T-FIX-F1-4: A.es > 0 (recovered via subtractWorkDays, not zero)',
+        A.es > 0,
+        'es=' + A.es);
+}
+
+// T-FIX-F1-5 — Round-trip stability. Round-tripping a previous result
+// (parseXER → computeCPM → save → re-run with stored early_start) must NOT
+// silently SNET-anchor every activity at its previously-computed ES.
+// Pre-fix: input early_start = previous ES caused Math.max(node.es, ddNum)
+// to pin ES to the prior value even when predecessor logic would have
+// produced a different one.
+{
+    const acts = [
+        { code: 'A', duration_days: 5 },
+        { code: 'B', duration_days: 3 },
+        { code: 'C', duration_days: 2 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ];
+    const r1 = E.computeCPM(acts, rels, {});
+    // Round-trip: feed prior ES back as `early_start` on every activity.
+    const acts2 = acts.map((a, i) => ({
+        ...a,
+        early_start: E.numToDate(r1.nodes[a.code].es),
+    }));
+    const r2 = E.computeCPM(acts2, rels, {});
+    check('T-FIX-F1-5: round-trip stable — A.es unchanged',
+        r1.nodes.A.es === r2.nodes.A.es,
+        'r1=' + r1.nodes.A.es + ' r2=' + r2.nodes.A.es);
+    check('T-FIX-F1-5: round-trip stable — B.es unchanged',
+        r1.nodes.B.es === r2.nodes.B.es,
+        'r1=' + r1.nodes.B.es + ' r2=' + r2.nodes.B.es);
+    check('T-FIX-F1-5: round-trip stable — C.es unchanged',
+        r1.nodes.C.es === r2.nodes.C.es);
+
+    // Stronger test: with a non-zero dataDate, supplying an early_start
+    // EARLIER than dataDate must NOT pull ES back below dataDate (pre-fix
+    // node.es=very-early floor wins over dataDate). Post-fix dataDate is
+    // the ES floor; early_start hint is ignored.
+    const acts3 = [
+        { code: 'X', duration_days: 5, early_start: '2026-01-01' },  // hint
+    ];
+    const r3 = E.computeCPM(acts3, [], { data_date: '2026-02-01' });
+    check('T-FIX-F1-5: stored early_start does NOT defeat dataDate floor',
+        r3.nodes.X.es_date === '2026-02-01',
+        'es_date=' + r3.nodes.X.es_date);
+}
+
+// T-FIX-F1-6 — Section D Monte Carlo backward pass in-progress LS pin.
+// Mirrors T-FIX-F1-1 for Section D's per-iteration MC engine. A is
+// in-progress with B a long parallel chain. The Section D forward pass
+// pins A.ES = actual_start, but pre-fix the backward pass let A.LS drift
+// later than A.ES via successor logic, giving A bogus positive TF and
+// dropping it from the MC criticalCount.
+{
+    const xer = [
+        '%T CALENDAR',
+        '%F clndr_id\tclndr_name\tdefault_flag\tclndr_data',
+        '%R 1\tMF\tY\t',
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id',
+        // A: 10wd target, 3wd remaining, in-progress at 2026-01-08.
+        '%R 1\tA\tInProgressA\tTT_Task\t80\t24\t2026-01-08 08:00\t\t1',
+        // B: 20wd parallel chain to make A have float-rich successor.
+        '%R 2\tB\tParallelB\tTT_Task\t160\t160\t\t\t1',
+        // D: terminal milestone.
+        '%R 3\tD\tFinish\tTT_Mile\t0\t0\t\t\t1',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t3\tPR_FS\t0',
+        '%R 2\t3\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    E.runCPM({ projectStart: '2026-01-05', logOutput: false });
+    const taskA = Object.values(E.getTasks()).find(t => t.code === 'A');
+    check('T-FIX-F1-6: Section D A.TF === 0 (in-progress LS pin fired)',
+        taskA && taskA.TF === 0,
+        'TF=' + (taskA && taskA.TF));
+    check('T-FIX-F1-6: Section D A.LS === A.ES',
+        taskA && taskA.LS === taskA.ES,
+        'LS=' + (taskA && taskA.LS) + ' ES=' + (taskA && taskA.ES));
+    check('T-FIX-F1-6: Section D A.LF === A.EF',
+        taskA && taskA.LF === taskA.EF,
+        'LF=' + (taskA && taskA.LF) + ' EF=' + (taskA && taskA.EF));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

@@ -659,10 +659,25 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                         f'forensic accuracy.'
                     ),
                 })
+        # v2.9.13 F1-Bug2 — parse remaining_duration once at node-construction
+        # time so the forward pass (which loops over `order`, not `activities`)
+        # can read it from `node`. Non-finite / negative values are coerced
+        # to None so the legacy fallback applies. Backports JS T3.18.
+        _rem_raw = a.get('remaining_duration')
+        _rem_dur = None
+        try:
+            if _rem_raw is not None:
+                _tmp = float(_rem_raw)
+                if math.isfinite(_tmp) and _tmp >= 0:
+                    _rem_dur = _tmp
+        except (TypeError, ValueError):
+            _rem_dur = None
         nodes[code] = {
             'code': code,
             'name': a.get('name', ''),
             'duration_days': dur,
+            # v2.9.13 F1-Bug2 — P6 retained-logic remaining_duration (or None).
+            'remaining_duration': _rem_dur,
             # Round 6 — int 0 (not 0.0) for tf initial: JS serializes 0 and 0.0
             # identically as "0"; Python keeps the float literal in json.dumps,
             # which breaks crossval string-equality on is_complete fixtures
@@ -723,7 +738,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         if has_actual_start:
             max_es = act_start_num
         else:
-            max_es = max(node['es'], dd_num)
+            # v2.9.13 F1-Bug5 — DROPPED node['es'] floor. Input early_start is
+            # an initialization hint only, not a SNET floor. Pre-fix logic
+            # `max(node['es'], dd_num)` silently anchored every recompute at
+            # the previously-computed ES (round-trip bug). For an ES floor,
+            # use an explicit SNET constraint. Mirrors JS Section C fix.
+            max_es = dd_num
         for p in preds:
             pnode = nodes.get(p['from_code'])
             if not pnode:
@@ -796,9 +816,25 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                 })
 
         node['es'] = max_es
-        node['ef'] = _advance_workdays(
-            node['es'], node['duration_days'], node_cal,
-            alerts=alerts, ctx=f'forward {code}.EF')
+        # v2.9.13 F1-Bug2 — backport JS T3.18 (P6 retained-logic). When an
+        # in-progress activity carries a remaining_duration value, EF is
+        # anchored at max(actual_start, data_date) + remaining_duration,
+        # not es + duration_days. Without this branch the JS-Python crossval
+        # cannot catch retained-logic bugs (JS ships T3.18; Python silently
+        # ignored it). See cpm-engine.js Section C lines ~1241-1260.
+        _rem_dur = node.get('remaining_duration')
+        _rem_provided = (_rem_dur is not None and math.isfinite(_rem_dur) and _rem_dur >= 0)
+        if has_actual_start and not node['is_complete'] and _rem_provided:
+            _ef_anchor = max(act_start_num, dd_num) if dd_num > 0 else act_start_num
+            if max_es > _ef_anchor:
+                _ef_anchor = max_es
+            node['ef'] = _advance_workdays(
+                _ef_anchor, _rem_dur, node_cal,
+                alerts=alerts, ctx=f'forward {code}.EF (retained-logic rem={_rem_dur})')
+        else:
+            node['ef'] = _advance_workdays(
+                node['es'], node['duration_days'], node_cal,
+                alerts=alerts, ctx=f'forward {code}.EF')
 
         # Forward-pass EF-side clamps (FNET, FNLT, MS_Finish, MFO).
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts)
@@ -884,14 +920,23 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # v2.9.12 T3.19 — AACE 29R-03 §4.3 immutability on backward pass.
         # An activity with actual_start cannot have LS later than ES (it
         # already started — drifting LS through float-rich successor logic
-        # is physically impossible). Pin LS = ES, tighten LF.
+        # is physically impossible). Pin LS = ES, LF = EF (mirror of
+        # completed-activity branch); the in-progress activity is on the
+        # critical path of its own historical fact.
+        #
+        # v2.9.13 F1-Bug1 — under P6 retained-logic (T3.18), EF was anchored
+        # at max(actual_start, data_date) + remaining_duration. The previous
+        # pin re-derived LF as ES + duration_days, which is LARGER than EF
+        # for any partly-complete activity (rem < dur). That produced bogus
+        # positive TF = duration_days - remaining_duration on in-progress
+        # critical activities, dropping them OFF the critical path. Pinning
+        # LF = EF directly preserves the retained-logic EF anchor and forces
+        # TF = 0. Mirrors JS Section C fix.
         if node.get('actual_start') and not node['is_complete']:
             a_s_num = date_to_num(node['actual_start'])
             if a_s_num > 0 and node['ls'] > node['es']:
                 node['ls'] = node['es']
-                node['lf'] = _advance_workdays(
-                    node['es'], node['duration_days'], node_cal,
-                    alerts=alerts, ctx=f'in-progress LF pin {code}')
+                node['lf'] = node['ef']
         node['tf'] = round(node['lf'] - node['ef'], 3)
 
     # v2.9.7 — ALAP post-pass. Per AACE 29R-03 §4 (Technical Considerations) and Oracle P6 docs, ALAP
