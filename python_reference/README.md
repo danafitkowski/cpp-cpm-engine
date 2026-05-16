@@ -23,10 +23,18 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  0602e50d7fdaf750f5afdbbccecbdb930664c453877148afed717e3315897236
+cpm.py  SHA-256:  924a8bb2f388bff32b91e1c7ce4cf4027cc96ba119d52077e6fc54529933e6a4
 ```
 
-(v2.9.8 Round 6 — bumped from 9a966777 with two changes: ENGINE_VERSION
+(v2.9.10 Round 8 — bumped from 0602e50d with two changes: ENGINE_VERSION
+2.9.8 → 2.9.10 sync (matches the JS engine), and AACE 29R-03 §4.3
+in-progress immutability backported — when an activity has `actual_start`
+set but is not is_complete, both ES is pinned to actual_start (predecessor
+logic and the data_date floor cannot override) and the forward-pass
+constraint clamps are bypassed. This mirrors the JS engine's behavior at
+cpm-engine.js Section ~931. Required for fixture F27.
+
+Prior v2.9.8 Round 6 — bumped from 9a966777 with two changes: ENGINE_VERSION
 2.9.7 → 2.9.8 sync, and `tf` initialized as int `0` instead of float `0.0`
 in three sites so JSON cross-engine equality holds for `is_complete` and
 ALAP-slid activities. No math change.)

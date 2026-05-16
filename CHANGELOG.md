@@ -4,9 +4,9 @@ All notable changes to `cpm-engine` are documented here. Versioning follows [Sem
 
 ---
 
-## Unreleased — 2026-05-16 — Round 7 independent-verification infrastructure (Daubert Angle 5 closer)
+## v2.9.10 — 2026-05-16 — Round 7 independent-verification infrastructure (Daubert Angle 5 closer)
 
-Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v299--round-7-daubert-hardening). No engine math changed; the engine bytes at v2.9.9 are unchanged, only the verification + attestation infrastructure landed.
+Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening). No engine math changed; the engine bytes at v2.9.9 are unchanged in this docs/infra release — `cpm-engine.js` byte content is identical apart from the `ENGINE_VERSION` constant bump and a few v2.9.9-era inline comments rewritten to cite v2.9.10. The verification + attestation infrastructure landed in this release.
 
 ### New
 
@@ -19,7 +19,9 @@ Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBE
 
 ### Notes
 
-- The engine remains at v2.9.9 — this is an infrastructure release, not a math release.
+- The engine math is byte-identical to v2.9.9 — this is a docs + infrastructure release. Only `ENGINE_VERSION` and the inline comments tied to it are bumped to `'2.9.10'` (plus the consequent test version-pin assertions and disclosure-string updates, plus a Round 8 hot-loop perf pass — OPT-1/OPT-2 — that is bit-identical at the manifest level and verified by 728/728 unit + 281/281 crossval).
+- `package.json` + `cpm-engine.js` ENGINE_VERSION bumped 2.9.9 → 2.9.10. Python reference `cpm.py` ENGINE_VERSION bumped 2.9.8 → 2.9.10 to track the JS engine (Round 8 also backported F27 in-progress immutability per AACE 29R-03 §4.3 — the Python file legitimately changes in this release and the bundled SHA-256 pin is rotated accordingly in `python_reference/README.md`). `__init__.py` re-exports `ENGINE_VERSION` from `cpm`, so `from python_reference import ENGINE_VERSION` returns `'2.9.10'`.
+- DAUBERT.md title, §1 footer, §3.1 anchor, §6 manifest sample, §8 header, footer disclosure-format-version bumped to v2.9.10. New §10 Roadmap section added (near-term: third-party attest, MPXJ crossval, Coq formal verification; mid-term: AACE peer review, threshold sourcing, branch coverage; long-term: `_MC` thread-safety, cross-engine validation).
 - `attestations/latest.json` is gitignored (locally regenerated on every `npm run verify`); CI-generated witnesses are published as workflow artifacts (90-day retention) + release assets on tag pushes (permanent).
 
 ---

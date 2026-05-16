@@ -32,7 +32,7 @@ The engine's correctness has been tested in four independent ways:
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
 | Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes, kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays, P6 primary + secondary constraints, TT_Hammock two-pass, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, Section D MS_Finish alert, dateToNum 2-digit guard, Round 6 strong-assertion strengthening (HAM-3/4, MC-2 exact, MS_Start hard-pin, FNLT per-trial, Q-3 SF backward exact dates, B1 exact working-day float), Round 7 full hammock SS/FF/SF semantics (HAM-SS-1, HAM-FF-1, HAM-SF-1, HAM-SS-succ-1, HAM-MIXED-1, HAM-CONVERGE-1, HAM-CYCLE-1) | **728 / 728 passing** |
-| Cross-validation suite     | `cpm-engine.crossval.js` — 25 fixtures × 281 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures plus Round 6 expansion (SNLT, FNET, MS_Finish, secondary constraint pair, OoS, ALAP-with-actual_start, calendar fallback, cycle, free-float documented gap). Severity-level alert parity asserted (not just count). | **281 / 281 bit-identical** |
+| Cross-validation suite     | `cpm-engine.crossval.js` — 32 fixtures × 346 checks, JS engine vs Python `compute_cpm` reference, including 3 constrained-schedule fixtures plus Round 6 expansion (SNLT, FNET, MS_Finish, secondary constraint pair, OoS, ALAP-with-actual_start, calendar fallback, cycle, free-float documented gap) plus Round 8 edge-case expansion (multi-id calendar fallback, actual_start AACE-immutability, ALAP+FNLT compound, mixed FF+SS, negative-lag ordinal, cycle-in-sub-network, far-future date arithmetic). Severity-level alert parity asserted (not just count). | **346 / 346 bit-identical** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
 | Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
 
@@ -51,12 +51,12 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite. The Python implementation is exercised by 1,800+ tests across 18 Python suites (forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review).
 - Made publicly available at <https://github.com/danafitkowski/cpp-cpm-engine>. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
-- **Externally reproducible cross-validation (v2.9.9).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`0602e50d7fdaf750f5afdbbccecbdb930664c453877148afed717e3315897236`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "281 / 281" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules. v2.9.8 Round 6 expanded the fixture set from 16 to 25 — adding SNLT primary, FNET, MS_Finish, secondary constraint pair, OoS regression, ALAP-with-actual_start suppression, calendar-fallback symmetry, cycle-error symmetry, and free-float documented gap — and extended `compareFixture` to assert alert SEVERITY-level parity, not just count. v2.9.9 closed the hammock SS/FF/SF FS-only limitation per Round 7 A1+A3, shipping a four-walker design with cross-axis recursion that handles all four relationship types and DAG diamond joins.)
+- **Externally reproducible cross-validation (v2.9.10).** A frozen Python reference implementation ships at `python_reference/cpm.py`. It is pinned by SHA-256 (`924a8bb2f388bff32b91e1c7ce4cf4027cc96ba119d52077e6fc54529933e6a4`) and the hash is printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash with `shasum -a 256` (or `Get-FileHash` on Windows), and confirm that the bytes they're testing against match the bytes documented here. Drift from the pinned hash invalidates the "346 / 346" headline and must be reproduced from a clean checkout. (v2.9.7 backported the full P6 constraint surface — SNET / SNLT / FNET / FNLT / MS_Start / MS_Finish / MFO / SO / ALAP plus secondary `constraint2` — into the Python reference so the crossval suite can exercise constrained schedules. v2.9.8 Round 6 expanded the fixture set from 16 to 25 — adding SNLT primary, FNET, MS_Finish, secondary constraint pair, OoS regression, ALAP-with-actual_start suppression, calendar-fallback symmetry, cycle-error symmetry, and free-float documented gap — and extended `compareFixture` to assert alert SEVERITY-level parity, not just count. v2.9.9 closed the hammock SS/FF/SF FS-only limitation per Round 7 A1+A3, shipping a four-walker design with cross-axis recursion that handles all four relationship types and DAG diamond joins. v2.9.10 Round 8 added 7 edge-case fixtures (F26-F32) — multi-id calendar fallback, AACE 29R-03 §4.3 in-progress actual_start immutability (with a matching extension to the Python reference, rotating the SHA-256 pin), ALAP+FNLT secondary compound, mixed FF+SS predecessors, negative-lag ordinal arithmetic, cycle-in-sub-network detection, and far-future date arithmetic stress — taking the fixture set from 25 to 32 and the check count from 281 to 346.)
 - Live-deployed at <https://mcp.criticalpathpartners.ca/try> where any party can run it against their own schedule.
 
-### §3.1 Independent Verification (v2.9.9 — Round 7 Daubert hardening)
+### §3.1 Independent Verification (v2.9.10 — Round 7 Daubert hardening)
 
-The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. v2.9.9 adds three layers of independent-verification infrastructure to mitigate this:
+The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. v2.9.10 promotes the Round 7 independent-verification infrastructure from `Unreleased` to a tagged release and adds three layers of mitigation:
 
 **Layer 1 — Public Continuous Integration.** Every push to `main` and every PR triggers `.github/workflows/verify.yml`, which runs:
 
@@ -93,7 +93,7 @@ Engine has **zero npm dependencies** (`engines.node >=18`), so the reproduction 
 
 **What this closes.** A *Daubert* challenger asserting "the testing was conducted solely by the proponent" must contend with: (a) GitHub's infrastructure running the same code at every commit, (b) Sigstore-signed attestations on a public transparency log, and (c) any third party producing an independent witness file in under 90 seconds. The challenger can no longer claim untestability.
 
-**What this does NOT close.** Independent reproduction is mechanical; it does not constitute **peer review** (Daubert Prong 2). A formal AACE TCM Forum or *Cost Engineering* journal submission, plus an independent academic or competing forensic-firm attestation, remain on the roadmap (see §10).
+**What this does NOT close.** Independent reproduction is mechanical; it does not constitute **peer review** (Daubert Prong 2). A formal AACE TCM Forum or *Cost Engineering* journal submission, plus an independent academic or competing forensic-firm attestation, remain on the roadmap — see [§10 Roadmap](#10-roadmap--forward-looking-daubert-hardening).
 
 The underlying CPM math (Kelley & Walker forward/backward pass) is one of the most peer-reviewed scheduling algorithms in the industry; it is the basis of every commercial CPM tool from Primavera P6 to Microsoft Project. **What the engine adds is operational discipline** — manifested provenance, AACE-canonical method labels, salvage logging, multi-strategy critical-path identification with divergence reporting.
 
@@ -101,7 +101,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 ## §4 Error Rate
 
-**Cross-validation reports 281 / 281 = 0% deviation across 25 fixtures.**
+**Cross-validation reports 346 / 346 = 0% deviation across 32 fixtures.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
 
 Performance characteristics:
@@ -142,7 +142,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.9',                    // Synchronized with package.json
+    engine_version: '2.9.10',                   // Synchronized with package.json
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -200,7 +200,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 685 + 281 = 966 verifications.
+2. Run `npm run test:all` to reproduce the 728 + 346 = 1,074 verifications. Or `npm run verify` for the full attestation-witness flow.
 3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
 4. Inspect the source — it is intentionally readable and well-commented (4,326 lines including narrative comments).
 
@@ -209,8 +209,8 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.8`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-14, refreshed with v2.9.9 full hammock SS/FF/SF semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard), and Round 7 full hammock semantics (four axis-specific transitive walkers with per-axis memoization))
+`engine_version: 2.9.10`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-16, refreshed with v2.9.10 Round 7 independent-verification infrastructure tag, v2.9.9 full hammock SS/FF/SF semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard), Round 7 full hammock semantics (four axis-specific transitive walkers with per-axis memoization), and Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction))
 
 ---
 
@@ -250,7 +250,7 @@ Callers may override `nearCriticalThreshold` via `opts`. The DCMA-14 Logic check
 
 ---
 
-## §8 Constraint Handling (v2.9.9)
+## §8 Constraint Handling (v2.9.10)
 
 The engine honors the following Primavera P6 constraint types declared on activities via `task.constraint = {type, date}` (primary) and `task.constraint2 = {type, date}` (secondary, v2.9.7+), or the equivalent `cstr_type` / `cstr_date2` (primary) and `cstr_type2` / `cstr_date` (secondary) long-form XER tokens, automatically normalized. Primary and secondary are applied sequentially per the Oracle P6 spec (primary first, secondary tightens further). Both Section C (`computeCPM`) and Section D (`runCPM`, used by the per-iteration Monte Carlo hot loop — see §D below) enforce constraints when an absolute `projectStart` anchor is supplied.
 
@@ -280,7 +280,7 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Hammock-cycle topology emits `{severity:'ALERT', context:'hammock-cycle'}`. Hammock negative-span emits `{severity:'ALERT', context:'hammock-negative-span'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.9'` to confirm the constraint module was active.
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.10'` to confirm the constraint module was active. (Engine math byte-identical to v2.9.9; only the version constant changed.)
 
 ### §D Section D thread-safety
 
@@ -293,3 +293,52 @@ Three engine features are first-publication or pre-publication in construction s
 ### Known limitations
 
 - **Hammock non-FS relationship types** (SS / FF / SF tying a hammock to a non-hammock activity) are fully computed as of v2.9.9 via four axis-specific transitive walkers (`esFloor`, `lfFloor`, `lfCeiling`, `esCeiling`). Hammock-of-hammocks DAG joins resolved via per-axis memoization. Genuine hammock-cycle topology (mutual succ↔pred between hammocks) is detected and emits `hammock-cycle` ALERT — cycle-affected hammocks still resolve from their non-cyclic anchors but may have incomplete anchor sets.
+
+---
+
+## §10 Roadmap — Forward-looking Daubert hardening
+
+This section lists hardening items in flight for future releases.
+
+### Near-term (next release)
+
+- **Real third-party reproduction attestation.** Solicit a signed PDF
+  attestation from one or more of: AACE TCM Forum, ASCE Journal of
+  Construction Engineering and Management, an academic group, a
+  competing forensic-scheduling firm. Layer 4 of the Independent
+  Verification stack from §3.1.
+- **MPXJ Java-bridge crossval lane.** Add a second crossval against
+  the established Java MPXJ library — different author, different
+  algorithm — to mechanize true third-party agreement. Layer 5.
+- **Coq / TLA+ formal verification of core CPM proof.** Forward and
+  backward pass invariants formally verified.
+
+### Mid-term
+
+- **AACE TCM Forum / Cost Engineering journal submission.** Formal
+  peer review (Daubert Prong 2).
+- **CPP house heuristic threshold sourcing.** The 8 thresholds called
+  "CPP house heuristic" in §7 — replace with values published by
+  SmartPM, AACE, DCMA, or another industry source, or remove from
+  scored output and demote to internal diagnostic.
+- **Branch-coverage tooling.** Add `c8` or `nyc` for branch-level
+  test coverage reporting (currently statement-level only).
+- **DCMA-14 alignment with the 2024 PPG #20.** Audit our DCMA
+  implementation against AACE PPG #20 (2nd Ed 2024) numbering.
+
+### Long-term (v3.0)
+
+- **`_MC` Section D thread-safety refactor.** Currently module-level
+  singleton state; v3.0 will plumb state through every Section D call
+  so portfolio MC can run concurrent schedules in one process.
+- **MPXJ-bridge XER round-trip.** Read XER via MPXJ, run CPP CPM, write
+  XER via MPXJ — bypasses our XER reader entirely as a check.
+- **MS Project / Synchro / Asta cross-engine validation.** Each is a
+  separate read/write surface; same input XER should produce identical
+  CPP output, MS Project output, Synchro output.
+
+### Continuously updated
+
+- **Citation regression list.** `tests/no-fabricated-citations.test.js`
+  blocks known-bad patterns; new patterns are added when audits
+  surface them. The list is part of the build gate.

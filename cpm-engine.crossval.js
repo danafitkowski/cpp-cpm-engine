@@ -809,6 +809,204 @@ compareFixture('F24 — Free-float parity DOCUMENTED GAP (no FF in Python ref)',
           '(FF derivable from ls-es etc.). Backport to lift this gap.',
 });
 
+// =====================================================================
+// ROUND 8 EXPANSION — F26-F32 edge-case fixtures
+// =====================================================================
+// Per Round 7 R7A + Round 8 R8C audits: existing F1-F25 set covered the
+// "happy paths" and the v2.9.8 constraint-surface bringup, but the
+// audit identified seven specific edge cases that crossval did not yet
+// exercise. Round 8 closes those gaps.
+//
+// Two of these (F27 in-progress immutability, plus the ALAP-secondary-slot
+// behavior covered by F28's primary placement) required minimal Python
+// reference extension; see python_reference/cpm.py @v2.9.10 and the
+// rotated SHA-256 pin documented in DAUBERT.md §3.
+
+// =====================================================================
+// FIXTURE 26 — Calendar fallback with MULTIPLE distinct bad clndr_ids
+// =====================================================================
+// F22 already covers single missing clndr_id. F26 stresses the alert-count
+// symmetry when three activities each reference a DIFFERENT non-existent
+// calendar id. Both engines must emit the same total alert count from
+// _advance_workdays + _retreat_workdays — every forward / backward / init-LS
+// step that lacks a calendar fires one ALERT. The count is the symmetry
+// signal — if either engine deduplicated alerts (e.g. cached by ctx string)
+// the count would diverge.
+compareFixture('F26 — Calendar fallback, 3 distinct missing clndr_ids', {
+    activities: [
+        { code: 'A', duration_days: 4, early_start: '2026-01-05', clndr_id: 'MISSING_A' },
+        { code: 'B', duration_days: 3, clndr_id: 'MISSING_B' },
+        { code: 'C', duration_days: 2, clndr_id: 'MISSING_C' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },  // wrong id key
+});
+
+// =====================================================================
+// FIXTURE 27 — actual_start AFTER data_date (in-progress, not complete)
+// =====================================================================
+// AACE 29R-03 §4.3: actual_start is an immutable historical fact. Neither
+// the data_date floor nor predecessor logic may push ES forward of an
+// event that demonstrably already happened. B has actual_start 2026-02-01
+// but data_date 2026-01-15 — both engines must pin B.ES = 2026-02-01.
+//
+// Note: prior to v2.9.10 the Python reference only honored actual_start
+// when is_complete was true. The reference was extended in this round to
+// mirror the JS engine's in-progress immutability behavior — see
+// python_reference/cpm.py around line 577 (search "AACE 29R-03 §4.3").
+// The SHA-256 pin in python_reference/README.md + DAUBERT.md §3 was
+// rotated to reflect this change.
+compareFixture('F27 — actual_start AFTER data_date pins ES (AACE 29R-03 §4.3)', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        // B's actual_start is AFTER data_date — exotic but legal (e.g. work
+        // started after the schedule was issued but before the next data
+        // date cycle). Both engines must pin B.ES = 2026-02-01.
+        { code: 'B', duration_days: 3, clndr_id: 'MF',
+          actual_start: '2026-02-01' },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+    data_date: '2026-01-15',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+}, {
+    skip_alert_parity: true,
+    note: 'OoS ALERT JS-only (B in-progress, A unstarted — retained-logic). ' +
+          'Node-output parity (ES pin to actual_start) is the substantive test.',
+});
+
+// =====================================================================
+// FIXTURE 28 — ALAP primary + FNLT secondary compound
+// =====================================================================
+// B has primary ALAP (slide ES/EF to LS/LF) plus secondary FNLT
+// (clamp LF backward). FNLT is set EARLIER than the natural LF so it
+// tightens. ALAP then slides ES forward to the clamped LS.
+//   - Project: A(5d) → {B(2d, ALAP+FNLT), C(10d)} → END(1d)
+//   - Without ALAP, B natural ES=01-12, EF=01-13, TF=8 (off CP, C drives)
+//   - With FNLT 2026-01-19 secondary: B.LF clamps to 01-19, B.LS=01-16
+//   - ALAP slides B.ES → 01-16, B.EF → 01-19
+//   - C/END unchanged; project finish unchanged
+compareFixture('F28 — ALAP primary + FNLT secondary compound', {
+    activities: [
+        { code: 'A',   duration_days: 5,  early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B',   duration_days: 2,  clndr_id: 'MF',
+          constraint:  { type: 'ALAP' },
+          constraint2: { type: 'FNLT', date: '2026-01-19' } },
+        { code: 'C',   duration_days: 10, clndr_id: 'MF' },
+        { code: 'END', duration_days: 1,  clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A',   to_code: 'B',   type: 'FS', lag_days: 0 },
+        { from_code: 'A',   to_code: 'C',   type: 'FS', lag_days: 0 },
+        { from_code: 'B',   to_code: 'END', type: 'FS', lag_days: 0 },
+        { from_code: 'C',   to_code: 'END', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 29 — Mixed FF + SS predecessors on the same successor
+// =====================================================================
+// C has BOTH FF from A (lag 0) AND SS from B (lag 3). The forward pass
+// must take max of the two drives. Per AACE 29R-03 §4 and Wickwire
+// Construction Scheduling §6.5, multi-relationship merges are common in
+// real P6 schedules and the engine must agree on the drive selection.
+//   - A(5d, start 01-05): EF = 01-09
+//   - B(8d, start 01-05): ES = 01-05, EF = 01-14
+//   - C(4d): FF drive = A.EF - dur = 01-09 - 4w = 01-05;
+//            SS drive = B.ES + 3w = 01-08
+//   - max → C.ES = 01-08, EF = 01-13
+compareFixture('F29 — Mixed FF + SS predecessors converge on same successor', {
+    activities: [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 8, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'C', duration_days: 4, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'C', type: 'FF', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'SS', lag_days: 3 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURE 30 — Negative lag (FS-2 lead, B starts BEFORE A finishes)
+// =====================================================================
+// A→B with FS-2 means B starts 2 working days before A finishes. F9
+// already exercises FS-3 with calendar; F30 is the no-calendar variant
+// (ordinal arithmetic) which stresses a different code path:
+// _advance_workdays/JS _advanceWithAlerts both shortcut to ordinal `n + lag`
+// when start_num <= 0 OR no calendar; we want both shortcut paths verified.
+//   - A(10d, start 01-05, ordinal): EF = 01-15
+//   - FS-2: B.ES = A.EF + (-2) = 01-13
+//   - B(5d): EF = 01-18
+compareFixture('F30 — Negative lag FS-2 (no calendar, ordinal arithmetic)', {
+    activities: [
+        { code: 'A', duration_days: 10, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 5 },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: -2 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: {},
+});
+
+// =====================================================================
+// FIXTURE 31 — Cycle confined to a sub-network (parallel acyclic + cycle)
+// =====================================================================
+// F23 exercises a 2-node cycle as the entire graph. F31 puts the cycle
+// in an isolated sub-network: A→B→C is a clean linear chain, while
+// D→E→D forms a 2-node cycle. The topo-sort detects the global cycle
+// (Kahn's algorithm leaves the cyclic nodes with non-zero in-degree)
+// and both engines must throw CYCLE. The clean A→B→C component cannot
+// rescue the computation — partial CPM is not supported.
+compareFixture('F31 — Cycle in sub-network (A→B→C clean + D↔E cycle)', {
+    activities: [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 4 },
+        { code: 'C', duration_days: 2 },
+        { code: 'D', duration_days: 5 },
+        { code: 'E', duration_days: 6 },
+    ],
+    relationships: [
+        // Acyclic component
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+        // Cyclic component
+        { from_code: 'D', to_code: 'E', type: 'FS', lag_days: 0 },
+        { from_code: 'E', to_code: 'D', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    cal_map: {},
+}, { expect_throw: true });
+
+// =====================================================================
+// FIXTURE 32 — Far-future date stress (post-2030 ordinal arithmetic)
+// =====================================================================
+// Activity starting 2037-12-15 with 100-day duration. The day-offset from
+// epoch 2020-01-01 is ~6558, well within JS Number safe-integer range
+// (2^53) and Python int range. Confirms neither engine has hidden int32
+// truncation or off-by-one near the high end of the working date space.
+// Output date 2038-05-04 (100 workdays after 2037-12-15 on MonFri).
+//
+// The fixture name references "Y2038" colloquially because the underlying
+// Unix epoch-second overflow lands at 2038-01-19; the day-offset
+// representation here is immune to that overflow, and F32 verifies it.
+compareFixture('F32 — Far-future date arithmetic (2037-12-15 + 100d, post-Y2038)', {
+    activities: [
+        { code: 'A', duration_days: 100, early_start: '2037-12-15', clndr_id: 'MF' },
+    ],
+    relationships: [],
+    data_date: '2037-12-15',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
 console.log('\n=========================================');
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks);

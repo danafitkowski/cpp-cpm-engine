@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.8'`. |
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.10'`.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -96,11 +96,11 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
         constraint: {                    // Optional. Primary P6 constraint.
             type: 'SNET',                //   One of: SNET | SNLT | FNET | FNLT | MS_Start | MS_Finish | MFO | SO | ALAP.
             date: '2026-01-10',          //   Anchor date for date-bearing constraints (omit for ALAP).
-        },
-        constraint2: {                   // Optional. Secondary P6 constraint (v2.9.7+). Applied after primary.
-            type: 'FNLT',                //   Common pairing: SNET (primary) + FNLT (secondary) = window pin.
-            date: '2026-01-20',
-        },
+        },                               //   See DAUBERT.md §8 for per-type forward/backward semantics.
+        constraint2: {                   // Optional. Secondary P6 constraint (v2.9.7+). Applied after primary
+            type: 'FNLT',                //   per Oracle P6 Database Reference (TASK.cstr_type2 / cstr_date).
+            date: '2026-01-20',          //   Common pairing: SNET (primary) + FNLT (secondary) = window pin.
+        },                               //   Same enum as primary `constraint.type`.
     },
     // ...
 ]
@@ -119,6 +119,18 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
     // ...
 ]
 ```
+
+**Day granularity (v2.9.11+).** The engine operates exclusively in whole-day
+units. `lag_days` and `duration_days` are `Math.round()`-ed at the internal
+calendar-arithmetic boundary (see `addWorkDays` / `subtractWorkDays`). P6
+typically stores lags in hours; `parseXER` converts via `lag_hr_cnt / 8`,
+which produces fractional days for any non-multiple-of-8 hour value (e.g. a
+4-hour P6 lag becomes `0.5` days). When that happens the engine emits a
+`SUB_DAY_LAG_ROUNDED` alert at the affected callsite identifying the
+fractional input and the rounded value. The forensic implication: 50
+successive 4-hour lags could silently inflate project finish by up to 50
+calendar days vs P6 — the alert flags the schedule as requiring sub-day
+precision review before relying on the dates.
 
 **opts:**
 
@@ -149,6 +161,18 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
     criticalCodesArray,                          // string[]. JSON-safe parallel field.
     topoOrder, topo_order,                       // Topological order (camelCase + snake_case).
     alerts,                                      // Array of { severity, context, message }.
+                                                 //   severity: 'WARN' | 'ALERT'.
+                                                 //   context:  'constraint-applied' (WARN), 'constraint-violated' (ALERT),
+                                                 //             'hammock-cycle' (ALERT), 'hammock-negative-span' (ALERT),
+                                                 //             'hammock-unsupported-rel' (legacy v2.9.8, now 0/empty),
+                                                 //             'out-of-sequence' (ALERT), 'driving-predecessor-anomaly', ...
+                                                 //   message:  human-readable description with activity codes.
+    dropped_activities,                          // Array of { task_code, task_type, reason } surfaced from parseXER.
+                                                 //   reason ∈ {'level-of-effort','wbs-summary','completed','zero-remaining'}.
+    hammocks_resolved,                           // Count of hammock activities whose ES/LF were derived from preds/succs.
+    hammocks_unresolved,                         // Count of hammocks that could not be resolved (no anchors / cycle).
+    hammock_non_fs_alerts,                       // Back-compat: v2.9.8-era list of non-FS hammock rels. v2.9.9+ always [].
+    hammock_unsupported_rel_count,               // Back-compat: same. v2.9.9+ always 0.
     manifest: {
         engine_version,                          // E.ENGINE_VERSION.
         method_id: 'computeCPM',

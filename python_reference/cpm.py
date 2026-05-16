@@ -43,7 +43,7 @@ EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
 
 # Synchronized with cpm-engine.js ENGINE_VERSION.
-ENGINE_VERSION = '2.9.8'
+ENGINE_VERSION = '2.9.10'
 
 
 # =============================================================================
@@ -574,7 +574,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             continue
         preds = pred_map.get(code, [])
         node_cal = _cal_for(node)
-        max_es = max(node['es'], dd_num)
+        # v2.9.10 Round 8 F27 — AACE 29R-03 §4.3 in-progress immutability.
+        # When an activity has an actual_start but is NOT complete, that
+        # historical event is immutable: neither the data_date floor nor
+        # predecessor logic may push ES forward of it. Mirrors the JS engine
+        # (cpm-engine.js Section ~931). The OoS-style behavior — predecessor
+        # would push later — is silent on the Python side (the JS engine
+        # emits OUT_OF_SEQUENCE alerts, which is a documented JS-only
+        # surface — see F20 / F21 fixtures).
+        act_start_num = date_to_num(node['actual_start']) if node['actual_start'] else 0
+        has_actual_start = act_start_num > 0
+        if has_actual_start:
+            max_es = act_start_num
+        else:
+            max_es = max(node['es'], dd_num)
         for p in preds:
             pnode = nodes.get(p['from_code'])
             if not pnode:
@@ -610,6 +623,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                 drive = _advance_workdays(anchor, lag, node_cal,
                                           alerts=alerts,
                                           ctx=f'FS-default lag {pnode["code"]}->{code}')
+            # AACE 29R-03 §4.3 — pred logic cannot override actual_start.
+            if has_actual_start:
+                continue
             if drive > max_es:
                 max_es = drive
 
@@ -617,8 +633,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # secondary; secondary tightens further per P6 spec.
         cstr = node.get('constraint')
         cstr2 = node.get('constraint2')
-        max_es = _apply_forward_es_constraint(code, max_es, cstr, 'primary', alerts)
-        max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts)
+        # AACE 29R-03 §4.3 — constraints also cannot override actual_start.
+        if not has_actual_start:
+            max_es = _apply_forward_es_constraint(code, max_es, cstr, 'primary', alerts)
+            max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts)
 
         node['es'] = max_es
         node['ef'] = _advance_workdays(
