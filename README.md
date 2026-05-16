@@ -72,7 +72,7 @@ The engine math is a commodity. The competitive moat in forensic scheduling is t
 - **Forensic delay analysis** — windows analysis (AACE MIP 3.3), collapsed as-built (MIP 3.8 Single Simulation), prospective TIA (MIP 3.6 Single Simulation or MIP 3.7 Multiple Base, depending on mode)
 - **Claim packages** — owner-submission EOT bundles with cover letter, exhibits, mitigation logs
 - **Daubert disclosures** — FRCP 26(a)(2)(B) reports, FRE 702/707 four-prong methodology statements
-- **Schedule risk analysis** — Monte Carlo P10/P50/P80/P90, sensitivity tornadoes, Bayesian updates
+- **Schedule risk primitives** — Bayesian posterior estimation (`computeBayesianUpdate`); per-iteration CPM (`runCPM`) suitable as an inner loop for Monte Carlo wrappers built on top of this engine. Full Monte Carlo / QRAMM scoring lives in the CPP forensic skill suite (`schedule-risk-analysis`), built atop this primitive.
 - **Schedule health** — DCMA-14 assessment, A-F auto-grade, baseline-vs-current diff
 - **Multi-jurisdiction calendars** — 66 jurisdictions (CA-FED + 13 provinces, US-FED + 50 states + DC)
 

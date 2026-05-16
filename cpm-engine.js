@@ -1737,7 +1737,24 @@ function parseXER(content) {
     let currentTable = '';
     let headers = [];
 
-    const lines = String(content).split('\n');
+    // F12 — defensive parse limits. Adversarial or accidentally-large XER
+    // exports can OOM the parser; cap up front and surface a PARSE_LIMIT_EXCEEDED
+    // error so callers can degrade gracefully instead of crashing the host.
+    const MAX_INPUT_BYTES = 50_000_000;       // 50 MB raw input
+    const MAX_ACTIVITIES = 100_000;            // 100k tasks
+    const MAX_RELATIONSHIPS = 500_000;         // 500k TASKPRED rows
+    const contentStr = String(content);
+    if (contentStr.length > MAX_INPUT_BYTES) {
+        const err = new Error('PARSE_LIMIT_EXCEEDED: XER input exceeds ' +
+            MAX_INPUT_BYTES + ' bytes (got ' + contentStr.length + ').');
+        err.code = 'PARSE_LIMIT_EXCEEDED';
+        err.limit = 'MAX_INPUT_BYTES';
+        throw err;
+    }
+    let _activityCount = 0;
+    let _relationshipCount = 0;
+
+    const lines = contentStr.split('\n');
     for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.startsWith('%T')) {
@@ -1900,6 +1917,14 @@ function parseXER(content) {
                         criticalCount: 0,
                         durationSamples: [],
                     };
+                    _activityCount++;
+                    if (_activityCount > MAX_ACTIVITIES) {
+                        const err = new Error('PARSE_LIMIT_EXCEEDED: XER activity count exceeds ' +
+                            MAX_ACTIVITIES + '.');
+                        err.code = 'PARSE_LIMIT_EXCEEDED';
+                        err.limit = 'MAX_ACTIVITIES';
+                        throw err;
+                    }
                 }
             }
             if (currentTable === 'TASKPRED') {
@@ -1935,6 +1960,14 @@ function parseXER(content) {
                     type: relType,
                     lag: _lagDays,
                 });
+                _relationshipCount++;
+                if (_relationshipCount > MAX_RELATIONSHIPS) {
+                    const err = new Error('PARSE_LIMIT_EXCEEDED: XER relationship count exceeds ' +
+                        MAX_RELATIONSHIPS + '.');
+                    err.code = 'PARSE_LIMIT_EXCEEDED';
+                    err.limit = 'MAX_RELATIONSHIPS';
+                    throw err;
+                }
             }
         }
     }
@@ -4536,9 +4569,21 @@ function renderDaubertHTML(disclosure, opts) {
 
     const hasAace   = citationsText.includes('AACE');
     const hasSanders = citationsText.includes('Sanders');
+    // F12 — gate AACE 122R-22 (QRAMM) behind an actual QRAMM result. When the
+    // disclosed method is plain CPM or TIA (no risk-maturity scoring), citing
+    // 122R-22 in the Key Citations block overstates the engine's scope and is
+    // a brand-truth violation. Limit the 122R-22 line to disclosures whose
+    // method_id is itself a risk/QRAMM method, OR whose underlying citation
+    // evidence explicitly names 122R-22.
+    const methodId = (d.methodology && d.methodology.method_id) || '';
+    const isRiskMethod = /qramm|monte|risk|sensitivity|bayes/i.test(methodId);
+    const aaceListNoQramm = '<li>AACE International Recommended Practices (29R-03, 49R-06, 52R-06)</li>';
+    const aaceListWithQramm = '<li>AACE International Recommended Practices (29R-03, 49R-06, 52R-06, 122R-22)</li>';
+    const includeQramm = isRiskMethod || citationsText.includes('122R-22');
+    const aaceLi = includeQramm ? aaceListWithQramm : aaceListNoQramm;
     const citationsHtml = (hasAace || hasSanders)
         ? '<h2>Key Citations</h2><ul>' +
-          (hasAace   ? '<li>AACE International Recommended Practices (29R-03, 49R-06, 52R-06, 122R-22)</li>' : '') +
+          (hasAace   ? aaceLi : '') +
           (hasSanders ? '<li>Sanders, M.C. (2024) — IBA "Junk science: the fallacy of retrospective time impact analysis"</li>' : '') +
           '</ul>'
         : '';
