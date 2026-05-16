@@ -59,7 +59,7 @@ _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
 # hammock orphan / duration_working_days, dateToNum rollover guard,
 # SUB_DAY_LAG_ROUNDED disclosure update) intentionally remain JS-only —
 # Python reference doesn't implement those surfaces.
-ENGINE_VERSION = '2.9.12'
+ENGINE_VERSION = '2.9.13'
 
 
 # =============================================================================

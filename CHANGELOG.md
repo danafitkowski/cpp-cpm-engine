@@ -12,6 +12,79 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.13 — 2026-05-16 — Round 10 audit + sequential fix wave (Daubert hardening)
+
+Dispatched a 20-agent deep audit (forward pass, backward pass, TF/CP, constraints, calendars, in-progress, hammocks, cycles, JS/Python parity, topology hash, AACE, Daubert, numerics, input validation, test coverage, brand discipline, Monte Carlo, security). Audit produced **218 findings (36 CRITICAL / 69 HIGH / 70 MEDIUM / 43 LOW)**.
+
+This release lands the first sequential remediation pass: 7 commits, 8+ new regression tests, zero new test failures.
+
+### F1 — In-progress activity retained-logic correctness (6 bugs)
+
+- **F1-Bug 1: Retained-logic LF/TF pin.** `cpm-engine.js:1357-1359` derived `LF = ES + duration_days` for in-progress activities. `TF = LF - EF = duration_days - remaining_duration` produced phantom positive float on every progressed activity, dropping in-progress critical work OFF the critical path. Fixed by pinning `LF = EF, LS = ES` (mirrors the completed-activity branch).
+- **F1-Bug 2: Python T3.18 backport.** `python_reference/cpm.py` was missing the v2.9.12 T3.18 retained-logic anchor entirely. Cross-validation couldn't catch JS retained-logic bugs because Python silently ignored the mode. Backported.
+- **F1-Bug 3: FUTURE_ACTUAL_FINISH alert.** Engine accepted `actual_finish > data_date` (physically impossible — a hallmark of fabricated/retro-edited claim schedules). Now emits ALERT.
+- **F1-Bug 4: INVERTED_ACTUALS alert.** Engine silently swallowed `actual_start > actual_finish` (negative-duration completed activity). Now emits ALERT and refuses to seed.
+- **F1-Bug 5: Stored `early_start` as silent SNET floor.** Caller round-tripping a prior result (parseXER → computeCPM → save → re-run) silently anchored every activity at its previously-computed ES. Fixed: input `early_start` is now an initialization hint only.
+- **F1-Bug 6: Section D in-progress LS pin.** Monte Carlo per-iteration backward pass didn't pin LS for in-progress activities, producing wrong TF in MC samples. Fixed to match Section C.
+- 21 new tests (T-FIX-F1-1 through T-FIX-F1-6).
+
+### F7 — AACE MIP labels + FRE 702 reframe
+
+- **MIP 3.6 descriptor corrected.** Every "MIP 3.6 (Modeled / Additive / Single Base — Impacted As-Planned)" was mislabeled — that text is MIP 3.5. Corrected to "MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)" across `cpm-engine.js`, `examples/03_tia_fragnet.js`, `cpm-engine.test.js`, `docs/citations.md`, `docs/algorithm.md`, `README.md`, `docs/api.md`.
+- **MIP 3.8 descriptor corrected.** `docs/citations.md` had "Single Base" — corrected to "Single Simulation — Collapsed As-Built".
+- **Daubert disclosure `rule` field.** Now leads with effective FRE 702 (Dec 1, 2023 amendment) instead of proposed FRE 707. FRE 707 demoted to forward-compatibility note.
+- **Prong 4 firm-naming scrub.** Removed unsupported claim "Used by Long International, HKA, Pickavance Consulting" (no public endorsement exists; violates CPP brand-discipline rule against naming third-party firms without consent). Replaced with methodology-based language.
+- **Citation regression test hardened.** `tests/no-fabricated-citations.test.js` now scans `.py` files, includes `python_reference/`, and FORBIDS the three MIP-descriptor mislabel patterns.
+
+### F12 — Brand truth + supply-chain hardening
+
+- **README Monte Carlo scope corrected.** README previously claimed "Schedule risk analysis — Monte Carlo P10/P50/P80/P90, sensitivity tornadoes, Bayesian updates" — but the engine ships only `computeBayesianUpdate` (Normal-Normal conjugate) and `runCPM` (per-iteration primitive). Full Monte Carlo / QRAMM is in the closed CPP forensic skill suite. README now scopes the claim to risk primitives + names the upstream consumer.
+- **AACE 122R-22 citation gated.** Daubert HTML disclosure no longer auto-cites 122R-22 for pure CPM/TIA outputs (was unconditional when AACE was referenced).
+- **`parseXER` size guards.** New `MAX_INPUT_BYTES = 50_000_000`, `MAX_ACTIVITIES = 100_000`, `MAX_RELATIONSHIPS = 500_000` constants. Throws `err.code = 'PARSE_LIMIT_EXCEEDED'` on exceed. Configurable via `opts.maxBytes` / `opts.maxActivities` / `opts.maxRelationships`.
+
+### F10 — Input validation hardening
+
+- **`DUPLICATE_ACTIVITY_CODE` alert.** Two activities with the same `code` previously overwrote silently (last-wins). Now emits ALERT in default mode; `opts.strict: true` throws.
+- **Finite-check on `lag_days` / `duration_days`.** `parseFloat(Infinity) || 0` previously evaluated to `Infinity`, poisoning ES/EF. Now uses `Number.isFinite()` with WARN alert on coerce.
+- **Invalid date string alerts.** `dateToNum('2026-13-45')` previously returned 0 (epoch) silently. Now emits WARN with the offending input.
+- **Activity code trim.** Trailing/leading whitespace on `code` / `from_code` / `to_code` was treated as a distinct ID, producing silent dangling relationships. Now trimmed with INFO alert when normalization fires.
+- **Relationship-type validation.** Invalid `type` (not in {FS, SS, FF, SF}) silently coerced to FS without alert. Now emits WARN with the original.
+- **SVG label truncation removed.** `cpm-engine.js:5295` chopped Float Burndown window labels to 12 chars silently (Window-2024-Q4-RFI-87 → Window-2024). Now renders full labels. Violated v2.9.1 truncation-purge rule.
+- 8 new tests (T-FIX-F10-1 through T-FIX-F10-8).
+
+### F8 — `verifyReport()` + `cli_verify.py` ship (closes CHANGELOG v2.8.0 advertised-but-undelivered gap)
+
+- **New `verifyReport(report, activities, relationships, opts)` function.** Recomputes the topology hash from supplied input; compares against `report.provenance.input_topology_hash` (with fallbacks for `manifest.topology_hash` and bare `topology_hash`). Confirms `engine_version` lock-step. Returns `{verified, hash_match, version_match, expected_hash, computed_hash, expected_version, computed_version, canonical_form, activity_count, relationship_count, warnings}`. Exported as `module.exports.verifyReport`.
+- **New `scripts/cli_verify.py`.** Single-file, Python-stdlib-only verifier. Takes a disclosed report + the activities/relationships JSON, recomputes the SHA-256 canonical form bit-identically with JS, prints VERIFIED or MISMATCH, exits 0/1/2 for verified/mismatch/invalid. Listed in `package.json` `files` array. Now ships with `npm install cpp-cpm-engine`.
+- Implements the "any opposing expert can independently verify" claim made in the brand-site Daubert blog and the engine's own DAUBERT.md §3.
+
+### F11 — Section D dataDate floor + cycle alert + deterministic topo
+
+- **Section D dataDate floor.** `runCPM` Monte Carlo path didn't apply `Math.max(node.es, dataDateOffset)` for un-started activities (Section C did, line 1154). Forensic outputs silently reported un-started ES values in the past of data date. Fixed.
+- **Cycle ALERT in `runCPM`.** When `excludedFromCycles > 0`, the Monte Carlo path now emits an ALERT (severity ERROR) listing excluded task IDs. Previously the field was returned silently; callers who didn't check produced wrong-answer CPM dashboards.
+- **Deterministic topological sort.** `_mcTopologicalSort` previously walked `for (const taskId in tasks)`, hitting V8's integer-key hoisting for numeric activity codes. Now walks `_MC.taskIdsOrdered` (insertion-order list built at parseXER time), matching the Section C `nodeCodesOrdered` pattern. Closes a JS-vs-Python topology-hash determinism gap.
+
+### Test state
+- `npm test`: **814 passed, 7 failed** (the 7 are pre-existing baseline: calendar fast-path equivalence, T2.12 negative-TF, T3.20 constraint-violated alert; flagged in audit as F3/F4/F5 cluster work, deferred to v2.9.14).
+- `node cpm-engine.crossval.js`: 42 fixtures / 1 expected-throw fixture; 435/444 checks pass (same baseline as v2.9.12).
+- `tests/no-fabricated-citations.test.js`: PASS (now scans `.py` and `python_reference/`).
+
+### Known remaining audit findings (deferred to v2.9.14)
+
+The 20-agent audit produced 218 findings. v2.9.13 closes the 22 most-defensible CRITICAL bugs (in-progress retained-logic, AACE labels, Daubert disclosure rule, input validation, verification infrastructure, Section D dataDate). Seven CRITICAL clusters remain for the next wave (each requires careful single-writer fixes — a parallel attempt confirmed these cannot be done concurrently):
+
+- **F2** — calendar zero-lag short-circuit + FF-0 round-trip identity
+- **F3** — JS/Python banker's-rounding parity (8+ callsites)
+- **F4** — LPM driving-predecessor backwalk (current LPM uses sum-of-durations DP that diverges from project_finish whenever lags or non-FS rels are present)
+- **F5** — constraint precedence (secondary FNET silently overrides primary FNLT; secondary SNET silently overrides primary MS_Start)
+- **F6** — hammock fixes (FS pred-chain anchor, Section C resolver call, project-relative offsets, FS hard precedence, iterative walkers)
+- **F9** — topology hash determinism (Python parity port + FNV-1a fallback removal + lag quantization + delimiter escaping + `v2:` prefix)
+- **F13/F14** — multi-cal lag conversion, AACE calendar effective-date enforcement, Bayesian lognormal/CI fixes, Python `driving_predecessor` parity
+
+These will land as separate atomic commits in v2.9.14 (single-writer sequential, same as v2.9.13's successful F7/F12/F10/F8/F11 wave).
+
+---
+
 ## v2.9.12 — 2026-05-16 — Round 9 engine math fix wave (constraint / calendar / in-progress / parity)
 
 Hardcore audit identified ~30 engine math defects across constraint handling, calendar arithmetic, in-progress activity actuals, and JS↔Python parity. v2.9.12 closes every one with a corrected calculation, a regression test asserting the exact corrected behavior, and (where applicable) a loud alert so the affected configuration cannot be missed in the future.
