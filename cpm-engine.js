@@ -4373,6 +4373,69 @@ function computeTopologyHash(activities, relationships) {
     };
 }
 
+/**
+ * verifyReport(report, activities, relationships, opts)
+ *
+ * F8 — Independent verification of a previously-disclosed Daubert report.
+ * Recomputes the topology hash from the supplied activities/relationships and
+ * compares against `report.provenance.input_topology_hash`. Also compares
+ * engine_version. Returns a structured verification record suitable for
+ * opposing-expert review.
+ *
+ * Use case: opposing counsel receives a Daubert disclosure JSON + the source
+ * XER. They rerun parseXER → verifyReport(disclosure, activities, rels) to
+ * confirm the report's hash matches the topology the engine would compute now.
+ *
+ * @param {object} report        — output of buildDaubertDisclosure (must have .provenance.input_topology_hash)
+ * @param {Array}  activities    — independently re-parsed activities
+ * @param {Array}  relationships — independently re-parsed relationships
+ * @param {object} [opts]        — { expected_version: '<semver>' } optional
+ * @returns {{verified, hash_match, version_match, expected_hash, computed_hash, expected_version, computed_version, warnings}}
+ */
+function verifyReport(report, activities, relationships, opts) {
+    opts = opts || {};
+    const warnings = [];
+    const provenance = (report && report.provenance) || {};
+    const expectedHash = provenance.input_topology_hash || null;
+    const expectedVersion = opts.expected_version ||
+        (report && report.engine_version) || null;
+
+    if (!expectedHash) {
+        warnings.push('NO_EXPECTED_HASH: report.provenance.input_topology_hash is null/missing.');
+    }
+
+    const hashInfo = computeTopologyHash(activities, relationships);
+    const computedHash = hashInfo.topology_hash;
+    const computedVersion = ENGINE_VERSION;
+
+    const hashMatch = !!expectedHash && expectedHash === computedHash;
+    const versionMatch = !!expectedVersion && expectedVersion === computedVersion;
+
+    if (!hashMatch && expectedHash && computedHash) {
+        warnings.push('HASH_MISMATCH: disclosed hash ' + expectedHash +
+            ' != recomputed hash ' + computedHash +
+            '. Topology has changed since the report was generated, OR ' +
+            'a different parser produced different canonical form.');
+    }
+    if (!versionMatch && expectedVersion && computedVersion) {
+        warnings.push('VERSION_MISMATCH: disclosed engine_version ' + expectedVersion +
+            ' != current engine_version ' + computedVersion +
+            '. Hash compare is still valid (canonical form is stable), but ' +
+            'method semantics may have shifted across the version gap.');
+    }
+
+    return {
+        verified: hashMatch && (versionMatch || !expectedVersion),
+        hash_match: hashMatch,
+        version_match: versionMatch,
+        expected_hash: expectedHash,
+        computed_hash: computedHash,
+        expected_version: expectedVersion,
+        computed_version: computedVersion,
+        warnings,
+    };
+}
+
 // ============================================================================
 // SECTION L — buildDaubertDisclosure (E3 — FRE 707 compliance wrapper)
 // ============================================================================
@@ -6361,6 +6424,7 @@ const _api = {
     computeKinematicDelay,
     // Section K
     computeTopologyHash,
+    verifyReport,
     // Section L
     buildDaubertDisclosure,
     // Section O
