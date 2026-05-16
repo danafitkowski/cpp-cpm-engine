@@ -12,7 +12,7 @@ Thank you for considering a contribution. The engine is the core of an active fo
    npm test
    ```
 
-2. **Every commit must pass 186/186 cross-validation checks against the Python sibling.**
+2. **Every commit must pass 346/346 cross-validation checks against the Python sibling (32 fixtures).**
 
    ```bash
    npm run crossval
@@ -32,7 +32,7 @@ Thank you for considering a contribution. The engine is the core of an active fo
    npm run crossval
    ```
 
-   The Python reference (`cpm.py`) is not currently bundled with this engine repo — it lives in the larger CPP suite (`_cpp_common`). If you cannot obtain it locally, the CI pipeline will run crossval for you on the PR.
+   The Python reference (`cpm.py`) **is bundled** with this engine repo at `python_reference/cpm.py`, pinned by SHA-256 to guarantee bit-identical crossval semantics. The bundled copy is the canonical reference for any external contributor running `npm run crossval`; CPP-internal developers may still point `$CPP_PYTHON_REFERENCE_DIR` at the live `_cpp_common/scripts/` tree for in-flight development.
 
 3. **Run `npm run test:all` before opening a PR.**
 
@@ -96,8 +96,8 @@ Every output manifest reads `ENGINE_VERSION` and embeds it in the report. A vers
 
 ## Pull-request checklist
 
-- [ ] `npm test` passes (677+ tests, 0 fail).
-- [ ] `npm run crossval` passes (186/186 checks).
+- [ ] `npm test` passes (728 tests, 0 fail).
+- [ ] `npm run crossval` passes (346/346 checks across 32 fixtures).
 - [ ] If you added a new citation, the URL is in `docs/citations.md` and the case/RP is real.
 - [ ] If you bumped the engine version, both `cpm-engine.js` and `package.json` are updated.
 - [ ] If you added a new public API, it is documented in `docs/api.md`.
