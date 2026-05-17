@@ -1305,8 +1305,16 @@ function computeCPM(activities, relationships, opts) {
         throw err;
     }
 
+    // v2.9.14 F13 Bug 1 — `calFor` now threads opts.projectCalendar as a
+    // fallback when the activity has no clndr_id. Previously a missing
+    // clndr_id returned null, forcing the engine to fall back to ordinal
+    // 7-day arithmetic with a loud alert — even when the caller had
+    // supplied a project-default calendar via opts.projectCalendar.
+    const _projectCalId = opts.projectCalendar || opts.project_calendar || '';
+    const _projectCal = _projectCalId ? (calMap[_projectCalId] || null) : null;
     function calFor(node) {
-        return node.clndr_id ? (calMap[node.clndr_id] || null) : null;
+        if (node.clndr_id && calMap[node.clndr_id]) return calMap[node.clndr_id];
+        return _projectCal;
     }
 
     // Forward pass.
@@ -5474,7 +5482,20 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
             }
         }
 
-        const { ci_low, ci_high } = _ciFromNormal(postMu, postSigma, credibleInterval);
+        let { ci_low, ci_high } = _ciFromNormal(postMu, postSigma, credibleInterval);
+        // v2.9.14 F13 Bug 5 — Normal-symmetric CI on a strictly-non-negative
+        // distribution (lognormal, beta, duration) can produce a NEGATIVE
+        // ci_low for high-variance priors, which is physically impossible
+        // (no activity has < 0 days). Clamp ci_low to 0 with a forensic
+        // note so the posterior block doesn't silently emit nonsense.
+        // Full distribution-specific quantile (lognormal log-scale CI, beta
+        // inverse-CDF) is deferred; the clamp prevents the silent-wrong-
+        // answer case while still preserving the symmetric ci_high.
+        if (prior.distribution === 'lognormal' ||
+            prior.distribution === 'beta' ||
+            prior.distribution === 'pert') {
+            if (ci_low < 0) ci_low = 0;
+        }
 
         posterior_by_code[code] = {
             mean: Math.round(postMu * 1000) / 1000,

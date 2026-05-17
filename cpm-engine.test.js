@@ -6499,6 +6499,57 @@ console.log('\n=== v2.9.14 Bug F4/F14 — Driving-predecessor parity + LPM tie-b
         'got ' + latest);
 }
 
+console.log('\n=== v2.9.14 Bug F13 — Project-calendar fallback + Bayesian CI clamp ===');
+
+// T-FIX-F13-1 — calFor() threads opts.projectCalendar as fallback when
+// activity has no clndr_id.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        // No clndr_id — should use opts.projectCalendar = 'MF' fallback.
+    ];
+    const calMap = { MF: { work_days: [1,2,3,4,5], holidays: [] } };
+    const r = E.computeCPM(acts, [], {
+        calMap,
+        projectCalendar: 'MF',
+        dataDate: '2026-01-05',
+    });
+    // With MF as project default, A starting Mon should END on next Mon.
+    // (Without the fallback, A would fall through to 7-day ordinal arithmetic
+    // and emit the "Calendar-aware arithmetic unavailable" ALERT.)
+    const hasAlertFallback = r.alerts.some(a =>
+        a.context && a.context.indexOf('forward A.EF') >= 0);
+    check('T-FIX-F13-1: opts.projectCalendar fallback prevents fallback ALERT',
+        !hasAlertFallback,
+        'alerts=' + JSON.stringify(r.alerts.filter(a =>
+            a.context && a.context.indexOf('A') >= 0).map(a => a.context)));
+}
+
+// T-FIX-F13-5a — Bayesian CI ci_low clamped to 0 for lognormal prior.
+// Use a very-high-variance synthetic prior so the Normal-symmetric CI would
+// otherwise dip below zero.
+{
+    if (typeof E.computeBayesianUpdate === 'function') {
+        const r = E.computeBayesianUpdate(
+            [{
+                code: 'A',
+                duration_days: 1,
+                distribution: 'lognormal',
+                sigma_ln: 2.0,  // high variance
+            }],
+            {},  // no actuals
+            { credibleInterval: 0.95 }
+        );
+        const p = r.posterior_by_code && r.posterior_by_code['A'];
+        check('T-FIX-F13-5a: lognormal ci_low clamped to 0',
+            p && p.ci_low >= 0,
+            'ci_low=' + (p ? p.ci_low : 'no posterior'));
+    } else {
+        check('T-FIX-F13-5a: computeBayesianUpdate present',
+            typeof E.computeBayesianUpdate === 'function');
+    }
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
