@@ -4365,23 +4365,53 @@ function computeKinematicDelay(slipSeries, opts) {
  * @param {Array<{from_code: string, to_code: string, type: string, lag_days: number}>} relationships
  * @returns {{topology_hash, activity_count, relationship_count, algorithm, ...}}
  */
+// v2.9.14 F9 — quantization quantum for floats prior to hashing. 1e6 means
+// durations / lags differing by less than 1 micro-day (≈0.0864 s) collide,
+// which is fine — P6's native granularity is hours. Without quantization,
+// rounding-noise at the ULP boundary (e.g. 5.0 vs 5.000000000000001 from
+// `40/8`) silently produces different hashes for byte-identical schedules.
+const _F9_QUANT = 1e6;
+
+function _f9Quantize(x) {
+    const v = parseFloat(x);
+    if (!Number.isFinite(v)) return null;  // caller emits COERCED_FIELD_IN_HASH
+    return Math.round(v * _F9_QUANT) / _F9_QUANT;
+}
+
 function computeTopologyHash(activities, relationships) {
     if (!Array.isArray(activities) || activities.length === 0) {
         return {
             topology_hash: null,
             activity_count: 0,
             relationship_count: 0,
-            algorithm: 'sha256-canonical-v1',
+            algorithm: 'sha256-canonical-v2',
             error: 'empty activity list',
             engine_version: ENGINE_VERSION,
         };
     }
 
-    // Build O(1) lookup map for activity duration by code.
+    // v2.9.14 F9 Bug C — track silent NaN→0 coercion so it surfaces in an
+    // alerts array on the result (callers may inspect for forensic audit).
+    const _coercionAlerts = [];
+
+    // Build O(1) lookup map for activity duration by code. Quantize to
+    // _F9_QUANT for ULP stability (F9 Bug E).
     const durByCode = Object.create(null);
     for (const a of activities) {
         if (!a || !a.code) continue;
-        durByCode[a.code] = parseFloat(a.duration_days) || 0;
+        const _dq = _f9Quantize(a.duration_days);
+        if (_dq === null) {
+            _coercionAlerts.push({
+                severity: 'ALERT',
+                context: 'COERCED_FIELD_IN_HASH',
+                message: 'Activity ' + a.code + ' duration_days=' +
+                    JSON.stringify(a.duration_days) + ' is non-finite; coerced to 0 ' +
+                    'for hash. Verify source XER.',
+            });
+            durByCode[a.code] = 0;
+        } else {
+            durByCode[a.code] = _dq;
+        }
     }
 
     // Build predecessor map keyed by activity code.
@@ -4400,7 +4430,17 @@ function computeTopologyHash(activities, relationships) {
         if (!(r.to_code in predsByCode)) continue;
         if (!(r.from_code in predsByCode)) continue;
         const _ptype = (r.type || 'FS').toUpperCase();
-        const _plag  = parseFloat(r.lag_days) || 0;
+        const _lq = _f9Quantize(r.lag_days);
+        const _plag = (_lq === null) ? 0 : _lq;
+        if (_lq === null && r.lag_days !== undefined && r.lag_days !== null && r.lag_days !== '') {
+            _coercionAlerts.push({
+                severity: 'ALERT',
+                context: 'COERCED_FIELD_IN_HASH',
+                message: 'Relationship ' + r.from_code + '->' + r.to_code +
+                    ' lag_days=' + JSON.stringify(r.lag_days) + ' is non-finite; ' +
+                    'coerced to 0 for hash. Verify source XER.',
+            });
+        }
         const _pkey  = r.from_code + '\x1f' + _ptype + '\x1f' + _plag;
         if (_predSeenByCode[r.to_code][_pkey]) continue;
         _predSeenByCode[r.to_code][_pkey] = true;
@@ -4414,7 +4454,11 @@ function computeTopologyHash(activities, relationships) {
     // Sort activities by code.
     const sortedCodes = Object.keys(predsByCode).sort();
 
-    // Build canonical line per activity.
+    // v2.9.14 F9 Bug D — JSON-encode each canonical line so delimiter chars
+    // in `code` / `type` (e.g. an activity code containing `|` or `:`) cannot
+    // collide with other activities. Old v1 form was `code|dur|preds` with
+    // `|` and `:` as delimiters — vulnerable. New v2 form uses a JSON object
+    // with explicit fields; canonical-key order via JSON.stringify replacer.
     const lines = [];
     for (const code of sortedCodes) {
         const dur = durByCode[code];
@@ -4423,30 +4467,33 @@ function computeTopologyHash(activities, relationships) {
             if (x.type !== y.type) return x.type < y.type ? -1 : 1;
             return x.lag - y.lag;
         });
-        const predStr = preds.map((p) => p.from + ':' + p.type + ':' + p.lag).join(',');
-        lines.push(code + '|' + dur + '|' + predStr);
+        // Canonical key order: code, dur, preds. Preds is array of
+        // {from, type, lag} also in canonical order.
+        const obj = {
+            code: code,
+            dur: dur,
+            preds: preds.map(p => ({ from: p.from, type: p.type, lag: p.lag })),
+        };
+        lines.push(JSON.stringify(obj, ['code', 'dur', 'preds', 'from', 'type', 'lag']));
     }
 
     const canonical = lines.join('\n');
 
-    // SHA-256 (Node.js) or FNV-1a fallback (browser).
+    // v2.9.14 F9 Bug B — no FNV-1a fallback. SHA-256 is mandatory; if neither
+    // Node crypto nor Web Crypto is available, throw a clear error.
     let hash = null;
     let algorithm;
     if (_crypto && _crypto.createHash) {
         hash = _crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
-        algorithm = 'sha256-canonical-v1';
+        algorithm = 'sha256-canonical-v2';
     } else {
-        // Browser fallback: FNV-1a 64-bit (not cryptographic but stable and deterministic).
-        // Note: browsers should use crypto.subtle.digest for SHA-256 if available.
-        let h = BigInt('0xcbf29ce484222325');
-        const fnv = BigInt('0x100000001b3');
-        const mask = BigInt('0xffffffffffffffff');
-        for (let i = 0; i < canonical.length; i++) {
-            h = (h ^ BigInt(canonical.charCodeAt(i))) & mask;
-            h = (h * fnv) & mask;
-        }
-        hash = 'fnv1a-' + h.toString(16);
-        algorithm = 'fnv1a-fallback-v1';
+        const err = new Error(
+            'computeTopologyHash: SHA-256 unavailable. Node crypto and Web Crypto ' +
+            'are both missing. Use computeTopologyHashAsync() in browser contexts ' +
+            'that support crypto.subtle, or run in a Node environment.'
+        );
+        err.code = 'NO_SHA256';
+        throw err;
     }
 
     const relCount = (relationships || []).filter(r => r && r.from_code && r.to_code).length;
@@ -4455,12 +4502,105 @@ function computeTopologyHash(activities, relationships) {
         : canonical.length;
 
     return {
-        topology_hash: hash,
+        // v2.9.14 F9 Bug F — `v2:` prefix so old v1 hashes vs new v2 hashes
+        // are visibly different. verifyReport tolerates both (forward-compat).
+        topology_hash: 'v2:' + hash,
         activity_count: sortedCodes.length,
         relationship_count: relCount,
         algorithm,
         canonical_byte_count: byteCount,
         engine_version: ENGINE_VERSION,
+        alerts: _coercionAlerts,
+    };
+}
+
+/**
+ * computeTopologyHashAsync(activities, relationships)
+ *
+ * Web Crypto variant for browser contexts. Returns a Promise. Uses
+ * crypto.subtle.digest('SHA-256') instead of the Node `crypto.createHash`
+ * API. Math and canonical form are bit-identical to computeTopologyHash.
+ */
+async function computeTopologyHashAsync(activities, relationships) {
+    if (!Array.isArray(activities) || activities.length === 0) {
+        return {
+            topology_hash: null,
+            activity_count: 0,
+            relationship_count: 0,
+            algorithm: 'sha256-canonical-v2',
+            error: 'empty activity list',
+            engine_version: ENGINE_VERSION,
+        };
+    }
+    // Defer to sync path for canonical construction by temporarily
+    // monkey-patching the SHA-256 backend? Simpler: replicate canonical
+    // form in line, then crypto.subtle.digest.
+    const _coercionAlerts = [];
+    const durByCode = Object.create(null);
+    for (const a of activities) {
+        if (!a || !a.code) continue;
+        const _dq = _f9Quantize(a.duration_days);
+        durByCode[a.code] = (_dq === null) ? 0 : _dq;
+    }
+    const predsByCode = Object.create(null);
+    const _predSeen = Object.create(null);
+    for (const code in durByCode) {
+        predsByCode[code] = [];
+        _predSeen[code] = Object.create(null);
+    }
+    for (const r of (relationships || [])) {
+        if (!r || !r.from_code || !r.to_code) continue;
+        if (!(r.to_code in predsByCode)) continue;
+        if (!(r.from_code in predsByCode)) continue;
+        const _ptype = (r.type || 'FS').toUpperCase();
+        const _lq = _f9Quantize(r.lag_days);
+        const _plag = (_lq === null) ? 0 : _lq;
+        const _pkey = r.from_code + '\x1f' + _ptype + '\x1f' + _plag;
+        if (_predSeen[r.to_code][_pkey]) continue;
+        _predSeen[r.to_code][_pkey] = true;
+        predsByCode[r.to_code].push({ from: r.from_code, type: _ptype, lag: _plag });
+    }
+    const sortedCodes = Object.keys(predsByCode).sort();
+    const lines = [];
+    for (const code of sortedCodes) {
+        const dur = durByCode[code];
+        const preds = predsByCode[code].slice().sort((x, y) => {
+            if (x.from !== y.from) return x.from < y.from ? -1 : 1;
+            if (x.type !== y.type) return x.type < y.type ? -1 : 1;
+            return x.lag - y.lag;
+        });
+        const obj = { code, dur, preds: preds.map(p => ({ from: p.from, type: p.type, lag: p.lag })) };
+        lines.push(JSON.stringify(obj, ['code', 'dur', 'preds', 'from', 'type', 'lag']));
+    }
+    const canonical = lines.join('\n');
+    let hash;
+    if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+        const buf = new TextEncoder().encode(canonical);
+        const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+        hash = Array.from(new Uint8Array(hashBuf))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+    } else if (_crypto && _crypto.createHash) {
+        hash = _crypto.createHash('sha256').update(canonical, 'utf8').digest('hex');
+    } else {
+        const err = new Error(
+            'computeTopologyHashAsync: SHA-256 unavailable. Both crypto.subtle ' +
+            'and Node crypto are missing.'
+        );
+        err.code = 'NO_SHA256';
+        throw err;
+    }
+    const relCount = (relationships || []).filter(r => r && r.from_code && r.to_code).length;
+    const byteCount = (typeof Buffer !== 'undefined' && Buffer.byteLength)
+        ? Buffer.byteLength(canonical, 'utf8')
+        : canonical.length;
+    return {
+        topology_hash: 'v2:' + hash,
+        activity_count: sortedCodes.length,
+        relationship_count: relCount,
+        algorithm: 'sha256-canonical-v2',
+        canonical_byte_count: byteCount,
+        engine_version: ENGINE_VERSION,
+        alerts: _coercionAlerts,
     };
 }
 
@@ -4499,14 +4639,36 @@ function verifyReport(report, activities, relationships, opts) {
     const computedHash = hashInfo.topology_hash;
     const computedVersion = ENGINE_VERSION;
 
-    const hashMatch = !!expectedHash && expectedHash === computedHash;
+    // v2.9.14 F9 — accept both `v2:<hex>` (new) and bare-hex / `fnv1a-...`
+    // (legacy v1) prefixes for forward-compat. A v1 report verified against
+    // v2 engine emits a HASH_LEGACY_FORMAT warning so the analyst knows the
+    // hash format has been upgraded but the topology is unchanged.
+    let hashMatch = !!expectedHash && expectedHash === computedHash;
+    let legacyFormatWarning = false;
+    if (!hashMatch && expectedHash && computedHash) {
+        // Legacy v1 unprefixed hex hashes are 64 chars. v2 hash is `v2:<64hex>`.
+        const expectedIsLegacy = /^[0-9a-f]{64}$/.test(expectedHash) ||
+            expectedHash.indexOf('fnv1a-') === 0;
+        if (expectedIsLegacy) {
+            legacyFormatWarning = true;
+        }
+    }
     const versionMatch = !!expectedVersion && expectedVersion === computedVersion;
 
     if (!hashMatch && expectedHash && computedHash) {
-        warnings.push('HASH_MISMATCH: disclosed hash ' + expectedHash +
-            ' != recomputed hash ' + computedHash +
-            '. Topology has changed since the report was generated, OR ' +
-            'a different parser produced different canonical form.');
+        if (legacyFormatWarning) {
+            warnings.push('HASH_LEGACY_FORMAT: disclosed hash ' + expectedHash +
+                ' is in v1 (pre-v2.9.14) format and cannot be directly compared ' +
+                'with v2 hash ' + computedHash + '. Topology MAY still be ' +
+                'identical — re-run computeTopologyHash on a v1 engine snapshot ' +
+                'to compare like-for-like, or re-generate the report against ' +
+                'engine v2.9.14+ for forward compatibility.');
+        } else {
+            warnings.push('HASH_MISMATCH: disclosed hash ' + expectedHash +
+                ' != recomputed hash ' + computedHash +
+                '. Topology has changed since the report was generated, OR ' +
+                'a different parser produced different canonical form.');
+        }
     }
     if (!versionMatch && expectedVersion && computedVersion) {
         warnings.push('VERSION_MISMATCH: disclosed engine_version ' + expectedVersion +
@@ -4518,6 +4680,7 @@ function verifyReport(report, activities, relationships, opts) {
     return {
         verified: hashMatch && (versionMatch || !expectedVersion),
         hash_match: hashMatch,
+        legacy_hash_format: legacyFormatWarning,
         version_match: versionMatch,
         expected_hash: expectedHash,
         computed_hash: computedHash,
@@ -6515,6 +6678,7 @@ const _api = {
     computeKinematicDelay,
     // Section K
     computeTopologyHash,
+    computeTopologyHashAsync,
     verifyReport,
     // Section L
     buildDaubertDisclosure,

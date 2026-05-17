@@ -1032,8 +1032,171 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
     }
 
 
+# =============================================================================
+# v2.9.14 F9 — Topology hash (Python parity port)
+# =============================================================================
+#
+# Mirrors the JS computeTopologyHash byte-for-byte on the v2 canonical form.
+# The Daubert dual-implementation claim ("the math is correct because two
+# independent engines produce identical answers") was previously broken for
+# `topology_hash` because Python had no equivalent function — the only
+# verification path was JS-to-JS, which doesn't prove math, just stability.
+# This port closes the gap.
+#
+# Canonical form v2 (matches JS):
+#   line = JSON.stringify({code, dur, preds}, ['code','dur','preds','from','type','lag'])
+#   canonical = lines.join('\n')   ← lines sorted by code
+#   hash = 'v2:' + sha256(canonical).hex()
+#
+# Quantization: parseFloat(value) -> round(value * 1e6) / 1e6 prior to hashing.
+# Non-finite -> 0 with COERCED_FIELD_IN_HASH alert (caller-visible).
+
+_F9_QUANT = 1_000_000
+
+
+def _f9_quantize(x):
+    """Quantize x to 6 decimal places. Returns None if non-finite.
+
+    Returns int when the quantized value is integral (matches JS JSON.stringify
+    semantics where 5.0 serializes as `5`, not `5.0`).
+    """
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(v):
+        return None
+    q = round(v * _F9_QUANT) / _F9_QUANT
+    # JS-parity: emit int for integral values so JSON serialization matches
+    # `5` rather than `5.0`.
+    if q == int(q):
+        return int(q)
+    return q
+
+
+def compute_topology_hash(activities, relationships):
+    """Compute SHA-256 topology hash. Mirrors JS computeTopologyHash v2.
+
+    Args:
+        activities: list of {'code', 'duration_days'} dicts.
+        relationships: list of {'from_code', 'to_code', 'type', 'lag_days'} dicts.
+
+    Returns:
+        dict with topology_hash (`v2:<sha256-hex>`), activity_count,
+        relationship_count, algorithm ('sha256-canonical-v2'),
+        canonical_byte_count, engine_version, alerts.
+    """
+    import hashlib
+    import json
+
+    if not isinstance(activities, list) or len(activities) == 0:
+        return {
+            'topology_hash': None,
+            'activity_count': 0,
+            'relationship_count': 0,
+            'algorithm': 'sha256-canonical-v2',
+            'error': 'empty activity list',
+            'engine_version': ENGINE_VERSION,
+        }
+
+    coercion_alerts = []
+    dur_by_code = {}
+    for a in activities:
+        if not a or not a.get('code'):
+            continue
+        code = a['code']
+        dq = _f9_quantize(a.get('duration_days'))
+        if dq is None:
+            coercion_alerts.append({
+                'severity': 'ALERT',
+                'context': 'COERCED_FIELD_IN_HASH',
+                'message': (
+                    f'Activity {code} duration_days='
+                    f'{json.dumps(a.get("duration_days"))} is non-finite; '
+                    f'coerced to 0 for hash. Verify source XER.'
+                ),
+            })
+            dur_by_code[code] = 0
+        else:
+            dur_by_code[code] = dq
+
+    preds_by_code = {c: [] for c in dur_by_code}
+    pred_seen = {c: set() for c in dur_by_code}
+    for r in (relationships or []):
+        if not r or not r.get('from_code') or not r.get('to_code'):
+            continue
+        if r['to_code'] not in preds_by_code:
+            continue
+        if r['from_code'] not in preds_by_code:
+            continue
+        ptype = (r.get('type') or 'FS').upper()
+        lq = _f9_quantize(r.get('lag_days'))
+        plag = 0 if lq is None else lq
+        if lq is None and r.get('lag_days') not in (None, '', 0):
+            coercion_alerts.append({
+                'severity': 'ALERT',
+                'context': 'COERCED_FIELD_IN_HASH',
+                'message': (
+                    f'Relationship {r["from_code"]}->{r["to_code"]} '
+                    f'lag_days={json.dumps(r.get("lag_days"))} is non-finite; '
+                    f'coerced to 0 for hash. Verify source XER.'
+                ),
+            })
+        pkey = f'{r["from_code"]}\x1f{ptype}\x1f{plag}'
+        if pkey in pred_seen[r['to_code']]:
+            continue
+        pred_seen[r['to_code']].add(pkey)
+        preds_by_code[r['to_code']].append({
+            'from': r['from_code'],
+            'type': ptype,
+            'lag': plag,
+        })
+
+    sorted_codes = sorted(preds_by_code.keys())
+    lines = []
+    for code in sorted_codes:
+        dur = dur_by_code[code]
+        preds_sorted = sorted(
+            preds_by_code[code],
+            key=lambda p: (p['from'], p['type'], p['lag']),
+        )
+        obj = {
+            'code': code,
+            'dur': dur,
+            'preds': [
+                {'from': p['from'], 'type': p['type'], 'lag': p['lag']}
+                for p in preds_sorted
+            ],
+        }
+        # JSON serialization must match JS JSON.stringify byte-for-byte:
+        # - no extra whitespace (separators=(',', ':'))
+        # - dict key order matches the replacer in JS: code, dur, preds, then
+        #   from, type, lag within preds. Python dicts preserve insertion
+        #   order, so we explicitly build with the right insertion order.
+        lines.append(json.dumps(obj, separators=(',', ':')))
+
+    canonical = '\n'.join(lines)
+    sha = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+    byte_count = len(canonical.encode('utf-8'))
+    rel_count = sum(
+        1 for r in (relationships or [])
+        if r and r.get('from_code') and r.get('to_code')
+    )
+
+    return {
+        'topology_hash': 'v2:' + sha,
+        'activity_count': len(sorted_codes),
+        'relationship_count': rel_count,
+        'algorithm': 'sha256-canonical-v2',
+        'canonical_byte_count': byte_count,
+        'engine_version': ENGINE_VERSION,
+        'alerts': coercion_alerts,
+    }
+
+
 __all__ = [
     'compute_cpm',
+    'compute_topology_hash',
     'date_to_num',
     'num_to_date',
     'add_work_days',

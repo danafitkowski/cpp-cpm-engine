@@ -1873,7 +1873,7 @@ const rels3 = [
     check('E2: hash is non-null string', typeof h1.topology_hash === 'string' && h1.topology_hash.length > 0);
     check('E2: activity_count = 3', h1.activity_count === 3);
     check('E2: relationship_count = 2', h1.relationship_count === 2);
-    check('E2: algorithm is sha256-canonical-v1', h1.algorithm === 'sha256-canonical-v1');
+    check('E2: algorithm is sha256-canonical-v2', h1.algorithm === 'sha256-canonical-v2');
 }
 {
     // Add a relationship → different hash
@@ -2559,12 +2559,12 @@ const _daubert_disc = E.buildDaubertDisclosure(null, {
     // Round 6: split into two strong assertions. The previous single check
     // used `hash || ''` as the fallback, which made `html.includes('')`
     // trivially true if hash was ever null/blank — silently passing on
-    // hash-generation failure. Now we assert (a) hash is the correct 64-char
-    // hex shape AND (b) it appears verbatim in the HTML render.
+    // hash-generation failure. Now we assert (a) hash matches the v2 shape
+    // `v2:<64-hex>` AND (b) it appears verbatim in the HTML render.
     const html = E.renderDaubertHTML(_daubert_disc, {});
     const _h = _daubert_disc.provenance.input_topology_hash;
-    check('O-T4a: topology hash is 64-char sha256 hex',
-        typeof _h === 'string' && _h.length === 64 && /^[0-9a-f]{64}$/.test(_h),
+    check('O-T4a: topology hash is v2:<64-hex> sha256',
+        typeof _h === 'string' && /^v2:[0-9a-f]{64}$/.test(_h),
         'hash=' + JSON.stringify(_h));
     check('O-T4b: topology hash present in HTML',
         typeof _h === 'string' && _h.length > 0 && html.includes(_h));
@@ -6222,6 +6222,92 @@ console.log('\n=== v2.9.14 Bug F2 — Zero-lag snap-to-workday + FF/SF anchor id
     const r = E.addWorkDays(fri, 0, cal);
     check('T-FIX-F2-5: addWorkDays(holiday, 0, cal) snaps to next workday',
         E.numToDate(r) === '2026-01-12', 'got ' + E.numToDate(r));
+}
+
+console.log('\n=== v2.9.14 Bug F9 — Topology hash v2 (Python parity + JSON-encoded + quantized) ===');
+
+// T-FIX-F9-1 — v2 prefix present.
+{
+    const acts = [
+        { code: 'A', duration_days: 5 },
+        { code: 'B', duration_days: 3 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeTopologyHash(acts, rels);
+    check('T-FIX-F9-1: hash has v2: prefix',
+        r.topology_hash && r.topology_hash.indexOf('v2:') === 0,
+        'got ' + r.topology_hash);
+}
+
+// T-FIX-F9-2 — algorithm string updated.
+{
+    const acts = [{ code: 'A', duration_days: 5 }];
+    const r = E.computeTopologyHash(acts, []);
+    check('T-FIX-F9-2: algorithm = sha256-canonical-v2',
+        r.algorithm === 'sha256-canonical-v2',
+        'got ' + r.algorithm);
+}
+
+// T-FIX-F9-3 — ULP-noise float quantization. 5.0 vs 5.000000000000001 must
+// produce the same hash (within _F9_QUANT = 1e-6).
+{
+    const r1 = E.computeTopologyHash(
+        [{ code: 'A', duration_days: 5.0 }], []);
+    const r2 = E.computeTopologyHash(
+        [{ code: 'A', duration_days: 5.000000000000001 }], []);
+    check('T-FIX-F9-3: ULP-noise floats collide (quantization)',
+        r1.topology_hash === r2.topology_hash,
+        'h1=' + r1.topology_hash + ' h2=' + r2.topology_hash);
+}
+
+// T-FIX-F9-4 — Delimiter characters in code don't collide. Old v1 form:
+// `A|B|preds` and `A:B|preds` could collide if rebuild order matched. With
+// JSON encoding the strings are unambiguous.
+{
+    const r1 = E.computeTopologyHash(
+        [{ code: 'A|B', duration_days: 5 }], []);
+    const r2 = E.computeTopologyHash(
+        [{ code: 'A', duration_days: 5 }, { code: 'B', duration_days: 5 }], []);
+    check('T-FIX-F9-4: delimiter-in-code does not collide',
+        r1.topology_hash !== r2.topology_hash,
+        'h1=' + r1.topology_hash + ' h2=' + r2.topology_hash);
+}
+
+// T-FIX-F9-5 — Non-finite duration -> COERCED_FIELD_IN_HASH alert.
+{
+    const r = E.computeTopologyHash(
+        [{ code: 'A', duration_days: Infinity }], []);
+    const has = r.alerts && r.alerts.some(a =>
+        a.context === 'COERCED_FIELD_IN_HASH' && a.severity === 'ALERT');
+    check('T-FIX-F9-5: non-finite duration emits COERCED_FIELD_IN_HASH',
+        has, 'alerts=' + JSON.stringify(r.alerts));
+}
+
+// T-FIX-F9-6 — Empty activity list returns null hash.
+{
+    const r = E.computeTopologyHash([], []);
+    check('T-FIX-F9-6: empty acts -> null hash',
+        r.topology_hash === null && r.algorithm === 'sha256-canonical-v2',
+        'got ' + JSON.stringify(r));
+}
+
+// T-FIX-F9-7 — verifyReport accepts v1 legacy hash with HASH_LEGACY_FORMAT
+// warning (does NOT crash, does NOT silently accept).
+{
+    const acts = [{ code: 'A', duration_days: 5 }];
+    const fakeReport = {
+        engine_version: '2.9.13',
+        provenance: {
+            // Plausible v1 64-hex hash — no v2 prefix.
+            input_topology_hash: 'a'.repeat(64),
+        },
+    };
+    const r = E.verifyReport(fakeReport, acts, []);
+    const hasLegacy = r.warnings && r.warnings.some(w =>
+        w.indexOf('HASH_LEGACY_FORMAT') === 0);
+    check('T-FIX-F9-7: v1 hash → HASH_LEGACY_FORMAT warning (not crash)',
+        hasLegacy && r.legacy_hash_format === true,
+        'warnings=' + JSON.stringify(r.warnings));
 }
 
 console.log('\n========================================');
