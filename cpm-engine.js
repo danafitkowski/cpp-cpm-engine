@@ -1421,6 +1421,13 @@ function computeCPM(activities, relationships, opts) {
             maxES = ddNum;
         }
         let drivingPred = null;  // tracks which pred (if any) gave maxES
+        // v2.9.18 A4-HIGH — shadow-driver accumulator for in-progress activities.
+        // When hasActualStart pins maxES, we still track which predecessor
+        // "would have driven" forensically — and that must be the MAX-drive
+        // pred across all that exceeded maxES, not the FIRST one iterated.
+        // Initialize to maxES so any drive > maxES wins; subsequent drives
+        // must exceed the current shadow-max to win.
+        let _shadowMaxDrive = maxES;
         // v2.9.12 F2.2 — FF/SF finish-anchor identity. Round-tripping
         // retreat→advance through duration drifts off the anchor whenever
         // the anchor lies on a non-workday under nodeCal. Capture the
@@ -1459,8 +1466,18 @@ function computeCPM(activities, relationships, opts) {
             // cannot push ES later. We still track the driving_predecessor for
             // forensic traceability (which pred *would* have driven if not for
             // the immutable actual), but maxES stays pinned.
+            //
+            // v2.9.18 A4-HIGH — track the MAX-drive pred ("would have driven"),
+            // not the FIRST one that exceeded maxES. The previous
+            // `drivingPred === null` clause locked in whichever pred happened
+            // to be iterated first, even if a later pred would have driven ES
+            // significantly later. Forensic narrative was wrong whenever
+            // multiple preds exceeded the pin. Use a separate accumulator
+            // `_shadowMaxDrive` so the tie-break logic for non-actual-start
+            // case below is unchanged.
             if (hasActualStart) {
-                if (drive > maxES && drivingPred === null) {
+                if (drive > _shadowMaxDrive) {
+                    _shadowMaxDrive = drive;
                     drivingPred = {
                         code: pnode.code,
                         type: p.type,
@@ -1706,6 +1723,43 @@ function computeCPM(activities, relationships, opts) {
         if (ef > maxEF) maxEF = ef;
     }
 
+    // v2.9.18 A3-HIGH — opts.projectFinish overrides the backward-pass seed.
+    // P6 supports a "Must Finish By" project property that seeds the backward
+    // pass at the contract deadline (or any user-imposed completion date),
+    // producing global negative float when the schedule cannot meet it.
+    // Without this option callers can only express "behind schedule" by
+    // attaching FNLT constraints to every end milestone — undisclosed in the
+    // public API. Now: opts.projectFinish (ISO date) overrides maxEF as the
+    // backward-pass seed. Negative TF emerges naturally when the deadline is
+    // earlier than the natural maxEF; positive TF when it's later.
+    const _projectFinishOpt = opts.projectFinish || opts.project_finish || opts.mustFinishBy || '';
+    let _projectDeadlineNum = 0;
+    if (_projectFinishOpt) {
+        _projectDeadlineNum = dateToNum(_projectFinishOpt);
+        if (_projectDeadlineNum > 0) {
+            const _origMaxEF = maxEF;
+            maxEF = _projectDeadlineNum;
+            const _delta = _projectDeadlineNum - _origMaxEF;
+            alerts.push({
+                severity: _delta < 0 ? 'ALERT' : 'WARN',
+                context: 'project-deadline-applied',
+                message: 'opts.projectFinish=' + _projectFinishOpt +
+                    ' (offset ' + _projectDeadlineNum + ') applied as backward-pass seed; ' +
+                    'natural maxEF=' + numToDate(_origMaxEF) +
+                    (_delta < 0 ? ' (deadline earlier than natural finish — negative float will propagate)'
+                                : ' (deadline later than natural finish — global positive float)') +
+                    '.',
+            });
+        } else {
+            alerts.push({
+                severity: 'WARN',
+                context: 'project-deadline-invalid',
+                message: 'opts.projectFinish=' + JSON.stringify(_projectFinishOpt) +
+                    ' did not parse as YYYY-MM-DD; backward-pass seed defaulted to maxEF.',
+            });
+        }
+    }
+
     // Backward pass — initialize.
     for (let __i = 0; __i < _orderLen; __i++) {
         const n = nodes[_order[__i]];
@@ -1912,12 +1966,42 @@ function computeCPM(activities, relationships, opts) {
         for (const s of successors) {
             const sn = nodes[s.to_code];
             if (!sn) continue;
-            let slack;
-            if (s.type === 'FS') slack = sn.es - n.ef - (s.lag_days || 0);
-            else if (s.type === 'SS') slack = sn.es - n.es - (s.lag_days || 0);
-            else if (s.type === 'FF') slack = sn.ef - n.ef - (s.lag_days || 0);
-            else if (s.type === 'SF') slack = sn.ef - n.es - (s.lag_days || 0);
-            else slack = sn.es - n.ef - (s.lag_days || 0);
+            // v2.9.18 A11-HIGH — calendar-aware slack. The previous formula
+            // `sn.es - n.ef - lag_days` mixed units: (sn.es - n.ef) is a
+            // calendar-day delta while lag_days is in working days on the
+            // successor's calendar. On any non-7-day calendar the two
+            // quantities don't subtract meaningfully. The cal-aware
+            // computation: walk the lag forward from pred's anchor in
+            // working days on the successor's calendar to get a calendar-
+            // day offset, then take the calendar-day delta to the successor's
+            // anchor. The result is in calendar days; ff_working_days below
+            // converts via _countWorkDaysBetween.
+            const succCal = (sn.clndr_id && calMap) ? calMap[sn.clndr_id] : null;
+            const lag = s.lag_days || 0;
+            // v2.9.18 A11-HIGH — alerts sink. Forward pass already fired
+            // calendar-fallback / fractional-lag alerts for this rel; the
+            // slack computation walks the same path so we suppress duplicate
+            // alerts here. (Cross-val parity: Python's slack derivation
+            // emits no alerts; matching that count.)
+            const _slackAlertSink = [];
+            let predAnchor, succAnchor;
+            if (s.type === 'FS') {
+                predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FS');
+                succAnchor = sn.es;
+            } else if (s.type === 'SS') {
+                predAnchor = _advanceWithAlerts(n.es, lag, succCal, _slackAlertSink, 'FF-slack SS');
+                succAnchor = sn.es;
+            } else if (s.type === 'FF') {
+                predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FF');
+                succAnchor = sn.ef;
+            } else if (s.type === 'SF') {
+                predAnchor = _advanceWithAlerts(n.es, lag, succCal, _slackAlertSink, 'FF-slack SF');
+                succAnchor = sn.ef;
+            } else {
+                predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack default');
+                succAnchor = sn.es;
+            }
+            const slack = succAnchor - predAnchor;
             if (slack < minSlack) {
                 minSlack = slack;
                 bindingSuccCode = s.to_code;
@@ -2088,6 +2172,15 @@ const _MC = {
     // instead of with JS's hoisting quirks. Built up at parseXER time so
     // runCPM doesn't have to recover insertion order from `for...in`.
     taskIdsOrdered: [],
+    // v2.9.18 A8-HIGH — calendar hours-per-day per clndr_id. P6 stores lag
+    // in hours and durations in hours; converting to days requires knowing
+    // the calendar's day_hr_cnt. The default 8 inflates 10-hour shifts by
+    // 25% and 24-hour continuous-ops by 200%. Parsed from the XER CALENDAR
+    // table when present; falls back to 8 with a WARN at lookup time.
+    calendarHoursPerDay: {},   // { clndr_id: number }
+    // v2.9.18 A8-HIGH — task → clndr_id index so lag conversion can look up
+    // the successor's calendar at TASKPRED parse time.
+    taskClndrId: {},           // { task_id: clndr_id }
 };
 
 function parseXER(content) {
@@ -2134,10 +2227,33 @@ function parseXER(content) {
             for (let i = 0; i < headers.length && i < values.length; i++) {
                 row[headers[i]] = values[i];
             }
+            // v2.9.18 A8-HIGH — parse CALENDAR table for clndr_id → day_hr_cnt.
+            // Oracle P6 stores day_hr_cnt directly on the CALENDAR row. When
+            // present, use it for lag conversion below (replacing the previous
+            // hardcoded /8). When the CALENDAR table is absent or day_hr_cnt
+            // is missing, all conversions fall back to 8 with a one-time WARN
+            // per unknown calendar at TASKPRED time.
+            if (currentTable === 'CALENDAR') {
+                const clndr_id = row.clndr_id;
+                if (clndr_id) {
+                    const _hpd = parseFloat(row.day_hr_cnt);
+                    if (Number.isFinite(_hpd) && _hpd > 0) {
+                        _MC.calendarHoursPerDay[clndr_id] = _hpd;
+                    }
+                }
+            }
             if (currentTable === 'TASK') {
                 const taskId = row.task_id;
-                const remaining = (parseFloat(row.remain_drtn_hr_cnt) || 0) / 8;
-                const targetDur = (parseFloat(row.target_drtn_hr_cnt) || 0) / 8;
+                // v2.9.18 A8-HIGH — capture task's calendar so TASKPRED lag
+                // conversion can use the SUCCESSOR's day_hr_cnt (per P6 spec).
+                if (row.clndr_id) _MC.taskClndrId[taskId] = row.clndr_id;
+                // Look up this task's day_hr_cnt for the duration conversion.
+                // Falls back to 8 if the calendar wasn't in the CALENDAR table.
+                const _dhpd = (row.clndr_id && _MC.calendarHoursPerDay[row.clndr_id])
+                    ? _MC.calendarHoursPerDay[row.clndr_id]
+                    : 8;
+                const remaining = (parseFloat(row.remain_drtn_hr_cnt) || 0) / _dhpd;
+                const targetDur = (parseFloat(row.target_drtn_hr_cnt) || 0) / _dhpd;
                 const _taskType = row.task_type || '';
                 // Drop reasons. Finish milestones (TT_FinMile) and start
                 // milestones (TT_Mile) legitimately have 0 duration; they
@@ -2320,7 +2436,37 @@ function parseXER(content) {
                     });
                     continue;
                 }
-                _lagDays = _rawLag / 8;
+                // v2.9.18 A8-HIGH — lag conversion uses the SUCCESSOR's
+                // calendar.day_hr_cnt (per P6 spec). Hardcoded /8 inflated
+                // 10-hr shift lags by 25% and 24-hr continuous-operations
+                // lags by 200%. When CALENDAR table or task's clndr_id is
+                // absent, falls back to 8 with a one-time WARN per unknown
+                // calendar (tracked so we don't spam the same alert for
+                // every relationship to the same successor).
+                const _succClndrId = _MC.taskClndrId[row.task_id];
+                const _succHpd = _succClndrId && _MC.calendarHoursPerDay[_succClndrId]
+                    ? _MC.calendarHoursPerDay[_succClndrId]
+                    : null;
+                let _lagHpd;
+                if (_succHpd !== null) {
+                    _lagHpd = _succHpd;
+                } else {
+                    _lagHpd = 8;
+                    if (_succClndrId && !_MC._lagHpdWarnedFor) _MC._lagHpdWarnedFor = {};
+                    if (_succClndrId && _MC._lagHpdWarnedFor && !_MC._lagHpdWarnedFor[_succClndrId]) {
+                        _MC._lagHpdWarnedFor[_succClndrId] = true;
+                        _MC.parseAlerts.push({
+                            severity: 'WARN',
+                            context: 'lag-hours-per-day-fallback',
+                            message: 'TASKPRED lag conversion: successor task_id=' +
+                                row.task_id + ' clndr_id=' + _succClndrId +
+                                ' has no day_hr_cnt in CALENDAR table; lag divisor ' +
+                                'defaulting to 8 (may inflate 10-hr / 24-hr lags). ' +
+                                'Provide CALENDAR rows with day_hr_cnt for accurate conversion.',
+                        });
+                    }
+                }
+                _lagDays = _rawLag / _lagHpd;
                 _MC.predecessors.push({
                     predTaskId: row.pred_task_id,
                     taskId: row.task_id,
@@ -2530,6 +2676,27 @@ function runCPM(opts) {
     // completed / zero-remaining / dangling-rel) so opposing experts see
     // every activity and relationship that didn't make it into the network.
     const alerts = (_MC.parseAlerts || []).slice();
+    // v2.9.18 A11-HIGH — Section D is ordinal-day arithmetic only. When the
+    // schedule has activities with clndr_id (calendar awareness intended),
+    // Section D silently treats lags and durations as ordinal days, which
+    // inflates working-day lags on any non-7-day calendar. Emit an ALERT
+    // pointing callers at Section C (computeCPM) for calendar-aware results.
+    let _calendarAwareWanted = false;
+    for (const taskId in _MC.taskClndrId) {
+        if (_MC.taskClndrId[taskId]) { _calendarAwareWanted = true; break; }
+    }
+    if (_calendarAwareWanted) {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'section-d-ordinal-only',
+            message: 'runCPM (Section D) is ORDINAL-day arithmetic only — lag ' +
+                'and duration are not calendar-converted on non-7-day calendars. ' +
+                'Activities with clndr_id were detected; for calendar-aware ' +
+                'results use computeCPM (Section C) with opts.calMap. ' +
+                'Section D will compute the schedule as if every day is a ' +
+                'working day; lag values you supplied are interpreted verbatim.',
+        });
+    }
     // v2.9.7 — Convert constraint date to Section D's day-number scale.
     // Returns -1 if conversion impossible (no projectStart or invalid date).
     function _cstrDayOffset(cstrDate) {
@@ -3543,6 +3710,10 @@ function resetMC() {
     // doesn't see stale alerts from the previous file.
     _MC.parseAlerts = [];
     _MC.calMap = null;
+    _MC.taskIdsOrdered = [];
+    // v2.9.18 A8-HIGH — clear cal-aware lag conversion state on reset.
+    _MC.calendarHoursPerDay = {};
+    _MC.taskClndrId = {};
 }
 
 // ============================================================================
@@ -6487,6 +6658,30 @@ function _applyObservance(year, month, day, observance) {
         // Sat(6) → Fri(−1), Sun(0) → Mon(+1)
         if (dow === 6) return _numToDateRaw(_msToNum(ms - 1 * 86400000));
         if (dow === 0) return _numToDateRaw(_msToNum(ms + 1 * 86400000));
+    } else if (observance === 'nearest_monday') {
+        // v2.9.18 A6-HIGH — Newfoundland and Labrador's Labour Standards Act
+        // observes St. Patrick's, St. George's, Discovery Day, and Orangemen's
+        // Day on the MONDAY NEAREST the anchor (not "only-if-weekend"). The
+        // previous monday_if_weekend implementation kept these holidays on
+        // their anchor date for any year the anchor landed Tue-Fri — which is
+        // a 1-day error for ~4 of every 7 years on each floating date.
+        //
+        // Distance to Monday: dow 0(Sun)→+1, 1(Mon)→0, 2(Tue)→-1, 3(Wed)→-2,
+        // 4(Thu)→+3 (next Monday is closer than 4 days back), 5(Fri)→+3,
+        // 6(Sat)→+2. Effectively: shift = (dow <= 4) ? (1 - dow) : (8 - dow).
+        // Wait — for Thursday (dow=4) the nearest Monday is the FOLLOWING
+        // Monday (3 days forward) because the previous Monday is also 3 days
+        // away; convention is to round forward for ties. So for dow=4: +3.
+        let shift;
+        if (dow === 0) shift = 1;           // Sun → Mon +1
+        else if (dow === 1) shift = 0;       // Mon → unchanged
+        else if (dow === 2) shift = -1;      // Tue → Mon -1
+        else if (dow === 3) shift = -2;      // Wed → Mon -2
+        else if (dow === 4) shift = 3;       // Thu → Mon +3 (tie → forward)
+        else if (dow === 5) shift = 3;       // Fri → Mon +3
+        else shift = 2;                      // Sat(6) → Mon +2
+        if (shift === 0) return _fmtYMD(year, month, day);
+        return _numToDateRaw(_msToNum(ms + shift * 86400000));
     }
     return _fmtYMD(year, month, day);
 }
@@ -6813,13 +7008,18 @@ const _HOLIDAY_RULES = {
     // "nearest Monday" logic for those movable anchors.
     'CA-NL': [
         _CA_NEW_YEARS,
-        { name: "St. Patrick's Day (observed)", type: 'fixed', month: 3, day: 17, observance: 'monday_if_weekend' },
+        // v2.9.18 A6-HIGH — NL's Labour Standards Act statutorily observes
+        // these on the NEAREST Monday (not "only-if-weekend"). Previously
+        // monday_if_weekend left e.g. Mar 17 Tue 2026 on Tuesday — actual NL
+        // observance shifts to Mon Mar 16. Same for St. George's (Apr 23),
+        // Discovery (Jun 24), Orangemen's (Jul 12).
+        { name: "St. Patrick's Day (observed)", type: 'fixed', month: 3, day: 17, observance: 'nearest_monday' },
         _CA_GOOD_FRIDAY,
-        { name: "St. George's Day (observed)", type: 'fixed', month: 4, day: 23, observance: 'monday_if_weekend' },
+        { name: "St. George's Day (observed)", type: 'fixed', month: 4, day: 23, observance: 'nearest_monday' },
         // Memorial Day and Canada Day are both July 1 in NL (same date)
         _CA_CANADA_DAY,
-        { name: "Discovery Day (observed)", type: 'fixed', month: 6, day: 24, observance: 'monday_if_weekend' },
-        { name: "Orangemen's Day (observed)", type: 'fixed', month: 7, day: 12, observance: 'monday_if_weekend' },
+        { name: "Discovery Day (observed)", type: 'fixed', month: 6, day: 24, observance: 'nearest_monday' },
+        { name: "Orangemen's Day (observed)", type: 'fixed', month: 7, day: 12, observance: 'nearest_monday' },
         _CA_LABOUR_DAY,
         _CA_THANKSGIVING,
         _CA_REMEMBRANCE,

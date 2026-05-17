@@ -5800,6 +5800,156 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         A ? 'A.LS=' + A.LS : 'no A');
 }
 
+// v2.9.18 A8-HIGH: lag conversion uses successor's calendar.day_hr_cnt
+// (was hardcoded /8). Real-world P6 schedules with 10-hr shift calendars or
+// 24-hr continuous-operations calendars previously had lags inflated 25% to
+// 200%. Now: parse CALENDAR rows from XER for day_hr_cnt; fall back to 8
+// with a one-time WARN per unknown calendar.
+{
+    // 10-hr shift calendar via XER CALENDAR table. Lag 20 hours = 2.0 days
+    // (was 2.5 days under hardcoded /8).
+    E.resetMC();
+    const xer = [
+        '%T CALENDAR',
+        '%F clndr_id\tclndr_name\tday_hr_cnt',
+        '%R 10\tShift10\t10',
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\ttarget_drtn_hr_cnt\tclndr_id',
+        '%R 1\tA\tA\tTT_Task\t40\t40\t10',   // 4 days @ 10hr/day
+        '%R 2\tB\tB\tTT_Task\t30\t30\t10',
+        '%T TASKPRED',
+        '%F task_id\tpred_task_id\tpred_type\tlag_hr_cnt',
+        '%R 2\t1\tPR_FS\t20',                 // 20-hour lag = 2.0 days on 10-hr cal
+    ].join('\n');
+    E.parseXER(xer);
+    const rels = E.getRelationships();
+    const A_B = rels.find(r => r.predTaskId === '1' && r.taskId === '2');
+    check('T-FIX-A8-H: lag converts using successor day_hr_cnt=10 (20hr → 2.0d)',
+        A_B && A_B.lag === 2,
+        'lag_days=' + (A_B ? A_B.lag : 'no rel'));
+    // Activity duration also uses day_hr_cnt
+    const tasks = E.getTasks();
+    const A = Object.values(tasks).find(t => t.code === 'A');
+    check('T-FIX-A8-H: duration converts using calendar day_hr_cnt (40hr/10 = 4d)',
+        A && A.remaining === 4, 'A.remaining=' + (A ? A.remaining : 'no A'));
+}
+{
+    // Fallback path: no CALENDAR table → /8 default + WARN per unknown clndr_id.
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\tclndr_id',
+        '%R 1\tA\tA\tTT_Task\t40\tX',
+        '%R 2\tB\tB\tTT_Task\t40\tX',
+        '%T TASKPRED',
+        '%F task_id\tpred_task_id\tpred_type\tlag_hr_cnt',
+        '%R 2\t1\tPR_FS\t16',
+    ].join('\n');
+    const parseResult = E.parseXER(xer);
+    const rels = E.getRelationships();
+    const A_B = rels.find(r => r.predTaskId === '1' && r.taskId === '2');
+    check('T-FIX-A8-H: unknown calendar falls back to /8 (16hr → 2.0d)',
+        A_B && A_B.lag === 2, 'lag_days=' + (A_B ? A_B.lag : 'no rel'));
+    // The lag-hours-per-day-fallback WARN drains through runCPM into result.alerts
+    const r = E.runCPM();
+    const warns = r.alerts.filter(a => a.context === 'lag-hours-per-day-fallback');
+    check('T-FIX-A8-H: lag-hours-per-day-fallback WARN emitted for unknown clndr_id',
+        warns.length === 1 && warns[0].message.indexOf('clndr_id=X') >= 0,
+        'warns=' + warns.length);
+}
+
+// v2.9.18 A4-HIGH: in-progress shadow-driver records MAX-drive pred.
+// Previously the first pred to exceed maxES was locked in; later preds with
+// stronger contributions were silently ignored. Forensic narrative wrong
+// whenever multiple preds exceeded the actual_start pin.
+{
+    // A is in-progress (actual_start anchors maxES); two preds (B, C) would
+    // both push ES later if A weren't pinned. C contributes more than B.
+    // After fix: drivingPred should be C (the max), not B (the first).
+    const r = E.computeCPM(
+        [{ code: 'B', duration_days: 5 },
+         { code: 'C', duration_days: 10 },
+         { code: 'A', duration_days: 5, actual_start: '2026-01-05' }],
+        [{ from_code: 'B', to_code: 'A', type: 'FS', lag_days: 0 },
+         { from_code: 'C', to_code: 'A', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-12' }
+    );
+    const A = r.nodes.A;
+    check('T-FIX-A4-H: shadow-driver records MAX-drive pred (C, not B)',
+        A.driving_predecessor && A.driving_predecessor.code === 'C',
+        'driver=' + JSON.stringify(A.driving_predecessor));
+}
+
+// v2.9.18 A3-HIGH: opts.projectFinish parameter forces backward-pass seed.
+// P6 "Must Finish By" — earlier deadline → global negative float.
+{
+    // Single 100-day activity; natural maxEF would be 100 days out.
+    // Set deadline 50 days out (impossible) → TF should go negative.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 100 }],
+        [],
+        { dataDate: '2026-01-05', projectFinish: '2026-02-25' }  // ~51 days from data date
+    );
+    const A = r.nodes.A;
+    check('T-FIX-A3-H: projectFinish earlier than natural maxEF → negative TF',
+        A.tf < 0, 'A.tf=' + A.tf);
+    check('T-FIX-A3-H: project-deadline-applied ALERT emitted',
+        r.alerts.some(a => a.context === 'project-deadline-applied' &&
+            a.severity === 'ALERT'),
+        'alerts=' + JSON.stringify(r.alerts.filter(a => a.context === 'project-deadline-applied')));
+}
+{
+    // Deadline LATER than natural finish → positive global float.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5 }],
+        [],
+        { dataDate: '2026-01-05', projectFinish: '2026-03-01' }
+    );
+    const A = r.nodes.A;
+    check('T-FIX-A3-H: projectFinish later than natural maxEF → positive TF',
+        A.tf > 0, 'A.tf=' + A.tf);
+    check('T-FIX-A3-H: project-deadline-applied WARN emitted (not ALERT)',
+        r.alerts.some(a => a.context === 'project-deadline-applied' &&
+            a.severity === 'WARN'),
+        'alerts=' + JSON.stringify(r.alerts.filter(a => a.context === 'project-deadline-applied')));
+}
+{
+    // Invalid projectFinish → graceful fallback + WARN.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5 }],
+        [],
+        { dataDate: '2026-01-05', projectFinish: 'garbage' }
+    );
+    check('T-FIX-A3-H: invalid projectFinish emits project-deadline-invalid WARN',
+        r.alerts.some(a => a.context === 'project-deadline-invalid'),
+        'alerts=' + r.alerts.length);
+}
+
+// v2.9.18 A6-HIGH: NL nearest-Monday observance for St. Patrick's, St. George's,
+// Discovery Day, Orangemen's Day. NL Labour Standards Act mandates nearest-Mon
+// observance; prior monday_if_weekend implementation left these on their anchor
+// date for any year the anchor landed Tue-Fri — a 1-day error for ~4 of every
+// 7 years on each floating date.
+{
+    const cases = [
+        [2025, '2025-03-17'],  // Mon → unchanged
+        [2026, '2026-03-16'],  // Tue → Mon -1
+        [2027, '2027-03-15'],  // Wed → Mon -2
+        [2028, '2028-03-20'],  // Fri → Mon +3
+        [2029, '2029-03-19'],  // Sat → Mon +2
+        [2030, '2030-03-18'],  // Sun → Mon +1
+    ];
+    for (const tup of cases) {
+        const yr = tup[0]; const expected = tup[1];
+        const h = E.getHolidays('CA-NL', yr, yr);
+        const inRange = h.filter(d => d.startsWith(yr + '-03') &&
+            ['-15','-16','-17','-18','-19','-20'].some(s => d.endsWith(s)));
+        check("T-FIX-A6-NL: " + yr + " St. Patrick's nearest-Mon = " + expected,
+            inRange.indexOf(expected) >= 0,
+            'got ' + JSON.stringify(inRange));
+    }
+}
+
 // v2.9.17 A17-CRIT-1: SO constraint regression test (was never tested).
 // SO (Start On) behaves identically to MS_Start per CONSTRAINT_TYPE_MAP.
 // Engine paths exist at multiple sites; this test locks the contract.
