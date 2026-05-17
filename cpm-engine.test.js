@@ -3801,17 +3801,21 @@ console.log('\n=== Section R-Hammock — TT_Hammock two-pass ===');
     check('HAM-2: hammock resolved (1)', result.hammocks_resolved === 1);
     const hammocks = E.getHammocks();
     const H = Object.values(hammocks).find(h => h.code === 'H');
-    // min(A1.EF=5, A2.EF=8) = 5 → H.ES = 5
-    check('HAM-2: H.ES = min(A1.EF=5, A2.EF=8) = 5',
-        H.ES === 5, 'got ' + H.ES);
+    // v2.9.17 F6 Bug A semantic correction: FS preds use MAX (hard precedence),
+    // not MIN. max(A1.EF=5, A2.EF=8) = 8 → H.ES = 8. The pre-v2.9.17 walker
+    // MIN'd everything (returning 5), which violated P6 FS-precedence: the
+    // hammock would start before A2 finishes.
+    check('HAM-2: H.ES = max(A1.EF, A2.EF) = 8 (FS-max precedence)',
+        H.ES === 8, 'got ' + H.ES);
     // projectFinish = max(B1.EF=5+3=8, B2.EF=8+7=15) = 15
     // B1.LS = projectFinish - B1.dur if on CP — but END drives B1.LS = END.LS - 0 = 15 - 0 = 15. So B1.LS = 15 - 3 = 12.
     // B2.LS = END.LS - 0 = 15, B2.LS = 15 - 7 = 8.
     // H.LF = max(B1.LS=12, B2.LS=8) = 12
     check('HAM-2: H.LF = max(B1.LS, B2.LS) = 12',
         H.LF === 12, 'got ' + H.LF);
-    check('HAM-2: H.duration = 12 - 5 = 7',
-        H.duration === 7, 'got ' + H.duration);
+    // Updated: H.duration = LF - ES = 12 - 8 = 4 (was 7 under MIN semantic).
+    check('HAM-2: H.duration = 12 - 8 = 4',
+        H.duration === 4, 'got ' + H.duration);
 }
 
 // HAM-3: Nested hammocks — H2's predecessor is H1 (another hammock).
@@ -4523,11 +4527,13 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         result.hammocks_resolved === 3, 'got ' + result.hammocks_resolved);
     const hams = E.getHammocks();
     const H3 = Object.values(hams).find(h => h.code === 'H3');
-    // H3.ES = min(A.EF via H1, B.EF via H2) = min(3, 7) = 3. Old code dropped
-    // the second leg via visited-set; if the first-walked leg was H1, H3.ES=3
-    // would still be correct but inverted ordering would have shown the bug.
-    // The strongest assertion: both legs contributed (no silent drop).
-    check('R-v298-B4: H3.ES = 3 (min from A via H1)', H3.ES === 3, 'got ' + H3.ES);
+    // v2.9.17 F6 Bug A semantic correction: FS preds use MAX (hard precedence).
+    // H3 has two FS preds (H1, H2). H1.EF=3, H2.EF=7 → H3.ES = max(3, 7) = 7.
+    // Pre-v2.9.17 the walker MIN'd everything (returning 3), violating P6
+    // FS-precedence: H3 would start before H2 finishes. Test updated to assert
+    // the audit-correct MAX semantic. Both pred legs still required to
+    // contribute (memoization regression guard preserved by the H1+H2 checks).
+    check('R-v298-B4: H3.ES = 7 (FS max of H1.EF, H2.EF)', H3.ES === 7, 'got ' + H3.ES);
     // Verify memoization didn't break correctness for nested case.
     const H1 = Object.values(hams).find(h => h.code === 'H1');
     const H2 = Object.values(hams).find(h => h.code === 'H2');
@@ -4906,18 +4912,23 @@ console.log('\n=== Section R-v299 — Hammock SS/FF/SF semantics ===');
     const result = E.runCPM();
     const H = Object.values(E.getHammocks()).find(h => h.code === 'H');
     check('HAM-MIXED-1: hammock resolved', result.hammocks_resolved === 1);
-    // esFloor: min(FS-pred A1.EF=5, SS-pred A2.ES+1=1) = 1
+    // v2.9.17 F6 Bug A semantic correction: FS preds use MAX (hard precedence),
+    // SS preds use MIN (widest-span). Combined: max(FS_max, SS_min).
+    // FS-pred A1.EF=5, SS-pred A2.ES+1=1 → max(5, 1) = 5. The pre-v2.9.17
+    // walker would have returned MIN(5, 1) = 1, but that violates FS-precedence
+    // (the hammock would start before A1 finishes).
+    // esFloor (corrected): max(FS_max=5, SS_min=1) = 5
     // lfFloor: null (no FF/SF preds)
     // lfCeiling: max(FS-succ B1.LS-0, FF-succ B2.LF-2)
     //   B1.LS = B1.LF - B1.dur. B1 → END FS so B1.LF = END.LS = 15. B1.LS = 12.
     //   B2.LF = 15. So lfCeiling = max(12, 15-2=13) = 13.
     // esCeiling: null (no SS/SF succs)
-    // H.ES = 1, H.LF = 13, H.duration = 12.
-    check('HAM-MIXED-1: H.ES === 1 (min of A1.EF=5, A2.ES+1=1)',
-        H.ES === 1, 'got ' + H.ES);
+    // v2.9.17: H.ES = max(FS_max=5, SS_min=1) = 5. H.LF = 13. duration = 8.
+    check('HAM-MIXED-1: H.ES === 5 (FS-max precedence wins over SS-min)',
+        H.ES === 5, 'got ' + H.ES);
     check('HAM-MIXED-1: H.LF === 13 (max of B1.LS=12, B2.LF-2=13)',
         H.LF === 13, 'got ' + H.LF);
-    check('HAM-MIXED-1: H.duration === 12', H.duration === 12, 'got ' + H.duration);
+    check('HAM-MIXED-1: H.duration === 8 (LF=13 - ES=5)', H.duration === 8, 'got ' + H.duration);
     check('HAM-MIXED-1: H.TF === 0', H.TF === 0, 'got ' + H.TF);
     check('HAM-MIXED-1: no non-FS alerts', result.hammock_non_fs_alerts.length === 0);
 }
@@ -5787,6 +5798,115 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     check('T-FIX-F5-D: Section D MS_Start pins LS to mandatory offset',
         A && A.LS === 5,
         A ? 'A.LS=' + A.LS : 'no A');
+}
+
+// v2.9.17 A17-CRIT-1: SO constraint regression test (was never tested).
+// SO (Start On) behaves identically to MS_Start per CONSTRAINT_TYPE_MAP.
+// Engine paths exist at multiple sites; this test locks the contract.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint: { type: 'SO', date: '2026-01-12' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    const A = r.nodes.A;
+    check('T-FIX-A17-1: SO constraint pins ES to constraint date',
+        A.es_date === '2026-01-12',
+        'A.es=' + A.es_date);
+    check('T-FIX-A17-1: SO constraint TF=0 (critical)',
+        A.tf === 0, 'A.tf=' + A.tf);
+    check('T-FIX-A17-1: SO constraint LS===ES (mandatory backward pin)',
+        A.ls === A.es, 'A.ls=' + A.ls + ' A.es=' + A.es);
+}
+{
+    // SO via CS_SO XER alias.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint: { type: 'CS_SO', date: '2026-01-12' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    const A = r.nodes.A;
+    check('T-FIX-A17-1: CS_SO XER alias normalizes to SO (ES pinned)',
+        A.es_date === '2026-01-12', 'A.es=' + A.es_date);
+}
+
+// v2.9.17 A17-CRIT-2: MFO constraint regression test (was never tested).
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint: { type: 'MFO', date: '2026-01-20' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    const A = r.nodes.A;
+    check('T-FIX-A17-2: MFO constraint pins EF to constraint date',
+        A.ef_date === '2026-01-20',
+        'A.ef=' + A.ef_date);
+    check('T-FIX-A17-2: MFO constraint TF=0 (mandatory backward pin)',
+        A.tf === 0, 'A.tf=' + A.tf);
+}
+
+// v2.9.17 A17-CRIT-3: DUPLICATE_ACTIVITY_CODE (the F10 computeCPM path, not
+// the TIA fragnet DUPLICATE_CODE). Default mode = alert + last-wins; strict
+// mode throws.
+{
+    let r = null, err = null;
+    try {
+        r = E.computeCPM(
+            [{ code: 'A', duration_days: 5 },
+             { code: 'A', duration_days: 10 }],   // duplicate
+            [],
+            { dataDate: '2026-01-05' }
+        );
+    } catch (e) { err = e; }
+    check('T-FIX-A17-3: computeCPM default mode does NOT throw on duplicate code',
+        err === null, err ? 'err=' + err.message : '');
+    check('T-FIX-A17-3: DUPLICATE_ACTIVITY_CODE alert emitted in default mode',
+        r && r.alerts.some(a => a.context && a.message && a.message.indexOf('DUPLICATE_ACTIVITY_CODE') >= 0),
+        'alerts=' + (r ? r.alerts.length : 'no r'));
+}
+{
+    let err = null;
+    try {
+        E.computeCPM(
+            [{ code: 'A', duration_days: 5 },
+             { code: 'A', duration_days: 10 }],
+            [],
+            { dataDate: '2026-01-05', strict: true }
+        );
+    } catch (e) { err = e; }
+    check('T-FIX-A17-3: strict mode throws DUPLICATE_ACTIVITY_CODE',
+        err !== null && err.code === 'DUPLICATE_ACTIVITY_CODE',
+        err ? 'code=' + err.code : 'no throw');
+}
+
+// v2.9.17 A17-CRIT-4: progress_override mode emits explicit ALERT (engine
+// only implements retained_logic; previously the option was silently
+// ignored, so a caller could ship a report under the wrong P6 setting).
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5 }],
+        [],
+        { dataDate: '2026-01-05', scheduleMode: 'progress_override' }
+    );
+    check('T-FIX-A17-4: progress_override emits ALERT',
+        r.alerts.some(a => a.context === 'progress-override-not-supported'),
+        'alerts=' + r.alerts.length);
+}
+// v2.9.17 A10-HIGH — dateToNum rejects trailing garbage in date components.
+// parseInt('2026.5', 10) returned 2026 silently — the regex check now
+// requires pure-digit components.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026.5-01-05' }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    check('T-FIX-A10-H: invalid date with trailing dot emits invalid-date-coerced ALERT',
+        r.alerts.some(a => a.context === 'invalid-date-coerced'),
+        'alerts=' + JSON.stringify(r.alerts.filter(a => a.context === 'invalid-date-coerced').map(a => a.message)));
 }
 
 // T3.21 — OoS detector enumerates EVERY unstarted predecessor.

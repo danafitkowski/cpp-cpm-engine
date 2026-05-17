@@ -430,6 +430,14 @@ function dateToNum(s) {
     const head = str.slice(0, 10);
     const parts = head.split('-');
     if (parts.length !== 3) return 0;
+    // v2.9.17 A10-HIGH — reject trailing garbage in date components.
+    // parseInt('2026.5', 10) silently returns 2026; parseInt('99x', 10)
+    // returns 99. Forensic dates must be pure digits. Strict regex check
+    // prevents accept-with-truncation on locale-formatted CSV round-trips
+    // or hand-edited XML strings.
+    if (!/^\d{4}$/.test(parts[0]) || !/^\d{1,2}$/.test(parts[1]) || !/^\d{1,2}$/.test(parts[2])) {
+        return 0;
+    }
     const y = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10);
     const d = parseInt(parts[2], 10);
@@ -1056,6 +1064,25 @@ function computeCPM(activities, relationships, opts) {
     // v2.9.12 T2.16 — declare alerts collector before _preResolveCalendars so
     // invalid-work_days substitutions surface as WARNs in the same result.
     const alerts = [];
+    // v2.9.17 A17-CRIT-4 — explicit progress_override mode handling. P6
+    // supports two scheduling modes for in-progress activities: retained
+    // logic (default) and progress override. This engine implements only
+    // retained logic; v2.9.13 F1-Bug 1/2 made that the correct default.
+    // Callers passing scheduleMode='progress_override' previously got
+    // silent retained-logic; now they get a loud ALERT so analysts can't
+    // accidentally produce a report under the wrong P6 setting.
+    const _scheduleMode = opts.scheduleMode || opts.schedule_mode || 'retained_logic';
+    if (_scheduleMode !== 'retained_logic') {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'progress-override-not-supported',
+            message: 'opts.scheduleMode=' + JSON.stringify(_scheduleMode) +
+                ' is not supported by this engine (only "retained_logic" implemented). ' +
+                'Computation proceeded under retained_logic. P6 retained-logic-vs-progress-override ' +
+                'distinction matters for in-progress activities with completed-predecessor logic. ' +
+                'See DAUBERT.md §8 known limitations.',
+        });
+    }
     // v2.9.15 P3 (F6-B) — hammocks-skipped-in-section-c alert. Section C
     // (computeCPM) does not resolve TT_Hammock activities — hammock semantics
     // live in Section D's runCPM() Pass-2 (_resolveHammocks). Callers that pass
@@ -1156,6 +1183,28 @@ function computeCPM(activities, relationships, opts) {
         const actualStart = a.actual_start || '';
         const actualFinish = a.actual_finish || '';
         const isComplete = !!a.is_complete || !!actualFinish;
+        // v2.9.17 A16-CRIT-3 — emit ALERT when a non-empty date string fails
+        // to parse. Previously dateToNum silently returned 0 for invalid input
+        // ('2026-13-45', 'abc', rollovers, year <1000), forensically poisoning
+        // the activity's ES/EF with the epoch (2020-01-01). Wire ALERTs at
+        // every activity-date callsite so the analyst sees the silent coercion.
+        function _alertOnSilentDateCoerce(rawStr, fieldName, activityCode) {
+            if (!rawStr) return;
+            if (dateToNum(rawStr) === 0) {
+                alerts.push({
+                    severity: 'ALERT',
+                    context: 'invalid-date-coerced',
+                    message: 'INVALID_DATE on ' + activityCode + '.' + fieldName +
+                        ': ' + JSON.stringify(rawStr) + ' did not parse as YYYY-MM-DD; ' +
+                        'silently coerced to epoch (offset 0 = 2020-01-01). ' +
+                        'Forensic dates must be valid 4-digit Gregorian dates.',
+                });
+            }
+        }
+        _alertOnSilentDateCoerce(a.early_start, 'early_start', code);
+        _alertOnSilentDateCoerce(a.early_finish, 'early_finish', code);
+        _alertOnSilentDateCoerce(actualStart, 'actual_start', code);
+        _alertOnSilentDateCoerce(actualFinish, 'actual_finish', code);
         let es = a.early_start ? dateToNum(a.early_start) : 0;
         let ef = a.early_finish ? dateToNum(a.early_finish) : 0;
         if (isComplete && actualFinish) {
@@ -3178,7 +3227,16 @@ function _resolveHammocks(projectFinish, log, alerts, projectStart) {
                     for (const p of top.h.preds) {
                         const ph = _MC.hammocks[p.predTaskId];
                         if (!ph) continue;
-                        if (p.type === 'FS' || !p.type || p.type === 'SS') {
+                        // v2.9.17 F6 Bug A — FS pred from hammock requires
+                        // upstream H.EF (= lfCeiling for zero-float hammocks),
+                        // not upstream H.ES (esFloor). For any nonzero-duration
+                        // intermediate hammock, succ.ES = pred.EF + lag is the
+                        // P6-spec FS semantic; the previous esFloor recursion
+                        // produced succ.ES = pred.ES + lag, violating FS for
+                        // any intermediate hammock with real content.
+                        if (p.type === 'FS' || !p.type) {
+                            pushKids.push({ kind: _WK_LF_CEIL, h: ph, phase: 0 });
+                        } else if (p.type === 'SS') {
                             pushKids.push({ kind: _WK_ES_FLOOR, h: ph, phase: 0 });
                         }
                     }
@@ -3218,27 +3276,49 @@ function _resolveHammocks(projectFinish, log, alerts, projectStart) {
             }
 
             // phase === 1: compute own value (children memoized by now).
+            // v2.9.17 F6 Bug A + A8-MEDIUM — FS preds are HARD precedence
+            // (succ.ES = MAX(pred.EF + lag)). SS preds keep widest-span
+            // (succ.ES = MIN(pred.ES + lag)). Combined: max(FS_max, SS_min).
+            // Previously every pred type was MIN'd together, allowing an SS
+            // pred to silently override an FS pred and start before the FS
+            // predecessor finished — direct FS violation.
             let val = null;
             if (top.kind === _WK_ES_FLOOR) {
+                let fsMax = null;
+                let ssMin = null;
                 for (const p of top.h.preds) {
                     const id = p.predTaskId;
                     const lag = p.lag || 0;
                     const t = _MC.tasks[id];
                     if (t) {
-                        let anchor = null;
-                        if (p.type === 'FS' || !p.type) anchor = t.EF + lag;
-                        else if (p.type === 'SS') anchor = t.ES + lag;
-                        if (anchor !== null && (val === null || anchor < val)) val = anchor;
+                        if (p.type === 'FS' || !p.type) {
+                            const anchor = t.EF + lag;
+                            if (fsMax === null || anchor > fsMax) fsMax = anchor;
+                        } else if (p.type === 'SS') {
+                            const anchor = t.ES + lag;
+                            if (ssMin === null || anchor < ssMin) ssMin = anchor;
+                        }
                         continue;
                     }
                     const ph = _MC.hammocks[id];
                     if (!ph) continue;
-                    if (p.type === 'FS' || !p.type || p.type === 'SS') {
+                    if (p.type === 'FS' || !p.type) {
+                        const sub = memoLfCeiling.get(ph.id);
+                        if (sub !== null && sub !== undefined) {
+                            const v = sub + lag;
+                            if (fsMax === null || v > fsMax) fsMax = v;
+                        }
+                    } else if (p.type === 'SS') {
                         const sub = memoEsFloor.get(ph.id);
-                        if (sub !== null && sub !== undefined &&
-                            (val === null || sub + lag < val)) val = sub + lag;
+                        if (sub !== null && sub !== undefined) {
+                            const v = sub + lag;
+                            if (ssMin === null || v < ssMin) ssMin = v;
+                        }
                     }
                 }
+                if (fsMax !== null && ssMin !== null) val = Math.max(fsMax, ssMin);
+                else if (fsMax !== null) val = fsMax;
+                else if (ssMin !== null) val = ssMin;
             } else if (top.kind === _WK_LF_FLOOR) {
                 for (const p of top.h.preds) {
                     const id = p.predTaskId;
