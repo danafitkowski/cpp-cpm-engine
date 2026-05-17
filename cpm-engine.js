@@ -5703,8 +5703,18 @@ function buildDaubertDisclosure(result, opts) {
 // ============================================================================
 
 const _DAUBERT_RENDER_VERSION = '1.0';
-const _CPP_NAVY  = '#0f2540';
-const _CPP_RED   = '#c8392f';
+// v2.9.20 A18-M2/A18-M3 — single source of truth for CPP brand colors.
+// Per `feedback_cpp_brand_spec.md`: navy `#0F2540` + red `#C8392F`,
+// Inter + JetBrains Mono. Uppercase hex matches the canonical spec.
+// All renderers in this file reference these constants (no duplicate
+// declarations elsewhere — search-and-link, not search-and-redefine).
+const _CPP_NAVY  = '#0F2540';
+const _CPP_RED   = '#C8392F';
+// v2.9.20 A18-M1 — Inter + system fallback for the body font. Inter is
+// the canonical CPP body font; the system-stack fallback covers boxes
+// without Inter installed (no CDN fetch — brand spec forbids it).
+const _CPP_BODY_FONT = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+const _CPP_MONO_FONT = "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace";
 
 /**
  * renderDaubertHTML(disclosure, opts)
@@ -5780,7 +5790,9 @@ function renderDaubertHTML(disclosure, opts) {
     const rule       = d.rule || 'Daubert / FRE 707';
 
     const css = [
-        'body{font-family:Georgia,serif;color:' + _CPP_NAVY + ';max-width:780px;margin:0 auto;padding:32px 24px;}',
+        // v2.9.20 A18-M1 — body font swapped Georgia → CPP canonical Inter
+        // (system fallback chain; no CDN per brand spec).
+        'body{font-family:' + _CPP_BODY_FONT + ';color:' + _CPP_NAVY + ';max-width:780px;margin:0 auto;padding:32px 24px;}',
         'h1{color:' + _CPP_NAVY + ';border-bottom:3px solid ' + _CPP_RED + ';padding-bottom:8px;font-size:1.5em;}',
         'h2{color:' + _CPP_NAVY + ';font-size:1.15em;margin-top:28px;}',
         'h3{color:' + _CPP_RED  + ';font-size:1em;margin-top:20px;margin-bottom:4px;}',
@@ -6741,11 +6753,14 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
         '#1a8870', '#6b82c4', '#2d9a72', '#4f6eb5', '#3a8a5e',
         '#7aa0d4', '#2a7f8a', '#5577b5', '#1f7a6a', '#8090cc',
     ];
-    const CRITICAL_COLOR  = '#c8392f';   // CPP brand red
-    const NAVY_COLOR      = '#0f2540';   // CPP brand navy
-    const ZERO_LINE_COLOR = '#e8a020';   // amber — zero-float warning line
-    const GRID_COLOR      = '#e0e8f0';
-    const AXIS_COLOR      = '#8090a8';
+    // v2.9.20 A18-M2 — link to the canonical brand-color constants
+    // declared up at SECTION O to avoid drift. Local aliases preserve
+    // legacy names for the SVG renderer's internal use.
+    const CRITICAL_COLOR  = _CPP_RED;    // CPP brand red (canonical)
+    const NAVY_COLOR      = _CPP_NAVY;   // CPP brand navy (canonical)
+    const ZERO_LINE_COLOR = '#E8A020';   // amber — zero-float warning line
+    const GRID_COLOR      = '#E0E8F0';
+    const AXIS_COLOR      = '#8090A8';
 
     // ── Determine Y range ────────────────────────────────────────────────────
     let tfMin = Infinity, tfMax = -Infinity;
@@ -6779,7 +6794,8 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
     parts.push(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" ' +
         'width="' + W + '" height="' + H + '" ' +
-        'style="font-family:Inter,Helvetica Neue,Arial,sans-serif;background:#f8fbff;">'
+        // v2.9.20 A18-M1 — use canonical _CPP_BODY_FONT for SVG too.
+        'style="font-family:' + _CPP_BODY_FONT + ';background:#F8FBFF;">'
     );
 
     // Title

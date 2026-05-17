@@ -2354,6 +2354,52 @@ console.log('\n=== v2.9.20 A19 — Bayesian module MED ===');
 }
 
 // ============================================================================
+// v2.9.20 A18 — Brand discipline MED/LOW
+// ============================================================================
+console.log('\n=== v2.9.20 A18 — Brand discipline MED/LOW ===');
+{
+    // A18-M1: Daubert HTML uses canonical Inter (not Georgia).
+    const d = E.buildDaubertDisclosure(null);
+    const html = E.renderDaubertHTML(d, { expert_name: 'Test' });
+    check('A18-M1: Daubert HTML uses Inter (no Georgia)',
+        html.includes("'Inter'") && !html.includes('Georgia,serif'));
+    check('A18-M1: Daubert HTML has system-font fallback chain',
+        html.includes('-apple-system') && html.includes('Helvetica'));
+    check('A18-M1: Daubert HTML has no CDN font reference',
+        !html.includes('fonts.googleapis.com') && !html.includes('cdn.'));
+}
+{
+    // A18-M2: brand colors single source — engine emits canonical uppercase
+    // navy and red hex codes everywhere.
+    const d = E.buildDaubertDisclosure(null);
+    const html = E.renderDaubertHTML(d, { expert_name: 'Test' });
+    check('A18-M2: Daubert HTML uses #0F2540 (canonical uppercase navy)',
+        html.includes('#0F2540') && !html.includes('#0f2540'));
+    check('A18-M2: Daubert HTML uses #C8392F (canonical uppercase red)',
+        html.includes('#C8392F') && !html.includes('#c8392f'));
+}
+{
+    // A18-M3: ENGINE_VERSION reachable via the disclosure provenance
+    // chain so brand-discipline reviewers can lock the version per artifact.
+    const d = E.buildDaubertDisclosure(null);
+    check('A18-M3: provenance.release_tag references the version',
+        d.provenance && d.provenance.release_tag === 'v' + E.ENGINE_VERSION);
+}
+{
+    // A18-L1: no hardcoded lowercase brand-color hex anywhere in the
+    // rendered Daubert HTML (regression-prevention for case drift).
+    const d = E.buildDaubertDisclosure(null);
+    const html = E.renderDaubertHTML(d, {});
+    // Only the canonical uppercase forms should appear for brand colors.
+    const lowerNavyHits = (html.match(/#0f2540/g) || []).length;
+    const lowerRedHits  = (html.match(/#c8392f/g) || []).length;
+    check('A18-L1: Daubert HTML has 0 lowercase navy hits',
+        lowerNavyHits === 0);
+    check('A18-L1: Daubert HTML has 0 lowercase red hits',
+        lowerRedHits === 0);
+}
+
+// ============================================================================
 // v2.9.20 A20 — Security MED
 // ============================================================================
 console.log('\n=== v2.9.20 A20 — Security MED ===');
@@ -2860,8 +2906,13 @@ console.log('\n=== Section M D4 — Test 7: HTML render smoke ===');
     check('D4-T7: html contains Float Burndown title', r.html.includes('Float Burndown'));
     check('D4-T7: html contains viewBox', r.html.includes('viewBox'));
     check('D4-T7: html contains Total Float label', r.html.includes('Total Float'));
-    check('D4-T7: html contains CPP navy #0f2540', r.html.includes('#0f2540'));
-    check('D4-T7: html contains CPP red #c8392f (B crossed zero)', r.html.includes('#c8392f'));
+    // v2.9.20 A18-M3 — brand spec uses uppercase hex (`#0F2540`, `#C8392F`).
+    // Accept either case to keep the test forward-compatible if downstream
+    // tools normalize hex codes; the canonical engine emit is uppercase.
+    check('D4-T7: html contains CPP navy #0F2540',
+        r.html.includes('#0F2540') || r.html.includes('#0f2540'));
+    check('D4-T7: html contains CPP red #C8392F (B crossed zero)',
+        r.html.includes('#C8392F') || r.html.includes('#c8392f'));
     check('D4-T7: html has no external dependencies',
         !r.html.includes('cdn.') && !r.html.includes('<script') && !r.html.includes('<link'));
     // Both codes must appear in the legend section of the SVG
