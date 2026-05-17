@@ -2726,7 +2726,7 @@ function runCPM(opts) {
     // They have no driving logic of their own — they take whatever shape the
     // surrounding network dictates. Iterate to a fixed point so nested
     // hammocks (hammock pred or succ of another hammock) resolve in order.
-    const hammockReport = _resolveHammocks(projectFinish, logOutput ? log : null, alerts);
+    const hammockReport = _resolveHammocks(projectFinish, logOutput ? log : null, alerts, projectStart);
 
     // v2.9.11 OPT-2: walk sorted[] (array index) for the critical count.
     // The pre-refactor loop iterated _MC.tasks with for...in, which on a 50k
@@ -2747,9 +2747,16 @@ function runCPM(opts) {
             if (tasks[taskId].TF <= 0.01) criticalCount += 1;
         }
     }
-    // Hammocks are by-definition zero-float summary bars; count them in.
+    // v2.9.14 F6 Bug D — Hammocks are summary bars, not driving activities;
+    // counting them in criticalCount conflated "schedule length" with "actual
+    // critical-path activity count" and silently inflated the headline number.
+    // The hammocks_resolved field already reports hammock count separately.
+    // (Hammocks ARE zero-float by definition, but reporting them in
+    // criticalCount creates a misleading metric — e.g. a 10-task schedule
+    // with 4 hammocks rendering as "14 critical activities".)
+    let hammocksOnCP = 0;
     for (const hammockId in _MC.hammocks) {
-        if (_MC.hammocks[hammockId].resolved) criticalCount += 1;
+        if (_MC.hammocks[hammockId].resolved) hammocksOnCP += 1;
     }
 
     // F11 — emit ERROR alert when activities were excluded by cycle detection.
@@ -2825,7 +2832,7 @@ function runCPM(opts) {
 //
 // v2.9.8 Bug B8 — Negative-span hammocks (LF < ES on chain) still emit
 // ALERT — this remains a genuine topology error.
-function _resolveHammocks(projectFinish, log, alerts) {
+function _resolveHammocks(projectFinish, log, alerts, projectStart) {
     const hammockIds = Object.keys(_MC.hammocks);
     if (hammockIds.length === 0) {
         return { resolved: 0, unresolved: 0, non_fs_alerts: [] };
@@ -3078,9 +3085,20 @@ function _resolveHammocks(projectFinish, log, alerts) {
         // hammock was authored against. Previously duration was reported
         // only as an ordinal day count (calendar-day span), which on a
         // MonFri-calendar hammock over-reports vs P6.
+        //
+        // v2.9.14 F6 Bug C — Section D operates in PROJECT-RELATIVE day
+        // numbers (project day 5, project day 10), not epoch offsets. The
+        // calendar-aware _countWorkDaysBetween reads the offsets as dates
+        // via _p6WeekdayFromOffset, so without a project-start anchor we
+        // were reading "project day 5" as 2020-01-06 (epoch + 5d). Add the
+        // project-start offset before passing to _countWorkDaysBetween so
+        // calendar lookups land on the correct weekday / holiday.
         if (h.clndr_id && _MC.calMap && _MC.calMap[h.clndr_id]) {
+            const _psNum = (projectStart && projectStart.length)
+                ? dateToNum(projectStart) : 0;
             h.duration_working_days = _countWorkDaysBetween(
-                es, es + duration, _MC.calMap[h.clndr_id]);
+                _psNum + es, _psNum + es + duration,
+                _MC.calMap[h.clndr_id]);
         } else {
             h.duration_working_days = _roundHalfUp(duration);
         }

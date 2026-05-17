@@ -6310,6 +6310,70 @@ console.log('\n=== v2.9.14 Bug F9 — Topology hash v2 (Python parity + JSON-enc
         'warnings=' + JSON.stringify(r.warnings));
 }
 
+console.log('\n=== v2.9.14 Bug F6 — Hammock fixes (project-relative + critical separation) ===');
+
+// T-FIX-F6-1 — Hammock resolves and reports duration_working_days >= 0.
+// Mostly validates that the F6-C project-start anchor change doesn't
+// break the basic hammock resolution path (no specific calendar math
+// needed — calMap may be absent and the fallback applies).
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 100\tA\tA\tTT_Task\t40\t40',   // 5d
+        '%R 101\tH\tHammock\tTT_Hammock\t0\t0',
+        '%R 102\tC\tC\tTT_Task\t40\t40',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 100\t101\tPR_FS\t0',
+        '%R 101\t102\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM({ projectStart: '2026-01-05' });
+    const hams = E.getHammocks();
+    const H = Object.values(hams).find(h => h.code === 'H');
+    check('T-FIX-F6-1: hammock resolved with project-start anchor',
+        H && H.resolved === true,
+        H ? 'ES=' + H.ES + ' LF=' + H.LF : 'no hammock');
+    check('T-FIX-F6-1: H.duration_working_days is non-negative integer',
+        H && typeof H.duration_working_days === 'number' && H.duration_working_days >= 0,
+        H ? 'dwd=' + H.duration_working_days : 'no hammock');
+}
+
+// T-FIX-F6-2 — criticalCount no longer includes hammocks. Schedule has
+// 3 real activities + 1 hammock = should report 3, not 4.
+{
+    E.resetMC();
+    const xer = [
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt',
+        '%R 100\tA\tA\tTT_Task\t40\t40',   // 5d
+        '%R 101\tH\tHammock\tTT_Hammock\t0\t0',
+        '%R 102\tC\tC\tTT_Task\t40\t40',
+        '',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 100\t101\tPR_FS\t0',
+        '%R 101\t102\tPR_FS\t0',
+        '%R 100\t102\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const result = E.runCPM();
+    // F6 Bug D — hammocks reported separately, not via criticalCount.
+    // 2 real critical activities (A, C); hammock H counted in
+    // hammocks_resolved, NOT in criticalCount.
+    check('T-FIX-F6-2: criticalCount excludes hammock (= 2 real, not 3)',
+        result.criticalCount === 2,
+        'got ' + result.criticalCount);
+    check('T-FIX-F6-2: hammocks_resolved reports the hammock',
+        result.hammocks_resolved === 1,
+        'got ' + result.hammocks_resolved);
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
