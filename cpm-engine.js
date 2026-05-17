@@ -146,6 +146,35 @@ const _crypto = (typeof require !== 'undefined') ? (() => { try { return require
 
 const ENGINE_VERSION = '2.9.19';
 
+// v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
+// these for raw-file ingest (see SECTION G). They're hoisted here so callers
+// that build activities/relationships arrays in-memory and pass them to
+// `computeCPM` / `computeCPMSalvaging` / `computeTopologyHash` directly are
+// also bounded. A schedule with >100k activities or >500k relationships is
+// almost certainly degenerate or adversarial; surface a CAP_EXCEEDED error
+// instead of letting the host process OOM during topological sort.
+const MAX_ENGINE_ACTIVITIES = 100_000;
+const MAX_ENGINE_RELATIONSHIPS = 500_000;
+
+function _enforceEngineCaps(activities, relationships, context) {
+    if (Array.isArray(activities) && activities.length > MAX_ENGINE_ACTIVITIES) {
+        const err = new Error('CAP_EXCEEDED: ' + (context || 'engine') +
+            ' activity count ' + activities.length + ' > ' + MAX_ENGINE_ACTIVITIES);
+        err.code = 'CAP_EXCEEDED';
+        err.limit = 'MAX_ENGINE_ACTIVITIES';
+        err.count = activities.length;
+        throw err;
+    }
+    if (Array.isArray(relationships) && relationships.length > MAX_ENGINE_RELATIONSHIPS) {
+        const err = new Error('CAP_EXCEEDED: ' + (context || 'engine') +
+            ' relationship count ' + relationships.length + ' > ' + MAX_ENGINE_RELATIONSHIPS);
+        err.code = 'CAP_EXCEEDED';
+        err.limit = 'MAX_ENGINE_RELATIONSHIPS';
+        err.count = relationships.length;
+        throw err;
+    }
+}
+
 // P6 constraint mapping (v2.9.3). Primavera stores cstr_type as the long XER
 // token (CS_MSO, CS_MEO, …) and cstr_date2 as 'YYYY-MM-DD HH:mm'. We normalize
 // to canonical short codes used in the engine's forward/backward passes.
@@ -1129,6 +1158,8 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
 
 function computeCPM(activities, relationships, opts) {
     opts = opts || {};
+    // v2.9.20 A20-M5 — DOS guard on caller-supplied arrays.
+    _enforceEngineCaps(activities, relationships, 'computeCPM');
     const dataDate = opts.dataDate || opts.data_date || '';
     // v2.9.12 T2.16 — declare alerts collector before _preResolveCalendars so
     // invalid-work_days substitutions surface as WARNs in the same result.
@@ -3859,6 +3890,8 @@ function resetMC() {
 
 function computeCPMSalvaging(activities, relationships, opts) {
     opts = opts || {};
+    // v2.9.20 A20-M5 — DOS guard on caller-supplied arrays.
+    _enforceEngineCaps(activities, relationships, 'computeCPMSalvaging');
     const salvage_log = [];
 
     // ── Pre-flight ──────────────────────────────────────────────────────────
@@ -3968,8 +4001,16 @@ function computeCPMSalvaging(activities, relationships, opts) {
     });
 
     // ── Cycle salvage ───────────────────────────────────────────────────────
-    const maxIter = (opts.maxSalvageIterations !== undefined)
+    // v2.9.20 A20-M2 — caller can't override the hard cap above 1000. A
+    // malformed opts.maxSalvageIterations=Infinity would otherwise put the
+    // cycle-break loop into an unbounded walk; cap at a generous but
+    // bounded ceiling so the worst case is still a graceful throw.
+    const MAX_SALVAGE_ITER_HARD_CAP = 1000;
+    let _rawMaxIter = (opts.maxSalvageIterations !== undefined)
         ? opts.maxSalvageIterations : 50;
+    if (!Number.isFinite(_rawMaxIter) || _rawMaxIter < 0) _rawMaxIter = 50;
+    if (_rawMaxIter > MAX_SALVAGE_ITER_HARD_CAP) _rawMaxIter = MAX_SALVAGE_ITER_HARD_CAP;
+    const maxIter = _rawMaxIter;
     let workingRels = cleanRels.slice();
     let result = null;
     for (let iter = 0; iter < maxIter + 1; iter++) {
@@ -4160,7 +4201,14 @@ function _findLatestFinish(nodes) {
 // Returns: Array of { path_number: number, codes: string[] }
 function _computeMFPPaths(nodes, predMap, opts) {
     opts = opts || {};
-    const maxPaths = opts.maxPaths || 1;
+    // v2.9.20 A20-M2 — cap maxPaths. Each path enumerates a chain back
+    // through predMap; an Infinity / very-large maxPaths is a runaway. 100
+    // paths is more than any forensic exhibit will ever need.
+    const MAX_MFP_PATHS_HARD_CAP = 100;
+    let _rawMaxPaths = opts.maxPaths || 1;
+    if (!Number.isFinite(_rawMaxPaths) || _rawMaxPaths < 1) _rawMaxPaths = 1;
+    if (_rawMaxPaths > MAX_MFP_PATHS_HARD_CAP) _rawMaxPaths = MAX_MFP_PATHS_HARD_CAP;
+    const maxPaths = _rawMaxPaths;
     const targetCode = opts.targetCode || _findLatestFinish(nodes);
     if (!targetCode || !nodes[targetCode]) return [];
 
@@ -5120,6 +5168,11 @@ function _f9Quantize(x) {
 }
 
 function computeTopologyHash(activities, relationships) {
+    // v2.9.20 A20-M5 — DOS guard on caller-supplied arrays. The canonical
+    // serializer is O(N+M log M) but each activity allocates several
+    // intermediate strings; an adversarial 10M-activity array could OOM
+    // a host before the SHA-256 even starts.
+    _enforceEngineCaps(activities, relationships, 'computeTopologyHash');
     if (!Array.isArray(activities) || activities.length === 0) {
         return {
             topology_hash: null,
@@ -5990,6 +6043,9 @@ function renderDaubertMarkdown(disclosure, opts) {
  */
 function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
     opts = opts || {};
+    // v2.9.20 A20-M5 — DOS guard. Bayesian update with hierarchical pooling
+    // is O(N) per pass; reject obviously-degenerate inputs up front.
+    _enforceEngineCaps(priorActivities, null, 'computeBayesianUpdate');
     const credibleInterval = (typeof opts.credible_interval === 'number'
         && Number.isFinite(opts.credible_interval)
         && opts.credible_interval > 0 && opts.credible_interval < 1)
@@ -6177,15 +6233,22 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
     }
 
     // ── Build group-level evidence from actuals (for hierarchical mode) ───────
+    // v2.9.20 A20-M1 — caller-supplied `wbs_groups` could carry a malicious
+    // __proto__ chain. for...in walks the prototype chain on plain objects;
+    // an attacker could inject "group_id" entries that propagate into the
+    // group_posteriors return value. Guard with hasOwnProperty so inherited
+    // properties are ignored.
     const groupEvidence = Object.create(null); // group_id → {sum, sumSq, count, codes}
     if (wbsGroups) {
         for (const code in wbsGroups) {
+            if (!Object.prototype.hasOwnProperty.call(wbsGroups, code)) continue;
             const gid = wbsGroups[code];
             if (!groupEvidence[gid]) {
                 groupEvidence[gid] = { sum: 0, sumSq: 0, count: 0, codes: [] };
             }
         }
         for (const code in wbsGroups) {
+            if (!Object.prototype.hasOwnProperty.call(wbsGroups, code)) continue;
             if (Object.prototype.hasOwnProperty.call(actuals, code)) {
                 const x = parseFloat(actuals[code]);
                 // v2.9.20 A15-M5 — `!isNaN(Infinity)` is true; Infinity would

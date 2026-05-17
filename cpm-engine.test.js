@@ -2354,6 +2354,103 @@ console.log('\n=== v2.9.20 A19 — Bayesian module MED ===');
 }
 
 // ============================================================================
+// v2.9.20 A20 — Security MED
+// ============================================================================
+console.log('\n=== v2.9.20 A20 — Security MED ===');
+{
+    // A20-M1: prototype-pollution safety on wbs_groups. Inherited properties
+    // must NOT propagate into group_posteriors.
+    const acts = [
+        { code: 'A', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+        { code: 'B', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+    ];
+    // Craft a wbs_groups object with a malicious __proto__ entry.
+    const evilProto = { evilCode: 'INJECTED_GROUP' };
+    const wbsGroups = Object.create(evilProto);
+    wbsGroups.A = 'G1';
+    wbsGroups.B = 'G1';
+    const result = E.computeBayesianUpdate(acts, { A: 11, B: 12 },
+        { wbs_groups: wbsGroups });
+    check('A20-M1: posterior_by_code does NOT include injected evilCode',
+        !('evilCode' in result.posterior_by_code));
+    check('A20-M1: posterior_by_code has only A and B',
+        Object.keys(result.posterior_by_code).sort().join(',') === 'A,B');
+}
+{
+    // A20-M2: salvager caps maxSalvageIterations at the hard cap (1000).
+    // Passing Infinity must not loop forever.
+    const r = E.computeCPMSalvaging(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+         { from_code: 'B', to_code: 'A', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05', maxSalvageIterations: Infinity }
+    );
+    check('A20-M2: salvage with Infinity maxIter returned (did not hang)',
+        r && Number.isFinite(r.projectFinishNum));
+    // And NaN reverts to default.
+    const r2 = E.computeCPMSalvaging(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+         { from_code: 'B', to_code: 'A', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05', maxSalvageIterations: NaN }
+    );
+    check('A20-M2: salvage with NaN maxIter completed normally',
+        r2 && Number.isFinite(r2.projectFinishNum));
+}
+{
+    // A20-M5: caller-supplied huge activities array → CAP_EXCEEDED.
+    // Allocate just-over the cap of cheap object literals so the cap fires
+    // before any real CPM work (the test stays under ~10ms wall-clock).
+    const ACTS_CAP = 100_000;
+    const huge = new Array(ACTS_CAP + 1);
+    for (let i = 0; i < huge.length; i++) huge[i] = { code: 'A' + i, duration_days: 1 };
+    let threw = false, errCode = null;
+    try {
+        E.computeCPM(huge, [], {});
+    } catch (e) {
+        threw = true;
+        errCode = e.code;
+    }
+    check('A20-M5: computeCPM rejects activities.length > 100k',
+        threw && errCode === 'CAP_EXCEEDED');
+
+    // Symmetric: huge relationships array. Build the smallest activities
+    // array (just 1 entry) and a relationships array just over the cap.
+    const REL_CAP = 500_000;
+    const acts = [{ code: 'A', duration_days: 1, early_start: '2026-01-05' }];
+    const hugeRels = new Array(REL_CAP + 1);
+    for (let i = 0; i < hugeRels.length; i++) {
+        hugeRels[i] = { from_code: 'A', to_code: 'A', type: 'FS', lag_days: 0 };
+    }
+    threw = false; errCode = null;
+    try {
+        E.computeCPM(acts, hugeRels, { dataDate: '2026-01-05' });
+    } catch (e) {
+        threw = true;
+        errCode = e.code;
+    }
+    check('A20-M5: computeCPM rejects relationships.length > 500k',
+        threw && errCode === 'CAP_EXCEEDED');
+}
+{
+    // A20-M5: computeTopologyHash also enforces the cap.
+    const ACTS_CAP = 100_000;
+    const huge = new Array(ACTS_CAP + 1);
+    for (let i = 0; i < huge.length; i++) huge[i] = { code: 'A' + i, duration_days: 1 };
+    let threw = false;
+    try {
+        E.computeTopologyHash(huge, []);
+    } catch (e) {
+        threw = e.code === 'CAP_EXCEEDED';
+    }
+    check('A20-M5: computeTopologyHash enforces activity cap', threw);
+}
+
+// ============================================================================
 // v2.3-D2 — P6-compatible MFP exact algorithm tests
 // ============================================================================
 
