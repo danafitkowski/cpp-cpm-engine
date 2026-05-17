@@ -12,6 +12,44 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.19 — 2026-05-17 — 9 HIGH-priority sweep
+
+Single sequential pass closes the long-tail HIGH findings prior fix-wave agents never attempted.
+
+### Engine
+
+- **A3-HIGH** — `opts.projectFinish` parameter on `computeCPM`. P6 "Must Finish By" semantic — caller specifies contract deadline as backward-pass seed. Negative TF propagates naturally when deadline < natural maxEF; positive global float when deadline > maxEF. Invalid date string emits `project-deadline-invalid` WARN and falls back to maxEF.
+
+- **A4-HIGH** — In-progress shadow-driver records MAX-drive pred, not FIRST. Previously the first pred to exceed `actStartNum` was locked in; later preds with stronger drive contributions were silently ignored — forensic narrative wrong whenever multiple preds exceeded the `actual_start` pin.
+
+- **A6-HIGH** — NL nearest-Monday observance. Newfoundland's Labour Standards Act statutorily observes St. Patrick's / St. George's / Discovery / Orangemen's Day on the NEAREST Monday (not "only-if-weekend"). The previous `monday_if_weekend` implementation produced a 1-day error for ~4/7 years on each floating date. New `nearest_monday` observance type added; all four NL movable anchors switched to it.
+
+- **A8-HIGH** — Lag conversion uses successor `calendar.day_hr_cnt`. P6 stores lag in hours; hardcoded `/8` inflated 10-hr shift lags by 25% and 24-hr continuous-ops lags by 200%. Now parses CALENDAR table from XER for `day_hr_cnt`, links via task `clndr_id`, looks up successor's calendar at TASKPRED parse time. Fallback to 8 with one-time WARN per unknown `clndr_id`. Duration parsing (`target_drtn_hr_cnt`, `remain_drtn_hr_cnt`) also uses the calendar's `day_hr_cnt` now.
+
+- **A11-HIGH** (×3):
+  - **FF/SF slack** — `sn.es - n.ef - lag_days` mixed calendar-day deltas with working-day lag. Replaced with anchor-based math: `_advanceWithAlerts(pred-axis, lag, succCal)` → `predAnchor`, then `slack = succAnchor - predAnchor` in calendar days. Cross-val parity preserved by sinking duplicate alerts.
+  - **Section D ordinal-only** — Added explicit ALERT when `runCPM` detects activities with `clndr_id` (calendar awareness intended). Directs callers to `computeCPM` (Section C) for cal-aware results. Section D remains week-agnostic by design (v3.0 architectural scope).
+  - **Hammock resolver** — Covered by the Section D ordinal-only alert.
+
+### Supply chain (A20-HIGH × 2)
+
+- **GH Actions SHA pinning** — Every action in `.github/workflows/*.yml` pinned from mutable `@v4`/`@v5`/`@v1`/`@v2` tag to a 40-char commit SHA looked up via `gh api`. Tag-hijack vector eliminated for the three CI workflows. `.github/dependabot.yml` added to bump SHAs weekly.
+- **Lockfile name drift** — `package-lock.json` regenerated. Old lockfile declared `@critical-path-partners/cpm-engine` v2.9.6 (six versions behind, pre-rename). Now matches current `cpp-cpm-engine` v2.9.19. The lockfile is gitignored so future drift is impossible.
+
+### Test state
+
+| Metric | v2.9.18 | v2.9.19 |
+|---|---|---|
+| Unit tests | 897 / 0 | **913 / 0** (+16 new regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Of the original 218-finding audit
+
+All 36 CRITICAL closed (per v2.9.18 verification). All HIGH items the prior agents flagged as "next-wave deferred" closed in this release except those that require v3.0 architectural changes (calendar-aware Section D, full hammock cross-validation against Python). Remaining surface items are MEDIUM / LOW polish or genuine v3.0 scope.
+
+---
+
 ## v2.9.18 — 2026-05-17 — Honest re-verification (7 unfixed items prior agents glossed over)
 
 Systematic re-verification of every CRITICAL claim in CHANGELOG against the actual code. Prior fix-wave agents (v2.9.13/14/15) had marked items as "fixed" or "deferred for principle" — turned out 7 of them were either still broken or never tested. This release closes all 7.
