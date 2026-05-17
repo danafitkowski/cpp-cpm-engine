@@ -773,12 +773,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             # the previously-computed ES (round-trip bug). For an ES floor,
             # use an explicit SNET constraint. Mirrors JS Section C fix.
             max_es = dd_num
+        # v2.9.14 F2.2 backport — FF/SF finish-anchor identity. Round-tripping
+        # retreat→advance through duration drifts off the anchor whenever the
+        # anchor lies on a non-workday under node_cal. Capture the winning
+        # pred's anchor and replay it directly when node.ef is computed below;
+        # preserves FF-0 / SF-0 identity (succ.EF === pred.EF / pred-ref.EF).
+        finish_anchor_ef = None
         for p in preds:
             pnode = nodes.get(p['from_code'])
             if not pnode:
                 continue
             t = p['type']
             lag = p['lag_days']
+            this_anchor_ef = None  # FF/SF only; None otherwise
             if t == 'FS':
                 anchor = pnode['ef']
                 drive = _advance_workdays(anchor, lag, node_cal,
@@ -796,6 +803,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                 drive = _retreat_workdays(
                     succ_ef_anchor, node['duration_days'], node_cal,
                     alerts=alerts, ctx=f'FF duration {code}')
+                this_anchor_ef = succ_ef_anchor
             elif t == 'SF':
                 succ_ef_anchor = _advance_workdays(
                     pnode['es'], lag, node_cal,
@@ -803,6 +811,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                 drive = _retreat_workdays(
                     succ_ef_anchor, node['duration_days'], node_cal,
                     alerts=alerts, ctx=f'SF duration {code}')
+                this_anchor_ef = succ_ef_anchor
             else:
                 anchor = pnode['ef']
                 drive = _advance_workdays(anchor, lag, node_cal,
@@ -813,6 +822,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                 continue
             if drive > max_es:
                 max_es = drive
+                # v2.9.14 F2.2 backport — capture FF/SF anchor of WINNING driver.
+                finish_anchor_ef = this_anchor_ef
 
         # v2.9.7 — P6 constraint application (forward pass). Primary then
         # secondary; secondary tightens further per P6 spec.
@@ -853,6 +864,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # ignored it). See cpm-engine.js Section C lines ~1241-1260.
         _rem_dur = node.get('remaining_duration')
         _rem_provided = (_rem_dur is not None and math.isfinite(_rem_dur) and _rem_dur >= 0)
+        _use_finish_anchor = (finish_anchor_ef is not None) and (not has_actual_start)
         if has_actual_start and not node['is_complete'] and _rem_provided:
             _ef_anchor = max(act_start_num, dd_num) if dd_num > 0 else act_start_num
             if max_es > _ef_anchor:
@@ -860,6 +872,14 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             node['ef'] = _advance_workdays(
                 _ef_anchor, _rem_dur, node_cal,
                 alerts=alerts, ctx=f'forward {code}.EF (retained-logic rem={_rem_dur})')
+        elif _use_finish_anchor:
+            # v2.9.14 F2.2 backport — FF/SF identity path: stamp EF from the
+            # captured anchor, then retreat to derive ES (matches max_es; the
+            # explicit reassignment is intentional for clarity).
+            node['ef'] = finish_anchor_ef
+            node['es'] = _retreat_workdays(
+                node['ef'], node['duration_days'], node_cal,
+                alerts=alerts, ctx=f'forward {code}.ES (FF/SF anchor)')
         else:
             node['ef'] = _advance_workdays(
                 node['es'], node['duration_days'], node_cal,

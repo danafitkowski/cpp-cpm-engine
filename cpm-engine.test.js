@@ -6148,6 +6148,82 @@ console.log('\n=== v2.9.14 Bug F3 — Banker-rounding parity (JS↔Python) ===')
         r2 === '2026-01-06', 'got ' + r2);
 }
 
+console.log('\n=== v2.9.14 Bug F2 — Zero-lag snap-to-workday + FF/SF anchor identity ===');
+
+// T-FIX-F2-1 — FS+0 with pred.EF on Saturday: succ.ES must snap forward.
+// A starts Mon, 5 days → EF Fri (2026-01-09). Wait — actually under
+// engine convention EF is exclusive (next Mon = 2026-01-12). If duration
+// is 4, EF=Fri (work day). Build pred whose ef lands on Sat.
+{
+    // Use early_start to force pred dates. A: starts Wed 2026-01-07,
+    // duration 3 → EF=Sat 2026-01-10 (calendar-day-exclusive on weekend
+    // is the pathological case the snap is designed for).
+    const cal = { work_days: [1,2,3,4,5], holidays: [] };
+    // dur=3 from Wed = work-thru Fri → EF cal-day = Sat? Actually EF
+    // exclusive on MonFri stays Mon if it spans a weekend boundary.
+    // Construct directly via addWorkDays so we can see the EF lands on
+    // a non-workday only if we feed in non-workday input.
+    const sat = E.dateToNum('2026-01-10');  // Sat
+    const r = E.addWorkDays(sat, 0, cal);
+    check('T-FIX-F2-1: addWorkDays(Sat, 0, MonFri) snaps forward to Mon',
+        E.numToDate(r) === '2026-01-12', 'got ' + E.numToDate(r));
+}
+
+// T-FIX-F2-2 — subtractWorkDays(Sun, 0, cal) snaps back to Fri.
+{
+    const cal = { work_days: [1,2,3,4,5], holidays: [] };
+    const sun = E.dateToNum('2026-01-11');  // Sun
+    const r = E.subtractWorkDays(sun, 0, cal);
+    check('T-FIX-F2-2: subtractWorkDays(Sun, 0, MonFri) snaps back to Fri',
+        E.numToDate(r) === '2026-01-09', 'got ' + E.numToDate(r));
+}
+
+// T-FIX-F2-3 — FF+0 identity. Pred EF lands on a workday; succ EF must
+// equal pred EF. Test via direct construct: A=5d Mon, B=3d, FF+0.
+{
+    const cal = { work_days: [1,2,3,4,5], holidays: [] };
+    // A: dur=5 wd, B: dur=3 wd. FF+0 → B.ef must equal A.ef.
+    const acts = [
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF' },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FF', lag_days: 0 }];
+    const calMap = { MF: cal };
+    const r = E.computeCPM(acts, rels, { calMap, dataDate: '2026-01-05' });
+    check('T-FIX-F2-3: FF+0 identity (B.ef === A.ef)',
+        r.nodes.B.ef === r.nodes.A.ef,
+        'A.ef=' + r.nodes.A.ef + ' B.ef=' + r.nodes.B.ef);
+}
+
+// T-FIX-F2-4 — FF+lag identity with non-zero lag on cross-cal weekend.
+// FF+2 with pred.EF on Fri → succ.EF must be Tue (advance 2wd from Fri).
+{
+    const cal = { work_days: [1,2,3,4,5], holidays: [] };
+    const acts = [
+        // A starts Mon 2026-01-05, dur=5 wd → A.ef = next Mon 2026-01-12.
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF' },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FF', lag_days: 2 }];
+    const calMap = { MF: cal };
+    const r = E.computeCPM(acts, rels, { calMap, dataDate: '2026-01-05' });
+    // B.ef should be advance(A.ef, 2 wd) = Mon→Wed = 2026-01-14.
+    check('T-FIX-F2-4: FF+2 identity (B.ef = advance(A.ef, 2wd))',
+        r.nodes.B.ef_date === '2026-01-14',
+        'A.ef=' + r.nodes.A.ef_date + ' B.ef=' + r.nodes.B.ef_date);
+}
+
+// T-FIX-F2-5 — Calendar with holiday on Sat — pure-Sat case w/ 0 advance.
+// Holiday on the anchor day; snap should still forward to Mon (next wd).
+{
+    const cal = { work_days: [1,2,3,4,5], holidays: ['2026-01-09'] };
+    // Fri 2026-01-09 is a holiday. addWorkDays(Fri-holiday, 0, cal) → Mon.
+    const fri = E.dateToNum('2026-01-09');
+    const r = E.addWorkDays(fri, 0, cal);
+    check('T-FIX-F2-5: addWorkDays(holiday, 0, cal) snaps to next workday',
+        E.numToDate(r) === '2026-01-12', 'got ' + E.numToDate(r));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
