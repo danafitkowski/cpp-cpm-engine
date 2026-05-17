@@ -6831,6 +6831,90 @@ console.log('\n=== v2.9.15 Bug F6-rest — hammock fixes (alert + iterative walk
     E.resetMC();
 }
 
+// ============================================================================
+// v2.9.15 Bug F4-rest — LPM driving-predecessor backwalk
+// ============================================================================
+console.log('\n=== v2.9.15 Bug F4-rest — LPM via driving_predecessor backwalk ===');
+
+// T-FIX-F4-A-SS5: LPM with SS+5 — verify the LPM chain matches the
+// driving_predecessor backwalk from terminal, not just longest-duration DP.
+{
+    // A(10d) --SS+5--> B(5d). Forward pass: A.ES=0 → drive B.ES = 0 + 5 = 5
+    //                          → B.EF = 5 + 5 = 10. A.EF = 0 + 10 = 10.
+    // Both terminate at 10. Tie-break: _findLatestFinish returns alphabetically
+    // first → A. But A.is_complete=false and B drives via SS+5 so the
+    // backwalk from B (if B were terminal) would visit A→B; from A (sink),
+    // chain is just [A] (A has no preds).
+    const acts = [
+        { code: 'A', duration_days: 10, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 5 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'SS', lag_days: 5 },
+    ];
+    const r = E.computeCPMWithStrategies(acts, rels, { dataDate: '2026-01-05', strategies: ['LPM'] });
+    const lpm = r.strategy_summary && r.strategy_summary.LPM;
+    check('T-FIX-F4-A-SS5: LPM is non-empty after SS+5 backwalk',
+        lpm && Array.isArray(lpm.codes) && lpm.codes.length >= 1,
+        'codes=' + JSON.stringify(lpm && lpm.codes));
+    // The terminal must be in the LPM chain.
+    const terminal = E._findLatestFinish(r.nodes);
+    check('T-FIX-F4-A-SS5: terminal is in LPM chain',
+        lpm && lpm.codes.indexOf(terminal) >= 0,
+        'terminal=' + terminal + ' codes=' + JSON.stringify(lpm && lpm.codes));
+}
+
+// T-FIX-F4-A-IP: LPM with in-progress activity uses driving_predecessor too.
+{
+    // A is in-progress (actual_start no actual_finish, remaining_duration=2).
+    // B FS→A. Forward: A drives via remaining_duration past data_date.
+    const acts = [
+        { code: 'A', duration_days: 5, actual_start: '2026-01-05', remaining_duration: 2 },
+        { code: 'B', duration_days: 3 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPMWithStrategies(acts, rels, { dataDate: '2026-01-10', strategies: ['LPM'] });
+    const lpm = r.strategy_summary && r.strategy_summary.LPM;
+    // B should be in the LPM chain (it's the live terminal) and so should A
+    // (because B.driving_predecessor === A).
+    check('T-FIX-F4-A-IP: LPM chain includes terminal B (in-progress A drives B)',
+        lpm && lpm.codes.indexOf('B') >= 0,
+        'codes=' + JSON.stringify(lpm && lpm.codes));
+    check('T-FIX-F4-A-IP: LPM chain includes pred A via driving_predecessor backwalk',
+        lpm && lpm.codes.indexOf('A') >= 0,
+        'codes=' + JSON.stringify(lpm && lpm.codes));
+}
+
+// T-FIX-F4-A-tie: LPM tie-break is deterministic (alphabetical when forks
+// would otherwise occur). With two preds driving the same successor to the
+// same date, driving_predecessor already tie-breaks alpha-FS+0 (T-FIX-F14-2);
+// the LPM walk inherits that determinism.
+{
+    // C has two preds A (FS+0) and B (SS+5) both driving C.es to 5.
+    // driving_predecessor on C picks FS+0 → A. LPM chain = [C, A].
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'C', duration_days: 1 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'SS', lag_days: 5 },
+    ];
+    const r = E.computeCPMWithStrategies(acts, rels, { dataDate: '2026-01-05', strategies: ['LPM'] });
+    const lpm = r.strategy_summary && r.strategy_summary.LPM;
+    // C is the latest-EF terminal. Its driving_predecessor (per F14-2) is A
+    // (FS+0 wins tie over SS+5). LPM chain = [A, C] sorted alpha.
+    check('T-FIX-F4-A-tie: LPM chain contains C (terminal)',
+        lpm && lpm.codes.indexOf('C') >= 0,
+        'codes=' + JSON.stringify(lpm && lpm.codes));
+    check('T-FIX-F4-A-tie: LPM tie-break selects A via FS+0 over B via SS+5',
+        lpm && lpm.codes.indexOf('A') >= 0 && lpm.codes.indexOf('B') === -1,
+        'codes=' + JSON.stringify(lpm && lpm.codes));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

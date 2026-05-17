@@ -3696,70 +3696,46 @@ function computeCPMWithStrategies(activities, relationships, opts) {
 
     // ── LPM strategy ────────────────────────────────────────────────────────
     if (strategies.includes('LPM')) {
-        // For each node, compute longest_to (max EF from any start to this
-        // node, exclusive — "what does it take to reach me") and longest_from
-        // (max remaining duration from this node to any end, inclusive — "what
-        // do I drive forward"). CP membership = (longest_to + duration +
-        // longest_from) >= project_duration.
-        // Project duration = max(EF) - min(ES) measured in calendar days.
-        const order = result.topo_order || result.topoOrder;
-        const longestTo = Object.create(null);
-        const longestFrom = Object.create(null);
-        for (const c of order) longestTo[c] = 0;
-        for (const c of order) longestFrom[c] = 0;
-
-        // Build adjacency for longest-path (treat all rels as FS+0 for path
-        // length purposes — we're measuring DURATION accumulation, not
-        // schedule semantics).
-        const succAdj = Object.create(null);
-        const predAdj = Object.create(null);
-        for (const c of order) { succAdj[c] = []; predAdj[c] = []; }
-        for (const r of (relationships || [])) {
-            if (succAdj[r.from_code] && predAdj[r.to_code]) {
-                succAdj[r.from_code].push(r.to_code);
-                predAdj[r.to_code].push(r.from_code);
-            }
-        }
-
-        // longestTo: forward DP in topo order
-        for (const c of order) {
-            let best = 0;
-            for (const p of predAdj[c]) {
-                const candidate = longestTo[p] + (parseFloat(result.nodes[p].duration_days) || 0);
-                if (candidate > best) best = candidate;
-            }
-            longestTo[c] = best;
-        }
-        // longestFrom: backward DP in reverse topo order
-        for (let i = order.length - 1; i >= 0; i--) {
-            const c = order[i];
-            let best = 0;
-            for (const s of succAdj[c]) {
-                const candidate = longestFrom[s] + (parseFloat(result.nodes[s].duration_days) || 0);
-                if (candidate > best) best = candidate;
-            }
-            longestFrom[c] = best;
-        }
-        // Project duration (LP definition — total along longest path)
-        let projectDuration = 0;
-        for (const c of order) {
-            const total = longestTo[c] + (parseFloat(result.nodes[c].duration_days) || 0) + longestFrom[c];
-            if (total > projectDuration) projectDuration = total;
-        }
-        // CP membership
+        // v2.9.15 P4 (F4-A) — replace the sum-of-durations DP with a backward
+        // walk via driving_predecessor. The DP measured "longest accumulated
+        // duration from any source to any sink"; that's a graph-theoretic
+        // longest path, not the algorithmic concept of "longest path" in CPM
+        // forensics. The CPM-correct LPM is: trace driving_predecessor from
+        // the latest-EF live terminal back through whatever pred actually
+        // pushed each activity's ES, until a true source is hit. The chain of
+        // visited activities IS the LPM critical path. See docs/algorithm.md.
+        //
+        // Tie-break: alphabetical on code if there is ever a fork (preserves
+        // the deterministic ordering of v2.9.15 driving_predecessor tagging).
+        // Excludes is_complete activities from CP candidacy.
         const codes = [];
-        const eps = 0.001;
-        for (const c of order) {
-            const n = result.nodes[c];
-            const total = longestTo[c] + (parseFloat(n.duration_days) || 0) + longestFrom[c];
-            if (Math.abs(total - projectDuration) <= eps && !n.is_complete) {
-                codes.push(c);
-                cpMethodsByCode[c].push('LPM');
+        const seen = new Set();
+        const terminal = _findLatestFinish(result.nodes);
+        if (terminal && !result.nodes[terminal].is_complete) {
+            // Walk back via driving_predecessor.code. CONSTRAINT / DATA_DATE
+            // sentinels lack a .code field — they terminate the walk early
+            // (constraint or data-date floor IS the start of the path).
+            let cur = terminal;
+            // Defensive bound on chain depth — Object.keys length is an upper
+            // bound on the longest possible chain via 1-pred-per-activity.
+            const maxDepth = Object.keys(result.nodes).length + 1;
+            let depth = 0;
+            while (cur && !seen.has(cur) && depth < maxDepth) {
+                seen.add(cur);
+                codes.push(cur);
+                const n = result.nodes[cur];
+                if (!n || !n.driving_predecessor) break;
+                const dp = n.driving_predecessor;
+                if (!dp.code) break;  // CONSTRAINT / DATA_DATE sentinel.
+                cur = dp.code;
+                depth += 1;
             }
         }
+        // Stamp method label on visited nodes.
+        for (const c of codes) cpMethodsByCode[c].push('LPM');
         strategy_summary.LPM = {
             critical_count: codes.length,
-            codes: codes.sort(),
+            codes: codes.slice().sort(),
         };
     }
     // ── MFP strategy — input (crt_path_num) + computed (engine) ─────────────
