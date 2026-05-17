@@ -12,6 +12,42 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.18 — 2026-05-17 — Honest re-verification (7 unfixed items prior agents glossed over)
+
+Systematic re-verification of every CRITICAL claim in CHANGELOG against the actual code. Prior fix-wave agents (v2.9.13/14/15) had marked items as "fixed" or "deferred for principle" — turned out 7 of them were either still broken or never tested. This release closes all 7.
+
+### Real engine bugs
+
+- **A8-CRIT-1 — Hammock walker FS pred-chain.** Walker recursed into upstream H.ES (esFloor) for FS preds, when P6 FS-precedence requires upstream H.EF (lfCeiling). Also: walker MIN'd all pred anchors together; the audit-correct semantic is FS=MAX (hard precedence) + SS=MIN (widest-span), combined as max(FS_max, SS_min). v2.9.15 attempted this fix and reverted after R-v298-B4 regressed — but R-v298-B4 was asserting the OLD wrong behavior. Both the walker AND the three hammock unit tests (R-v298-B4, HAM-2, HAM-MIXED-1) updated to the CPM-correct semantic.
+
+- **A16-CRIT-3 — dateToNum silent coerce.** Invalid date strings (`'2026-13-45'`, `'abc'`, rollovers, year <1000) silently returned 0 with no signal. Forensic analyses then ran with `ES=2020-01-01` (the engine's epoch) for the affected activity. Now: every activity-date callsite in `computeCPM` is gated by `_alertOnSilentDateCoerce` that emits `invalid-date-coerced` ALERT when a non-empty input fails to parse.
+
+- **A10-HIGH — parseInt trailing garbage.** `parseInt('2026.5', 10)` silently returned 2026. Date-component parsing now requires pure-digit components via strict regex.
+
+- **A17-CRIT-4 — `progress_override` mode silently ignored.** `opts.scheduleMode='progress_override'` previously dropped through to retained_logic without notice; caller could ship a report under the wrong P6 setting. Now emits `progress-override-not-supported` ALERT.
+
+### Missing test coverage (CRITICAL findings the audit listed as never-tested)
+
+- **A17-CRIT-1**: SO constraint — first regression tests added (4 assertions including the CS_SO XER alias).
+- **A17-CRIT-2**: MFO constraint — first regression tests added (2 assertions).
+- **A17-CRIT-3**: `DUPLICATE_ACTIVITY_CODE` in `computeCPM` (the F10 code path; previously only `TIA`'s `DUPLICATE_CODE` was tested) — 3 assertions including the strict-mode throw path.
+
+### Test state
+
+| Metric | v2.9.17 | v2.9.18 |
+|---|---|---|
+| Unit tests | 886 / 0 | **897 / 0** (+11 new assertions across 6 new test groups) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Of the original 218-finding audit
+
+Remaining unfixed CRITICAL items: **A17-CRIT-5** (zero hammock crossval fixtures — Python doesn't support hammocks, so JS-Python parity for hammocks is a v3.0 architectural project), **A17-CRIT-6** (zero LOE crossval — same parity gap). Plus the F13 Bug 4 Bayesian lognormal API contract question from earlier.
+
+The long-tail HIGH items (A3-HIGH project-deadline parameter, A4-HIGH shadow-driver max-not-first, A6-HIGH NL nearest-Monday holiday rule, A8-HIGH lag-conversion /8 hardcoded, A11-HIGH multi-cal lag, A20-HIGH GH Actions SHA pinning) are deferred to v2.9.19+; documented as the queue.
+
+---
+
 ## v2.9.17 — 2026-05-17 — F5 constraint precedence (no more "deliberately deferred")
 
 Closes the four F5 CRITICAL bugs that v2.9.14 and v2.9.15 fix-wave agents punted on with hand-wavy reasoning ("can't construct test scenarios without re-introducing the round-trip silent-anchor bug"). The bugs are real engine math defects. The tests just needed to use `dataDate` for anchoring instead of `early_start` — the same pattern v2.9.16 used to fix the 7 baseline failures.
