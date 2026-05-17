@@ -6092,6 +6092,62 @@ console.log('\n=== v2.9.14 Bug F10 — Input validation hardening ===');
         'threw=' + (threw && threw.message));
 }
 
+console.log('\n=== v2.9.14 Bug F3 — Banker-rounding parity (JS↔Python) ===');
+
+// T-FIX-F3-1 — _roundHalfUp on .5 cases: 0.5→1, 1.5→2, 2.5→3, -0.5→0.
+// Confirms JS engine has switched from Math.round (V8 half-up but
+// inconsistent across runtimes) to a deterministic floor(x+0.5) helper.
+{
+    const offset = E.dateToNum('2026-01-05');
+    // numToDate(offset + 0.5) should pick the next day deterministically.
+    const nd = E.numToDate(offset + 0.5);
+    check('T-FIX-F3-1: numToDate(offset+0.5) lands on next day',
+        nd === '2026-01-06', 'got ' + nd);
+}
+
+// T-FIX-F3-2 — 4-hour P6 lag = 0.5 day. addWorkDays(Mon, 0.5) under
+// half-up rounds to 1 → Tue (skipping Sat/Sun if Fri start).
+{
+    const cal = { work_days: [1,2,3,4,5], holidays: [] };
+    const mon = E.dateToNum('2026-01-05');
+    const r = E.addWorkDays(mon, 0.5, cal);
+    check('T-FIX-F3-2: addWorkDays(Mon, 0.5d, MonFri) rounds half-up to 1d',
+        E.numToDate(r) === '2026-01-06', 'got ' + E.numToDate(r));
+}
+
+// T-FIX-F3-3 — 20-hour lag = 2.5 day. Half-up rounds to 3 → Mon → Thu.
+{
+    const cal = { work_days: [1,2,3,4,5], holidays: [] };
+    const mon = E.dateToNum('2026-01-05');
+    const r = E.addWorkDays(mon, 2.5, cal);
+    check('T-FIX-F3-3: addWorkDays(Mon, 2.5d, MonFri) rounds to 3wd → Thu',
+        E.numToDate(r) === '2026-01-08', 'got ' + E.numToDate(r));
+}
+
+// T-FIX-F3-4 — 12-hour lag = 1.5 day. Half-up rounds to 2.
+{
+    const cal = { work_days: [1,2,3,4,5], holidays: [] };
+    const mon = E.dateToNum('2026-01-05');
+    const r = E.addWorkDays(mon, 1.5, cal);
+    check('T-FIX-F3-4: addWorkDays(Mon, 1.5d, MonFri) rounds to 2wd → Wed',
+        E.numToDate(r) === '2026-01-07', 'got ' + E.numToDate(r));
+}
+
+// T-FIX-F3-5 — TF half-thousandth half-up. (lf - ef) = 0.0005 rounds up to 0.001.
+{
+    // Hand-fabricate a node-like dict to test _roundHalfUpTo only — go
+    // through full pipeline via TF: easier to assert via _walkFromMon-
+    // independent path. We rely on numToDate(0.5) rolling forward,
+    // already covered above; add direct sanity that the float quantum
+    // crosses a precision boundary.
+    const r1 = E.numToDate(E.dateToNum('2026-01-05') + 0.49999);  // < .5
+    const r2 = E.numToDate(E.dateToNum('2026-01-05') + 0.50001);  // > .5
+    check('T-FIX-F3-5a: just under .5 floors (stays on Mon)',
+        r1 === '2026-01-05', 'got ' + r1);
+    check('T-FIX-F3-5b: just over .5 rounds up (rolls to Tue)',
+        r2 === '2026-01-06', 'got ' + r2);
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

@@ -311,6 +311,28 @@ const VALID_REL_TYPES = ['FS', 'SS', 'FF', 'SF'];
 const _EPOCH_MS = Date.UTC(EPOCH_YEAR, EPOCH_MONTH - 1, EPOCH_DAY);
 const _MS_PER_DAY = 86400000;
 
+// v2.9.14 F3 — Banker's-rounding parity helpers. JS `Math.round(0.5) === 1`
+// (half-toward-+Infinity) while Python `int(round(0.5)) === 0` (banker's,
+// half-to-even). With real-world P6 lags of 4 / 12 / 20 hours producing
+// 0.5 / 1.5 / 2.5-day fractions, this divergence silently breaks JS↔Python
+// parity. We harmonize on HALF-UP convention (`Math.floor(x + 0.5)`) in BOTH
+// runtimes via the shared helpers below. Math-path callsites (date offsets,
+// addWorkDays / subtractWorkDays integer rounding, tf precision) route here.
+// Display-only sites (.toFixed(), SVG text formatting, dashboard percentages)
+// keep their existing Math.round — those are presentation, not math.
+function _roundHalfUp(x) {
+    if (!Number.isFinite(x)) return x;
+    // Math.floor(x + 0.5) handles both signs deterministically:
+    //   half-up: 0.5→1, 1.5→2, 2.5→3, -0.5→0, -1.5→-1
+    return Math.floor(x + 0.5);
+}
+function _roundHalfUpTo(x, decimals) {
+    if (decimals === undefined || decimals === null) decimals = 0;
+    if (!Number.isFinite(x)) return x;
+    const m = Math.pow(10, decimals);
+    return Math.floor(x * m + 0.5) / m;
+}
+
 // ── v2.1-C1: MonFri arithmetic fast path ─────────────────────────────────────
 //
 // For clean MonFri calendars (work_days=[1,2,3,4,5], no holidays), addWorkDays
@@ -391,7 +413,7 @@ function _isCleanMonFri(workDays, holidaysSet) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function _msToOffset(ms) {
-    return Math.round((ms - _EPOCH_MS) / _MS_PER_DAY);
+    return _roundHalfUp((ms - _EPOCH_MS) / _MS_PER_DAY);
 }
 
 function _offsetToDateUTC(offset) {
@@ -432,7 +454,7 @@ function dateToNum(s) {
 
 function numToDate(n) {
     if (!Number.isFinite(n) || n <= 0) return '';
-    const dt = _offsetToDateUTC(Math.round(n));
+    const dt = _offsetToDateUTC(_roundHalfUp(n));
     return dt.getUTCFullYear() + '-' + _pad2(dt.getUTCMonth() + 1) + '-' + _pad2(dt.getUTCDate());
 }
 
@@ -461,21 +483,21 @@ function _isWorkDayOffset(offset, workDays, holidaysSet) {
 // safety bound — an all-holiday calendar would otherwise hang.
 function _roundForwardToWorkday(num, workDays, holidaysSet) {
     if (!Number.isFinite(num) || num <= 0) return num;
-    let cur = Math.round(num);
+    let cur = _roundHalfUp(num);
     let guard = 0;
     while (!_isWorkDayOffset(cur, workDays, holidaysSet)) {
         cur += 1;
-        if (++guard > 366) return Math.round(num);
+        if (++guard > 366) return _roundHalfUp(num);
     }
     return cur;
 }
 function _roundBackwardToWorkday(num, workDays, holidaysSet) {
     if (!Number.isFinite(num) || num <= 0) return num;
-    let cur = Math.round(num);
+    let cur = _roundHalfUp(num);
     let guard = 0;
     while (!_isWorkDayOffset(cur, workDays, holidaysSet)) {
         cur -= 1;
-        if (++guard > 366) return Math.round(num);
+        if (++guard > 366) return _roundHalfUp(num);
     }
     return cur;
 }
@@ -562,7 +584,7 @@ function _preResolveCalendars(calMap, alerts) {
 function addWorkDays(startNum, nDays, calendarInfo) {
     // startNum: epoch-offset days. Returns new offset after N working days.
     if (nDays === null || nDays === undefined) nDays = 0;
-    let n = Math.round(Number(nDays) || 0);
+    let n = _roundHalfUp(Number(nDays) || 0);
     if (n < 0) return subtractWorkDays(startNum, -n, calendarInfo);
     // v2.9.12 F2.1 — zero-advance snap. When n === 0 with a real calendar,
     // a startNum that lies on a non-workday must be snapped FORWARD to the
@@ -584,13 +606,13 @@ function addWorkDays(startNum, nDays, calendarInfo) {
     // v2.1-C1 fast path: clean MonFri, no holidays → O(1) modular arithmetic.
     // Hot path on real schedules; ~250× speedup for a 30d activity vs the walk.
     if (_isCleanMonFri(workDays, holidaysSet)) {
-        const startInt = Math.round(startNum);
+        const startInt = _roundHalfUp(startNum);
         const fw = (_p6WeekdayFromOffset(startInt) + 1) % 7;
         return startInt + _walkFromFirstFw(fw, n);
     }
 
     // General fallback: day-by-day walk (custom workdays or holidays present).
-    let cur = Math.round(startNum);
+    let cur = _roundHalfUp(startNum);
     let remaining = n;
     while (remaining > 0) {
         cur += 1;
@@ -601,7 +623,7 @@ function addWorkDays(startNum, nDays, calendarInfo) {
 
 function subtractWorkDays(endNum, nDays, calendarInfo) {
     if (nDays === null || nDays === undefined) nDays = 0;
-    let n = Math.round(Number(nDays) || 0);
+    let n = _roundHalfUp(Number(nDays) || 0);
     if (n < 0) return addWorkDays(endNum, -n, calendarInfo);
     // v2.9.12 F2.1 — symmetric zero-retreat snap (see addWorkDays). When
     // n === 0 with a real calendar, a non-workday anchor snaps BACKWARD to
@@ -620,13 +642,13 @@ function subtractWorkDays(endNum, nDays, calendarInfo) {
     // v2.1-C1 fast path: clean MonFri, no holidays → O(1) modular arithmetic.
     // Symmetry: walkToEnd(lw, n) === walkFromFirstFw(_BW_MIRROR[lw], n).
     if (_isCleanMonFri(workDays, holidaysSet)) {
-        const endInt = Math.round(endNum);
+        const endInt = _roundHalfUp(endNum);
         const lw = _p6WeekdayFromOffset(endInt);
         return endInt - _walkFromFirstFw(_BW_MIRROR[lw], n);
     }
 
     // General fallback: day-by-day walk (custom workdays or holidays present).
-    let cur = Math.round(endNum);
+    let cur = _roundHalfUp(endNum);
     let remaining = n;
     while (remaining > 0) {
         cur -= 1;
@@ -648,11 +670,11 @@ function _countWorkDaysBetween(fromNum, toNum, calendarInfo) {
     // `<= fromNum` clamp swallowed every negative interval to 0.
     if (toNum === fromNum) return 0;
     if (toNum < fromNum) return -_countWorkDaysBetween(toNum, fromNum, calendarInfo);
-    if (!calendarInfo) return Math.round(toNum - fromNum);
+    if (!calendarInfo) return _roundHalfUp(toNum - fromNum);
     const { workDays, holidaysSet } = _resolveCalendar(calendarInfo);
     if (workDays.length === 0) return 0;
-    let n = 0, cur = Math.round(fromNum);
-    const end = Math.round(toNum);
+    let n = 0, cur = _roundHalfUp(fromNum);
+    const end = _roundHalfUp(toNum);
     while (cur < end) {
         cur += 1;
         if (_isWorkDayOffset(cur, workDays, holidaysSet)) n += 1;
@@ -696,28 +718,28 @@ function _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx) {
 
 function _advanceWithAlerts(startNum, nDays, calendarInfo, alerts, ctx) {
     _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx);
-    if (startNum <= 0) return startNum + Math.round(Number(nDays) || 0);
+    if (startNum <= 0) return startNum + _roundHalfUp(Number(nDays) || 0);
     if (!calendarInfo) {
         alerts.push({
             severity: 'ALERT',
             context: ctx,
             message: 'Calendar-aware arithmetic unavailable (no cal_map/clndr_id) — falling back to 7-day ordinal arithmetic.',
         });
-        return startNum + Math.round(Number(nDays) || 0);
+        return startNum + _roundHalfUp(Number(nDays) || 0);
     }
     return addWorkDays(startNum, nDays, calendarInfo);
 }
 
 function _retreatWithAlerts(endNum, nDays, calendarInfo, alerts, ctx) {
     _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx);
-    if (endNum <= 0) return endNum - Math.round(Number(nDays) || 0);
+    if (endNum <= 0) return endNum - _roundHalfUp(Number(nDays) || 0);
     if (!calendarInfo) {
         alerts.push({
             severity: 'ALERT',
             context: ctx,
             message: 'Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) — falling back to 7-day ordinal arithmetic.',
         });
-        return endNum - Math.round(Number(nDays) || 0);
+        return endNum - _roundHalfUp(Number(nDays) || 0);
     }
     return subtractWorkDays(endNum, nDays, calendarInfo);
 }
@@ -1541,7 +1563,7 @@ function computeCPM(activities, relationships, opts) {
                 node.lf = node.ef;
             }
         }
-        node.tf = Math.round((node.lf - node.ef) * 1000) / 1000;
+        node.tf = _roundHalfUpTo(node.lf - node.ef, 3);
     }
 
     // v2.9.5 — ALAP (As Late As Possible) post-pass. ALAP post-pass per Oracle
@@ -1636,7 +1658,7 @@ function computeCPM(activities, relationships, opts) {
         // violations, FS-lead pulls, SS/FF leads). Drop the clamp so an
         // over-constrained activity reports negative FF — same forensic
         // disclosure rule we use for TF / tf_working_days.
-        const ff = (minSlack === Infinity) ? n.tf : Math.round(minSlack * 1000) / 1000;
+        const ff = (minSlack === Infinity) ? n.tf : _roundHalfUpTo(minSlack, 3);
         n.ff = ff;
         // v2.9.11 R8A-3 — Use binding successor's calendar for FF / SF.
         let ffCal;
@@ -3060,7 +3082,7 @@ function _resolveHammocks(projectFinish, log, alerts) {
             h.duration_working_days = _countWorkDaysBetween(
                 es, es + duration, _MC.calMap[h.clndr_id]);
         } else {
-            h.duration_working_days = Math.round(duration);
+            h.duration_working_days = _roundHalfUp(duration);
         }
         h.resolved = true;
         if (log) {
@@ -5904,7 +5926,7 @@ function _fmtYMD(year, month, day) {
 }
 
 function _msToNum(ms) {
-    return Math.round((ms - _EPOCH_MS) / _MS_PER_DAY);
+    return _roundHalfUp((ms - _EPOCH_MS) / _MS_PER_DAY);
 }
 
 function _numToDateRaw(n) {

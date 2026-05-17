@@ -42,6 +42,35 @@ EPOCH_MONTH = 1
 EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
 
+
+# v2.9.14 F3 — Banker's-rounding parity helpers. Python's built-in `round()` is
+# banker's (half-to-even): `int(round(0.5)) == 0`, `int(round(1.5)) == 2`. JS
+# `Math.round(0.5) === 1` is half-toward-+Infinity. With real-world P6 lags of
+# 4 / 12 / 20 hours producing 0.5 / 1.5 / 2.5-day fractions, this divergence
+# silently breaks JS↔Python parity. The two helpers below harmonize on HALF-UP
+# convention (`floor(x + 0.5)`) in BOTH runtimes — the JS module exposes the
+# matching `_roundHalfUp` / `_roundHalfUpTo` so math-path callsites are
+# bit-equivalent. Display-only callers (formatting only) keep `round()`.
+def _round_half_up(x):
+    """Return floor(x + 0.5) as int. Mirrors JS _roundHalfUp."""
+    if x is None:
+        return 0
+    try:
+        return int(math.floor(float(x) + 0.5))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _round_half_up_to(x, decimals=0):
+    """Round x to `decimals` decimal places using half-up. Mirrors JS _roundHalfUpTo."""
+    if x is None:
+        return 0.0
+    try:
+        m = 10 ** decimals
+        return math.floor(float(x) * m + 0.5) / m
+    except (TypeError, ValueError):
+        return 0.0
+
 # Synchronized with cpm-engine.js ENGINE_VERSION. v2.9.12 (Round 9 engine
 # math fix wave) backports several JS-only fixes from the audit memo:
 #   T1.1 — MS_Start hard-pin on backward LF clamp (mirrors JS).
@@ -223,7 +252,7 @@ def num_to_date(n):
     if n is None or n <= 0:
         return ''
     try:
-        return date.fromordinal(int(round(n)) + _epoch_ordinal()).isoformat()
+        return date.fromordinal(_round_half_up(n) + _epoch_ordinal()).isoformat()
     except (ValueError, OverflowError):
         return ''
 
@@ -232,7 +261,7 @@ def _date_from_num(n):
     if n is None or n <= 0:
         return None
     try:
-        return date.fromordinal(int(round(n)) + _epoch_ordinal())
+        return date.fromordinal(_round_half_up(n) + _epoch_ordinal())
     except (ValueError, OverflowError):
         return None
 
@@ -271,7 +300,7 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
     if n_workdays is None:
         n_workdays = 0
     try:
-        n = int(round(float(n_workdays)))
+        n = _round_half_up(float(n_workdays))
     except (TypeError, ValueError):
         n = 0
     if n < 0:
@@ -315,7 +344,7 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
     if n_workdays is None:
         n_workdays = 0
     try:
-        n = int(round(float(n_workdays)))
+        n = _round_half_up(float(n_workdays))
     except (TypeError, ValueError):
         n = 0
     if n < 0:
@@ -386,7 +415,7 @@ def _topo_sort(node_codes, succ_map, pred_map):
 
 def _advance_workdays(start_num, n_days, calendar_info, *, alerts, ctx):
     if start_num <= 0:
-        return start_num + int(round(n_days))
+        return start_num + _round_half_up(n_days)
     if not calendar_info:
         alerts.append({
             'severity': 'ALERT',
@@ -396,17 +425,17 @@ def _advance_workdays(start_num, n_days, calendar_info, *, alerts, ctx):
                 '- falling back to 7-day ordinal arithmetic.'
             ),
         })
-        return start_num + int(round(n_days))
+        return start_num + _round_half_up(n_days)
     start_d = _date_from_num(start_num)
     if start_d is None:
-        return start_num + int(round(n_days))
+        return start_num + _round_half_up(n_days)
     end_d = add_work_days(start_d, n_days, calendar_info)
     return _num_from_date(end_d)
 
 
 def _retreat_workdays(end_num, n_days, calendar_info, *, alerts, ctx):
     if end_num <= 0:
-        return end_num - int(round(n_days))
+        return end_num - _round_half_up(n_days)
     if not calendar_info:
         alerts.append({
             'severity': 'ALERT',
@@ -416,10 +445,10 @@ def _retreat_workdays(end_num, n_days, calendar_info, *, alerts, ctx):
                 '(no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.'
             ),
         })
-        return end_num - int(round(n_days))
+        return end_num - _round_half_up(n_days)
     end_d = _date_from_num(end_num)
     if end_d is None:
-        return end_num - int(round(n_days))
+        return end_num - _round_half_up(n_days)
     start_d = subtract_work_days(end_d, n_days, calendar_info)
     return _num_from_date(start_d)
 
@@ -937,7 +966,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             if a_s_num > 0 and node['ls'] > node['es']:
                 node['ls'] = node['es']
                 node['lf'] = node['ef']
-        node['tf'] = round(node['lf'] - node['ef'], 3)
+        node['tf'] = _round_half_up_to(node['lf'] - node['ef'], 3)
 
     # v2.9.7 — ALAP post-pass. Per AACE 29R-03 §4 (Technical Considerations) and Oracle P6 docs, ALAP
     # activities slide their early dates to match their late dates (consume
