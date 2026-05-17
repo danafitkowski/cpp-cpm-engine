@@ -6727,6 +6727,110 @@ console.log('\n=== v2.9.15 Bug F14-rest — driving_predecessor enrichment ===')
         'driver=' + JSON.stringify(bNode.driving_predecessor));
 }
 
+// ============================================================================
+// v2.9.15 Bug F6-rest — hammock skip-in-Section-C alert + iterative walkers
+// ============================================================================
+console.log('\n=== v2.9.15 Bug F6-rest — hammock fixes (alert + iterative walkers) ===');
+
+// T-FIX-F6-B: computeCPM emits ALERT when _MC.hammocks is non-empty.
+// Section C doesn't resolve hammocks (only Section D's runCPM does), so
+// callers passing hammock-bearing input directly to computeCPM previously
+// got a silent omission of those summary bars. Now they get an ALERT.
+{
+    E.resetMC();
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 1 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ];
+    // Inject a synthetic hammock into _MC so computeCPM sees it.
+    const _hams = E.getHammocks();
+    _hams['HAM_1'] = { id: 'HAM_1', code: 'H1', name: 'Test Hammock', preds: [], succs: [] };
+    try {
+        const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+        const skipAlert = r.alerts.find(a => a.context === 'hammocks-skipped-in-section-c');
+        check('T-FIX-F6-B: computeCPM emits hammocks-skipped-in-section-c ALERT',
+            skipAlert && skipAlert.severity === 'ALERT',
+            'alerts=' + JSON.stringify(r.alerts.map(a => a.context)));
+        check('T-FIX-F6-B: ALERT lists the skipped hammock code',
+            skipAlert && skipAlert.message.indexOf('H1') >= 0,
+            'alert message=' + (skipAlert ? skipAlert.message : 'no alert'));
+    } finally {
+        E.resetMC();
+    }
+}
+
+// T-FIX-F6-E: 200-deep hammock chain via parseXER + runCPM does not overflow.
+// Pre-v2.9.15 the mutually-recursive _esFloor / _lfCeiling / etc walked the
+// hammock chain by JS function-call recursion; chains of ~5k+ would blow the
+// default Node.js stack. 200 is a sanity-check on the iterative refactor —
+// it must always succeed.
+{
+    E.resetMC();
+    // Build XER: one source task → 200 hammocks chained → one sink task.
+    // Hammock semantics: each hammock spans [first pred ES, max succ LF].
+    // 200 hammocks daisy-chained via FS=0 is a deep stack of recursive walks.
+    const N = 200;
+    let xer = 'ERMHDR\n7.0\n%T\tTASK\n%F\ttask_id\ttask_code\ttask_name\ttask_type\tstatus_code\ttarget_drtn_hr_cnt\n';
+    xer += '%R\tS\tS\tSource\tTT_Task\tTK_NotStart\t40\n';
+    xer += '%R\tE\tE\tSink\tTT_Task\tTK_NotStart\t8\n';
+    for (let i = 1; i <= N; i++) {
+        xer += '%R\tH' + i + '\tH' + i + '\tHam' + i + '\tTT_Hammock\tTK_NotStart\t0\n';
+    }
+    xer += '%T\tTASKPRED\n%F\ttask_id\tpred_task_id\tpred_type\tlag_hr_cnt\n';
+    // Source → H1
+    xer += '%R\tH1\tS\tPR_FS\t0\n';
+    // H_i → H_(i+1)
+    for (let i = 1; i < N; i++) {
+        xer += '%R\tH' + (i+1) + '\tH' + i + '\tPR_FS\t0\n';
+    }
+    // H_N → E
+    xer += '%R\tE\tH' + N + '\tPR_FS\t0\n';
+    let didOverflow = false;
+    let result = null;
+    try {
+        E.parseXER(xer);
+        result = E.runCPM();
+    } catch (e) {
+        if (/stack|range/i.test(String(e && e.message))) didOverflow = true;
+    }
+    check('T-FIX-F6-E: 200-deep hammock chain — no stack overflow',
+        !didOverflow && result !== null);
+    // Sanity: at least some hammocks resolved (anchors back to S/E).
+    check('T-FIX-F6-E: 200-deep hammock chain — at least one resolved',
+        result && (result.hammocks_resolved + result.hammocks_unresolved) === N,
+        'resolved=' + (result ? result.hammocks_resolved : 'n/a') +
+        ' unresolved=' + (result ? result.hammocks_unresolved : 'n/a'));
+    E.resetMC();
+}
+
+// T-FIX-F6-E-regress: iterative walker preserves semantics on a simple
+// 1-hammock fixture. Pure-refactor regression check.
+{
+    E.resetMC();
+    // Same as the v295-6 fixture: A(10d) → H → B(5d).
+    const xer = [
+        'ERMHDR\n7.0',
+        '%T\tTASK',
+        '%F\ttask_id\ttask_code\ttask_name\ttask_type\tstatus_code\ttarget_drtn_hr_cnt',
+        '%R\t1\tA\tA\tTT_Task\tTK_NotStart\t80',
+        '%R\t2\tH\tH\tTT_Hammock\tTK_NotStart\t0',
+        '%R\t3\tB\tB\tTT_Task\tTK_NotStart\t40',
+        '%T\tTASKPRED',
+        '%F\ttask_id\tpred_task_id\tpred_type\tlag_hr_cnt',
+        '%R\t2\t1\tPR_FS\t0',
+        '%R\t3\t2\tPR_FS\t0',
+    ].join('\n') + '\n';
+    E.parseXER(xer);
+    const result = E.runCPM();
+    check('T-FIX-F6-E-regress: 1 hammock resolved (iterative walker parity)',
+        result.hammocks_resolved === 1 && result.hammocks_unresolved === 0,
+        'resolved=' + result.hammocks_resolved + ' unresolved=' + result.hammocks_unresolved);
+    E.resetMC();
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

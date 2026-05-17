@@ -1056,6 +1056,26 @@ function computeCPM(activities, relationships, opts) {
     // v2.9.12 T2.16 — declare alerts collector before _preResolveCalendars so
     // invalid-work_days substitutions surface as WARNs in the same result.
     const alerts = [];
+    // v2.9.15 P3 (F6-B) — hammocks-skipped-in-section-c alert. Section C
+    // (computeCPM) does not resolve TT_Hammock activities — hammock semantics
+    // live in Section D's runCPM() Pass-2 (_resolveHammocks). Callers that pass
+    // hammock-bearing input directly to computeCPM previously got a silent
+    // computation that omitted those summary bars. Emit a non-blocking ALERT
+    // so the caller sees the list of codes that were skipped.
+    if (_MC && _MC.hammocks && Object.keys(_MC.hammocks).length > 0) {
+        const _hamCodes = Object.values(_MC.hammocks).map(h => h.code).filter(c => !!c);
+        if (_hamCodes.length > 0) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'hammocks-skipped-in-section-c',
+                message: 'computeCPM does not resolve hammock activities. The ' +
+                    'following ' + _hamCodes.length + ' hammock(s) are present in ' +
+                    '_MC.hammocks and are NOT included in this result: ' +
+                    _hamCodes.slice().sort().join(', ') +
+                    '. Use runCPM() / Section D for hammock-aware scheduling.',
+            });
+        }
+    }
     // v2.1-C2: Pre-resolve all calendars once at the top of each CPM run.
     // _resolveCalendar fast-returns when it sees the _resolved sentinel, so
     // every addWorkDays/subtractWorkDays call in the forward/backward passes
@@ -2962,75 +2982,212 @@ function _resolveHammocks(projectFinish, log, alerts, projectStart) {
     const inProgressEsCeiling = new Set();
     let cycleDetected = false;
 
+    // v2.9.15 P3 (F6-E) — iterative walkers via explicit work-stack to
+    // protect against stack overflow on deep hammock chains. Walker kinds:
+    //   0 = esFloor, 1 = lfFloor, 2 = lfCeiling, 3 = esCeiling
+    // Pure refactor — preserves prior recursive semantics (same memo keys,
+    // same cycle-detection sets, same anchor formulas).
+    const _WK_ES_FLOOR = 0;
+    const _WK_LF_FLOOR = 1;
+    const _WK_LF_CEIL  = 2;
+    const _WK_ES_CEIL  = 3;
+    function _memoFor(kind) {
+        if (kind === _WK_ES_FLOOR) return memoEsFloor;
+        if (kind === _WK_LF_FLOOR) return memoLfFloor;
+        if (kind === _WK_LF_CEIL)  return memoLfCeiling;
+        return memoEsCeiling;
+    }
+    function _inProgressFor(kind) {
+        if (kind === _WK_ES_FLOOR) return inProgressEsFloor;
+        if (kind === _WK_LF_FLOOR) return inProgressLfFloor;
+        if (kind === _WK_LF_CEIL)  return inProgressLfCeiling;
+        return inProgressEsCeiling;
+    }
+
+    // Generic iterative walker. Computes _esFloor / _lfFloor / _lfCeiling /
+    // _esCeiling for the supplied hammock via post-order DFS over the
+    // hammock-coupled sub-dependencies. Children are visited first (entering
+    // them under their in-progress guard); the parent recomputes its value
+    // after all reachable children have been memoized.
+    function _walk(rootKind, rootH) {
+        // Stack item shape: { kind, h, phase }
+        //   phase 0 = "enter": push children, mark parent as visited-in-progress
+        //   phase 1 = "exit":  read child memos, compute own value
+        const stack = [{ kind: rootKind, h: rootH, phase: 0 }];
+        while (stack.length > 0) {
+            const top = stack[stack.length - 1];
+            const memo = _memoFor(top.kind);
+            const inProg = _inProgressFor(top.kind);
+
+            if (top.phase === 0) {
+                if (memo.has(top.h.id)) { stack.pop(); continue; }
+                if (inProg.has(top.h.id)) {
+                    // Cycle on this kind — emit null and skip recursion.
+                    cycleDetected = true;
+                    memo.set(top.h.id, null);
+                    stack.pop();
+                    continue;
+                }
+                inProg.add(top.h.id);
+                top.phase = 1;
+
+                // Enumerate the children (hammock-coupled neighbors that
+                // require recursion). Push them in reverse so processing
+                // order matches the original recursive order.
+                const pushKids = [];
+                if (top.kind === _WK_ES_FLOOR) {
+                    for (const p of top.h.preds) {
+                        const ph = _MC.hammocks[p.predTaskId];
+                        if (!ph) continue;
+                        if (p.type === 'FS' || !p.type || p.type === 'SS') {
+                            pushKids.push({ kind: _WK_ES_FLOOR, h: ph, phase: 0 });
+                        }
+                    }
+                } else if (top.kind === _WK_LF_FLOOR) {
+                    for (const p of top.h.preds) {
+                        const ph = _MC.hammocks[p.predTaskId];
+                        if (!ph) continue;
+                        if (p.type === 'FF') {
+                            pushKids.push({ kind: _WK_LF_CEIL, h: ph, phase: 0 });
+                        } else if (p.type === 'SF') {
+                            pushKids.push({ kind: _WK_ES_FLOOR, h: ph, phase: 0 });
+                        }
+                    }
+                } else if (top.kind === _WK_LF_CEIL) {
+                    for (const s of top.h.succs) {
+                        const sh = _MC.hammocks[s.taskId];
+                        if (!sh) continue;
+                        if (s.type === 'FS' || !s.type || s.type === 'FF') {
+                            pushKids.push({ kind: _WK_LF_CEIL, h: sh, phase: 0 });
+                        }
+                    }
+                } else { // _WK_ES_CEIL
+                    for (const s of top.h.succs) {
+                        const sh = _MC.hammocks[s.taskId];
+                        if (!sh) continue;
+                        if (s.type === 'SS') {
+                            pushKids.push({ kind: _WK_ES_CEIL, h: sh, phase: 0 });
+                        } else if (s.type === 'SF') {
+                            pushKids.push({ kind: _WK_LF_CEIL, h: sh, phase: 0 });
+                        }
+                    }
+                }
+                for (let i = pushKids.length - 1; i >= 0; i--) {
+                    stack.push(pushKids[i]);
+                }
+                continue;
+            }
+
+            // phase === 1: compute own value (children memoized by now).
+            let val = null;
+            if (top.kind === _WK_ES_FLOOR) {
+                for (const p of top.h.preds) {
+                    const id = p.predTaskId;
+                    const lag = p.lag || 0;
+                    const t = _MC.tasks[id];
+                    if (t) {
+                        let anchor = null;
+                        if (p.type === 'FS' || !p.type) anchor = t.EF + lag;
+                        else if (p.type === 'SS') anchor = t.ES + lag;
+                        if (anchor !== null && (val === null || anchor < val)) val = anchor;
+                        continue;
+                    }
+                    const ph = _MC.hammocks[id];
+                    if (!ph) continue;
+                    if (p.type === 'FS' || !p.type || p.type === 'SS') {
+                        const sub = memoEsFloor.get(ph.id);
+                        if (sub !== null && sub !== undefined &&
+                            (val === null || sub + lag < val)) val = sub + lag;
+                    }
+                }
+            } else if (top.kind === _WK_LF_FLOOR) {
+                for (const p of top.h.preds) {
+                    const id = p.predTaskId;
+                    const lag = p.lag || 0;
+                    const t = _MC.tasks[id];
+                    if (t) {
+                        let anchor = null;
+                        if (p.type === 'FF') anchor = t.EF + lag;
+                        else if (p.type === 'SF') anchor = t.ES + lag;
+                        if (anchor !== null && (val === null || anchor > val)) val = anchor;
+                        continue;
+                    }
+                    const ph = _MC.hammocks[id];
+                    if (!ph) continue;
+                    if (p.type === 'FF') {
+                        const sub = memoLfCeiling.get(ph.id);
+                        if (sub !== null && sub !== undefined &&
+                            (val === null || sub + lag > val)) val = sub + lag;
+                    } else if (p.type === 'SF') {
+                        const sub = memoEsFloor.get(ph.id);
+                        if (sub !== null && sub !== undefined &&
+                            (val === null || sub + lag > val)) val = sub + lag;
+                    }
+                }
+            } else if (top.kind === _WK_LF_CEIL) {
+                for (const s of top.h.succs) {
+                    const id = s.taskId;
+                    const lag = s.lag || 0;
+                    const t = _MC.tasks[id];
+                    if (t) {
+                        let anchor = null;
+                        if (s.type === 'FS' || !s.type) anchor = t.LS - lag;
+                        else if (s.type === 'FF') anchor = t.LF - lag;
+                        if (anchor !== null && (val === null || anchor > val)) val = anchor;
+                        continue;
+                    }
+                    const sh = _MC.hammocks[id];
+                    if (!sh) continue;
+                    if (s.type === 'FS' || !s.type || s.type === 'FF') {
+                        const sub = memoLfCeiling.get(sh.id);
+                        if (sub !== null && sub !== undefined &&
+                            (val === null || sub - lag > val)) val = sub - lag;
+                    }
+                }
+            } else { // _WK_ES_CEIL
+                for (const s of top.h.succs) {
+                    const id = s.taskId;
+                    const lag = s.lag || 0;
+                    const t = _MC.tasks[id];
+                    if (t) {
+                        let anchor = null;
+                        if (s.type === 'SS') anchor = t.LS - lag;
+                        else if (s.type === 'SF') anchor = t.LF - lag;
+                        if (anchor !== null && (val === null || anchor < val)) val = anchor;
+                        continue;
+                    }
+                    const sh = _MC.hammocks[id];
+                    if (!sh) continue;
+                    if (s.type === 'SS') {
+                        const sub = memoEsCeiling.get(sh.id);
+                        if (sub !== null && sub !== undefined &&
+                            (val === null || sub - lag < val)) val = sub - lag;
+                    } else if (s.type === 'SF') {
+                        const sub = memoLfCeiling.get(sh.id);
+                        if (sub !== null && sub !== undefined &&
+                            (val === null || sub - lag < val)) val = sub - lag;
+                    }
+                }
+            }
+            inProg.delete(top.h.id);
+            memo.set(top.h.id, val);
+            stack.pop();
+        }
+        return _memoFor(rootKind).get(rootH.id);
+    }
+
     // ─── ES floor ─────────────────────────────────────────────────────────
     // From preds: FS-pred T.EF+L  /  SS-pred T.ES+L
     // Hammock pred: FS chain recurses into upstream's esFloor (transparent
     // pass-through of the FS chain). SS chain recurses into upstream's
     // esFloor too (SS pred to hammock = upstream's ES drives ours).
-    function _esFloor(h) {
-        if (memoEsFloor.has(h.id)) return memoEsFloor.get(h.id);
-        if (inProgressEsFloor.has(h.id)) { cycleDetected = true; return null; }
-        inProgressEsFloor.add(h.id);
-        let val = null;
-        for (const p of h.preds) {
-            const id = p.predTaskId;
-            const lag = p.lag || 0;
-            const t = _MC.tasks[id];
-            if (t) {
-                let anchor = null;
-                if (p.type === 'FS' || !p.type) anchor = t.EF + lag;
-                else if (p.type === 'SS') anchor = t.ES + lag;
-                if (anchor !== null && (val === null || anchor < val)) val = anchor;
-                continue;
-            }
-            const ph = _MC.hammocks[id];
-            if (!ph) continue;
-            if (p.type === 'FS' || !p.type || p.type === 'SS') {
-                const sub = _esFloor(ph);
-                if (sub !== null && (val === null || sub + lag < val)) val = sub + lag;
-            }
-            // FF/SF hammock preds do NOT contribute to our ES floor — they
-            // affect our LF floor (see _lfFloor below).
-        }
-        inProgressEsFloor.delete(h.id);
-        memoEsFloor.set(h.id, val);
-        return val;
-    }
+    function _esFloor(h) { return _walk(_WK_ES_FLOOR, h); }
 
     // ─── LF floor ─────────────────────────────────────────────────────────
     // From preds: FF-pred T.EF+L  /  SF-pred T.ES+L
     // Hammock pred: FF couples to upstream's lfCeiling (= upstream's EF).
     // SF couples to upstream's esFloor (= upstream's ES).
-    function _lfFloor(h) {
-        if (memoLfFloor.has(h.id)) return memoLfFloor.get(h.id);
-        if (inProgressLfFloor.has(h.id)) { cycleDetected = true; return null; }
-        inProgressLfFloor.add(h.id);
-        let val = null;
-        for (const p of h.preds) {
-            const id = p.predTaskId;
-            const lag = p.lag || 0;
-            const t = _MC.tasks[id];
-            if (t) {
-                let anchor = null;
-                if (p.type === 'FF') anchor = t.EF + lag;
-                else if (p.type === 'SF') anchor = t.ES + lag;
-                if (anchor !== null && (val === null || anchor > val)) val = anchor;
-                continue;
-            }
-            const ph = _MC.hammocks[id];
-            if (!ph) continue;
-            if (p.type === 'FF') {
-                const sub = _lfCeiling(ph);
-                if (sub !== null && (val === null || sub + lag > val)) val = sub + lag;
-            } else if (p.type === 'SF') {
-                const sub = _esFloor(ph);
-                if (sub !== null && (val === null || sub + lag > val)) val = sub + lag;
-            }
-        }
-        inProgressLfFloor.delete(h.id);
-        memoLfFloor.set(h.id, val);
-        return val;
-    }
+    function _lfFloor(h) { return _walk(_WK_LF_FLOOR, h); }
 
     // ─── LF ceiling ───────────────────────────────────────────────────────
     // From succs: FS-succ T.LS-L  /  FF-succ T.LF-L
@@ -3038,68 +3195,11 @@ function _resolveHammocks(projectFinish, log, alerts, projectStart) {
     // downstream LS = downstream ES, but ES depends on its preds which
     // include us — so recurse on lfCeiling to walk DOWN the succ chain to
     // a normal-task LS). FF couples to downstream's lfCeiling.
-    function _lfCeiling(h) {
-        if (memoLfCeiling.has(h.id)) return memoLfCeiling.get(h.id);
-        if (inProgressLfCeiling.has(h.id)) { cycleDetected = true; return null; }
-        inProgressLfCeiling.add(h.id);
-        let val = null;
-        for (const s of h.succs) {
-            const id = s.taskId;
-            const lag = s.lag || 0;
-            const t = _MC.tasks[id];
-            if (t) {
-                let anchor = null;
-                if (s.type === 'FS' || !s.type) anchor = t.LS - lag;
-                else if (s.type === 'FF') anchor = t.LF - lag;
-                if (anchor !== null && (val === null || anchor > val)) val = anchor;
-                continue;
-            }
-            const sh = _MC.hammocks[id];
-            if (!sh) continue;
-            if (s.type === 'FS' || !s.type || s.type === 'FF') {
-                const sub = _lfCeiling(sh);
-                if (sub !== null && (val === null || sub - lag > val)) val = sub - lag;
-            }
-            // SS/SF hammock succs do NOT contribute to our LF ceiling — they
-            // affect our ES ceiling (see _esCeiling below).
-        }
-        inProgressLfCeiling.delete(h.id);
-        memoLfCeiling.set(h.id, val);
-        return val;
-    }
+    function _lfCeiling(h) { return _walk(_WK_LF_CEIL, h); }
 
     // ─── ES ceiling ───────────────────────────────────────────────────────
     // From succs: SS-succ T.LS-L  /  SF-succ T.LF-L
-    function _esCeiling(h) {
-        if (memoEsCeiling.has(h.id)) return memoEsCeiling.get(h.id);
-        if (inProgressEsCeiling.has(h.id)) { cycleDetected = true; return null; }
-        inProgressEsCeiling.add(h.id);
-        let val = null;
-        for (const s of h.succs) {
-            const id = s.taskId;
-            const lag = s.lag || 0;
-            const t = _MC.tasks[id];
-            if (t) {
-                let anchor = null;
-                if (s.type === 'SS') anchor = t.LS - lag;
-                else if (s.type === 'SF') anchor = t.LF - lag;
-                if (anchor !== null && (val === null || anchor < val)) val = anchor;
-                continue;
-            }
-            const sh = _MC.hammocks[id];
-            if (!sh) continue;
-            if (s.type === 'SS') {
-                const sub = _esCeiling(sh);
-                if (sub !== null && (val === null || sub - lag < val)) val = sub - lag;
-            } else if (s.type === 'SF') {
-                const sub = _lfCeiling(sh);
-                if (sub !== null && (val === null || sub - lag < val)) val = sub - lag;
-            }
-        }
-        inProgressEsCeiling.delete(h.id);
-        memoEsCeiling.set(h.id, val);
-        return val;
-    }
+    function _esCeiling(h) { return _walk(_WK_ES_CEIL, h); }
 
     // Resolve every hammock by collecting all four anchors. Widest-span
     // semantic:
