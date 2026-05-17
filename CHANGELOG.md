@@ -12,6 +12,55 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.15 — 2026-05-16 — Round 12 deferred-sub-bug wave (F4/F6/F13/F14)
+
+Fourth sequential remediation pass — addresses sub-bugs previously deferred from v2.9.14 because they required either non-trivial refactor (iterative walkers), an algorithm swap (LPM backwalk), or a coordinated multi-file change (calendar enforcement, driver enrichment). All 7 baseline failures preserved; **25 new test assertions** across 14 new test groups, **865 → 871 passing** end-to-end.
+
+### F13-b — Calendar effective-date enforcement (8 rule windows)
+
+Holidays that didn't exist before certain enactment years were silently emitted. The CA-FED set returned `2018-09-30` (NDTR) even though that holiday wasn't statutory until 2021; US-FED returned `2018-06-19` (Juneteenth) even though it wasn't federal until 2021; CA-BC Family Day used the modern 3rd-Mon-Feb rule for 2013–2018 even though it was 2nd-Mon-Feb in that window. Each silent emission could shift a calendar-aware day count in forensic work-day Δ by 1 day per stale holiday.
+
+Added optional `effective_from` / `effective_to` integer-year fields to holiday rule objects:
+
+- US-FED Juneteenth: `effective_from: 2021` (Juneteenth National Independence Day Act, signed Jun 17 2021)
+- CA-FED National Day for Truth and Reconciliation: `effective_from: 2021` (Bill C-5)
+- CA-NS Heritage Day: `effective_from: 2015`
+- CA-NB Family Day: `effective_from: 2018`
+- CA-ON Family Day: `effective_from: 2008`
+- CA-PE Islander Day: `effective_from: 2009`
+- CA-MB Louis Riel Day: `effective_from: 2008`
+- CA-BC Family Day: SPLIT — 2nd Mon Feb (`effective_from: 2013, effective_to: 2018`) → 3rd Mon Feb (`effective_from: 2019`)
+- US-MA + US-ME Patriots' Day: SPLIT — fixed Apr 19 (`effective_to: 1968`) → 3rd Mon Apr (`effective_from: 1969`, Uniform Monday Holiday Act adoption)
+
+`_evaluateRule` returns null when `year < effective_from` or `year > effective_to`. `getHolidays` emits a one-time `console.warn` when the requested range falls outside any rule's window, so callers see historical-range queries that might omit modern holidays. 4 new test groups (10 assertions).
+
+### F14-rest — driving_predecessor enrichment (tie-break + CONSTRAINT + DATA_DATE tags)
+
+Metadata-only enrichment of `node.driving_predecessor` — no math change.
+
+- **Bug 2 (tie-break).** When two preds drive an activity to the same ES, the previous code used "first-wins" insertion order. Now: prefer `FS+lag_days=0` (canonical tight logic edge), then alphabetical on pred code. Skips when the incumbent is a CONSTRAINT / DATA_DATE sentinel.
+- **Bug 3 (CONSTRAINT driver).** When primary or secondary ES-side constraint clamps maxES past the pred-driven value, set `driving_predecessor = {type:'CONSTRAINT', constraint_type, date}`. Analysts can now see the constraint is the actual driver, not a real pred.
+- **Bug 4 (DATA_DATE driver).** When no pred and no constraint won, but `maxES === ddNum` AND the activity has predecessors, set `driving_predecessor = {type:'DATA_DATE', date}`. The schedule update date floored ES past where pred finishes would have placed it. Excludes true source activities (no preds → legitimately null).
+
+Same edits applied in `cpm.py` for JS-Python crossval parity. `docs/api.md` updated with the three new sentinel `driving_predecessor.type` values. 4 new test groups (4 assertions).
+
+### F6-rest — hammock fixes (alert + iterative walkers)
+
+- **Bug B (Section C hammock visibility).** `computeCPM` does not resolve `TT_Hammock` activities — hammock semantics live in Section D's `runCPM` Pass-2 (`_resolveHammocks`). Callers passing hammock-bearing input directly to `computeCPM` previously got silent omission. Now: when `_MC.hammocks` is non-empty at `computeCPM` entry, emit a non-blocking `ALERT` with context `hammocks-skipped-in-section-c` listing the skipped codes. Architectural refactor (wiring `_resolveHammocks` into Section C) deferred — this restores visibility without changing the math.
+- **Bug E (iterative walkers).** Converted `_esFloor` / `_lfFloor` / `_lfCeiling` / `_esCeiling` from mutually-recursive JS functions to a single iterative walker with explicit work-stack, post-order DFS, and a phase state-machine. Memoization keys, cycle-detection sets, and anchor formulas preserved verbatim — every existing hammock test still passes. The recursive form would blow the default Node.js stack (~10k frames) on hammock chains of ~5k+ depth; the iterative form scales to the hardware ceiling.
+
+3 new test groups (5 assertions): hammock-skipped ALERT in computeCPM, 200-deep hammock chain without overflow, 1-hammock semantic regression.
+
+### F4-A — LPM driving-predecessor backwalk
+
+The prior LPM implementation used a forward+backward DP measuring "longest accumulated duration from any source to any sink." That's a graph-theoretic longest-path, not the algorithmic concept of LPM in CPM forensics. The CPM-correct LPM is the chain you get when you trace `driving_predecessor` (the pred that actually pushed each ES) backward from the latest-EF live terminal until you hit a true source.
+
+Replacement: walk back from `_findLatestFinish(nodes)` via `node.driving_predecessor.code` until the chain terminates (null `driving_predecessor` = true source; CONSTRAINT / DATA_DATE sentinel = path origin). Visited activities ARE the LPM CP. Tie-break inherits the deterministic v2.9.15 driving_predecessor tagging (FS+0 wins ties; alphabetical fallback). Excludes `is_complete` activities from CP candidacy. Defensive depth bound.
+
+All existing LPM tests still pass; crossval unchanged at 435/444. 3 new test groups (6 assertions).
+
+---
+
 ## v2.9.14 — 2026-05-16 — Round 11 sequential fix wave (F2/F3/F4/F5/F6/F9/F13/F14)
 
 Second sequential remediation pass against the 218-finding Round 10 audit. Seven commits, 24+ new regression tests, **all 7 baseline failures preserved** (those depend on the v2.9.13 F1-Bug5 contract change and cannot be fixed without reverting it; documented per-commit).
