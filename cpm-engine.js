@@ -248,6 +248,23 @@ function _normalizeConstraint(c, alerts, _ctx) {
         }
         return null;
     }
+    // v2.9.20 A16-M2 — validate the constraint date parses. Previously a
+    // malformed date string ('2026-13-99') silently coerced to 0 inside
+    // _applyForward*Constraint, effectively dropping the constraint with no
+    // signal. Now drop loudly with a constraint-invalid-date WARN.
+    if (dateToNum(dateStr) === 0) {
+        if (alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-invalid-date',
+                message: 'Constraint ' + canonical + ' on ' + (_ctx || 'activity') +
+                    ' has invalid date ' + JSON.stringify(rawDate) +
+                    '; constraint dropped to prevent silent epoch-coercion. ' +
+                    'Provide a YYYY-MM-DD date.',
+            });
+        }
+        return null;
+    }
     return { type: canonical, date: dateStr };
 }
 
@@ -289,6 +306,19 @@ function _normalizeConstraint2(c, alerts, _ctx) {
                 context: 'constraint-incomplete',
                 message: 'Secondary constraint ' + canonical + ' on ' + (_ctx || 'activity') +
                     ' has no date; secondary constraint dropped.',
+            });
+        }
+        return null;
+    }
+    // v2.9.20 A16-M2 — validate the date parses; mirror _normalizeConstraint.
+    if (dateToNum(dateStr) === 0) {
+        if (alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-invalid-date',
+                message: 'Secondary constraint ' + canonical + ' on ' + (_ctx || 'activity') +
+                    ' has invalid date ' + JSON.stringify(rawDate) +
+                    '; secondary constraint dropped.',
             });
         }
         return null;
@@ -1142,15 +1172,60 @@ function computeCPM(activities, relationships, opts) {
     // edge-drop tiebreak when cycles include numeric-only codes.
     const nodes = Object.create(null);
     const nodeCodesOrdered = [];
+    // v2.9.20 A16-M4 — empty schedule alert. Returning an empty result
+    // silently lets downstream consumers compute Δ against an empty
+    // schedule and get garbage. Loud signal at entry.
+    if (activities.length === 0) {
+        alerts.push({
+            severity: 'WARN',
+            context: 'empty-schedule',
+            message: 'computeCPM called with zero activities. Result will have ' +
+                'empty nodes/topo/criticalCodes and projectFinishNum=0. Verify ' +
+                'the activity list was actually populated upstream.',
+        });
+    }
+    let _activityIdx = -1;
     for (const a of activities) {
-        if (!a) continue;
+        _activityIdx++;
+        if (!a) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'activity-null',
+                message: 'activities[' + _activityIdx + '] is null/undefined; skipped.',
+            });
+            continue;
+        }
         // F10 — trim whitespace on activity code. P6/XER round-trips sometimes
         // emit codes with leading/trailing spaces that silently break
         // adjacency lookups in the predMap / succMap. Emit an INFO so the
         // trim is visible to forensic reviewers.
         const codeRaw = a.code || '';
         const code = String(codeRaw).trim();
-        if (!code) continue;
+        if (!code) {
+            // v2.9.20 A16-M5 — emit ALERT instead of silent drop. An XER
+            // converter bug that drops a task_code on one row silently
+            // makes the activity vanish; analysts need to see it.
+            alerts.push({
+                severity: 'ALERT',
+                context: 'activity-missing-code',
+                message: 'activities[' + _activityIdx + '] has missing/empty code; ' +
+                    'activity skipped. Verify the upstream parser preserved task_code.',
+            });
+            continue;
+        }
+        // v2.9.20 A16-L3 — strip ASCII control characters from name field.
+        // Activity names with embedded \n / \r / \x00 silently break HTML
+        // / CSV / DOCX renderers downstream. INFO when sanitization fires
+        // so the cleanup is visible.
+        if (a.name && typeof a.name === 'string' && /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(a.name)) {
+            alerts.push({
+                severity: 'INFO',
+                context: 'activity-name-control-chars',
+                message: 'Activity ' + code + ' name contained ASCII control ' +
+                    'characters (not \\t \\n \\r); engine retains the raw value ' +
+                    'but downstream renderers may misbehave. Consider sanitizing.',
+            });
+        }
         if (code !== String(codeRaw)) {
             alerts.push({
                 severity: 'INFO',
@@ -1331,6 +1406,20 @@ function computeCPM(activities, relationships, opts) {
     for (const r of relationships) {
         const fc = r.from_code;
         const tc = r.to_code;
+        // v2.9.20 A16-L4 — explicit self-loop detection. Self-referential
+        // relationships (A → A) would be caught later by cycle detection
+        // with a generic CYCLE error; the dedicated SELF_LOOP signal points
+        // the analyst at the bad row before the cycle walk runs.
+        if (fc && tc && fc === tc) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'self-loop',
+                message: 'Relationship has from_code === to_code (' + fc +
+                    '); self-loop dropped. Verify the source XER does not have ' +
+                    'an accidental self-reference on this activity.',
+            });
+            continue;
+        }
         const _rtypeRaw = (r.type || 'FS').toUpperCase();
         let rtype = _rtypeRaw;
         // F10 — invalid relationship type. Previously coerced to FS silently.
