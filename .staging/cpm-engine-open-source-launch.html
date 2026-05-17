@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="canonical" href="https://criticalpathpartners.ca/blog/cpm-engine-open-source-launch.html" />
+<title>We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.</title>
+<meta name="description" content="cpp-cpm-engine v2.9.14 ships MIT-licensed on npm, GitHub, MCP registry, and Railway. 744 unit tests, 32 fixtures times 346 cross-validation checks, Sigstore-signed CI, Daubert disclosure built in.">
+<meta name="keywords" content="open source CPM engine, npm cpp-cpm-engine, MIT forensic scheduling, Daubert FRE 702 707, Sigstore Rekor transparency log, AACE 29R-03 windows analysis, MCP registry forensic, bit-identical reproducibility, Critical Path Partners open source">
+<meta name="author" content="Dana Fitkowski">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://criticalpathpartners.ca/blog/cpm-engine-open-source-launch.html">
+<meta property="og:title" content="We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.">
+<meta property="og:description" content="cpp-cpm-engine v2.9.14 ships across four public deployment surfaces (npm, GitHub, MCP registry, Railway) locked to one SHA-256. Run the full test suite on your own machine.">
+<meta property="og:image" content="https://criticalpathpartners.ca/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Critical Path Partners">
+<meta property="og:locale" content="en_CA">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.">
+<meta name="twitter:description" content="cpp-cpm-engine v2.9.14 ships MIT-licensed across npm, GitHub, MCP registry, and Railway. 744 unit tests plus 32 fixtures times 346 cross-validation checks. Run it on your own machine.">
+<meta name="twitter:image" content="https://criticalpathpartners.ca/og-image.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.","author":{"@type":"Person","name":"Dana Fitkowski","jobTitle":"Forensic Construction Schedule Claims Expert","worksFor":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca"}},"publisher":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca","logo":{"@type":"ImageObject","url":"https://criticalpathpartners.ca/og-image.png"}},"image":"https://criticalpathpartners.ca/og-image.png","datePublished":"2026-05-16","dateModified":"2026-05-16","description":"cpp-cpm-engine v2.9.14 ships MIT-licensed across four public deployment surfaces: npm, GitHub releases, MCP registry, Railway-hosted MCP. 744 unit tests plus 32 fixtures times 346 cross-validation checks. Sigstore-signed CI on Rekor. Built for FRE 702 (amended 2023) and the proposed FRE 707."}
+</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --navy: #0F2540;
+    --navy-mid: #1a3a52;
+    --red: #C8392F;
+    --red-dark: #a32d24;
+    --white: #ffffff;
+    --off-white: #f8fafc;
+    --slate-100: #e2e8f0;
+    --slate-200: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+    --green: #16a34a;
+    --amber: #d97706;
+}
+
+/* System-fonts-only stack. No CDN, no @import. This post eats its own dog food. */
+html { scroll-behavior: smooth; }
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--white); color: var(--slate-800);
+    line-height: 1.7; -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+code, .mono { font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+.container { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+.accent-strip { height: 4px; background: var(--red); }
+
+/* ─── NAV ─── */
+.nav {
+    background: rgba(255,255,255,0.96); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 18px 0; position: sticky; top: 0; z-index: 100;
+}
+.nav .container { display: flex; justify-content: space-between; align-items: center; max-width: 1340px; }
+.nav-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.nav-brand-mark {
+    width: 36px; height: 36px;
+    background: var(--navy); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 13px; letter-spacing: 0.5px;
+    border-left: 3px solid var(--red);
+}
+.nav-brand-text { font-weight: 800; font-size: 16px; color: var(--navy); letter-spacing: -0.01em; }
+.nav-links { display: flex; gap: 18px; align-items: center; }
+.nav-links a {
+    color: var(--slate-700); text-decoration: none;
+    font-size: 14px; font-weight: 500; transition: color 0.15s;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--red); }
+.nav-cta {
+    background: var(--navy); color: var(--white) !important;
+    padding: 10px 20px; border-radius: 4px;
+    font-weight: 600; font-size: 13px;
+    border-left: 3px solid var(--red); transition: background 0.15s;
+}
+.nav-cta:hover { background: var(--navy-mid); }
+
+.nav-live-dot { display: inline-block; width: 7px; height: 7px; background: var(--red); border-radius: 50%; margin-right: 6px; vertical-align: middle; animation: cpp-live-pulse 2s ease-in-out infinite; box-shadow: 0 0 6px rgba(200,57,47,0.5); }
+@keyframes cpp-live-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(0.82); } }
+
+/* ─── ARTICLE HERO ─── */
+.article-hero {
+    background: var(--navy); color: var(--white);
+    padding: 64px 0 48px; position: relative; overflow: hidden;
+}
+.article-hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 22% 28%, rgba(200,57,47,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 78% 78%, rgba(44,77,104,0.55) 0%, transparent 50%);
+    pointer-events: none;
+}
+.article-hero .container { position: relative; z-index: 1; max-width: 820px; }
+.breadcrumb { font-size: 13px; color: var(--slate-400); margin-bottom: 18px; }
+.breadcrumb a { color: var(--slate-200); text-decoration: none; }
+.breadcrumb a:hover { color: var(--white); }
+.article-label {
+    display: inline-block; font-size: 11px; font-weight: 800;
+    letter-spacing: 2.5px; text-transform: uppercase;
+    padding: 5px 12px; background: rgba(200,57,47,0.18);
+    color: #fc7269; margin-bottom: 18px;
+    border-left: 2px solid var(--red);
+}
+.article-hero h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 900; letter-spacing: -0.02em; line-height: 1.12;
+    color: var(--white); margin-bottom: 16px;
+}
+.article-meta {
+    color: var(--slate-400); font-size: 13px;
+    font-family: 'JetBrains Mono', 'Consolas', monospace; letter-spacing: 0.5px;
+}
+
+/* ─── ARTICLE BODY ─── */
+.article-body {
+    max-width: 760px; margin: 0 auto;
+    padding: 60px 32px 90px;
+    color: var(--slate-800); font-size: 16px; line-height: 1.75;
+}
+.article-body p {
+    margin-bottom: 22px; color: var(--slate-700);
+}
+.article-body strong { color: var(--navy); font-weight: 700; }
+.article-body em { color: var(--slate-700); }
+.article-body a {
+    color: var(--red); text-decoration: none;
+    font-weight: 600; border-bottom: 1px solid rgba(200,57,47,0.3);
+    transition: border-color 0.15s;
+}
+.article-body a:hover { border-bottom-color: var(--red); }
+.article-body h2 {
+    font-size: 26px; font-weight: 800; color: var(--navy);
+    letter-spacing: -0.02em; line-height: 1.25;
+    margin: 52px 0 18px; padding-top: 8px;
+}
+.article-body h3 {
+    font-size: 18px; font-weight: 700; color: var(--red);
+    letter-spacing: -0.01em; margin: 28px 0 10px;
+    text-transform: none;
+}
+.article-body ul, .article-body ol {
+    margin: 0 0 22px 28px; color: var(--slate-700);
+}
+.article-body li { margin-bottom: 8px; }
+.article-body code {
+    background: var(--off-white);
+    border: 1px solid var(--slate-100);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 14px;
+    color: var(--navy);
+}
+
+/* Per-discipline card */
+.discipline {
+    background: var(--off-white);
+    border: 1px solid var(--slate-100);
+    border-left: 4px solid var(--navy);
+    padding: 22px 26px;
+    margin: 28px 0;
+}
+.discipline h3 {
+    color: var(--navy);
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 18px;
+    font-weight: 800;
+}
+.discipline .field {
+    margin-bottom: 12px;
+    font-size: 15px;
+    line-height: 1.6;
+}
+.discipline .field:last-child { margin-bottom: 0; }
+.discipline .field-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 4px;
+}
+.discipline .field-text { color: var(--slate-700); }
+.discipline .field-text strong { color: var(--navy); }
+.discipline.green { border-left-color: var(--green); }
+.discipline.amber { border-left-color: var(--amber); }
+
+/* Callouts */
+.callout {
+    background: var(--off-white);
+    border: 1px solid var(--slate-100);
+    padding: 22px 26px; margin: 28px 0;
+}
+.callout.warning { border-left: 4px solid var(--amber); }
+.callout.tip { border-left: 4px solid var(--green); }
+.callout.danger { border-left: 4px solid var(--red); }
+.callout-title {
+    font-weight: 800; font-size: 12px;
+    letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 8px; color: var(--navy);
+}
+.callout p { margin-bottom: 0; color: var(--slate-700); font-size: 15px; }
+
+/* CTA */
+.article-cta {
+    background: var(--navy); color: var(--white);
+    border-left: 4px solid var(--red);
+    padding: 36px 40px; margin: 48px 0 32px;
+    text-align: center;
+}
+.article-cta h3 {
+    font-size: 22px; font-weight: 800; color: var(--white);
+    letter-spacing: -0.01em; margin: 0 0 10px;
+}
+.article-cta p { color: var(--slate-200); font-size: 15px; margin-bottom: 22px; }
+.article-cta a {
+    display: inline-block; background: var(--red); color: var(--white);
+    padding: 14px 32px; border-radius: 4px;
+    border: none; border-left: 3px solid var(--white);
+    font-weight: 600; font-size: 15px;
+    text-decoration: none; transition: background 0.15s, transform 0.15s;
+    min-height: 44px;
+}
+.article-cta a:hover { background: var(--red-dark); transform: translateY(-1px); }
+
+.closing-quote {
+    border-left: 4px solid var(--red);
+    background: var(--off-white);
+    padding: 26px 32px;
+    margin: 40px 0;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--slate-800);
+}
+.closing-quote strong { color: var(--navy); }
+
+.related-row {
+    margin-top: 32px; padding-top: 24px;
+    border-top: 1px solid var(--slate-100);
+    font-size: 14px; color: var(--slate-700);
+}
+.related-row strong { color: var(--navy); }
+
+/* ─── FOOTER ─── */
+.footer {
+    background: #0a1a2e; color: var(--slate-400);
+    padding: 40px 0 28px; border-top: 3px solid var(--red);
+}
+.footer-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--slate-500); flex-wrap: wrap; gap: 12px;
+}
+.footer-bottom a { color: var(--slate-400); text-decoration: none; }
+.footer-bottom a:hover { color: var(--white); }
+
+@media (max-width: 768px) {
+    .container { padding: 0 24px; }
+    .nav-links a:not(.nav-cta) { display: none; }
+    .article-hero { padding: 48px 0 38px; }
+    .article-body { padding: 44px 22px 70px; font-size: 15px; }
+    .article-body h2 { font-size: 22px; margin: 40px 0 14px; }
+    .article-cta { padding: 28px 22px; }
+    .discipline { padding: 18px 20px; }
+}
+@media (max-width: 480px) {
+    .container { padding: 0 18px; }
+    .article-body { padding: 36px 18px 60px; font-size: 15px; }
+    .article-body h2 { font-size: 20px; margin: 36px 0 12px; }
+    .article-body h3 { font-size: 16px; }
+    .article-cta { padding: 22px 18px; }
+    .closing-quote { padding: 20px 22px; font-size: 16px; }
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    padding: 8px 16px;
+    background: var(--navy);
+    color: var(--white);
+    text-decoration: none;
+    font-size: 13px;
+    z-index: 200;
+}
+.skip-link:focus { left: 0; }
+
+/* WCAG-AA accessibility — focus-visible, skip-link, mobile nav (added 2026-05-14) */
+a:focus-visible, .btn:focus-visible, .nav a:focus-visible, button:focus-visible, .nav-cta:focus-visible {
+    outline: 2px solid #C8392F;
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+.skip-to-main {
+    position: absolute; left: -9999px; top: 0;
+    background: #0F2540; color: #fff;
+    padding: 12px 20px; z-index: 9999;
+    text-decoration: none; font-weight: 600;
+}
+.skip-to-main:focus { left: 8px; top: 8px; }
+.nav-burger {
+    display: none;
+    background: transparent; border: 1px solid #cbd5e1;
+    width: 44px; height: 44px;
+    border-radius: 4px; cursor: pointer; padding: 0;
+    align-items: center; justify-content: center;
+    color: #0F2540;
+}
+@media (max-width: 780px) {
+    .nav-links { display: none; }
+    .nav-links.open {
+        display: flex; flex-direction: column;
+        position: absolute; top: 100%; left: 0; right: 0;
+        background: #fff; padding: 12px 20px;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 8px 24px rgba(15,37,64,0.06);
+        z-index: 100;
+    }
+    .nav-burger { display: inline-flex !important; }
+}
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<div class="accent-strip"></div>
+
+<nav class="nav" aria-label="Primary">
+    <div class="container">
+        <a href="/" class="nav-brand">
+            <div class="nav-brand-mark" aria-hidden="true">CPP</div>
+            <div class="nav-brand-text">Critical Path Partners</div>
+        </a>
+        <button type="button" class="nav-burger" aria-label="Open menu" aria-expanded="false" onclick="var nl=this.parentNode.querySelector('.nav-links'); nl.classList.toggle('open'); this.setAttribute('aria-expanded', nl.classList.contains('open'));"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div class="nav-links">
+            <a href="/schedule-health-report.html"><span class="nav-live-dot" aria-hidden="true"></span>Schedule Health Report</a>
+            <a href="/forensic-schedule-analysis.html"><span class="nav-live-dot" aria-hidden="true"></span>Forensic Schedule Analysis</a>
+            <a href="/samples.html">Samples</a>
+            <a href="/case-studies/">Case Studies</a>
+            <a href="/blog/" class="active">Blog</a>
+            <a href="/connect.html" class="nav-cta">Talk to CPP</a>
+        </div>
+    </div>
+</nav>
+
+<main id="main">
+
+<section class="article-hero">
+    <div class="container">
+        <div class="breadcrumb"><a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; CPM Engine Open-Source Launch</div>
+        <div class="article-label">Ship Note</div>
+        <h1>We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.</h1>
+        <div class="article-meta">By Dana Fitkowski &middot; May 16, 2026 &middot; 9 min read</div>
+    </div>
+</section>
+
+<article class="article-body">
+
+<p>Two weeks ago we shipped <code>cpp-cpm-engine</code> as an MIT-licensed public repository. Today we shipped v2.9.14 to npm, to the Model Context Protocol registry, and bit-identical across the four canonical CPP deployment surfaces. The engine that drives every Critical Path Partners forensic deliverable is now reproducible on your own machine in under a minute.</p>
+
+<p>This is not a marketing post. It is a methodology post. Under FRE 702 as amended in December 2023, and the proposed FRE 707 currently moving through the rules committee, an expert's reasoning and methodology have to be reliable to a preponderance of the evidence. <strong>Closed-engine forensic-scheduling tools cannot deliver that.</strong> The vendors in this space &mdash; SmartPM, Nodes &amp; Links, ALICE, Acumen Fuse &mdash; treat the CPM math as proprietary. None of them can hand an opposing expert a one-command reproduction path. We can.</p>
+
+<div class="callout tip">
+    <div class="callout-title">The test (under one minute)</div>
+    <p>From any terminal with Node 18+:</p>
+    <p><code>npm install cpp-cpm-engine</code></p>
+    <p>Or, to reproduce the full verification suite:</p>
+    <p><code>git clone https://github.com/danafitkowski/cpp-cpm-engine &amp;&amp; cd cpp-cpm-engine &amp;&amp; npm install &amp;&amp; npm run test:all</code></p>
+    <p>Measured at five seconds on a 2023-era laptop (Win11, Node 22, NVMe SSD). 744 unit tests pass. 32 fixtures times 346 cross-validation checks pass. DCMA-14 and AACE 29R-03 compliance checks pass.</p>
+</div>
+
+<h2>1. The four public deployment surfaces, locked to one SHA-256</h2>
+
+<div class="discipline">
+    <h3>One engine. Four canonical install paths. Bit-identical hash across all four.</h3>
+    <div class="field">
+        <div class="field-label">Why this matters</div>
+        <div class="field-text">A forensic exhibit cites the engine version that produced it. The opposing expert must be able to fetch <em>exactly that build</em> from a public source that is not under CPP's control, and confirm by hash that the build is what we say it is. One canonical surface is fragile. Four parallel surfaces, with the same hash, is robust. If three vendors go dark next week the fourth still serves the same binary.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Surface 1 &mdash; npm</div>
+        <div class="field-text"><code>npm install cpp-cpm-engine</code> &middot; <a href="https://www.npmjs.com/package/cpp-cpm-engine">npmjs.com/package/cpp-cpm-engine</a>. Public registry. Globally mirrored. Versions immutable once published.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Surface 2 &mdash; GitHub releases</div>
+        <div class="field-text"><a href="https://github.com/danafitkowski/cpp-cpm-engine/releases">github.com/danafitkowski/cpp-cpm-engine/releases</a>. Each tag is signed and pinned. Tag <code>v2.9.14</code> matches today's npm publish, byte for byte.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Surface 3 &mdash; Railway-hosted MCP</div>
+        <div class="field-text"><code>https://mcp.criticalpathpartners.ca/cpm-engine.js</code>. The same file served live by the CPP MCP server. Anyone can <code>curl</code> it and hash it.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Surface 4 &mdash; Local skill bundle</div>
+        <div class="field-text">The cpm-engine.js that ships inside the CPP forensic skill suite, packaged with every claim-workbench, windows-analysis, and TIA deliverable.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Indexed at</div>
+        <div class="field-text">The Model Context Protocol registry entry <code>io.github.danafitkowski/cpp-cpm-engine</code> at <a href="https://registry.modelcontextprotocol.io">registry.modelcontextprotocol.io</a> points to the same canonical repository. AI-driven forensic-analysis workflows discover the server there.</div>
+    </div>
+</div>
+
+<h2>2. What the test suite actually proves</h2>
+
+<div class="discipline">
+    <h3>744 unit tests, 32 fixtures times 346 cross-validation checks, DCMA-14 and AACE 29R-03 compliance gates.</h3>
+    <div class="field">
+        <div class="field-label">Unit tests &mdash; 744</div>
+        <div class="field-text">Every algorithmic primitive of the engine has unit coverage: forward pass, backward pass, total float, free float, longest-path identification, calendar arithmetic across 66 jurisdictions, constraint propagation (FNLT, SNLT, MSO, MFO, As-Late-As-Possible), driving-predecessor selection under float ties, in-progress activity handling, hammock semantics across SS / FF / SF relationships, retained-logic vs progress-override convergence.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Cross-validation &mdash; 32 fixtures times 346 checks</div>
+        <div class="field-text">The engine ships in two synchronized implementations &mdash; a JavaScript port for browser, MCP, and dashboard surfaces, and a Python sibling (<code>cpm.py</code>) that drives batch claim-preparation pipelines. They are kept bit-identical via a 32-fixture, 346-check cross-validation harness that runs in CI on every commit. JS and Python disagree on a single Early Start by even one minute and the build fails. This is how an opposing expert can be confident the dashboard they are reviewing and the DOCX they are reading were computed from the same primitives.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">DCMA-14 compliance gate</div>
+        <div class="field-text">The 14 Defense Contract Management Agency schedule-health metrics are evaluated in CI against fixture schedules with known-good and known-bad results. Any regression in dangling-logic detection, lag-abuse counting, hard-constraint flagging, or float-distribution analysis breaks the build.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">AACE 29R-03 compliance gate</div>
+        <div class="field-text">Every method-id string the engine emits matches the AACE Recommended Practice 29R-03 canonical labels. MIP 3.3 for Observational/Static/Periodic Windows. MIP 3.6 for Prospective/Modeled/Single-Base TIA. MIP 3.7 for Prospective/Modeled/Multi-Base TIA. MIP 3.8 for Retrospective/Modeled/Single-Base Collapsed-As-Built. Peer reviewers and opposing experts can match these strings against the AACE recommended practice without translation.</div>
+    </div>
+</div>
+
+<h2>3. Sigstore-signed CI runs on a public transparency log</h2>
+
+<div class="discipline">
+    <h3>The build is signed by GitHub Actions OIDC and logged to Rekor. CPP cannot edit either.</h3>
+    <div class="field">
+        <div class="field-label">Why this matters</div>
+        <div class="field-text">A test suite that only the vendor can run is not independently verifiable. The CPP test suite runs on Ubuntu, macOS, and Windows runners against Node 18, 20, and 22 &mdash; a 9-cell matrix on every push to main. The runs execute on hardware GitHub provides, not on CPP infrastructure. Their outputs are signed by GitHub Actions' OIDC token using the Sigstore <code>cosign</code> protocol and the signatures are appended to the Rekor public transparency log.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">What this means for opposing counsel</div>
+        <div class="field-text">If CPP claims a particular build of the engine passed 744 / 32x346 / DCMA-14 / AACE 29R-03, opposing counsel can look up the Sigstore attestation, follow it to the Rekor entry, and read the original GitHub Actions log on hardware CPP does not control and cannot edit. The disclosure is not "trust the expert" &mdash; it is "trust the public log."</div>
+    </div>
+    <div class="field">
+        <div class="field-label">How to verify</div>
+        <div class="field-text">Visit <a href="https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml">github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml</a>. Each run links to its Sigstore attestation. The Rekor log entry is reachable from the attestation page. There is no CPP-side step in this chain.</div>
+    </div>
+</div>
+
+<h2>4. AACE-canonical, Daubert-disclosed</h2>
+
+<div class="discipline">
+    <h3>Every method-id matches AACE. The Daubert disclosure is built into the engine.</h3>
+    <div class="field">
+        <div class="field-label">AACE method-id alignment</div>
+        <div class="field-text">The engine exposes <code>method_id</code> on every output. The label set is restricted to AACE-canonical strings. There is no "MIP 3.7 windows" mislabel (which circulates in some commercial tooling); windows analysis is MIP 3.3 per AACE 29R-03, and the engine refuses to emit any other label for that method. Same discipline for MIP 3.6, MIP 3.7, MIP 3.8.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Daubert disclosure builder</div>
+        <div class="field-text">The engine ships <code>buildDaubertDisclosure()</code>, which produces a four-prong methodology statement aligned with FRE 702 (testability, peer review, error rate, general acceptance). The output names the engine version, the method-id, the topology hash of the input data, the calendar version, and a link to the canonical methodology document. An expert disclosure that uses this output can be cross-examined against the underlying engine code, line for line.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Verifiable Provenance Tool</div>
+        <div class="field-text"><code>verifyReport()</code> recomputes the topology hash from a disclosed report and confirms <code>engine_version</code> lock-step. A CLI (<code>cli_verify.py</code>) lets opposing experts run the check without installing the entire suite. The CPP MCP server exposes a public <code>/verify</code> endpoint for the same purpose.</div>
+    </div>
+</div>
+
+<h2>5. The math is sixty years old. The discipline is new.</h2>
+
+<div class="discipline">
+    <h3>None of this should be commercial confidential in 2026.</h3>
+    <div class="field">
+        <div class="field-label">Forward and backward pass</div>
+        <div class="field-text">Kelley &amp; Walker, "Critical-Path Planning and Scheduling," Proceedings of the Eastern Joint IRE-AIEE-ACM Computer Conference (1959). Public domain. Free.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Topological sort</div>
+        <div class="field-text">Kahn, "Topological Sorting of Large Networks," Communications of the ACM 5(11):558&ndash;562 (1962). Public domain. Free.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">Cycle detection (strongly-connected components)</div>
+        <div class="field-text">Tarjan, "Depth-First Search and Linear Graph Algorithms," SIAM Journal on Computing 1(2):146&ndash;160 (1972). Public domain. Free.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">What is genuinely new</div>
+        <div class="field-text">The forensic discipline surrounding the math. CI-enforced data-truncation prohibition. AACE-canonical labeling. Sigstore-signed reproducibility. SHA-256 topology hashing in every output. A 66-jurisdiction holiday calendar covering CA-FED plus 13 provinces and territories, US-FED plus 50 states and DC. None of that is in any closed-engine vendor's product.</div>
+    </div>
+</div>
+
+<h2>6. What CPP is asking the industry to do</h2>
+
+<div class="discipline">
+    <h3>If a forensic engine cannot be reproduced by the opposing expert, it should not be admissible.</h3>
+    <div class="field">
+        <div class="field-label">For forensic schedulers</div>
+        <div class="field-text">Fork the engine. Run the test suite. File an issue on any defect. Submit a fixture that broke another engine. The math is the same math everyone is computing; the discipline is what differs. Adopt the discipline.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">For counsel building expert disclosures</div>
+        <div class="field-text">Ask your expert which forensic engine they are using and whether you can hand the opposing expert a one-command reproduction path. If the answer is no, ask why. The 2023 FRE 702 amendment is real. The proposed FRE 707 is moving. Methodology must be inspectable.</div>
+    </div>
+    <div class="field">
+        <div class="field-label">For closed-engine vendors</div>
+        <div class="field-text">The bar is rising. The market for forensic-grade work will not survive a future <em>Daubert</em> ruling that the methodology must be independently reproducible if your engine cannot be reproduced. Open the methodology. Keep the proprietary UI, the proprietary workflow tools, the proprietary services. The math is not the moat.</div>
+    </div>
+</div>
+
+<h2>How to participate</h2>
+
+<p>The minimal path:</p>
+
+<pre><code>npm install cpp-cpm-engine</code></pre>
+
+<p>The full reproduction path:</p>
+
+<pre><code>git clone https://github.com/danafitkowski/cpp-cpm-engine
+cd cpp-cpm-engine
+npm install
+npm run test:all</code></pre>
+
+<p>That is it. No license server. No SaaS portal. No phone call with a sales engineer. MIT license. Fork it. Audit it. File an issue if you find a bug. If it stands up to peer review, it stands up to court.</p>
+
+<p>The brand-discipline rules &mdash; no truncation in user-facing output, AACE-canonical labels, Daubert disclosure built in &mdash; are documented in <a href="https://github.com/danafitkowski/cpp-cpm-engine/blob/main/CONTRIBUTING.md"><code>CONTRIBUTING.md</code></a>. Pull requests that violate them fail CI.</p>
+
+<p><strong>The companion repositories shipped at the same time:</strong></p>
+
+<ul>
+    <li><a href="https://github.com/danafitkowski/cpp-xer-parser"><code>cpp-xer-parser</code></a> &mdash; canonical Primavera P6 XER parser and generator with MIP 3.4 half-step support, MIT-licensed.</li>
+    <li><a href="https://github.com/danafitkowski/cpp-critical-path-validator"><code>cpp-critical-path-validator</code></a> &mdash; critical path validation, DCMA-14 assessment, and logic health review for P6 schedules, MIT-licensed.</li>
+</ul>
+
+<p>The whole world can watch the verification runs at <a href="https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml">github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml</a>. We would rather correct the record than defend it.</p>
+
+</article>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-bottom">
+            <div>&copy; 2026 Critical Path Partners. All rights reserved.</div>
+            <div><a href="/">criticalpathpartners.ca</a> &middot; <a href="mailto:dana@criticalpathpartners.ca">dana@criticalpathpartners.ca</a> &middot; <a href="tel:+15195326300">519-532-6300</a></div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
