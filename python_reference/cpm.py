@@ -88,7 +88,7 @@ def _round_half_up_to(x, decimals=0):
 # hammock orphan / duration_working_days, dateToNum rollover guard,
 # SUB_DAY_LAG_ROUNDED disclosure update) intentionally remain JS-only —
 # Python reference doesn't implement those surfaces.
-ENGINE_VERSION = '2.9.15'
+ENGINE_VERSION = '2.9.16'
 
 
 # =============================================================================
@@ -318,9 +318,6 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
     else:
         current = start_date
 
-    if n == 0:
-        return current
-
     if calendar_info is None:
         work_days = [1, 2, 3, 4, 5]
         holidays = set()
@@ -329,6 +326,18 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
         holidays = set(calendar_info.get('holidays') or [])
 
     if not work_days:
+        return current
+
+    if n == 0:
+        # v2.9.16 F11-parity backport — match JS F2.1 zero-snap contract:
+        # when n === 0 with a real calendar, a non-workday anchor snaps
+        # FORWARD to the next working day. Without this, FS/SS+0 across
+        # a non-workday boundary (e.g. predecessor finish on Sat with
+        # successor on MonFri) silently produces succ.ES on Sat in Python
+        # while JS produces succ.ES on Mon — JS↔Python parity gap exposed
+        # by crossval F11.
+        while not _is_work_day(current, work_days, holidays):
+            current += timedelta(days=1)
         return current
 
     remaining = n
@@ -362,9 +371,6 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
     else:
         current = end_date
 
-    if n == 0:
-        return current
-
     if calendar_info is None:
         work_days = [1, 2, 3, 4, 5]
         holidays = set()
@@ -373,6 +379,14 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
         holidays = set(calendar_info.get('holidays') or [])
 
     if not work_days:
+        return current
+
+    if n == 0:
+        # v2.9.16 F11-parity backport — symmetric to add_work_days. When
+        # n === 0 with a real calendar, a non-workday anchor snaps BACKWARD
+        # to the prior working day. Matches JS F2.1 contract.
+        while not _is_work_day(current, work_days, holidays):
+            current -= timedelta(days=1)
         return current
 
     remaining = n
