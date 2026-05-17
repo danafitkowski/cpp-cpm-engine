@@ -3904,6 +3904,29 @@ function computeCPMSalvaging(activities, relationships, opts) {
             });
             continue;
         }
+        // v2.9.20 A16-L4 — self-loops in salvage mode are logged as DROPPED_EDGE
+        // (mirrors strict computeCPM's self-loop ALERT but stays in salvage_log
+        // so callers see the structured cycle-break entry they expect).
+        if (fc === tc) {
+            salvage_log.push({
+                severity: 'WARN',
+                category: 'DROPPED_EDGE',
+                message: 'Dropped self-loop ' + fc + '->' + tc +
+                    ' (' + (r.type || 'FS') + ', lag=' + (r.lag_days || 0) + 'd)',
+                details: {
+                    cycle_codes: [fc],
+                    dropped_edge: {
+                        from_code: fc,
+                        to_code: tc,
+                        type: r.type || 'FS',
+                        lag_days: r.lag_days || 0,
+                    },
+                    iteration: -1,
+                    reason: 'self-loop',
+                },
+            });
+            continue;
+        }
         cleanRels.push(r);
     }
 
