@@ -6550,6 +6550,94 @@ console.log('\n=== v2.9.14 Bug F13 — Project-calendar fallback + Bayesian CI c
     }
 }
 
+// ============================================================================
+// v2.9.15 Bug F13-b — Calendar effective-date enforcement
+// ============================================================================
+console.log('\n=== v2.9.15 Bug F13-b — Calendar effective-date enforcement ===');
+
+// T-FIX-F13-b-1: Juneteenth was not a US-FED holiday before 2021 — must be absent in 2018.
+{
+    // Silence the WARN noise from the historical-range check.
+    const origWarn = console.warn;
+    console.warn = () => {};
+    try {
+        const h2018 = E.getHolidays('US-FED', 2018, 2018);
+        check('T-FIX-F13-b-1: US-FED 2018 has NO Juneteenth (effective_from 2021)',
+            !h2018.includes('2018-06-19'),
+            'unexpected: 2018-06-19 present');
+        // Sanity: still present in 2021+.
+        const h2021 = E.getHolidays('US-FED', 2021, 2021);
+        check('T-FIX-F13-b-1: US-FED 2021 STILL has Juneteenth (effective_from 2021)',
+            h2021.includes('2021-06-19') || h2021.includes('2021-06-18') || h2021.includes('2021-06-21'),
+            '2021 holidays: ' + h2021.filter(d => d.startsWith('2021-06')).join(','));
+    } finally {
+        console.warn = origWarn;
+    }
+}
+
+// T-FIX-F13-b-2: CA-FED NDTR (Sep 30) was not a federal stat holiday before 2021.
+{
+    const origWarn = console.warn;
+    console.warn = () => {};
+    try {
+        const h2018 = E.getHolidays('CA-FED', 2018, 2018);
+        check('T-FIX-F13-b-2: CA-FED 2018 has NO NDTR Sep 30 (effective_from 2021)',
+            !h2018.includes('2018-09-30'),
+            'unexpected: 2018-09-30 present');
+        // Sanity: still present 2026.
+        const h2026 = E.getHolidays('CA-FED', 2026, 2026);
+        check('T-FIX-F13-b-2: CA-FED 2026 STILL has NDTR Sep 30',
+            h2026.includes('2026-09-30'));
+    } finally {
+        console.warn = origWarn;
+    }
+}
+
+// T-FIX-F13-b-3: NS Heritage Day was not a holiday before 2015.
+{
+    const origWarn = console.warn;
+    console.warn = () => {};
+    try {
+        // NS Heritage Day = 3rd Mon Feb. In 2013, 3rd Mon Feb = Feb 18, 2013.
+        const h2013 = E.getHolidays('CA-NS', 2013, 2013);
+        check('T-FIX-F13-b-3: CA-NS 2013 has NO Heritage Day Feb 18 (effective_from 2015)',
+            !h2013.includes('2013-02-18'),
+            'unexpected: 2013-02-18 present');
+        // Sanity: 2026 still has it (3rd Mon Feb 2026 = Feb 16).
+        const h2026 = E.getHolidays('CA-NS', 2026, 2026);
+        check('T-FIX-F13-b-3: CA-NS 2026 STILL has Heritage Day Feb 16',
+            h2026.includes('2026-02-16'));
+    } finally {
+        console.warn = origWarn;
+    }
+}
+
+// T-FIX-F13-b-4: BC Family Day was 2nd Mon Feb (2013–2018), then 3rd Mon Feb (2019+).
+{
+    const origWarn = console.warn;
+    console.warn = () => {};
+    try {
+        // 2017: 2nd Mon Feb = Feb 13, 2017; 3rd Mon Feb = Feb 20, 2017.
+        const h2017 = E.getHolidays('CA-BC', 2017, 2017);
+        check('T-FIX-F13-b-4: CA-BC 2017 has Family Day Feb 13 (2nd Mon — pre-2019 rule)',
+            h2017.includes('2017-02-13'),
+            'BC 2017 Feb: ' + h2017.filter(d => d.startsWith('2017-02')).join(','));
+        check('T-FIX-F13-b-4: CA-BC 2017 does NOT have Family Day Feb 20 (3rd Mon)',
+            !h2017.includes('2017-02-20'),
+            'unexpected: 2017-02-20 present');
+        // 2019: 2nd Mon Feb = Feb 11, 2019; 3rd Mon Feb = Feb 18, 2019.
+        const h2019 = E.getHolidays('CA-BC', 2019, 2019);
+        check('T-FIX-F13-b-4: CA-BC 2019 has Family Day Feb 18 (3rd Mon — 2019+ rule)',
+            h2019.includes('2019-02-18'),
+            'BC 2019 Feb: ' + h2019.filter(d => d.startsWith('2019-02')).join(','));
+        check('T-FIX-F13-b-4: CA-BC 2019 does NOT have Family Day Feb 11 (2nd Mon)',
+            !h2019.includes('2019-02-11'),
+            'unexpected: 2019-02-11 present');
+    } finally {
+        console.warn = origWarn;
+    }
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

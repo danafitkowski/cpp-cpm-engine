@@ -6161,7 +6161,18 @@ function _numToDateRaw(n) {
 
 // ── Rule evaluator ───────────────────────────────────────────────────────────
 // Returns a 'YYYY-MM-DD' string (or null if rule not applicable in year).
+//
+// v2.9.15 P1 (F13-b): rules MAY carry optional `effective_from` and `effective_to`
+// integer-year bounds. A rule emits nothing for years outside [effective_from,
+// effective_to] (inclusive). Used to model holidays that didn't exist before a
+// statutory enactment year (e.g. Juneteenth pre-2021) or that changed form
+// across a known transition year (e.g. BC Family Day moved from 2nd→3rd Mon Feb
+// at 2019).
 function _evaluateRule(rule, year) {
+    // v2.9.15 P1: enforce effective_from / effective_to year bounds before evaluating.
+    if (typeof rule.effective_from === 'number' && year < rule.effective_from) return null;
+    if (typeof rule.effective_to   === 'number' && year > rule.effective_to)   return null;
+
     const obs = rule.observance || null;
 
     if (rule.type === 'fixed') {
@@ -6244,15 +6255,18 @@ const _CA_CHRISTMAS       = { name: 'Christmas Day',         type: 'fixed', mont
 const _CA_BOXING          = { name: 'Boxing Day',            type: 'fixed', month: 12, day: 26, observance: 'monday_if_weekend' };
 const _CA_REMEMBRANCE     = { name: 'Remembrance Day',       type: 'fixed', month: 11, day: 11, observance: 'monday_if_weekend' };
 const _CA_CIVIC_AUG       = { name: 'Civic Holiday (observed)', type: 'nth_weekday', month: 8, weekday: 1, n: 1 };
-const _CA_NDTR            = { name: 'National Day for Truth and Reconciliation', type: 'fixed', month: 9, day: 30, observance: 'monday_if_weekend' };
-const _CA_FAMILY_DAY_3RD  = { name: 'Family Day',            type: 'nth_weekday', month: 2,  weekday: 1, n: 3 };
+// CA-FED NDTR: federal statutory holiday since 2021 (Bill C-5, royal assent Jun 3, 2021).
+const _CA_NDTR            = { name: 'National Day for Truth and Reconciliation', type: 'fixed', month: 9, day: 30, observance: 'monday_if_weekend', effective_from: 2021 };
+// ON Family Day: enacted by Family Day Act 2008.
+const _CA_FAMILY_DAY_3RD  = { name: 'Family Day',            type: 'nth_weekday', month: 2,  weekday: 1, n: 3, effective_from: 2008 };
 const _CA_SAINT_JEAN      = { name: 'Saint-Jean-Baptiste Day', type: 'fixed', month: 6, day: 24, observance: 'monday_if_weekend' };
 
 const _US_NEW_YEARS       = { name: "New Year's Day",        type: 'fixed', month: 1,  day: 1,  observance: 'us_federal' };
 const _US_MLK             = { name: 'Martin Luther King Jr. Day', type: 'nth_weekday', month: 1, weekday: 1, n: 3 };
 const _US_PRESIDENTS      = { name: "Presidents' Day (Washington's Birthday)", type: 'nth_weekday', month: 2, weekday: 1, n: 3 };
 const _US_MEMORIAL        = { name: 'Memorial Day',          type: 'last_weekday', month: 5, weekday: 1 };
-const _US_JUNETEENTH      = { name: 'Juneteenth National Independence Day', type: 'fixed', month: 6, day: 19, observance: 'us_federal' };
+// US-FED Juneteenth: federal holiday since 2021 (Juneteenth National Independence Day Act, signed Jun 17, 2021).
+const _US_JUNETEENTH      = { name: 'Juneteenth National Independence Day', type: 'fixed', month: 6, day: 19, observance: 'us_federal', effective_from: 2021 };
 const _US_INDEPENDENCE    = { name: 'Independence Day',      type: 'fixed', month: 7,  day: 4,  observance: 'us_federal' };
 const _US_LABOR           = { name: 'Labor Day',             type: 'nth_weekday', month: 9, weekday: 1, n: 1 };
 const _US_COLUMBUS        = { name: 'Columbus Day',          type: 'nth_weekday', month: 10, weekday: 1, n: 2 };
@@ -6320,7 +6334,9 @@ const _HOLIDAY_RULES = {
     // BC Day = 1st Mon Aug; no Boxing Day statutory
     'CA-BC': [
         _CA_NEW_YEARS,
-        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3 },
+        // BC Family Day: introduced 2013 as 2nd Mon Feb; moved to 3rd Mon Feb in 2019 to align with AB/ON.
+        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 2, effective_from: 2013, effective_to: 2018 },
+        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3, effective_from: 2019 },
         _CA_GOOD_FRIDAY,
         _CA_VICTORIA_DAY,
         _CA_CANADA_DAY,
@@ -6369,7 +6385,8 @@ const _HOLIDAY_RULES = {
     // Terry Fox Day 1st Mon Aug (Terry Fox Day since 2015, formerly Civic Holiday)
     'CA-MB': [
         _CA_NEW_YEARS,
-        { name: 'Louis Riel Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3 },
+        // MB Louis Riel Day: introduced 2008.
+        { name: 'Louis Riel Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3, effective_from: 2008 },
         _CA_GOOD_FRIDAY,
         _CA_VICTORIA_DAY,
         _CA_CANADA_DAY,
@@ -6385,7 +6402,8 @@ const _HOLIDAY_RULES = {
     // Heritage Day 3rd Mon Feb; Natal Day 1st Mon Aug (civic, Halifax area)
     'CA-NS': [
         _CA_NEW_YEARS,
-        { name: 'Heritage Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3 },
+        // NS Heritage Day: introduced 2015 per Nova Scotia Heritage Day Act.
+        { name: 'Heritage Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3, effective_from: 2015 },
         _CA_GOOD_FRIDAY,
         _CA_VICTORIA_DAY,
         _CA_CANADA_DAY,
@@ -6401,7 +6419,8 @@ const _HOLIDAY_RULES = {
     // Family Day 3rd Mon Feb; New Brunswick Day 1st Mon Aug
     'CA-NB': [
         _CA_NEW_YEARS,
-        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3 },
+        // NB Family Day: introduced 2018 (Employment Standards Act amendment).
+        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3, effective_from: 2018 },
         _CA_GOOD_FRIDAY,
         _CA_VICTORIA_DAY,
         _CA_CANADA_DAY,
@@ -6419,7 +6438,8 @@ const _HOLIDAY_RULES = {
     // v1: use Civic Holiday 1st Mon Aug as proxy for August holiday
     'CA-PE': [
         _CA_NEW_YEARS,
-        { name: 'Islander Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3 },
+        // PEI Islander Day: introduced 2009.
+        { name: 'Islander Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3, effective_from: 2009 },
         _CA_GOOD_FRIDAY,
         _CA_VICTORIA_DAY,
         _CA_CANADA_DAY,
@@ -6548,14 +6568,18 @@ const _HOLIDAY_RULES = {
     'US-LA': _US_FED_RULES,
     'US-ME': [
         ..._US_FED_RULES,
-        // Patriots' Day — 3rd Mon Apr (Battle of Lexington & Concord)
-        { name: "Patriots' Day", type: 'nth_weekday', month: 4, weekday: 1, n: 3 },
+        // Patriots' Day — fixed Apr 19 (Battle of Lexington & Concord, 1775) through 1968;
+        // moved to 3rd Mon Apr starting 1969 (Uniform Monday Holiday Act, Mass/Maine adoption).
+        { name: "Patriots' Day", type: 'fixed', month: 4, day: 19, observance: 'us_federal', effective_to: 1968 },
+        { name: "Patriots' Day", type: 'nth_weekday', month: 4, weekday: 1, n: 3, effective_from: 1969 },
     ],
     'US-MD': _US_FED_RULES,
     'US-MA': [
         ..._US_FED_RULES,
-        // Patriots' Day — 3rd Mon Apr (Boston Marathon Monday)
-        { name: "Patriots' Day", type: 'nth_weekday', month: 4, weekday: 1, n: 3 },
+        // Patriots' Day — fixed Apr 19 (Battle of Lexington & Concord, 1775) through 1968;
+        // moved to 3rd Mon Apr starting 1969 (Boston Marathon Monday).
+        { name: "Patriots' Day", type: 'fixed', month: 4, day: 19, observance: 'us_federal', effective_to: 1968 },
+        { name: "Patriots' Day", type: 'nth_weekday', month: 4, weekday: 1, n: 3, effective_from: 1969 },
     ],
     'US-MI': _US_FED_RULES,
     'US-MN': _US_FED_RULES,
@@ -6634,6 +6658,24 @@ function getHolidays(jurisdiction, fromYear, toYear) {
         const err = new Error('Unknown jurisdiction: ' + jurisdiction);
         err.code = 'UNKNOWN_JURISDICTION';
         throw err;
+    }
+    // v2.9.15 P1 (F13-b): emit a one-time WARN if the requested year range
+    // includes years where any rule's effective window excludes it. This signals
+    // the caller that some statutory holidays the jurisdiction expects to exist
+    // today did NOT exist in (a portion of) the requested historical range.
+    let rangeOutsideWindow = false;
+    for (const rule of rules) {
+        const ef = typeof rule.effective_from === 'number' ? rule.effective_from : -Infinity;
+        const et = typeof rule.effective_to   === 'number' ? rule.effective_to   : +Infinity;
+        if (fromYear < ef || toYear > et) {
+            rangeOutsideWindow = true;
+            break;
+        }
+    }
+    if (rangeOutsideWindow && typeof console !== 'undefined' && typeof console.warn === 'function') {
+        console.warn('[getHolidays][' + jurisdiction + '] WARN: requested year range [' +
+            fromYear + ',' + toYear + '] partially outside one-or-more rule effective windows ' +
+            '(historical holidays may be omitted; modern holidays may not apply pre-enactment).');
     }
     // Audit T1 fix: cascade collisions to next weekday rather than silently
     // dropping. Example: in 2027 Dec 25 (Sat) → observed Mon Dec 27, AND
