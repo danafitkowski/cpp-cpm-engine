@@ -4975,7 +4975,9 @@ function computeTopologyHash(activities, relationships) {
             topology_hash: null,
             activity_count: 0,
             relationship_count: 0,
-            algorithm: 'sha256-canonical-v2',
+            // v2.9.20 A12-M4 — algorithm: null when no hash computed. Reporting
+            // 'sha256-canonical-v2' for an empty schedule was misleading.
+            algorithm: null,
             error: 'empty activity list',
             engine_version: ENGINE_VERSION,
         };
@@ -4989,19 +4991,25 @@ function computeTopologyHash(activities, relationships) {
     // _F9_QUANT for ULP stability (F9 Bug E).
     const durByCode = Object.create(null);
     for (const a of activities) {
-        if (!a || !a.code) continue;
+        if (!a || a.code === null || a.code === undefined || a.code === '') continue;
+        // v2.9.20 A12-M1 — coerce code to string at hash boundary. JSON
+        // pipelines sometimes emit numeric codes (a.code = 1) while parseXER
+        // produces string codes ('1'). Both should produce the SAME hash.
+        // Without coercion, `JSON.stringify({code: 1})` and `JSON.stringify(
+        // {code: '1'})` differ at hash time. String(1) === '1'.
+        const _code = String(a.code);
         const _dq = _f9Quantize(a.duration_days);
         if (_dq === null) {
             _coercionAlerts.push({
                 severity: 'ALERT',
                 context: 'COERCED_FIELD_IN_HASH',
-                message: 'Activity ' + a.code + ' duration_days=' +
+                message: 'Activity ' + _code + ' duration_days=' +
                     JSON.stringify(a.duration_days) + ' is non-finite; coerced to 0 ' +
                     'for hash. Verify source XER.',
             });
-            durByCode[a.code] = 0;
+            durByCode[_code] = 0;
         } else {
-            durByCode[a.code] = _dq;
+            durByCode[_code] = _dq;
         }
     }
 
@@ -5017,9 +5025,14 @@ function computeTopologyHash(activities, relationships) {
         _predSeenByCode[code] = Object.create(null);
     }
     for (const r of (relationships || [])) {
-        if (!r || !r.from_code || !r.to_code) continue;
-        if (!(r.to_code in predsByCode)) continue;
-        if (!(r.from_code in predsByCode)) continue;
+        if (!r || r.from_code === null || r.from_code === undefined || r.from_code === '' ||
+                r.to_code === null || r.to_code === undefined || r.to_code === '') continue;
+        // v2.9.20 A12-M1 — coerce both endpoints to string for the same
+        // reason as activity codes (numeric/string ambiguity).
+        const _from = String(r.from_code);
+        const _to = String(r.to_code);
+        if (!(_to in predsByCode)) continue;
+        if (!(_from in predsByCode)) continue;
         const _ptype = (r.type || 'FS').toUpperCase();
         const _lq = _f9Quantize(r.lag_days);
         const _plag = (_lq === null) ? 0 : _lq;
@@ -5027,16 +5040,16 @@ function computeTopologyHash(activities, relationships) {
             _coercionAlerts.push({
                 severity: 'ALERT',
                 context: 'COERCED_FIELD_IN_HASH',
-                message: 'Relationship ' + r.from_code + '->' + r.to_code +
+                message: 'Relationship ' + _from + '->' + _to +
                     ' lag_days=' + JSON.stringify(r.lag_days) + ' is non-finite; ' +
                     'coerced to 0 for hash. Verify source XER.',
             });
         }
-        const _pkey  = r.from_code + '\x1f' + _ptype + '\x1f' + _plag;
-        if (_predSeenByCode[r.to_code][_pkey]) continue;
-        _predSeenByCode[r.to_code][_pkey] = true;
-        predsByCode[r.to_code].push({
-            from: r.from_code,
+        const _pkey  = _from + '\x1f' + _ptype + '\x1f' + _plag;
+        if (_predSeenByCode[_to][_pkey]) continue;
+        _predSeenByCode[_to][_pkey] = true;
+        predsByCode[_to].push({
+            from: _from,
             type: _ptype,
             lag: _plag,
         });
@@ -5087,7 +5100,12 @@ function computeTopologyHash(activities, relationships) {
         throw err;
     }
 
+    // v2.9.20 A12-M2 — distinguish raw vs post-dedup relationship counts.
+    // Verifiers recomputing the canonical form count post-dedup edges; if
+    // they compare against `relationship_count` they get a spurious mismatch.
     const relCount = (relationships || []).filter(r => r && r.from_code && r.to_code).length;
+    let hashedRelCount = 0;
+    for (const c in predsByCode) hashedRelCount += predsByCode[c].length;
     const byteCount = (typeof Buffer !== 'undefined' && Buffer.byteLength)
         ? Buffer.byteLength(canonical, 'utf8')
         : canonical.length;
@@ -5097,7 +5115,11 @@ function computeTopologyHash(activities, relationships) {
         // are visibly different. verifyReport tolerates both (forward-compat).
         topology_hash: 'v2:' + hash,
         activity_count: sortedCodes.length,
-        relationship_count: relCount,
+        // v2.9.20 A12-M2 — raw input count for transparency; hashed count
+        // is what verifiers can match against the canonical form.
+        input_relationship_count: relCount,
+        relationship_count: relCount,  // retained for backward compat
+        hashed_relationship_count: hashedRelCount,
         algorithm,
         canonical_byte_count: byteCount,
         engine_version: ENGINE_VERSION,
@@ -5118,7 +5140,9 @@ async function computeTopologyHashAsync(activities, relationships) {
             topology_hash: null,
             activity_count: 0,
             relationship_count: 0,
-            algorithm: 'sha256-canonical-v2',
+            // v2.9.20 A12-M4 — algorithm: null when no hash computed. Reporting
+            // 'sha256-canonical-v2' for an empty schedule was misleading.
+            algorithm: null,
             error: 'empty activity list',
             engine_version: ENGINE_VERSION,
         };
@@ -5401,6 +5425,10 @@ function buildDaubertDisclosure(result, opts) {
         ].filter(Boolean),
         engine_version: ENGINE_VERSION,
         disclosure_format_version: '1.0',
+        // v2.9.20 A14-L3 — schema URL for the disclosure format. Lets
+        // verifyReport-like consumers detect format-version mismatches and
+        // future versions (1.1, 2.0) without breaking parsers that pin to 1.0.
+        disclosure_schema_url: 'https://criticalpathpartners.ca/schemas/cpp-cpm-engine/daubert-disclosure-v1.json',
         generated_at: new Date().toISOString(),
     };
 }

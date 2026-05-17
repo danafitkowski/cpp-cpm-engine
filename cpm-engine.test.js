@@ -6687,8 +6687,10 @@ console.log('\n=== v2.9.14 Bug F9 — Topology hash v2 (Python parity + JSON-enc
 // T-FIX-F9-6 — Empty activity list returns null hash.
 {
     const r = E.computeTopologyHash([], []);
-    check('T-FIX-F9-6: empty acts -> null hash',
-        r.topology_hash === null && r.algorithm === 'sha256-canonical-v2',
+    // v2.9.20 A12-M4 — algorithm null when no hash computed (was misleading
+    // to report 'sha256-canonical-v2' for an empty schedule).
+    check('T-FIX-F9-6: empty acts -> null hash + null algorithm',
+        r.topology_hash === null && r.algorithm === null,
         'got ' + JSON.stringify(r));
 }
 
