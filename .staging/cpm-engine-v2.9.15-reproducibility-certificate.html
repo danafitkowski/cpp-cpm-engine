@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="canonical" href="https://criticalpathpartners.ca/blog/cpm-engine-v2.9.15-reproducibility-certificate.html" />
+<title>Forensic CPM Engine v2.9.15 — Reproducibility Certificate | Critical Path Partners</title>
+<meta name="description" content="One-page reproducibility certificate for cpp-cpm-engine v2.9.15. SHA-256, four install paths, AACE-canonical method-ids, FRE 702 disclosure references. Attach to expert disclosures.">
+<meta name="author" content="Dana Fitkowski">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Forensic CPM Engine v2.9.15 — Reproducibility Certificate">
+<meta property="og:description" content="Daubert-grade one-page certificate. Engine + Python-sibling SHA-256. Four reproduction paths. AACE-canonical method-ids. FRE 702 (Dec 2023) reference.">
+<meta property="og:url" content="https://criticalpathpartners.ca/blog/cpm-engine-v2.9.15-reproducibility-certificate.html">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+    --navy: #0F2540;
+    --navy-mid: #1a3a52;
+    --red: #C8392F;
+    --red-dark: #a32d24;
+    --white: #ffffff;
+    --off-white: #f8fafc;
+    --slate-100: #e2e8f0;
+    --slate-200: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+    --green: #16a34a;
+}
+html { scroll-behavior: smooth; }
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--white);
+    color: var(--slate-900);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-size: 11pt;
+}
+code, .mono {
+    font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.92em;
+}
+
+/* PAGE LAYOUT — LETTER (8.5x11) or A4, single page */
+.page {
+    max-width: 7.5in;
+    margin: 0 auto;
+    padding: 0.5in 0.5in 0.5in 0.5in;
+    background: var(--white);
+}
+
+/* HEADER */
+.cert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 4px solid var(--red);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+.cert-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.cert-brand-mark {
+    width: 38px; height: 38px;
+    background: var(--navy);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    border-left: 3px solid var(--red);
+}
+.cert-brand-text {
+    font-weight: 800;
+    color: var(--navy);
+    font-size: 14pt;
+    letter-spacing: -0.01em;
+}
+.cert-brand-sub {
+    font-size: 9pt;
+    color: var(--slate-600);
+    margin-top: 2px;
+}
+.cert-meta {
+    text-align: right;
+    font-size: 9pt;
+    color: var(--slate-600);
+}
+.cert-meta strong { color: var(--navy); }
+
+/* TITLE */
+.cert-title {
+    text-align: center;
+    margin: 8px 0 16px;
+}
+.cert-title h1 {
+    color: var(--navy);
+    font-size: 18pt;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 4px;
+}
+.cert-title .subtitle {
+    color: var(--slate-700);
+    font-size: 10.5pt;
+    font-weight: 500;
+}
+.cert-title .version-stamp {
+    display: inline-block;
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+    padding: 3px 10px;
+    margin-top: 8px;
+    border-left: 3px solid var(--red);
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+/* GRID */
+.cert-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.cert-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+.cert-cell {
+    border: 1px solid var(--slate-200);
+    border-left: 3px solid var(--navy);
+    padding: 9px 12px;
+    background: var(--off-white);
+}
+.cert-cell .label {
+    font-size: 7.5pt;
+    font-weight: 800;
+    color: var(--red);
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+.cert-cell .value {
+    font-size: 10pt;
+    color: var(--navy);
+    line-height: 1.35;
+}
+.cert-cell .value.mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7.5pt;
+    word-break: break-all;
+    color: var(--slate-800);
+}
+.cert-cell.full { grid-column: 1 / -1; }
+
+/* SECTIONS */
+.cert-section {
+    margin-bottom: 12px;
+}
+.cert-section h2 {
+    color: var(--navy);
+    font-size: 11pt;
+    font-weight: 800;
+    border-bottom: 1.5px solid var(--slate-200);
+    padding-bottom: 3px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* INSTALL PATHS TABLE */
+.install-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+}
+.install-table th {
+    background: var(--navy);
+    color: var(--white);
+    text-align: left;
+    padding: 4px 8px;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.install-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--slate-100);
+    vertical-align: top;
+}
+.install-table tr:nth-child(even) td { background: var(--off-white); }
+.install-table .mono { font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; }
+
+/* AACE CITATIONS */
+.cite-list {
+    list-style: none;
+    font-size: 9pt;
+    line-height: 1.6;
+}
+.cite-list li {
+    padding-left: 14px;
+    position: relative;
+}
+.cite-list li::before {
+    content: "§";
+    color: var(--red);
+    font-weight: 800;
+    position: absolute;
+    left: 0;
+}
+.cite-list strong { color: var(--navy); }
+
+/* REPRODUCE BOX */
+.reproduce-box {
+    border: 2px solid var(--navy);
+    background: #f0f9ff;
+    padding: 10px 14px;
+    margin: 8px 0 12px;
+}
+.reproduce-box .title-line {
+    font-weight: 800;
+    color: var(--navy);
+    font-size: 10pt;
+    margin-bottom: 5px;
+}
+.reproduce-box pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+    color: var(--slate-900);
+    background: var(--white);
+    padding: 6px 8px;
+    margin: 4px 0 0;
+    border-left: 3px solid var(--red);
+    overflow-x: auto;
+    line-height: 1.4;
+}
+
+/* FOOTER */
+.cert-footer {
+    border-top: 2px solid var(--slate-200);
+    padding-top: 10px;
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 8pt;
+    color: var(--slate-600);
+}
+.cert-footer .signature-block {
+    text-align: left;
+}
+.cert-footer .signature-block .name {
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 9.5pt;
+}
+.cert-footer .signature-block .title {
+    color: var(--slate-700);
+    margin-top: 1px;
+}
+.cert-footer .contact-block {
+    text-align: right;
+}
+.cert-footer .contact-block .url {
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 9.5pt;
+}
+.cert-footer code { font-size: 8pt; }
+
+/* PRINT */
+@media print {
+    body { font-size: 10pt; }
+    .page {
+        padding: 0.35in 0.4in 0.35in 0.4in;
+        max-width: 100%;
+    }
+    .no-print { display: none; }
+    @page {
+        size: letter;
+        margin: 0;
+    }
+}
+
+/* SCREEN-ONLY note bar */
+.screen-note {
+    background: var(--navy);
+    color: var(--white);
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 10pt;
+    border-bottom: 3px solid var(--red);
+}
+.screen-note a { color: var(--white); text-decoration: underline; }
+.screen-note .print-btn {
+    background: var(--red);
+    color: var(--white);
+    padding: 5px 12px;
+    border-radius: 3px;
+    font-weight: 700;
+    text-decoration: none;
+    margin-left: 12px;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 9.5pt;
+}
+@media print { .screen-note { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="screen-note no-print">
+    Forensic Reproducibility Certificate — designed to be saved as a single-page PDF and attached to expert-disclosure exhibits.
+    <button class="print-btn" onclick="window.print()">Print to PDF</button>
+</div>
+
+<div class="page">
+
+<!-- HEADER -->
+<header class="cert-header">
+    <div class="cert-brand">
+        <div class="cert-brand-mark">CPP</div>
+        <div>
+            <div class="cert-brand-text">Critical Path Partners</div>
+            <div class="cert-brand-sub">Forensic Schedule Analysis &middot; criticalpathpartners.ca</div>
+        </div>
+    </div>
+    <div class="cert-meta">
+        <div><strong>Document:</strong> Reproducibility Certificate</div>
+        <div><strong>Issued:</strong> 2026-05-16</div>
+        <div><strong>Engine:</strong> cpp-cpm-engine</div>
+        <div><strong>License:</strong> MIT</div>
+    </div>
+</header>
+
+<!-- TITLE -->
+<div class="cert-title">
+    <h1>Forensic CPM Engine &mdash; Reproducibility Certificate</h1>
+    <div class="subtitle">One-page expert-disclosure attachment. The engine that produced your forensic report is independently reproducible by any opposing expert.</div>
+    <div class="version-stamp">VERSION 2.9.15 &middot; SHA-256-LOCKED &middot; SIGSTORE-SIGNED</div>
+</div>
+
+<!-- IDENTITY -->
+<section class="cert-section">
+    <h2>Engine Identity</h2>
+    <div class="cert-grid">
+        <div class="cert-cell">
+            <div class="label">JavaScript engine SHA-256</div>
+            <div class="value mono">0541d9ef9f5005b673f3956590d6ba5e1708d8ea3e6b547aaec9a69d981439c7</div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">Python reference SHA-256</div>
+            <div class="value mono">8baf41efb320030739d6626c2076714756b2dacdeb182e022d38bfebc6b73f5b</div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">GitHub commit (tag <code>v2.9.15</code>)</div>
+            <div class="value mono">8a9d78dc56af1fe02ae5b9157471c8a2d71d678b</div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">Topology-hash format</div>
+            <div class="value mono">sha256-canonical-v2 (prefix <code>v2:</code>)</div>
+        </div>
+    </div>
+</section>
+
+<!-- INSTALL PATHS -->
+<section class="cert-section">
+    <h2>Four Public Deployment Surfaces &mdash; Bit-Identical</h2>
+    <table class="install-table">
+        <thead>
+            <tr>
+                <th style="width:24%">Surface</th>
+                <th style="width:50%">Install Path</th>
+                <th style="width:26%">Verification</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>npm package</td>
+                <td class="mono">npm install cpp-cpm-engine@2.9.15</td>
+                <td class="mono">npm view cpp-cpm-engine@2.9.15 dist.shasum</td>
+            </tr>
+            <tr>
+                <td>GitHub release</td>
+                <td class="mono">github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.15</td>
+                <td class="mono">gh attestation verify cpp-cpm-engine-2.9.15.tgz</td>
+            </tr>
+            <tr>
+                <td>Railway-hosted MCP</td>
+                <td class="mono">curl mcp.criticalpathpartners.ca/cpm-engine.js</td>
+                <td class="mono">sha256sum &mdash; compare to cell above</td>
+            </tr>
+            <tr>
+                <td>Local skill bundle</td>
+                <td class="mono">~/.claude/skills/cpp-forensic-mcp/static/cpm-engine.js</td>
+                <td class="mono">sha256sum &mdash; compare to cell above</td>
+            </tr>
+            <tr>
+                <td>MCP registry index</td>
+                <td class="mono">registry.modelcontextprotocol.io/v0/servers?search=cpp-cpm</td>
+                <td class="mono">version === 2.9.15, isLatest: true</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- REPRODUCE -->
+<div class="reproduce-box">
+    <div class="title-line">Reproduction in under a minute, zero npm dependencies, any opposing expert</div>
+<pre>git clone https://github.com/danafitkowski/cpp-cpm-engine
+cd cpp-cpm-engine &amp;&amp; git checkout v2.9.15
+npm test                # 871 unit tests
+node cpm-engine.crossval.js   # 42 fixtures &times; 444 checks JS&harr;Python parity</pre>
+</div>
+
+<!-- VERIFIABLE EVIDENCE -->
+<section class="cert-section">
+    <h2>Verifiable Evidence</h2>
+    <div class="cert-grid three">
+        <div class="cert-cell">
+            <div class="label">Unit tests passing</div>
+            <div class="value"><strong>871</strong> / 878 assertions</div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">Cross-validation</div>
+            <div class="value"><strong>42</strong> fixtures &middot; <strong>435</strong> / 444 checks</div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">CI matrix</div>
+            <div class="value">3 OS &times; 3 Node = <strong>9 cells</strong> per push</div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">Engine lines of code</div>
+            <div class="value">JS <strong>6,950</strong> &middot; Python <strong>1,304</strong></div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">Holiday calendars</div>
+            <div class="value"><strong>66</strong> jurisdictions (CA+13, US+50, +UK)</div>
+        </div>
+        <div class="cert-cell">
+            <div class="label">Sigstore signature</div>
+            <div class="value">Rekor public transparency log</div>
+        </div>
+    </div>
+</section>
+
+<!-- AACE CITATIONS -->
+<section class="cert-section">
+    <h2>AACE-Canonical Method Identifiers</h2>
+    <ul class="cite-list">
+        <li><strong>AACE 29R-03</strong> &mdash; Forensic Schedule Analysis. MIP 3.3 Observational Windows; MIP 3.6 Prospective Single-Base TIA; MIP 3.7 Prospective Multi-Base TIA; MIP 3.8 Collapsed As-Built (Single Sim).</li>
+        <li><strong>AACE 49R-06</strong> &mdash; Critical Path identification methods (LPM &middot; TFM &middot; MFP).</li>
+        <li><strong>AACE 52R-06</strong> &mdash; Time Impact Analysis (fragnet insertion).</li>
+        <li><strong>AACE 24R-03</strong> &mdash; Constraint criticality.</li>
+        <li><strong>AACE 67R-11</strong> &mdash; Forensic schedule analysis competency.</li>
+        <li><strong>DCMA 14-Point Assessment</strong> &mdash; full coverage in CI.</li>
+        <li><strong>SCL Delay &amp; Disruption Protocol, 2nd Edition (2017)</strong> &mdash; methodology alignment.</li>
+    </ul>
+</section>
+
+<!-- LEGAL FRAMEWORK -->
+<section class="cert-section">
+    <h2>Daubert Framework Compliance</h2>
+    <ul class="cite-list">
+        <li><strong>FRE 702</strong> as amended December 1, 2023 &mdash; methodology reliability (Rule 702(c) and 702(d)) demonstrated to preponderance of evidence. All four <em>Daubert</em> prongs addressed in <code>buildDaubertDisclosure()</code>.</li>
+        <li><strong><em>Daubert v. Merrell Dow Pharmaceuticals, Inc.</em>, 509 U.S. 579 (1993)</strong> &mdash; foundational reliability framework: testability, peer review, error rate, general acceptance.</li>
+        <li><strong>FRCP 26(a)(2)(B)</strong> &mdash; expert disclosure of methods and data. Engine version + topology hash + manifest fields satisfy disclosure.</li>
+        <li><strong>Proposed FRE 707</strong> &mdash; court-appointed-expert methodology inspectability. Forward-compatible.</li>
+    </ul>
+</section>
+
+<!-- FOOTER -->
+<footer class="cert-footer">
+    <div class="signature-block">
+        <div class="name">Dana Fitkowski</div>
+        <div class="title">Forensic Construction Schedule Claims Expert &middot; Critical Path Partners</div>
+        <div class="title">25 years P6 &middot; 20 years nuclear &amp; heavy energy</div>
+    </div>
+    <div class="contact-block">
+        <div class="url">criticalpathpartners.ca</div>
+        <div><code>dana@criticalpathpartners.ca</code> &middot; <code>+1-519-532-6300</code></div>
+        <div>Issued 2026-05-16 &middot; <code>v2.9.15</code> &middot; <code>MIT</code></div>
+    </div>
+</footer>
+
+</div>
+
+</body>
+</html>
