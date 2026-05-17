@@ -2354,6 +2354,102 @@ console.log('\n=== v2.9.20 A19 — Bayesian module MED ===');
 }
 
 // ============================================================================
+// v2.9.20 A17 — Public-API surface test coverage MED/LOW
+// ============================================================================
+console.log('\n=== v2.9.20 A17 — Public-API surface coverage ===');
+{
+    // A17-M1: computeCPMWithStrategies — degenerate empty inputs return a
+    // well-shaped result rather than throwing.
+    let threw = false;
+    let r = null;
+    try {
+        r = E.computeCPMWithStrategies([], [], {});
+    } catch (e) {
+        threw = true;
+    }
+    check('A17-M1: computeCPMWithStrategies([], [], {}) does not throw', !threw);
+    check('A17-M1: empty input → result.manifest present',
+        !threw && r && r.manifest && typeof r.manifest.engine_version === 'string');
+}
+{
+    // A17-M2: computeTIA — empty fragnets argument returns a no-op result
+    // with explanatory alert rather than throwing.
+    let threw = false;
+    let r = null;
+    try {
+        r = E.computeTIA(
+            [{ code: 'A', duration_days: 5, early_start: '2026-01-05' }],
+            [],
+            [],  // empty fragnets
+            { dataDate: '2026-01-05' }
+        );
+    } catch (e) {
+        threw = true;
+    }
+    check('A17-M2: computeTIA with empty fragnets does not throw', !threw);
+    check('A17-M2: empty fragnets → result has manifest',
+        !threw && r && r.manifest);
+}
+{
+    // A17-M3: computeBayesianUpdate with empty actuals returns priors as posteriors.
+    const acts = [
+        { code: 'A', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+    ];
+    const r = E.computeBayesianUpdate(acts, {}, {});
+    check('A17-M3: empty actuals → result.posterior_by_code.A exists',
+        r.posterior_by_code && r.posterior_by_code.A);
+    check('A17-M3: empty actuals → A.actual_applied === false',
+        r.posterior_by_code.A && r.posterior_by_code.A.actual_applied === false);
+    check('A17-M3: empty actuals → no alerts',
+        Array.isArray(r.alerts) && r.alerts.length === 0);
+    check('A17-M3: empty actuals → manifest.actual_count === 0',
+        r.manifest.actual_count === 0);
+}
+{
+    // A17-L1: buildDaubertDisclosure(undefined) — defensive null handling.
+    let threw = false;
+    let d = null;
+    try {
+        d = E.buildDaubertDisclosure(undefined);
+    } catch (e) {
+        threw = true;
+    }
+    check('A17-L1: buildDaubertDisclosure(undefined) does not throw', !threw);
+    check('A17-L1: undefined → result has 4 prongs',
+        !threw && d && d.prong_1_tested && d.prong_2_peer_review &&
+        d.prong_3_error_rate && d.prong_4_general_acceptance);
+}
+{
+    // A17-L2: computeTopologyHash(null, null) — degenerate inputs.
+    let threw = false;
+    let r = null;
+    try {
+        r = E.computeTopologyHash(null, null);
+    } catch (e) {
+        threw = true;
+    }
+    check('A17-L2: computeTopologyHash(null, null) does not throw', !threw);
+    check('A17-L2: null inputs → topology_hash is null',
+        !threw && r && r.topology_hash === null);
+    check('A17-L2: null inputs → algorithm is null (no hash computed)',
+        !threw && r && r.algorithm === null);
+}
+{
+    // A17-L3: renderDaubertMarkdown(undefined) — defensive null handling.
+    let threw = false;
+    let md = null;
+    try {
+        md = E.renderDaubertMarkdown(undefined, {});
+    } catch (e) {
+        threw = true;
+    }
+    check('A17-L3: renderDaubertMarkdown(undefined) does not throw', !threw);
+    check('A17-L3: undefined → returns non-empty string',
+        !threw && typeof md === 'string' && md.length > 0);
+}
+
+// ============================================================================
 // v2.9.20 A18 — Brand discipline MED/LOW
 // ============================================================================
 console.log('\n=== v2.9.20 A18 — Brand discipline MED/LOW ===');
