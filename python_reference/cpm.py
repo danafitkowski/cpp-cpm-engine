@@ -497,13 +497,35 @@ def _apply_forward_es_constraint(code, max_es, cstr, label, alerts):
     return max_es
 
 
-def _apply_forward_ef_constraint(code, ef, cstr, label, alerts):
-    """Forward-pass EF-side clamp."""
+def _apply_forward_ef_constraint(code, ef, cstr, label, alerts, es=None):
+    """Forward-pass EF-side clamp.
+
+    v2.9.14 F5 Bug E backport — optional `es` parameter. When provided, the
+    function guarantees EF >= ES on the returned value so a constraint
+    cannot pin EF below ES (which would produce a negative-duration
+    activity). Mirrors JS _applyForwardEFConstraint v2.9.12 T3.20.
+    """
     if not cstr:
         return ef
     cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
     tag = ' (secondary)' if label == 'secondary' else ''
     ctype = cstr.get('type')
+
+    def _guard_ef(candidate):
+        if es is not None and isinstance(es, (int, float)) and math.isfinite(es) and candidate < es:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'constraint-violated',
+                'message': (
+                    f'Constraint {ctype}{tag} on {code} would pin EF='
+                    f'{num_to_date(candidate)} below ES={num_to_date(es)} '
+                    f'(negative duration). Clamped EF >= ES to preserve '
+                    f'duration invariant.'
+                ),
+            })
+            return es
+        return candidate
+
     if ctype == 'FNET' and cd_num > 0:
         if cd_num > ef:
             alerts.append({
@@ -511,7 +533,7 @@ def _apply_forward_ef_constraint(code, ef, cstr, label, alerts):
                 'context': 'constraint-applied',
                 'message': f'FNET{tag} on {code} pushes EF from {num_to_date(ef)} to {cstr["date"]}',
             })
-            return cd_num
+            return _guard_ef(cd_num)
     elif ctype == 'FNLT' and cd_num > 0:
         if ef > cd_num:
             alerts.append({
@@ -533,7 +555,7 @@ def _apply_forward_ef_constraint(code, ef, cstr, label, alerts):
                     'context': 'constraint-applied',
                     'message': f'Mandatory Finish{tag} on {code} pins EF to {cstr["date"]}',
                 })
-            return cd_num
+            return _guard_ef(cd_num)
     return ef
 
 
@@ -886,8 +908,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                 alerts=alerts, ctx=f'forward {code}.EF')
 
         # Forward-pass EF-side clamps (FNET, FNLT, MS_Finish, MFO).
-        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts)
-        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts)
+        # v2.9.14 F5 Bug E backport — pass node['es'] so the helper guarantees
+        # EF >= ES, matching JS T3.20 behavior.
+        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts, node['es'])
+        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts, node['es'])
 
     max_ef = 0
     for n in nodes.values():

@@ -1015,7 +1015,24 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
     if (cstr.type === 'FNLT' && cdNum > 0) {
         if (cdNum < minLF) return cdNum;
     } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
-        if (cdNum > 0) return cdNum;
+        if (cdNum > 0) {
+            // v2.9.14 F5 Bug F — MS_Finish/MFO is mandatory-pin: LF = cstr.date
+            // regardless of whether that widens or tightens existing minLF. When
+            // cdNum > minLF the clamp WIDENS LF (loosens float) — this is the
+            // P6-spec'd behavior but was silent previously. Emit WARN so the
+            // forensic analyst sees the soft-side clamp.
+            if (cdNum > minLF && alerts) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-widens-lf',
+                    message: 'Mandatory Finish on ' + code + ' widens backward-pass LF from ' +
+                        numToDate(minLF) + ' to ' + cstr.date +
+                        ' (cstr.date > predecessor-logic LF). P6-spec hard-pin behaviour; ' +
+                        'verify the constraint date matches scheduler intent.',
+                });
+            }
+            return cdNum;
+        }
     } else if (cstr.type === 'SNLT' && cdNum > 0) {
         // LF = constraint.date + duration (clamps LS to ≤ constraint date).
         const lfFromSnlt = _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
