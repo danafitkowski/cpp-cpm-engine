@@ -5676,6 +5676,119 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         r.alerts.some(a => a.context === 'constraint-violated'));
 }
 
+// v2.9.16 F5 — constraint precedence on primary/secondary slot.
+// Bug A: Secondary FNET silently overrides primary FNLT. After both EF
+// clamps run, a re-check must alert that the FNLT is now violated.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint:  { type: 'FNLT', date: '2026-01-15' },
+           constraint2: { type: 'FNET', date: '2026-01-20' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    // After F5-A: EF=2026-01-20 (FNET pushed past FNLT), and a final
+    // cross-check ALERT fires citing the FNLT violation.
+    const alerts = r.alerts.filter(a => a.context === 'constraint-violated');
+    check('T-FIX-F5-A: secondary FNET pushing past primary FNLT emits constraint-violated alert',
+        alerts.some(a => a.message.indexOf('FNLT') >= 0 && a.message.indexOf('subsequent') >= 0),
+        'alerts=' + JSON.stringify(alerts.map(a => a.message)));
+}
+{
+    // Bug A reverse — secondary MS_Finish silently violated by primary FNET
+    // is symmetric. Primary FNET to 2026-01-20, secondary MS_Finish at
+    // 2026-01-15. Final EF = 2026-01-20 (FNET wins per existing logic),
+    // secondary MS_Finish is now violated.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint:  { type: 'FNET',      date: '2026-01-20' },
+           constraint2: { type: 'MS_Finish', date: '2026-01-15' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    // MS_Finish hard-pin actually wins on the second pass (it FORCES EF to
+    // cdNum). So this case isn't a violation — but if both were FNLT+FNET
+    // the F5-A check fires. Just assert no spurious alerts and final EF
+    // landed on the mandatory finish.
+    check('T-FIX-F5-A2: secondary MS_Finish hard-pins EF even after primary FNET',
+        r.nodes.A.ef_date === '2026-01-15',
+        'A.ef=' + r.nodes.A.ef_date);
+}
+// Bug B: Secondary SNET cannot override primary MS_Start (mandatory hard-pin).
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint:  { type: 'MS_Start', date: '2026-01-10' },
+           constraint2: { type: 'SNET',     date: '2026-01-20' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    // After F5-B: ES restored to MS_Start date (2026-01-10), priority-override
+    // WARN emitted. EF = ES + 5wd = 2026-01-19 (Mon) on default 7-day cal.
+    // Note: with no clndr_id, engine emits a calendar-fallback alert; that's
+    // separate from F5-B's priority-override WARN.
+    const priorityWarns = r.alerts.filter(a => a.context === 'constraint-priority-override');
+    check('T-FIX-F5-B: secondary SNET suppressed by primary MS_Start (priority-override WARN)',
+        priorityWarns.length === 1 &&
+        priorityWarns[0].message.indexOf('MS_Start') >= 0,
+        'warns=' + JSON.stringify(priorityWarns.map(a => a.message)));
+    check('T-FIX-F5-B: ES pinned to MS_Start date (not pushed by secondary SNET)',
+        r.nodes.A.es_date === '2026-01-10',
+        'A.es=' + r.nodes.A.es_date);
+}
+
+// v2.9.16 F5-C — backward pass: secondary FNLT cannot pull LF below
+// primary mandatory-start pin. MS_Start primary at 2026-01-10 pins
+// LF = MS_Start.date + duration; secondary FNLT at 2026-01-08 must NOT
+// tighten LF earlier than the primary mandatory pin.
+{
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5,
+           constraint:  { type: 'MS_Start', date: '2026-01-10' },
+           constraint2: { type: 'FNLT',     date: '2026-01-08' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    const A = r.nodes.A;
+    // After F5-C: LS pinned at MS_Start date (2026-01-10), priority-override
+    // WARN emitted. With no calendar, LF = 2026-01-10 + 5 = 2026-01-15.
+    const priorityWarns = r.alerts.filter(a => a.context === 'constraint-priority-override');
+    check('T-FIX-F5-C: backward secondary FNLT cannot override primary MS_Start',
+        priorityWarns.some(a => a.message.indexOf('FNLT') >= 0 && a.message.indexOf('MS_Start') >= 0),
+        'warns=' + JSON.stringify(priorityWarns.map(a => a.message)));
+    check('T-FIX-F5-C: LS preserved on MS_Start date',
+        A.ls_date === '2026-01-10',
+        'A.ls=' + A.ls_date);
+}
+
+// v2.9.16 F5-D — Section D _clampLFBackward must handle MS_Start / SO.
+// Previously Section D only clamped LF for FNLT / MS_Finish / MFO / SNLT;
+// mandatory-start was silently ignored on the Monte Carlo per-iteration
+// backward pass, so an MS_Start activity could appear non-critical in MC
+// distributions even though it's hard-pinned.
+{
+    E.resetMC();
+    // XER columns: cstr_type + cstr_date2 = PRIMARY (per Oracle P6 schema —
+    // the suffix-2 belongs to the date, not the type).
+    const xer = [
+        '%T\tTASK',
+        '%F\ttask_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%R\t1\tA\tA\tTT_Task\t40\tCS_MSO\t2026-01-10',
+    ].join('\n');
+    E.parseXER(xer);
+    E.runCPM({ projectStart: '2026-01-05' });
+    const tasks = E.getTasks();
+    const A = Object.values(tasks).find(t => t.code === 'A');
+    // After F5-D: A.LF clamps via MS_Start handler so post-clamp LS lands on
+    // mandatory date offset (5 days from project start = day 5). TF=0.
+    check('T-FIX-F5-D: Section D MS_Start clamps LF on backward pass',
+        A && A.TF === 0,
+        A ? 'A.TF=' + A.TF : 'no A');
+    check('T-FIX-F5-D: Section D MS_Start pins LS to mandatory offset',
+        A && A.LS === 5,
+        A ? 'A.LS=' + A.LS : 'no A');
+}
+
 // T3.21 — OoS detector enumerates EVERY unstarted predecessor.
 {
     const r = E.computeCPM(
