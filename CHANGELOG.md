@@ -12,6 +12,36 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.17 — 2026-05-17 — F5 constraint precedence (no more "deliberately deferred")
+
+Closes the four F5 CRITICAL bugs that v2.9.14 and v2.9.15 fix-wave agents punted on with hand-wavy reasoning ("can't construct test scenarios without re-introducing the round-trip silent-anchor bug"). The bugs are real engine math defects. The tests just needed to use `dataDate` for anchoring instead of `early_start` — the same pattern v2.9.16 used to fix the 7 baseline failures.
+
+### Section C — forward pass
+
+- **F5-A: Secondary FNET silently overrides primary FNLT (no alert).** After both `_applyForwardEFConstraint` calls run, a final-state cross-check now re-validates FNLT / MS_Finish / MFO deadlines on either slot. When a soft secondary FNET pushes EF past a primary FNLT date, `constraint-violated` ALERT fires citing "violated by subsequent constraint." Previously the FNLT-on-its-own-pass check only saw the initial EF value (within bounds), so the later push was invisible.
+
+- **F5-B: Secondary SNET silently overrides primary MS_Start hard-pin.** Primary mandatory-start date is captured BEFORE applying secondary. If secondary moves `maxES` off the mandatory date, `maxES` is restored to the mandatory pin and `constraint-priority-override` WARN emitted. Symmetric: if secondary is mandatory and primary (soft) shifted `maxES` off it, secondary's pin restored. P6 spec: mandatory-start is a hard pin; no soft constraint can move it.
+
+### Section C — backward pass
+
+- **F5-C: Secondary FNLT silently pulls LF below primary MS_Start.** Speculative computation of `_primaryMandatoryLF` before applying primary, then refuse to let soft secondary (FNLT / SNLT) tighten `minLF` below the primary mandatory pin (MS_Start / SO / MS_Finish / MFO). Symmetric for secondary mandatory + soft primary. `constraint-priority-override` WARN emitted on attempted override.
+
+### Section D — Monte Carlo per-iteration backward pass
+
+- **F5-D: `_clampLFBackward` omitted MS_Start / SO clamping.** Section C's v2.9.12 T1.1 fix wired MS_Start into the backward pass so `LS = cstr.date` and `TF = 0`. Section D was missing the analogous branch — only FNLT / MS_Finish / MFO / SNLT clamped LF. An MS_Start activity could appear non-critical in Monte Carlo distributions despite being hard-pinned. Added the MS_Start / SO branch: `task.LF = cOff + task.remaining` so the post-clamp `LS = LF - remaining` recompute lands on the mandatory date.
+
+### Test state
+
+| Metric | v2.9.16 | v2.9.17 |
+|---|---|---|
+| Unit tests | 878 / 0 | **886 / 0** (+8 new F5 regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+Of the 218-finding 20-agent audit from v2.9.13, the only outstanding CRITICAL item is F13 Bug 4 (Bayesian lognormal `duration_days` semantic — interpreted as median, audit-suggested as mean). That's a genuine API contract question for `computeBayesianUpdate` callers, not a silent bug.
+
+---
+
 ## v2.9.16 — 2026-05-17 — Zero baseline failures + Python F2 backport
 
 Closes the "7 baseline failures preserved" framing from v2.9.13/14/15. The earlier waves called these failures "deliberately preserved" because the underlying scenarios required reverting v2.9.13 F1-Bug 5. That was hand-waving. The actual root causes were six test-architecture issues plus one real engine bug:
