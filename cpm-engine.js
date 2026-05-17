@@ -422,11 +422,33 @@ function _offsetToDateUTC(offset) {
 
 function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
+// v2.9.20 A6-L2 — track tz-suffix warnings module-level so we emit once
+// per distinct input rather than spamming for every relationship.
+const _DATE_TZ_WARNED = new Set();
 function dateToNum(s) {
     // 'YYYY-MM-DD' (or 'YYYY-MM-DD HH:MM') → integer day offset from EPOCH.
     if (s === null || s === undefined) return 0;
     const str = String(s).trim();
     if (!str) return 0;
+    // v2.9.20 A6-L2 — warn (once per distinct string) when the input carries
+    // a timezone suffix (T..Z or ±HH:MM). slice(0, 10) silently strips the
+    // suffix, but a string like '2024-03-10T23:59-08:00' is actually Mar 11
+    // UTC and silently mapping it to 2024-03-10 can off-by-one for non-UTC
+    // pipelines. P6 XER stores naive dates so the strip is fine for that
+    // path, but the public API also accepts JSON strings; opportunistic
+    // warning lets the analyst know to normalize.
+    if (typeof console !== 'undefined' && console.warn) {
+        if (/T\d{2}:\d{2}.*(Z|[+-]\d{2}:?\d{2})/.test(str) && !_DATE_TZ_WARNED.has(str)) {
+            _DATE_TZ_WARNED.add(str);
+            // Cap the set so a long-running session doesn't grow unbounded.
+            if (_DATE_TZ_WARNED.size > 100) _DATE_TZ_WARNED.clear();
+            console.warn('cpp-cpm-engine: dateToNum(' + JSON.stringify(str) +
+                ') contains a timezone offset; slice(0, 10) ignores it. ' +
+                'If the schedule date crosses midnight in a non-UTC zone the ' +
+                'truncated date may be off by one. Normalize to YYYY-MM-DD ' +
+                '(naive) before passing to the engine.');
+        }
+    }
     const head = str.slice(0, 10);
     const parts = head.split('-');
     if (parts.length !== 3) return 0;
@@ -6622,7 +6644,20 @@ function _safeDateUTC(year, month0, day) {
 }
 
 // ── Anonymous Gregorian Easter algorithm ─────────────────────────────────────
+// v2.9.20 A6-M3 — exact only for Gregorian years (≥ 1583). Pre-Gregorian
+// Easter would need the Julian computus algorithm. Forensic schedules never
+// query pre-1583 holidays, but the public getHolidays() takes any positive
+// year; guard with null + one-time console.warn so a misuse is loud.
 function _easterSunday(year) {
+    if (year < 1583) {
+        if (typeof console !== 'undefined' && console.warn) {
+            console.warn('cpp-cpm-engine: _easterSunday(' + year +
+                ') — Anonymous Gregorian Algorithm is only exact for ' +
+                'Gregorian years (≥ 1583); returning null. Julian Easter ' +
+                'would require the Meeus/Jones/Butcher Julian algorithm.');
+        }
+        return null;
+    }
     const a = year % 19;
     const b = Math.floor(year / 100);
     const c = year % 100;
@@ -6657,6 +6692,13 @@ function _applyObservance(year, month, day, observance) {
     } else if (observance === 'us_federal') {
         // Sat(6) → Fri(−1), Sun(0) → Mon(+1)
         if (dow === 6) return _numToDateRaw(_msToNum(ms - 1 * 86400000));
+        if (dow === 0) return _numToDateRaw(_msToNum(ms + 1 * 86400000));
+    } else if (observance === 'monday_if_sunday') {
+        // v2.9.20 A6-M2 / A6-M4 — California Gov Code §6727 (César Chávez Day)
+        // and Quebec National Holiday Act §3 (Saint-Jean-Baptiste) shift to
+        // Monday only when the anchor falls on Sunday, not on Saturday. The
+        // previous us_federal label over-shifted (Sat→Fri); statute mandates
+        // only Sun→Mon for these jurisdictions.
         if (dow === 0) return _numToDateRaw(_msToNum(ms + 1 * 86400000));
     } else if (observance === 'nearest_monday') {
         // v2.9.18 A6-HIGH — Newfoundland and Labrador's Labour Standards Act
@@ -6775,6 +6817,8 @@ function _evaluateRule(rule, year) {
 
     if (rule.type === 'easter_relative') {
         const e = _easterSunday(year);
+        // v2.9.20 A6-M3 — pre-1583 (pre-Gregorian) easter_relative skipped.
+        if (e === null) return null;
         const easterDate = _safeDateUTC(year, e.month - 1, e.day);
         const shiftedMs = easterDate.getTime() + rule.offset * 86400000;
         const shiftedDate = new Date(shiftedMs);
@@ -6809,7 +6853,12 @@ const _CA_CIVIC_AUG       = { name: 'Civic Holiday (observed)', type: 'nth_weekd
 const _CA_NDTR            = { name: 'National Day for Truth and Reconciliation', type: 'fixed', month: 9, day: 30, observance: 'monday_if_weekend', effective_from: 2021 };
 // ON Family Day: enacted by Family Day Act 2008.
 const _CA_FAMILY_DAY_3RD  = { name: 'Family Day',            type: 'nth_weekday', month: 2,  weekday: 1, n: 3, effective_from: 2008 };
-const _CA_SAINT_JEAN      = { name: 'Saint-Jean-Baptiste Day', type: 'fixed', month: 6, day: 24, observance: 'monday_if_weekend' };
+// v2.9.20 A6-M4 — Quebec National Holiday Act §3 specifies the next-day
+// shift only when Saint-Jean-Baptiste falls on Sunday for employees who do
+// not normally work Sunday. Saturday does not trigger statutory shift to
+// Friday. Use monday_if_sunday to match statute. The previous
+// monday_if_weekend implementation over-shifted Saturday occurrences.
+const _CA_SAINT_JEAN      = { name: 'Saint-Jean-Baptiste Day', type: 'fixed', month: 6, day: 24, observance: 'monday_if_sunday' };
 
 const _US_NEW_YEARS       = { name: "New Year's Day",        type: 'fixed', month: 1,  day: 1,  observance: 'us_federal' };
 const _US_MLK             = { name: 'Martin Luther King Jr. Day', type: 'nth_weekday', month: 1, weekday: 1, n: 3 };
@@ -7016,7 +7065,14 @@ const _HOLIDAY_RULES = {
         { name: "St. Patrick's Day (observed)", type: 'fixed', month: 3, day: 17, observance: 'nearest_monday' },
         _CA_GOOD_FRIDAY,
         { name: "St. George's Day (observed)", type: 'fixed', month: 4, day: 23, observance: 'nearest_monday' },
-        // Memorial Day and Canada Day are both July 1 in NL (same date)
+        // v2.9.20 A6-L1 — NL Memorial Day on Jul 1 is a separate statutory
+        // observance (commemorates the Royal Newfoundland Regiment at
+        // Beaumont-Hamel, 1916). It collides with Canada Day; dedupe via
+        // _emitYear / _formatDate keeps only one slot, but listing both
+        // names preserves forensic provenance: a NL claim filing showing
+        // "Memorial Day" on Jul 1 has different statutory weight than one
+        // showing "Canada Day".
+        { name: 'Memorial Day (NL)', type: 'fixed', month: 7, day: 1, observance: 'monday_if_weekend' },
         _CA_CANADA_DAY,
         { name: "Discovery Day (observed)", type: 'fixed', month: 6, day: 24, observance: 'nearest_monday' },
         { name: "Orangemen's Day (observed)", type: 'fixed', month: 7, day: 12, observance: 'nearest_monday' },
@@ -7096,7 +7152,9 @@ const _HOLIDAY_RULES = {
         // California replaces Columbus Day with César Chávez Day
         _US_NEW_YEARS, _US_MLK, _US_PRESIDENTS, _US_MEMORIAL,
         _US_JUNETEENTH, _US_INDEPENDENCE, _US_LABOR,
-        { name: 'César Chávez Day', type: 'fixed', month: 3, day: 31, observance: 'us_federal' },
+        // v2.9.20 A6-M2 — California Gov Code §6727 specifies Mar 31, shifted
+        // to Monday ONLY when Sun. Saturday shift to Friday is not in statute.
+        { name: 'César Chávez Day', type: 'fixed', month: 3, day: 31, observance: 'monday_if_sunday' },
         _US_VETERANS, _US_THANKSGIVING, _US_CHRISTMAS,
     ],
     'US-CO': _US_FED_RULES,
@@ -7110,8 +7168,10 @@ const _HOLIDAY_RULES = {
     'US-FL': _US_FED_RULES,
     'US-GA': [
         ..._US_FED_RULES,
-        // Confederate Memorial Day — observed per O.C.G.A. §1-4-12
-        { name: 'Confederate Memorial Day (observed)', type: 'fixed', month: 4, day: 26, observance: 'us_federal' },
+        // v2.9.20 A6-M1 — O.C.G.A. §1-4-12 fixes April 26 and does NOT mandate
+        // weekend observance; the day moves only by employer practice. Drop
+        // the federal-style auto-shift to match statute text.
+        { name: 'Confederate Memorial Day (observed)', type: 'fixed', month: 4, day: 26 },
     ],
     'US-HI': _US_FED_RULES,
     'US-ID': _US_FED_RULES,
@@ -7160,8 +7220,10 @@ const _HOLIDAY_RULES = {
     'US-RI': _US_FED_RULES,
     'US-SC': [
         ..._US_FED_RULES,
-        // Confederate Memorial Day — observed per S.C. Code §53-5-10
-        { name: 'Confederate Memorial Day (observed)', type: 'fixed', month: 5, day: 10, observance: 'us_federal' },
+        // v2.9.20 A6-M1 — S.C. Code §53-5-10 fixes May 10 and does NOT mandate
+        // weekend observance shift; the federal-style us_federal observance
+        // (Sat→Fri, Sun→Mon) was added without statutory basis. Drop it.
+        { name: 'Confederate Memorial Day (observed)', type: 'fixed', month: 5, day: 10 },
     ],
     'US-SD': _US_FED_RULES,
     'US-TN': _US_FED_RULES,
