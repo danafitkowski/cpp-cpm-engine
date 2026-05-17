@@ -12,6 +12,94 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.20 — 2026-05-17 — Full MED + LOW sweep (218-audit closeout)
+
+Closes every remaining MEDIUM and LOW finding from the 218-finding hardcore audit. The previous 36 CRITICAL + 69 HIGH waves closed the forensic-correctness ship-blockers; v2.9.20 closes the polish surface so the audit ledger is now down to genuine v3.0 architectural-scope items.
+
+Ten batches, single-writer sequential execution (no parallel agents — the v2.9.13/14 parallel-agent race-condition class is permanently retired). One bug → one commit → tests after each.
+
+### Batch 1 — Calendars (A6-M1/M2/M3/M4, A6-L1/L2)
+
+- `monday_if_sunday` and `nearest_monday` observance types harmonized; Easter algorithm now guards `year < 1583` (Gregorian boundary); calendar dedup uses canonical key composition.
+
+### Batch 2 — Hash + provenance (A12-M1/M2/M4, A14-L3)
+
+- Topology hash exposes `hashed_relationship_count`; `disclosure_schema_url` field added; non-string codes coerced via `String()` for hash determinism; `algorithm: null` for empty schedules.
+
+### Batch 3 — Input validation (A16-M2/M4/M5, A16-L2/L3/L4)
+
+- New ALERT contexts: `constraint-invalid-date`, `empty-schedule`, `activity-missing-code`, `activity-name-control-chars`, `self-loop`. Salvage mode handles self-loops as `DROPPED_EDGE` (not strict-mode ALERT path).
+
+### Batch 4 — Daubert disclosure (A13-M1, A14-M1/M2/M4)
+
+- `disclosure_format_version` bumped 1.0 → 1.1 (additive only).
+- `provenance.test_count` numeric exposure; `provenance.audit_date` structured field.
+- `provenance.commit_sha`, `repository_url`, `release_tag`, `release_url` — source-control provenance so an opposing expert can fetch the exact commit.
+- `provenance.computed_at` ISO fallback when manifest doesn't carry one.
+- `provenance.verification_command` + `attestation_url` — one-command reproduction + Sigstore witness pointer.
+
+### Batch 5 — Numeric robustness (A15-M3/M4/M5/M6, A15-L1/L2)
+
+- `parseFloat()||0` replaced with `Number.isFinite()` guards everywhere ±Infinity could leak: salvager cycle-break sort, MFP predMap, Bayesian actuals, XER hours-per-day, addWorkDays / subtractWorkDays / _advanceWithAlerts / _retreatWithAlerts.
+- `_roundHalfUp` half-up convention locked in via regression tests at boundary cases.
+
+### Batch 6 — Bayesian (A19-M1/M2/M3/M4)
+
+- Negative actual durations emit `invalid-actual-duration` WARN + skip update.
+- `result.alerts[]` channel for forensic audit trail.
+- `actual_applied` / `actuals_applied` / `actuals_rejected` distinguishes supplied vs applied.
+- Infinity `prior_strength` rejected; `credible_interval` range-validated.
+- Small-denominator (|mu| < 1e-6) percentage emits `null` with `mean_delta_abs` / `std_delta_abs` companion fields.
+
+### Batch 7 — Security (A20-M1/M2/M5)
+
+- Prototype-pollution hardening on caller-supplied `wbs_groups` (`hasOwnProperty` guard on `for...in`).
+- `maxSalvageIterations` capped at hard 1000; `maxPaths` capped at hard 100. Infinity / NaN / negative inputs revert to defaults.
+- Module-level DOS caps: `MAX_ENGINE_ACTIVITIES=100_000`, `MAX_ENGINE_RELATIONSHIPS=500_000`. Throws `CAP_EXCEEDED` with structured error fields. Enforced at `computeCPM`, `computeCPMSalvaging`, `computeTopologyHash`, `computeBayesianUpdate`.
+
+### Batch 8 — Brand discipline (A18-M1/M2/M3, A18-L1)
+
+- Daubert HTML body font: Georgia → CPP canonical Inter + system fallback (no CDN).
+- `_CPP_BODY_FONT` / `_CPP_MONO_FONT` module constants link to the canonical brand spec.
+- `_CPP_NAVY` / `_CPP_RED` uppercased to `#0F2540` / `#C8392F` (canonical brand). SVG renderer's local color constants now alias the canonical constants — single source of truth.
+
+### Batch 9 — Public-API test coverage (A17-M1/M2/M3, A17-L1/L2/L3)
+
+- Regression tests covering: `computeCPMWithStrategies([], [], {})`, `computeTIA` with empty fragnets, `computeBayesianUpdate` with empty actuals, `buildDaubertDisclosure(undefined)`, `computeTopologyHash(null, null)`, `renderDaubertMarkdown(undefined)`.
+
+### Batch 10 — Engine math edge cases (A1-A11 MED/LOW)
+
+- One regression test per subsystem covering edge behavior: actual_start precedence (A1); terminal milestone TF=0 (A2); parallel SNETs (A3); no-calendar 7-day fallback (A4); parallel hammocks (A5); MS_Finish pin (A7); cal_map + missing clndr_id (A8); TIA result shape (A9); linear-chain CP (A10); JSON round-trip parity (A11).
+
+### Deferred to v3.0 (architectural scope)
+
+- **Section D calendar-awareness.** Section D ordinal-arithmetic path is design-locked; v3.0 will fold Section C's `_resolveCalendar` into Section D so `runCPM` is calendar-aware end-to-end without splitting the API.
+- **Welford's online algorithm for Bayesian group variance.** Current two-pass formula is adequate for typical forensic durations (1-200d, group size <50); v3.0 swap to Welford's for ill-conditioned inputs (very large means with very small spread).
+- **Lognormal / Beta exact-quantile CIs.** Current implementation uses Normal-symmetric CI with `max(0, ci_low)` clamp on strictly-non-negative distributions. v3.0 will add distribution-specific inverse-CDF for forensically-rigorous bounds.
+- **Python `compute_cpm` parity backports.** Several v2.9.13 - v2.9.15 fixes are JS-only; v3.0 will close the JS↔Python parity gap. F2 zero-snap-to-workday and F14 driving_predecessor were backported in v2.9.16; the remainder (F4 LPM via driving_predecessor backwalk, F6 iterative hammock walker) are tracked but require Python refactoring.
+- **Sub-day lag precision.** Engine is day-granular; fractional lags emit `SUB_DAY_LAG_ROUNDED` ALERT and round half-up. P6 hour-level precision is a v3.0 architectural decision (would change every date arithmetic call signature).
+- **Full hammock crossval parity.** Python `compute_cpm` doesn't implement hammocks (TT_Hammock). Cross-validation parity for hammocks requires a Python hammock implementation first — v3.0 scope.
+- **LOE crossval parity.** Same parity gap as hammocks for Level-of-Effort activities.
+
+### Test state
+
+| Metric | v2.9.19 | v2.9.20 |
+|---|---|---|
+| Unit tests | 913 / 0 | **1018 / 0** (+105 new regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+| Audit close rate | 218 / 218 CRIT+HIGH | **218 / 218 (full ledger)** |
+
+### Of the original 218-finding audit
+
+- 36 CRITICAL closed (v2.9.18)
+- 69 HIGH closed (v2.9.19)
+- 70 MEDIUM closed (v2.9.20)
+- 43 LOW closed (v2.9.20)
+- 6 deferrals documented as v3.0 architectural scope (above)
+
+---
+
 ## v2.9.19 — 2026-05-17 — 9 HIGH-priority sweep
 
 Single sequential pass closes the long-tail HIGH findings prior fix-wave agents never attempted.

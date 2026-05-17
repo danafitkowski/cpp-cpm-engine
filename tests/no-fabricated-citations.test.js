@@ -77,6 +77,12 @@ const META_MARKERS = [
     // F7 — historical CHANGELOG entries that quote the now-superseded
     // "Single Base" wording when documenting that it was replaced.
     /TIA disambiguation/i,
+    // v2.9.20 — CHANGELOG entries that describe a now-corrected mislabel.
+    // The historical record needs to quote the wrong text in order to
+    // explain what was fixed; the META_MARKER prevents the citation
+    // sweep from flagging the historical entry as a current claim.
+    /descriptor corrected/i,
+    /was mislabeled/i,
 ];
 
 // Filename-level skips for the audit infrastructure itself.
