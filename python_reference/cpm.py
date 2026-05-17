@@ -744,6 +744,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             'constraint2': _normalize_constraint2(a.get('constraint2'), alerts, code),
             'actual_finish': actual_finish,
             'clndr_id': a.get('clndr_id', '') or '',
+            # v2.9.14 F14 backport — driving_predecessor populated by the
+            # forward pass; init None.
+            'driving_predecessor': None,
         }
 
     pred_map = defaultdict(list)
@@ -801,6 +804,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # pred's anchor and replay it directly when node.ef is computed below;
         # preserves FF-0 / SF-0 identity (succ.EF === pred.EF / pred-ref.EF).
         finish_anchor_ef = None
+        # v2.9.14 F14 backport — track driving_predecessor. Mirrors JS
+        # Section C forward pass (cpm-engine.js Section C lines ~1357-1390).
+        # When pred logic pushes max_es later, we record which pred drove it.
+        # Out: dict {code, type, lag_days} or None.
+        driving_pred = None
         for p in preds:
             pnode = nodes.get(p['from_code'])
             if not pnode:
@@ -841,9 +849,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                                           ctx=f'FS-default lag {pnode["code"]}->{code}')
             # AACE 29R-03 §4.3 — pred logic cannot override actual_start.
             if has_actual_start:
+                if drive > max_es and driving_pred is None:
+                    # Track which pred WOULD have driven (forensic visibility)
+                    # even though actual_start pins max_es.
+                    driving_pred = {
+                        'code': pnode['code'],
+                        'type': t,
+                        'lag_days': lag,
+                    }
                 continue
             if drive > max_es:
                 max_es = drive
+                driving_pred = {
+                    'code': pnode['code'],
+                    'type': t,
+                    'lag_days': lag,
+                }
                 # v2.9.14 F2.2 backport — capture FF/SF anchor of WINNING driver.
                 finish_anchor_ef = this_anchor_ef
 
@@ -912,6 +933,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # EF >= ES, matching JS T3.20 behavior.
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts, node['es'])
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts, node['es'])
+
+        # v2.9.14 F14 backport — store driving_predecessor on node for
+        # forensic traceability. None when no pred drove (initial-task or
+        # constraint-pinned).
+        node['driving_predecessor'] = driving_pred
 
     max_ef = 0
     for n in nodes.values():
