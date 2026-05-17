@@ -164,11 +164,13 @@ console.log('\n=== Section C — calendar-aware arithmetic ===');
 {
     // 5-day task on MonFri calendar starting Mon 2026-01-05 → EF = next Mon 01-12
     // (P6 convention: EF is exclusive — start of day after last work day.)
+    // v2.9.13 F1-Bug5: input early_start is no longer an SNET floor. Use
+    // dataDate to anchor the project start at the desired date.
     const acts = [
-        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 5, clndr_id: 'MF' },
     ];
     const calMap = { MF: { work_days: [1,2,3,4,5], holidays: [] } };
-    const r = E.computeCPM(acts, [], { calMap });
+    const r = E.computeCPM(acts, [], { calMap, dataDate: '2026-01-05' });
     check('cal-aware: 5d MonFri Mon → next Mon (EF exclusive)',
         r.nodes.A.ef_date === '2026-01-12',
         'got ' + r.nodes.A.ef_date);
@@ -316,7 +318,7 @@ console.log('\n=== Cross-validation: Section C vs Section D should agree ===');
     const mcRes = E.runCPM();
 
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'A', duration_days: 5, clndr_id: 'MF' },
         { code: 'B', duration_days: 7, clndr_id: 'MF' },
         { code: 'C', duration_days: 3, clndr_id: 'MF' },
     ];
@@ -325,7 +327,8 @@ console.log('\n=== Cross-validation: Section C vs Section D should agree ===');
         { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
     ];
     const calMap = { MF: { work_days: [1,2,3,4,5], holidays: [] } };
-    const cpmRes = E.computeCPM(acts, rels, { calMap });
+    // v2.9.13 F1-Bug5: anchor via dataDate, not stored early_start.
+    const cpmRes = E.computeCPM(acts, rels, { calMap, dataDate: '2026-01-05' });
 
     // Section D: 15 raw days. Section C: 15 working days from Mon 01-05 on MonFri
     // = end of week 3 = next Mon 2026-01-26 (EF exclusive convention).
@@ -1306,7 +1309,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.9.12',
-        r.manifest.engine_version === '2.9.15');
+        r.manifest.engine_version === '2.9.16');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1342,7 +1345,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.15');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.16');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1456,23 +1459,36 @@ console.log('\n=== v2.1 Wave C1 — addWorkDays/subtractWorkDays MonFri fast pat
     // Equivalence check: fast path output MUST equal day-by-day walk output
     // for ALL (start_offset, n) and (end_offset, n) combos in the grid.
     // The walk-based reference replicates the engine's fallback exactly.
+    const isWd = (off) => {
+        const p6 = new Date(Date.UTC(2020, 0, 1) + off * 86400000).getUTCDay();
+        return [1, 2, 3, 4, 5].indexOf(p6) !== -1;
+    };
     function walkAdd(start, n) {
-        if (n === 0) return start;
+        if (n === 0) {
+            // v2.9.12 F2.1 contract: when n === 0 with a real calendar, a
+            // non-workday anchor snaps FORWARD to the next working day.
+            let cur = start;
+            while (!isWd(cur)) cur += 1;
+            return cur;
+        }
         let cur = start, remaining = n;
         while (remaining > 0) {
             cur += 1;
-            const p6 = new Date(Date.UTC(2020, 0, 1) + cur * 86400000).getUTCDay();
-            if ([1, 2, 3, 4, 5].indexOf(p6) !== -1) remaining -= 1;
+            if (isWd(cur)) remaining -= 1;
         }
         return cur;
     }
     function walkSub(end, n) {
-        if (n === 0) return end;
+        if (n === 0) {
+            // v2.9.12 F2.1 symmetric contract: zero-retreat snaps BACKWARD.
+            let cur = end;
+            while (!isWd(cur)) cur -= 1;
+            return cur;
+        }
         let cur = end, remaining = n;
         while (remaining > 0) {
             cur -= 1;
-            const p6 = new Date(Date.UTC(2020, 0, 1) + cur * 86400000).getUTCDay();
-            if ([1, 2, 3, 4, 5].indexOf(p6) !== -1) remaining -= 1;
+            if (isWd(cur)) remaining -= 1;
         }
         return cur;
     }
@@ -1582,7 +1598,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.15');
+    check('D3: engine_version present', h.engine_version === '2.9.16');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2026,7 +2042,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.0');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.15');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.16');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2046,7 +2062,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.15');
+        dCaught && dCaught.engine_version === '2.9.16');
 }
 
 // ============================================================================
@@ -5475,12 +5491,13 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
 // T2.12 — _countWorkDaysBetween signed result for negative interval.
 // Build a fixture that produces an over-constrained network so tf becomes
 // negative (LF < EF) and tf_working_days follows.
+// v2.9.13 F1-Bug5: anchor via dataDate, not stored early_start.
 {
     const r = E.computeCPM(
-        [{ code: 'A', duration_days: 100, early_start: '2026-01-05',
+        [{ code: 'A', duration_days: 100,
            constraint: { type: 'FNLT', date: '2026-01-10' } }],  // impossible
         [],
-        { cal_map: {} }
+        { cal_map: {}, dataDate: '2026-01-05' }
     );
     const A = r.nodes.A;
     // LF pinned at 2026-01-10 (FNLT), EF at 2026-01-05+100=2026-04-15.
@@ -5642,12 +5659,13 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
 }
 
 // T3.20 — Section C EF-side constraint guards EF >= ES.
+// v2.9.13 F1-Bug5: anchor via dataDate, not stored early_start.
 {
     const r = E.computeCPM(
-        [{ code: 'A', duration_days: 10, early_start: '2026-01-10',
+        [{ code: 'A', duration_days: 10,
            constraint: { type: 'MS_Finish', date: '2026-01-05' } }],  // infeasible
         [],
-        {}
+        { dataDate: '2026-01-10' }
     );
     const A = r.nodes.A;
     check('T3.20: A.ef >= A.es (negative duration prevented)',
@@ -6296,7 +6314,7 @@ console.log('\n=== v2.9.14 Bug F9 — Topology hash v2 (Python parity + JSON-enc
 {
     const acts = [{ code: 'A', duration_days: 5 }];
     const fakeReport = {
-        engine_version: '2.9.15',
+        engine_version: '2.9.16',
         provenance: {
             // Plausible v1 64-hex hash — no v2 prefix.
             input_topology_hash: 'a'.repeat(64),
