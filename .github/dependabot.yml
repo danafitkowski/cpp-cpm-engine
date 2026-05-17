@@ -1,0 +1,9 @@
+# Track GitHub Actions SHA updates; renew weekly so the pinned SHAs stay
+# fresh against security fixes without manual lookup.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
