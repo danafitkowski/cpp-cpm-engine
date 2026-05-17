@@ -867,6 +867,27 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                 }
                 # v2.9.14 F2.2 backport — capture FF/SF anchor of WINNING driver.
                 finish_anchor_ef = this_anchor_ef
+            elif (drive == max_es and driving_pred is not None
+                  and driving_pred.get('type') not in ('CONSTRAINT', 'DATA_DATE')):
+                # v2.9.15 P2 (F14-2) backport — deterministic tie-break on
+                # equal drive dates. Prefer FS+lag_days=0 (canonical tight
+                # logic edge); then alphabetical on pred code. Skip when the
+                # incumbent is a CONSTRAINT/DATA_DATE sentinel.
+                inc_is_fs0 = driving_pred.get('type') == 'FS' and driving_pred.get('lag_days') == 0
+                new_is_fs0 = t == 'FS' and lag == 0
+                swap = False
+                if new_is_fs0 and not inc_is_fs0:
+                    swap = True
+                elif new_is_fs0 == inc_is_fs0:
+                    if pnode['code'] < driving_pred.get('code', ''):
+                        swap = True
+                if swap:
+                    driving_pred = {
+                        'code': pnode['code'],
+                        'type': t,
+                        'lag_days': lag,
+                    }
+                    finish_anchor_ef = this_anchor_ef
 
         # v2.9.7 — P6 constraint application (forward pass). Primary then
         # secondary; secondary tightens further per P6 spec.
@@ -876,8 +897,25 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # v2.9.12 T1.2 — emit constraint-noop WARN when ES-side constraints
         # are suppressed by actual_start. Mirrors JS Section C.
         if not has_actual_start:
+            # v2.9.15 P2 (F14-3) backport — track CONSTRAINT-driven driver.
+            _es_before_primary = max_es
             max_es = _apply_forward_es_constraint(code, max_es, cstr, 'primary', alerts)
+            if max_es > _es_before_primary and cstr and cstr.get('date'):
+                driving_pred = {
+                    'type': 'CONSTRAINT',
+                    'constraint_type': cstr.get('type'),
+                    'date': cstr.get('date'),
+                }
+                finish_anchor_ef = None
+            _es_before_secondary = max_es
             max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts)
+            if max_es > _es_before_secondary and cstr2 and cstr2.get('date'):
+                driving_pred = {
+                    'type': 'CONSTRAINT',
+                    'constraint_type': cstr2.get('type'),
+                    'date': cstr2.get('date'),
+                }
+                finish_anchor_ef = None
         else:
             if cstr and cstr.get('type') in ('SNET', 'MS_Start', 'SO'):
                 alerts.append({
@@ -933,6 +971,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         # EF >= ES, matching JS T3.20 behavior.
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts, node['es'])
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts, node['es'])
+
+        # v2.9.15 P2 (F14-4) backport — DATA_DATE-driven driver. When no pred
+        # and no constraint won, but max_es == dd_num AND the activity has preds,
+        # set driving_predecessor to a {type:'DATA_DATE', date} sentinel.
+        if (driving_pred is None and not has_actual_start and dd_num > 0
+                and max_es == dd_num and len(pred_map.get(code, [])) > 0):
+            driving_pred = {
+                'type': 'DATA_DATE',
+                'date': data_date,
+            }
 
         # v2.9.14 F14 backport — store driving_predecessor on node for
         # forensic traceability. None when no pred drove (initial-task or

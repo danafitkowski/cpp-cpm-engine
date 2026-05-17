@@ -149,7 +149,15 @@ precision review before relying on the dates.
             tf, ff,                              // Total / free float (calendar days).
             tf_working_days,                     // TF in working days on activity's own calendar.
             ff_working_days,                     // FF in working days.
-            driving_predecessor,                 // Code of predecessor that determined ES.
+            driving_predecessor,                 // Object describing what drove ES, or null.
+                                                 //   {code, type, lag_days}  — real predecessor; `type` ∈ {'FS','SS','FF','SF'}.
+                                                 //   {type:'CONSTRAINT', constraint_type, date}  — v2.9.15: an ES-side
+                                                 //     constraint (SNET / MS_Start / SO / primary OR secondary) clamped ES
+                                                 //     past whatever any predecessor would have produced.
+                                                 //   {type:'DATA_DATE', date}  — v2.9.15: data_date floored ES past all
+                                                 //     predecessor drives (activity has preds but they finished earlier
+                                                 //     than data_date, so the schedule update date is the actual driver).
+                                                 //   null  — true source activity (no preds, no constraint, no data-date floor).
             is_complete, actual_start, actual_finish,
             clndr_id, duration_days,
         },

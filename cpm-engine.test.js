@@ -6638,6 +6638,95 @@ console.log('\n=== v2.9.15 Bug F13-b — Calendar effective-date enforcement ===
     }
 }
 
+// ============================================================================
+// v2.9.15 Bug F14-rest — driving_predecessor tie-break + CONSTRAINT + DATA_DATE tags
+// ============================================================================
+console.log('\n=== v2.9.15 Bug F14-rest — driving_predecessor enrichment ===');
+
+// T-FIX-F14-2: FS+0 tie alphabetical-break. Two preds A and B both drive
+// activity C to the same date; one is FS+0, the other is SS+5. Prefer FS+0
+// regardless of alpha order.
+{
+    // A: ES=1, dur=4, EF=5 → FS+0 drives C to 5.
+    // B: ES=1, dur=0, but with SS+4 driving C to 5 (B.ES=1 + lag 4 = 5).
+    const acts = [
+        { code: 'A', duration_days: 4, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 4, early_start: '2026-01-05' },
+        { code: 'C', duration_days: 1 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'SS', lag_days: 4 },  // SS+4: B.ES+4 = A.EF
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    const cNode = r.nodes['C'];
+    check('T-FIX-F14-2: FS+0 wins tie over SS+4 (when both drive same date)',
+        cNode.driving_predecessor &&
+        cNode.driving_predecessor.code === 'A' &&
+        cNode.driving_predecessor.type === 'FS' &&
+        cNode.driving_predecessor.lag_days === 0,
+        'driver=' + JSON.stringify(cNode.driving_predecessor));
+}
+
+// T-FIX-F14-3a: SNET constraint forces ES past pred — driver = CONSTRAINT
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 1, constraint: { type: 'SNET', date: '2026-02-01' } },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    const bNode = r.nodes['B'];
+    check('T-FIX-F14-3a: SNET constraint pushes ES past pred → driver type CONSTRAINT',
+        bNode.driving_predecessor &&
+        bNode.driving_predecessor.type === 'CONSTRAINT' &&
+        bNode.driving_predecessor.constraint_type === 'SNET' &&
+        bNode.driving_predecessor.date === '2026-02-01',
+        'driver=' + JSON.stringify(bNode.driving_predecessor));
+}
+
+// T-FIX-F14-3b: MS_Start constraint pushes ES past pred — driver = CONSTRAINT
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 1, constraint: { type: 'MS_Start', date: '2026-02-15' } },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    const bNode = r.nodes['B'];
+    check('T-FIX-F14-3b: MS_Start constraint past pred → driver type CONSTRAINT',
+        bNode.driving_predecessor &&
+        bNode.driving_predecessor.type === 'CONSTRAINT' &&
+        bNode.driving_predecessor.constraint_type === 'MS_Start',
+        'driver=' + JSON.stringify(bNode.driving_predecessor));
+}
+
+// T-FIX-F14-4: DATA_DATE floor drives ES past pred → driver type DATA_DATE
+{
+    // A finished long before data_date. B has FS dependency on A.
+    // dataDate >> A.ef → maxES floors to dataDate, not predecessor's EF.
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05',
+          actual_start: '2026-01-05', actual_finish: '2026-01-09', is_complete: true },
+        { code: 'B', duration_days: 1 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ];
+    // dataDate is well after A.ef = 2026-01-09; should floor B.es to dataDate.
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-03-01' });
+    const bNode = r.nodes['B'];
+    check('T-FIX-F14-4: dataDate floors ES past completed pred → driver type DATA_DATE',
+        bNode.driving_predecessor &&
+        bNode.driving_predecessor.type === 'DATA_DATE' &&
+        bNode.driving_predecessor.date === '2026-03-01',
+        'driver=' + JSON.stringify(bNode.driving_predecessor));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

@@ -1409,6 +1409,29 @@ function computeCPM(activities, relationships, opts) {
                 };
                 // v2.9.12 F2.2 — capture FF/SF anchor of WINNING driver.
                 finishAnchorEF = thisAnchorEF;
+            } else if (drive === maxES && drivingPred !== null && drivingPred.type !== 'CONSTRAINT' && drivingPred.type !== 'DATA_DATE') {
+                // v2.9.15 P2 (F14-2) — deterministic tie-break on equal drive
+                // dates. Prefer FS with lag_days===0 (the "canonical" tightest
+                // logic edge); then alphabetical on pred code. Skips when the
+                // incumbent is already a constraint-driven/data-date-driven
+                // sentinel (those aren't real predecessors).
+                const incIsFS0 = drivingPred.type === 'FS' && drivingPred.lag_days === 0;
+                const newIsFS0 = p.type === 'FS' && lag === 0;
+                let swap = false;
+                if (newIsFS0 && !incIsFS0) {
+                    swap = true;
+                } else if (newIsFS0 === incIsFS0) {
+                    // Same "FS+0" status — fall through to alphabetical on code.
+                    if (pnode.code < drivingPred.code) swap = true;
+                }
+                if (swap) {
+                    drivingPred = {
+                        code: pnode.code,
+                        type: p.type,
+                        lag_days: lag,
+                    };
+                    finishAnchorEF = thisAnchorEF;
+                }
             }
         }
 
@@ -1427,8 +1450,31 @@ function computeCPM(activities, relationships, opts) {
         const cstr = node.constraint;
         const cstr2 = node.constraint2;
         if (!hasActualStart) {
+            // v2.9.15 P2 (F14-3) — track CONSTRAINT-driven driver. When a
+            // primary or secondary forward-ES constraint clamps maxES PAST
+            // whatever the preds drove, set driving_predecessor to a
+            // {type:'CONSTRAINT', constraint_type, date} sentinel so analysts
+            // can see the constraint is the actual driver (not a real pred).
+            const _esBeforePrimary = maxES;
             maxES = _applyForwardESConstraint(code, maxES, cstr, 'primary', alerts);
+            if (maxES > _esBeforePrimary && cstr && cstr.date) {
+                drivingPred = {
+                    type: 'CONSTRAINT',
+                    constraint_type: cstr.type,
+                    date: cstr.date,
+                };
+                finishAnchorEF = null;
+            }
+            const _esBeforeSecondary = maxES;
             maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts);
+            if (maxES > _esBeforeSecondary && cstr2 && cstr2.date) {
+                drivingPred = {
+                    type: 'CONSTRAINT',
+                    constraint_type: cstr2.type,
+                    date: cstr2.date,
+                };
+                finishAnchorEF = null;
+            }
         } else {
             if (cstr && (cstr.type === 'SNET' || cstr.type === 'MS_Start' || cstr.type === 'SO')) {
                 alerts.push({
@@ -1482,6 +1528,20 @@ function computeCPM(activities, relationships, opts) {
         // v2.9.12 T3.20 — pass node.es so the helper guarantees EF >= ES.
         node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts, node.es);
         node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts, node.es);
+
+        // v2.9.15 P2 (F14-4) — DATA_DATE-driven driver. When no pred and no
+        // constraint won, but maxES === ddNum AND the activity has predecessors
+        // (i.e. ddNum genuinely floored ES past where the preds would have put
+        // it), set driving_predecessor to a {type:'DATA_DATE', date} sentinel.
+        // Excludes true source activities (no preds) — those legitimately have
+        // null driving_predecessor.
+        if (drivingPred === null && !hasActualStart && ddNum > 0 && maxES === ddNum &&
+            (predMap[code] || []).length > 0) {
+            drivingPred = {
+                type: 'DATA_DATE',
+                date: dataDate,
+            };
+        }
 
         node.driving_predecessor = drivingPred;
     }
