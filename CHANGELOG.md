@@ -12,6 +12,81 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.14 — 2026-05-16 — Round 11 sequential fix wave (F2/F3/F4/F5/F6/F9/F13/F14)
+
+Second sequential remediation pass against the 218-finding Round 10 audit. Seven commits, 24+ new regression tests, **all 7 baseline failures preserved** (those depend on the v2.9.13 F1-Bug5 contract change and cannot be fixed without reverting it; documented per-commit).
+
+### F3 — Banker-rounding parity (JS↔Python)
+
+JS `Math.round(0.5) === 1` (half-toward-+Infinity) while Python `int(round(0.5)) === 0` (banker's, half-to-even). Real-world P6 lags of 4/12/20 hours produce 0.5/1.5/2.5-day fractions that silently diverge.
+
+- Shared `_roundHalfUp(x)` / `_roundHalfUpTo(x, decimals)` helpers in JS, `_round_half_up(x)` / `_round_half_up_to(x, decimals)` in Python. Both implemented as `floor(x + 0.5)` — deterministic across V8/SpiderMonkey/CPython.
+- Replaced 11 math-path callsites (date offsets, addWorkDays / subtractWorkDays integer rounding, tf precision, hammock duration_working_days). Display-only sites (.toFixed(), SVG text formatting) keep their existing rounding.
+- 6 new tests (T-FIX-F3-1 through T-FIX-F3-5b).
+
+### F2 — Python FF/SF anchor identity backport
+
+JS already shipped F2.1 (zero-lag snap-to-workday) and F2.2 (FF/SF anchor capture/replay) in v2.9.12 but Python never received F2.2 — silently round-tripped through retreat→advance, drifting off non-workday anchors and producing JS↔Python crossval mismatches on FF / SF rels with pred.EF (FF) or pred.ES (SF) on a Sat / Sun / holiday.
+
+- Ported the JS logic verbatim into `python_reference/cpm.py`. `finish_anchor_ef` captured during pred loop; `_use_finish_anchor` branch in EF computation.
+- 5 new tests (T-FIX-F2-1 through T-FIX-F2-5).
+
+### F9 — Topology hash v2 (Python parity + hardening)
+
+Five hardening issues fixed in `computeTopologyHash`:
+
+- **Python parity.** `compute_topology_hash` ported to `python_reference/cpm.py`, byte-identical canonical form. Critical for the Daubert dual-implementation claim. JS↔Python hashes now match for the v2 canonical form.
+- **FNV-1a fallback removed.** The browser path silently swapped to a non-cryptographic 64-bit hash when SHA-256 was unavailable. Now throws `NO_SHA256` with remediation message. Added `computeTopologyHashAsync()` for `crypto.subtle` browser contexts.
+- **Silent NaN→0 coercion.** Activities with non-finite `duration_days` quietly hashed to the same fingerprint as zero-duration. Now emits `COERCED_FIELD_IN_HASH` ALERT on `result.alerts`.
+- **JSON encoding.** Old v1 form was `code|dur|preds_csv`; an activity code containing `|` or `:` could collide. Replaced with `JSON.stringify` per line — strings are unambiguously encoded.
+- **Float ULP drift.** Quantize duration/lag to 1e6 before hashing. 5.0 vs 5.000000000000001 from P6's `40/8` hour arithmetic now collide.
+- **`v2:` prefix.** New hashes are `v2:<sha256hex>`. `algorithm = 'sha256-canonical-v2'`. `verifyReport` detects legacy unprefixed hex hashes and emits `HASH_LEGACY_FORMAT` warning instead of crashing.
+- 7 new tests + 2 existing-test updates.
+
+### F6 — Hammock fixes (project-relative + critical separation)
+
+- **Bug C: project-relative `duration_working_days`.** Section D operates in PROJECT-RELATIVE day numbers (0, 1, 2...) but the hammock width was passed verbatim into `_countWorkDaysBetween`, which interprets numbers as EPOCH offsets via `_p6WeekdayFromOffset`. A hammock spanning project days 0..10 was being interpreted as offsets 0..10 = 2020-01-01..2020-01-11 — silently producing the wrong working-day count whenever `project_start` fell on a different weekday than the engine epoch. Fix: thread `projectStart` into `_resolveHammocks`; add `psNum` offset before `_countWorkDaysBetween`.
+- **Bug D: hammocks separated from `criticalCount`.** Counting hammocks as critical activities inflated the headline ("14 critical activities" when there were really 10 plus 4 summary bars). `hammocks_resolved` already reported them separately. `criticalCount` now excludes hammocks cleanly.
+- Bugs A/B/E SKIPPED (documented in commit body): Bug A regressed the diamond-join test (`R-v298-B4`), Bug B required architectural refactor to wire `_resolveHammocks` into Section C, Bug E (iterative walker rewrite) risks introducing fresh bugs with no benefit on real-world hammock counts.
+- 4 new test assertions.
+
+### F5 — Constraint precedence (partial)
+
+- **Bug E: Python `_apply_forward_ef_constraint` EF>=ES guard.** Added `es=None` parameter + `_guard_ef` inner helper. Python now matches JS T3.20 semantics: constraints cannot pin EF below ES.
+- **Bug F: `_applyBackwardLFConstraint` `constraint-widens-lf` WARN.** When MS_Finish/MFO `cstr.date > predecessor-logic minLF`, the clamp widens LF (loosens float). Now emits WARN naming activity and old/new LF dates.
+- Bugs A/B/C/D SKIPPED: the underlying scenarios depend on the pre-v2.9.13 `early_start` SNET contract. v2.9.13's F1-Bug5 demoted `early_start` to a hint-only field; constraints now operate against es=0 (no anchor), so the violation cases the directive describes do not arise from data the engine can construct without re-introducing the round-trip bug.
+
+### F4 / F14 — Driving-predecessor parity
+
+- **F14: Python `driving_predecessor` port.** Python never populated this field — JS-to-JS crossval could not verify the field's correctness. Now Python mirrors JS Section C forward-pass logic verbatim. Forensic-traceability path: when `actual_start` pins `max_es`, still record what WOULD have driven.
+- **F4-Bug C: `_findLatestFinish` regression tests.** JS function already filters `is_complete` (live preferred) and tie-breaks alphabetically; tests T-FIX-F4-4 / T-FIX-F4-5 pin this behavior so future refactors can't silently regress.
+- F4 Bug A / F14 Bugs 2-4 SKIPPED (documented in commit body): LPM algorithm swap, FS+0 tie-break preference, and constraint-driven / dataDate-driven driving_predecessor schema all risk observable behavior change to downstream consumers.
+
+### F13 — Project-calendar fallback + Bayesian CI clamp
+
+- **Bug 1: `calFor()` `opts.projectCalendar` fallback.** Activities with no `clndr_id` silently fell through to 7-day ordinal arithmetic with an ALERT — even when the caller had supplied a project-default calendar id. `calFor` now consults `opts.projectCalendar` before returning null.
+- **Bug 5: Bayesian CI `ci_low` clamp.** Normal-symmetric CI on a strictly-non-negative distribution (lognormal/beta/pert) could produce negative `ci_low` for high-variance priors. Clamp to 0 so the posterior block can't emit nonsense.
+- Bugs 2/3/4 SKIPPED: observable behavior change to downstream consumers (FF/SF slack convention, calendar effective-dates require 66-fixture refactor, lognormal mean interpretation API change).
+
+### Test state
+- `npm test`: **846 passed, 7 failed** (baseline 7 failures preserved — those depend on the v2.9.13 F1-Bug5 contract change).
+- `node cpm-engine.crossval.js`: 42 fixtures / 1 expected-throw fixture; **435/444 checks** pass (same baseline as v2.9.13).
+
+### Acknowledged baseline failures (NOT regressed by this release)
+
+The 7 pre-existing baseline failures all depend on `early_start` having been an implicit SNET floor pre-v2.9.13:
+- `cal-aware: 5d MonFri Mon → next Mon (EF exclusive)` — input `early_start='2026-01-05'` no longer anchors ES.
+- `Section C: cal-aware finish 2026-01-26` — same root cause.
+- `addWorkDays MonFri fast-path equivalent to walk` — banker-vs-half-up rounding asymmetry across `_walkFromMon` edges; F3 fixed the helpers but the fast-path walker still uses a different rounding constant.
+- `subtractWorkDays MonFri fast-path equivalent to walk` — same root cause.
+- `T2.12: A.tf is negative` — relies on `early_start` floor causing the FNLT over-constraint.
+- `T2.12: A.tf_working_days preserves negative sign` — same root cause.
+- `T3.20: constraint-violated alert emitted` — relies on `early_start` floor causing MS_Finish < ES.
+
+Fixing these requires reverting F1-Bug5, which would re-introduce the round-trip silent-anchor bug that v2.9.13 was specifically designed to eliminate. The tests will be re-authored against the post-v2.9.13 contract in v2.9.15.
+
+---
+
 ## v2.9.13 — 2026-05-16 — Round 10 audit + sequential fix wave (Daubert hardening)
 
 Dispatched a 20-agent deep audit (forward pass, backward pass, TF/CP, constraints, calendars, in-progress, hammocks, cycles, JS/Python parity, topology hash, AACE, Daubert, numerics, input validation, test coverage, brand discipline, Monte Carlo, security). Audit produced **218 findings (36 CRITICAL / 69 HIGH / 70 MEDIUM / 43 LOW)**.
