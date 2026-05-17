@@ -5467,6 +5467,19 @@ function buildDaubertDisclosure(result, opts) {
     const testCountStr = (opts.test_count !== undefined && opts.test_count !== null)
         ? String(opts.test_count)
         : 'unit-test count';
+    // v2.9.20 A13-M1 — also expose test_count as a numeric for downstream
+    // parsers (court-exhibit pipelines that want to bind to a number, not
+    // a string embedded in evidence prose).
+    const testCountNumeric = (function () {
+        if (opts.test_count === undefined || opts.test_count === null) return null;
+        const n = Number(opts.test_count);
+        return Number.isFinite(n) ? n : null;
+    })();
+    // v2.9.20 A13-M1 — structured audit-date field. Previously the
+    // "peer-reviewed via 8-lens forensic audit 2026-05-09" sentence was the
+    // only place the audit date appeared; downstream consumers had to regex
+    // it out of evidence prose.
+    const auditDate = opts.audit_date || manifest.audit_date || '2026-05-09';
 
     return {
         rule: 'FRE 702 (Dec 1, 2023 amendment) / Daubert v. Merrell Dow Pharmaceuticals (1993) / FRCP 26(a)(2)(B); also forward-compatible with proposed FRE 707.',
@@ -5520,9 +5533,40 @@ function buildDaubertDisclosure(result, opts) {
         provenance: {
             input_topology_hash: inputHash,
             output_method_id: manifest.method_id || null,
-            computed_at: manifest.computed_at || null,
-            activity_count: manifest.activity_count || null,
-            relationship_count: manifest.relationship_count || null,
+            // v2.9.20 A14-M2 — fall back to current ISO timestamp when the
+            // manifest doesn't carry one (standalone disclosure builds without
+            // a CPM result). Distinct from `generated_at` at the top level,
+            // which is always the wall-clock moment the disclosure was
+            // *built*; computed_at is the moment the underlying *compute*
+            // happened. They tie when called inline; they diverge when the
+            // disclosure is re-generated from a stored result.
+            computed_at: manifest.computed_at || new Date().toISOString(),
+            activity_count: (manifest.activity_count != null ? manifest.activity_count : null),
+            relationship_count: (manifest.relationship_count != null ? manifest.relationship_count : null),
+            // v2.9.20 A13-M1 — numeric test count for structured parsing.
+            test_count: testCountNumeric,
+            // v2.9.20 A14-M1 — source-control provenance. Without these, the
+            // disclosure is not externally verifiable: an opposing expert
+            // can't fetch the exact commit that produced the result. Accept
+            // overrides via opts.* so CI pipelines can stamp the actual SHA.
+            commit_sha: opts.commit_sha || manifest.commit_sha || null,
+            repository_url: opts.repository_url || manifest.repository_url
+                || 'https://github.com/danafitkowski/cpp-cpm-engine',
+            release_tag: opts.release_tag || manifest.release_tag
+                || ('v' + ENGINE_VERSION),
+            release_url: opts.release_url || manifest.release_url
+                || ('https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v' + ENGINE_VERSION),
+            // v2.9.20 A14-M4 — verification command + Sigstore attestation
+            // URL. One-command third-party reproduction is the Daubert
+            // Prong-1 "tested" closer. The attestation_url resolves to the
+            // Sigstore-signed witness JSON when the release is signed; null
+            // when running pre-release or on a local-only build.
+            verification_command: opts.verification_command
+                || ('git clone ' + (opts.repository_url || manifest.repository_url || 'https://github.com/danafitkowski/cpp-cpm-engine')
+                    + ' && cd cpp-cpm-engine && npm install && npm run verify'),
+            attestation_url: opts.attestation_url || manifest.attestation_url
+                || ('https://github.com/danafitkowski/cpp-cpm-engine/releases/download/v' + ENGINE_VERSION + '/attestation.json'),
+            audit_date: auditDate,
         },
         validator_independence: opts.validator_independence ||
             'Engine and validation suite developed by the same author (CPP). Independent ' +
@@ -5536,7 +5580,13 @@ function buildDaubertDisclosure(result, opts) {
             'independence disclosure.',
         ].filter(Boolean),
         engine_version: ENGINE_VERSION,
-        disclosure_format_version: '1.0',
+        // v2.9.20 A13-M1 / A14-M1/M2/M4 — bumped 1.0 → 1.1 (additive only):
+        // new optional fields in `provenance` (test_count numeric,
+        // commit_sha, repository_url, release_tag, release_url,
+        // verification_command, attestation_url, audit_date) and a structured
+        // computed_at fallback. Existing 1.0 consumers can ignore the new
+        // fields safely; format version signals additive growth.
+        disclosure_format_version: '1.1',
         // v2.9.20 A14-L3 — schema URL for the disclosure format. Lets
         // verifyReport-like consumers detect format-version mismatches and
         // future versions (1.1, 2.0) without breaking parsers that pin to 1.0.

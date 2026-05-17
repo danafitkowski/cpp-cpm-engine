@@ -2041,7 +2041,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: round-trip preserves rule field',
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
-        roundTrip && roundTrip.disclosure_format_version === '1.0');
+        roundTrip && roundTrip.disclosure_format_version === '1.1');
     check('E3: engine_version in disclosure', d.engine_version === '2.9.19');
 }
 {
@@ -2063,6 +2063,101 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
         dCaught && dCaught.engine_version === '2.9.19');
+}
+
+// ============================================================================
+// v2.9.20 A13-M1 / A14-M1/M2/M4 — Daubert disclosure provenance enrichment
+// ============================================================================
+console.log('\n=== v2.9.20 A13-M1 / A14-M1/M2/M4 — Daubert provenance enrichment ===');
+{
+    // A13-M1: numeric test_count exposed structurally.
+    const d = E.buildDaubertDisclosure(null, { test_count: 913 });
+    check('A13-M1: provenance.test_count is numeric when test_count supplied',
+        d.provenance && d.provenance.test_count === 913);
+    const d2 = E.buildDaubertDisclosure(null, {});
+    check('A13-M1: provenance.test_count is null when not supplied',
+        d2.provenance && d2.provenance.test_count === null);
+    const d3 = E.buildDaubertDisclosure(null, { test_count: 'not-a-number' });
+    check('A13-M1: non-numeric test_count → provenance.test_count is null',
+        d3.provenance && d3.provenance.test_count === null);
+}
+{
+    // A14-M1: source-control provenance present and correct.
+    const d = E.buildDaubertDisclosure(null);
+    check('A14-M1: provenance.repository_url present',
+        d.provenance && typeof d.provenance.repository_url === 'string' &&
+        d.provenance.repository_url.indexOf('github.com') > -1);
+    check('A14-M1: provenance.release_tag matches ENGINE_VERSION',
+        d.provenance && d.provenance.release_tag === 'v' + E.ENGINE_VERSION);
+    check('A14-M1: provenance.release_url ends with /tag/<release_tag>',
+        d.provenance && d.provenance.release_url &&
+        d.provenance.release_url.endsWith('/tag/v' + E.ENGINE_VERSION));
+    check('A14-M1: provenance.commit_sha is null when not supplied',
+        d.provenance && d.provenance.commit_sha === null);
+    // Caller override works.
+    const d2 = E.buildDaubertDisclosure(null, {
+        commit_sha: 'deadbeefcafe1234',
+        repository_url: 'https://example.com/repo',
+        release_tag: 'v9.9.9',
+        release_url: 'https://example.com/repo/releases/tag/v9.9.9',
+    });
+    check('A14-M1: commit_sha override flows through',
+        d2.provenance && d2.provenance.commit_sha === 'deadbeefcafe1234');
+    check('A14-M1: repository_url override flows through',
+        d2.provenance && d2.provenance.repository_url === 'https://example.com/repo');
+    check('A14-M1: release_tag override flows through',
+        d2.provenance && d2.provenance.release_tag === 'v9.9.9');
+}
+{
+    // A14-M2: computed_at falls back to a generated ISO string when manifest absent.
+    const d = E.buildDaubertDisclosure(null);
+    check('A14-M2: computed_at is non-null (ISO fallback)',
+        d.provenance && typeof d.provenance.computed_at === 'string' &&
+        d.provenance.computed_at.length >= 20);
+    // ISO 8601 sanity — parseable as a Date and round-trips.
+    const t = Date.parse(d.provenance.computed_at);
+    check('A14-M2: computed_at parses as a valid Date',
+        Number.isFinite(t) && t > 0);
+    // Caller-supplied manifest.computed_at takes precedence.
+    const fixed = '2025-01-01T00:00:00.000Z';
+    const d2 = E.buildDaubertDisclosure({ manifest: { computed_at: fixed } });
+    check('A14-M2: manifest.computed_at preserved',
+        d2.provenance && d2.provenance.computed_at === fixed);
+}
+{
+    // A14-M4: verification_command + attestation_url present and well-formed.
+    const d = E.buildDaubertDisclosure(null);
+    check('A14-M4: verification_command is non-empty string',
+        d.provenance && typeof d.provenance.verification_command === 'string' &&
+        d.provenance.verification_command.indexOf('npm run verify') > -1);
+    check('A14-M4: verification_command starts with git clone',
+        d.provenance && d.provenance.verification_command.indexOf('git clone') === 0);
+    check('A14-M4: attestation_url points at GitHub release',
+        d.provenance && d.provenance.attestation_url &&
+        d.provenance.attestation_url.indexOf('/releases/download/') > -1);
+    // Override works.
+    const d2 = E.buildDaubertDisclosure(null, {
+        verification_command: 'custom-cmd',
+        attestation_url: 'https://example.com/witness.json',
+    });
+    check('A14-M4: verification_command override',
+        d2.provenance && d2.provenance.verification_command === 'custom-cmd');
+    check('A14-M4: attestation_url override',
+        d2.provenance && d2.provenance.attestation_url === 'https://example.com/witness.json');
+}
+{
+    // A13-M1: audit_date is structured + supplied.
+    const d = E.buildDaubertDisclosure(null);
+    check('A13-M1: provenance.audit_date is YYYY-MM-DD string',
+        d.provenance && /^\d{4}-\d{2}-\d{2}$/.test(d.provenance.audit_date));
+    const d2 = E.buildDaubertDisclosure(null, { audit_date: '2026-12-01' });
+    check('A13-M1: audit_date override flows through',
+        d2.provenance && d2.provenance.audit_date === '2026-12-01');
+}
+{
+    // disclosure_format_version bump 1.0 → 1.1 for additive provenance fields.
+    const d = E.buildDaubertDisclosure(null);
+    check('Daubert format bumped to 1.1', d.disclosure_format_version === '1.1');
 }
 
 // ============================================================================
