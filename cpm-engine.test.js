@@ -2185,29 +2185,27 @@ console.log('\n=== v2.9.20 A15 — Numeric robustness ===');
 {
     // A15-M5: Bayesian update rejects ±Infinity actuals (would otherwise
     // produce Infinity-valued posteriors that corrupt downstream forecasts).
-    if (typeof E.computeBayesianForecast === 'function') {
-        const acts = [
-            { code: 'A', duration_days: 10, distribution: 'pert',
-              optimistic: 7, pessimistic: 13 },
-            { code: 'B', duration_days: 10, distribution: 'pert',
-              optimistic: 7, pessimistic: 13 },
-        ];
-        const actuals = { A: Infinity, B: 11 };
-        const result = E.computeBayesianForecast(acts, actuals, {});
-        // B should be updated normally; A should fall through (Infinity rejected)
-        // → A's posterior matches its prior (within tolerance).
-        const postA = result.posteriors && result.posteriors.A;
-        const postB = result.posteriors && result.posteriors.B;
-        check('A15-M5: Bayesian posteriors object present', !!postA && !!postB);
-        check('A15-M5: Infinity actual rejected → A posterior mean is finite',
-            postA && Number.isFinite(postA.mean));
-        check('A15-M5: Infinity actual rejected → A posterior std is finite',
-            postA && Number.isFinite(postA.std));
-        check('A15-M5: B updated → B mean ≠ raw prior mean (10)',
-            postB && Math.abs(postB.mean - 10) > 1e-9);
-    } else {
-        check('A15-M5: computeBayesianForecast not exported — skipping (skip)', true);
-    }
+    const acts = [
+        { code: 'A', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+        { code: 'B', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+    ];
+    const actuals = { A: Infinity, B: 11 };
+    const result = E.computeBayesianUpdate(acts, actuals, {});
+    const postA = result.posterior_by_code && result.posterior_by_code.A;
+    const postB = result.posterior_by_code && result.posterior_by_code.B;
+    check('A15-M5: Bayesian posterior_by_code present', !!postA && !!postB);
+    check('A15-M5: Infinity actual rejected → A posterior mean is finite',
+        postA && Number.isFinite(postA.mean));
+    check('A15-M5: Infinity actual rejected → A posterior std is finite',
+        postA && Number.isFinite(postA.std));
+    check('A15-M5: Infinity actual → A.actual_applied is false',
+        postA && postA.actual_applied === false);
+    check('A15-M5: B updated → B mean shifted toward observed 11',
+        postB && postB.mean > 10 && postB.mean <= 11);
+    check('A15-M5: B.actual_applied is true',
+        postB && postB.actual_applied === true);
 }
 {
     // A15-L1: addWorkDays/subtractWorkDays guard against ±Infinity nDays.
@@ -2249,6 +2247,110 @@ console.log('\n=== v2.9.20 A15 — Numeric robustness ===');
         E.addWorkDays(0, -0.5, null) === 0);
     check('A15-L2: addWorkDays(0, -1.5, null) → -1 (half-up: -1.5 rounds to -1)',
         E.addWorkDays(0, -1.5, null) === -1);
+}
+
+// ============================================================================
+// v2.9.20 A19 — Bayesian module MED
+// ============================================================================
+console.log('\n=== v2.9.20 A19 — Bayesian module MED ===');
+{
+    // A19-M1: negative actual durations emit WARN and skip update.
+    const acts = [
+        { code: 'NEG', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+        { code: 'OK',  duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+    ];
+    const actuals = { NEG: -3, OK: 11 };
+    const result = E.computeBayesianUpdate(acts, actuals, {});
+    check('A19-M1: alerts array on result', Array.isArray(result.alerts));
+    check('A19-M1: ≥1 invalid-actual-duration WARN',
+        result.alerts.some(a => a.context === 'invalid-actual-duration' && a.code === 'NEG'));
+    check('A19-M1: NEG.actual_applied === false',
+        result.posterior_by_code.NEG && result.posterior_by_code.NEG.actual_applied === false);
+    check('A19-M1: OK.actual_applied === true',
+        result.posterior_by_code.OK && result.posterior_by_code.OK.actual_applied === true);
+    check('A19-M1: manifest.actuals_applied === 1',
+        result.manifest.actuals_applied === 1);
+    check('A19-M1: manifest.actuals_rejected === 1',
+        result.manifest.actuals_rejected === 1);
+}
+{
+    // A19-M1 hierarchical: negative group actual is excluded from group evidence.
+    const acts = [
+        { code: 'X', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+        { code: 'Y', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+        { code: 'Z', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+    ];
+    const result = E.computeBayesianUpdate(acts, { X: -5, Y: 12 },
+        { wbs_groups: { X: 'G1', Y: 'G1', Z: 'G1' } });
+    check('A19-M1 (hier): negative actual emits WARN',
+        result.alerts.some(a => a.context === 'invalid-actual-duration' && a.code === 'X'));
+    // Group evidence count should be 1 (only Y), not 2.
+    check('A19-M1 (hier): group_posteriors.G1.contributing_count === 1',
+        result.group_posteriors && result.group_posteriors.G1 &&
+        result.group_posteriors.G1.contributing_count === 1);
+}
+{
+    // A19-M2: Infinity prior_strength rejected; falls back to 1.0 default.
+    const acts = [
+        { code: 'A', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+    ];
+    const result = E.computeBayesianUpdate(acts, { A: 11 },
+        { prior_strength: Infinity });
+    check('A19-M2: Infinity prior_strength → manifest.prior_strength === 1.0',
+        result.manifest.prior_strength === 1.0);
+    const postA = result.posterior_by_code.A;
+    check('A19-M2: posterior mean is finite after Infinity prior_strength reject',
+        postA && Number.isFinite(postA.mean));
+    check('A19-M2: posterior std is finite after Infinity prior_strength reject',
+        postA && Number.isFinite(postA.std));
+    // NaN prior_strength → 1.0
+    const r2 = E.computeBayesianUpdate(acts, { A: 11 }, { prior_strength: NaN });
+    check('A19-M2: NaN prior_strength → 1.0', r2.manifest.prior_strength === 1.0);
+}
+{
+    // A19-M4: small-denominator percentages emit null with abs delta fallback.
+    // Use a near-zero prior (duration=0.0000001 → prior.mu ≈ 1e-7 — below SMALL_DENOM)
+    const acts = [
+        { code: 'TINY', duration_days: 1e-7, distribution: 'pert',
+          optimistic: 1e-7, pessimistic: 1e-6 },
+    ];
+    const result = E.computeBayesianUpdate(acts, { TINY: 0.5 }, {});
+    const shift = result.prior_vs_posterior_shift.TINY;
+    check('A19-M4: small denom → mean_delta_pct is null',
+        shift && shift.mean_delta_pct === null);
+    check('A19-M4: small denom → mean_delta_abs is finite',
+        shift && Number.isFinite(shift.mean_delta_abs));
+    // Normal-denom case still produces percentages.
+    const acts2 = [
+        { code: 'NORMAL', duration_days: 10, distribution: 'pert',
+          optimistic: 7, pessimistic: 13 },
+    ];
+    const r2 = E.computeBayesianUpdate(acts2, { NORMAL: 15 }, {});
+    const s2 = r2.prior_vs_posterior_shift.NORMAL;
+    check('A19-M4: normal denom → mean_delta_pct is a number',
+        s2 && typeof s2.mean_delta_pct === 'number');
+    check('A19-M4: normal denom → mean_delta_abs present alongside pct',
+        s2 && Number.isFinite(s2.mean_delta_abs));
+}
+{
+    // A19: credible_interval input validation. Out-of-range values fall back to 0.95.
+    const acts = [{ code: 'A', duration_days: 10, distribution: 'pert',
+                    optimistic: 7, pessimistic: 13 }];
+    const r1 = E.computeBayesianUpdate(acts, {}, { credible_interval: 1.5 });
+    check('A19: credible_interval=1.5 → falls back to 0.95',
+        r1.manifest.credible_interval === 0.95);
+    const r2 = E.computeBayesianUpdate(acts, {}, { credible_interval: -0.1 });
+    check('A19: credible_interval=-0.1 → falls back to 0.95',
+        r2.manifest.credible_interval === 0.95);
+    const r3 = E.computeBayesianUpdate(acts, {}, { credible_interval: 0.99 });
+    check('A19: credible_interval=0.99 → preserved',
+        r3.manifest.credible_interval === 0.99);
 }
 
 // ============================================================================

@@ -5990,11 +5990,23 @@ function renderDaubertMarkdown(disclosure, opts) {
  */
 function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
     opts = opts || {};
-    const credibleInterval = (typeof opts.credible_interval === 'number')
+    const credibleInterval = (typeof opts.credible_interval === 'number'
+        && Number.isFinite(opts.credible_interval)
+        && opts.credible_interval > 0 && opts.credible_interval < 1)
         ? opts.credible_interval : 0.95;
-    const priorStrength = (typeof opts.prior_strength === 'number' && opts.prior_strength > 0)
+    // v2.9.20 A19-M2 — `opts.prior_strength > 0` is true for Infinity, which
+    // would collapse the conjugate update to "prior dominates entirely" with
+    // NaN side effects in the variance math (Infinity / Infinity inside
+    // _conjugateUpdate). Number.isFinite() rejects the degenerate input.
+    const priorStrength = (typeof opts.prior_strength === 'number'
+        && Number.isFinite(opts.prior_strength)
+        && opts.prior_strength > 0)
         ? opts.prior_strength : 1.0;
     const wbsGroups = opts.wbs_groups || null;
+    // v2.9.20 A19-M1 — alerts channel for actuals validation. Negative
+    // actual durations are physically impossible; emit a WARN per code
+    // and skip the update so the silent-wrong-answer rule holds.
+    const bayesAlerts = [];
 
     // Validate inputs
     if (!Array.isArray(priorActivities) || priorActivities.length === 0) {
@@ -6181,18 +6193,44 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
                 // forever. Number.isFinite() rejects both NaN and ±Infinity
                 // so the hierarchical update can never silently emit
                 // Infinity-valued posteriors.
-                if (Number.isFinite(x)) {
-                    const gid = wbsGroups[code];
-                    groupEvidence[gid].sum += x;
-                    groupEvidence[gid].sumSq += x * x;
-                    groupEvidence[gid].count++;
-                    groupEvidence[gid].codes.push(code);
+                if (!Number.isFinite(x)) continue;
+                // v2.9.20 A19-M1 — negative actual durations are physically
+                // impossible. Emit a WARN and skip the update.
+                if (x < 0) {
+                    bayesAlerts.push({
+                        severity: 'WARN',
+                        context: 'invalid-actual-duration',
+                        code: code,
+                        message: 'Bayesian update for ' + code + ' skipped: ' +
+                            'actual_duration=' + x + ' is < 0 (physically impossible).',
+                    });
+                    continue;
                 }
+                const gid = wbsGroups[code];
+                groupEvidence[gid].sum += x;
+                groupEvidence[gid].sumSq += x * x;
+                groupEvidence[gid].count++;
+                groupEvidence[gid].codes.push(code);
             }
         }
     }
 
     // ── Compute per-group posterior summary ───────────────────────────────────
+    // v2.9.20 A19-M3 — variance formula limitation note.
+    //
+    // The textbook two-pass formula (sumSq - sum²/count)/(count-1) is
+    // numerically unstable under catastrophic cancellation when sum²/count
+    // is close to sumSq (uniform values + large magnitudes). For typical
+    // forensic schedule actuals (durations 1-200 days, small group sizes
+    // <50), the cancellation budget is ~6 digits — adequate for the
+    // 3-decimal posterior reporting below.
+    //
+    // For ill-conditioned inputs (very large means with very small spread,
+    // e.g. mean=1e6 days with std=1e-3 — physically unrealistic), Welford's
+    // online algorithm would be required. Deferred to v3.0 scope.
+    //
+    // The Math.max(gVar, 1e-12) clamp prevents the sqrt(-epsilon)
+    // floating-point flip from emitting NaN.
     const group_posteriors = Object.create(null);
     if (wbsGroups) {
         for (const gid in groupEvidence) {
@@ -6226,15 +6264,26 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         let postSigma = prior.sigma;
 
         const hasActual = Object.prototype.hasOwnProperty.call(actuals, code);
+        let actualWasApplied = false;
         if (hasActual) {
             const x = parseFloat(actuals[code]);
             // v2.9.20 A15-M5 — see paired comment in the group-evidence
             // loop. Reject ±Infinity so the conjugate update can't emit
             // a posterior with infinite mean/sigma.
-            if (Number.isFinite(x)) {
+            // v2.9.20 A19-M1 — reject negative durations.
+            if (Number.isFinite(x) && x >= 0) {
                 const updated = _conjugateUpdate(prior.mu, prior.sigma, x, priorStrength);
                 postMu = updated.mu;
                 postSigma = updated.sigma;
+                actualWasApplied = true;
+            } else if (Number.isFinite(x) && x < 0) {
+                bayesAlerts.push({
+                    severity: 'WARN',
+                    context: 'invalid-actual-duration',
+                    code: code,
+                    message: 'Bayesian update for ' + code + ' skipped: ' +
+                        'actual_duration=' + x + ' is < 0 (physically impossible).',
+                });
             }
         } else if (wbsGroups && wbsGroups[code]) {
             // Hierarchical: shift prior toward group mean (shrinkage)
@@ -6288,17 +6337,31 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
             ci_high: Math.round(ci_high * 1000) / 1000,
             distribution: prior.distribution,
             had_actual: hasActual,
+            // v2.9.20 A19-M1 — distinguish "actual was supplied" from
+            // "actual was successfully applied". Invalid actuals (negative,
+            // non-finite) leave had_actual=true but actual_applied=false.
+            actual_applied: actualWasApplied,
         };
 
-        const meanDeltaPct = prior.mu !== 0
+        // v2.9.20 A19-M4 — guard small-denominator percentages. When
+        // |prior.mu| or |prior.sigma| is below 1e-6 days, the percentage
+        // change ((post-prior)/prior * 100) is dominated by float noise
+        // and produces uninformative giant numbers. Emit null with a
+        // companion absolute delta so consumers can present either.
+        const SMALL_DENOM = 1e-6;
+        const meanDeltaPct = (prior.mu !== 0 && Math.abs(prior.mu) >= SMALL_DENOM)
             ? Math.round(((postMu - prior.mu) / prior.mu) * 10000) / 100
-            : 0;
-        const stdDeltaPct = prior.sigma !== 0
+            : null;
+        const stdDeltaPct = (prior.sigma !== 0 && Math.abs(prior.sigma) >= SMALL_DENOM)
             ? Math.round(((postSigma - prior.sigma) / prior.sigma) * 10000) / 100
-            : 0;
+            : null;
         prior_vs_posterior_shift[code] = {
             mean_delta_pct: meanDeltaPct,
             std_delta_pct: stdDeltaPct,
+            // Absolute deltas always available; consumers should prefer
+            // these when *_delta_pct is null (small-denominator case).
+            mean_delta_abs: Math.round((postMu - prior.mu) * 1000) / 1000,
+            std_delta_abs: Math.round((postSigma - prior.sigma) * 1000) / 1000,
         };
     }
 
@@ -6306,6 +6369,9 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         posterior_by_code,
         prior_vs_posterior_shift,
         methodology: 'Bayesian sequential updating with optional hierarchical pooling per WBS group',
+        // v2.9.20 A19-M1 — surface invalid-actual WARNs so callers can
+        // present a forensically-visible audit trail of skipped updates.
+        alerts: bayesAlerts,
         manifest: {
             engine_version: ENGINE_VERSION,
             method_id: 'computeBayesianUpdate',
@@ -6314,6 +6380,11 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
             prior_strength: priorStrength,
             activity_count: priorActivities.length,
             actual_count: Object.keys(actuals).length,
+            // v2.9.20 A19-M1 — distinguish supplied actuals from applied ones.
+            actuals_applied: Object.keys(posterior_by_code).reduce(function (n, c) {
+                return n + (posterior_by_code[c] && posterior_by_code[c].actual_applied ? 1 : 0);
+            }, 0),
+            actuals_rejected: bayesAlerts.length,
         },
     };
 
