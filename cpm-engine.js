@@ -644,7 +644,13 @@ function _preResolveCalendars(calMap, alerts) {
 function addWorkDays(startNum, nDays, calendarInfo) {
     // startNum: epoch-offset days. Returns new offset after N working days.
     if (nDays === null || nDays === undefined) nDays = 0;
-    let n = _roundHalfUp(Number(nDays) || 0);
+    // v2.9.20 A15-L1 — `Number(nDays) || 0` keeps ±Infinity (truthy) and
+    // would push the work-day walker into an infinite loop. Coerce
+    // non-finite inputs to 0 so the function returns a sensible anchor
+    // rather than hanging. NaN, Infinity, -Infinity all collapse to 0.
+    let _rawN = Number(nDays);
+    if (!Number.isFinite(_rawN)) _rawN = 0;
+    let n = _roundHalfUp(_rawN);
     if (n < 0) return subtractWorkDays(startNum, -n, calendarInfo);
     // v2.9.12 F2.1 — zero-advance snap. When n === 0 with a real calendar,
     // a startNum that lies on a non-workday must be snapped FORWARD to the
@@ -683,7 +689,10 @@ function addWorkDays(startNum, nDays, calendarInfo) {
 
 function subtractWorkDays(endNum, nDays, calendarInfo) {
     if (nDays === null || nDays === undefined) nDays = 0;
-    let n = _roundHalfUp(Number(nDays) || 0);
+    // v2.9.20 A15-L1 — symmetric to addWorkDays Infinity guard.
+    let _rawN = Number(nDays);
+    if (!Number.isFinite(_rawN)) _rawN = 0;
+    let n = _roundHalfUp(_rawN);
     if (n < 0) return addWorkDays(endNum, -n, calendarInfo);
     // v2.9.12 F2.1 — symmetric zero-retreat snap (see addWorkDays). When
     // n === 0 with a real calendar, a non-workday anchor snaps BACKWARD to
@@ -778,28 +787,36 @@ function _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx) {
 
 function _advanceWithAlerts(startNum, nDays, calendarInfo, alerts, ctx) {
     _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx);
-    if (startNum <= 0) return startNum + _roundHalfUp(Number(nDays) || 0);
+    // v2.9.20 A15-L1 — ordinal-arithmetic fallback also needs the Infinity
+    // guard. Without it, an Infinity lag in a non-calendar codepath would
+    // emit Infinity-valued ES/EF that JSON.stringify serializes as `null`.
+    const _nRaw = Number(nDays);
+    const _nSafe = Number.isFinite(_nRaw) ? _nRaw : 0;
+    if (startNum <= 0) return startNum + _roundHalfUp(_nSafe);
     if (!calendarInfo) {
         alerts.push({
             severity: 'ALERT',
             context: ctx,
             message: 'Calendar-aware arithmetic unavailable (no cal_map/clndr_id) — falling back to 7-day ordinal arithmetic.',
         });
-        return startNum + _roundHalfUp(Number(nDays) || 0);
+        return startNum + _roundHalfUp(_nSafe);
     }
     return addWorkDays(startNum, nDays, calendarInfo);
 }
 
 function _retreatWithAlerts(endNum, nDays, calendarInfo, alerts, ctx) {
     _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx);
-    if (endNum <= 0) return endNum - _roundHalfUp(Number(nDays) || 0);
+    // v2.9.20 A15-L1 — symmetric to _advanceWithAlerts Infinity guard.
+    const _nRaw = Number(nDays);
+    const _nSafe = Number.isFinite(_nRaw) ? _nRaw : 0;
+    if (endNum <= 0) return endNum - _roundHalfUp(_nSafe);
     if (!calendarInfo) {
         alerts.push({
             severity: 'ALERT',
             context: ctx,
             message: 'Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) — falling back to 7-day ordinal arithmetic.',
         });
-        return endNum - _roundHalfUp(Number(nDays) || 0);
+        return endNum - _roundHalfUp(_nSafe);
     }
     return subtractWorkDays(endNum, nDays, calendarInfo);
 }
@@ -2363,8 +2380,17 @@ function parseXER(content) {
                 const _dhpd = (row.clndr_id && _MC.calendarHoursPerDay[row.clndr_id])
                     ? _MC.calendarHoursPerDay[row.clndr_id]
                     : 8;
-                const remaining = (parseFloat(row.remain_drtn_hr_cnt) || 0) / _dhpd;
-                const targetDur = (parseFloat(row.target_drtn_hr_cnt) || 0) / _dhpd;
+                // v2.9.20 A15-M6 — `parseFloat(Infinity) || 0` keeps Infinity
+                // (truthy), letting Infinity-hour XER rows propagate as
+                // Infinity-day durations downstream. Number.isFinite() rejects
+                // both NaN and ±Infinity so corrupt XER rows can't silently
+                // poison the duration field.
+                const _remHrRaw = parseFloat(row.remain_drtn_hr_cnt);
+                const _remHr = Number.isFinite(_remHrRaw) ? _remHrRaw : 0;
+                const remaining = _remHr / _dhpd;
+                const _tgtHrRaw = parseFloat(row.target_drtn_hr_cnt);
+                const _tgtHr = Number.isFinite(_tgtHrRaw) ? _tgtHrRaw : 0;
+                const targetDur = _tgtHr / _dhpd;
                 const _taskType = row.task_type || '';
                 // Drop reasons. Finish milestones (TT_FinMile) and start
                 // milestones (TT_Mile) legitimately have 0 duration; they
@@ -3967,9 +3993,16 @@ function computeCPMSalvaging(activities, relationships, opts) {
             const inCycle = workingRels.filter(r =>
                 cycleSet.has(r.from_code) && cycleSet.has(r.to_code));
             // Heuristic: highest |lag|, alpha tiebreak by (from_code, to_code).
+            // v2.9.20 A15-M3 — `parseFloat(x) || 0` keeps ±Infinity (truthy)
+            // and lets it leak into the sort, where Infinity−Infinity = NaN
+            // produces non-deterministic ordering. Use Number.isFinite()
+            // and coerce non-finite lags to 0 so the highest-|lag| heuristic
+            // still picks a real edge.
             inCycle.sort((a, b) => {
-                const la = Math.abs(parseFloat(a.lag_days) || 0);
-                const lb = Math.abs(parseFloat(b.lag_days) || 0);
+                const pa = parseFloat(a.lag_days);
+                const pb = parseFloat(b.lag_days);
+                const la = Number.isFinite(pa) ? Math.abs(pa) : 0;
+                const lb = Number.isFinite(pb) ? Math.abs(pb) : 0;
                 if (lb !== la) return lb - la;
                 if (a.from_code !== b.from_code) return a.from_code < b.from_code ? -1 : 1;
                 if (a.to_code !== b.to_code) return a.to_code < b.to_code ? -1 : 1;
@@ -4294,11 +4327,16 @@ function computeCPMWithStrategies(activities, relationships, opts) {
             if (!r || !r.from_code || !r.to_code) continue;
             if (!(r.to_code in mfpPredMap)) continue;
             if (!(r.from_code in result.nodes)) continue;
+            // v2.9.20 A15-M4 — `parseFloat(x) || 0` keeps ±Infinity (truthy)
+            // and lets it leak into the MFP path walk where it corrupts
+            // float-totalling math. Use Number.isFinite() and coerce.
+            const _mfpLagRaw = parseFloat(r.lag_days);
+            const _mfpLag = Number.isFinite(_mfpLagRaw) ? _mfpLagRaw : 0;
             mfpPredMap[r.to_code].push({
                 from_code: r.from_code,
                 to_code: r.to_code,
                 type: r.type || 'FS',
-                lag_days: parseFloat(r.lag_days) || 0,
+                lag_days: _mfpLag,
             });
         }
 
@@ -6138,7 +6176,12 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         for (const code in wbsGroups) {
             if (Object.prototype.hasOwnProperty.call(actuals, code)) {
                 const x = parseFloat(actuals[code]);
-                if (!isNaN(x)) {
+                // v2.9.20 A15-M5 — `!isNaN(Infinity)` is true; Infinity would
+                // leak into ge.sum / ge.sumSq and corrupt the group prior
+                // forever. Number.isFinite() rejects both NaN and ±Infinity
+                // so the hierarchical update can never silently emit
+                // Infinity-valued posteriors.
+                if (Number.isFinite(x)) {
                     const gid = wbsGroups[code];
                     groupEvidence[gid].sum += x;
                     groupEvidence[gid].sumSq += x * x;
@@ -6185,7 +6228,10 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         const hasActual = Object.prototype.hasOwnProperty.call(actuals, code);
         if (hasActual) {
             const x = parseFloat(actuals[code]);
-            if (!isNaN(x)) {
+            // v2.9.20 A15-M5 — see paired comment in the group-evidence
+            // loop. Reject ±Infinity so the conjugate update can't emit
+            // a posterior with infinite mean/sigma.
+            if (Number.isFinite(x)) {
                 const updated = _conjugateUpdate(prior.mu, prior.sigma, x, priorStrength);
                 postMu = updated.mu;
                 postSigma = updated.sigma;

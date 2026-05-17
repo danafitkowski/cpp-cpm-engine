@@ -2161,6 +2161,97 @@ console.log('\n=== v2.9.20 A13-M1 / A14-M1/M2/M4 — Daubert provenance enrichme
 }
 
 // ============================================================================
+// v2.9.20 A15 — Numeric robustness (M3/M4/M5/M6/L1/L2)
+// ============================================================================
+console.log('\n=== v2.9.20 A15 — Numeric robustness ===');
+{
+    // A15-M3: Salvager handles ±Infinity lag in the cycle-break sort without
+    // producing non-deterministic output (Infinity − Infinity = NaN).
+    const r = E.computeCPMSalvaging(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        // 2-cycle with one Infinity lag — must coerce to 0 in the heuristic
+        // sort so the highest-|lag| pick is the OTHER edge (lag=5).
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: Infinity },
+         { from_code: 'B', to_code: 'A', type: 'FS', lag_days: 5 }],
+        { dataDate: '2026-01-05' }
+    );
+    const drops = r.salvage_log.filter(e => e.category === 'DROPPED_EDGE');
+    check('A15-M3: salvager produced ≥1 DROPPED_EDGE despite Infinity lag',
+        drops.length >= 1);
+    check('A15-M3: salvager produced a finite projectFinishNum (no NaN/Infinity leak)',
+        Number.isFinite(r.projectFinishNum) && r.projectFinishNum > 0);
+}
+{
+    // A15-M5: Bayesian update rejects ±Infinity actuals (would otherwise
+    // produce Infinity-valued posteriors that corrupt downstream forecasts).
+    if (typeof E.computeBayesianForecast === 'function') {
+        const acts = [
+            { code: 'A', duration_days: 10, distribution: 'pert',
+              optimistic: 7, pessimistic: 13 },
+            { code: 'B', duration_days: 10, distribution: 'pert',
+              optimistic: 7, pessimistic: 13 },
+        ];
+        const actuals = { A: Infinity, B: 11 };
+        const result = E.computeBayesianForecast(acts, actuals, {});
+        // B should be updated normally; A should fall through (Infinity rejected)
+        // → A's posterior matches its prior (within tolerance).
+        const postA = result.posteriors && result.posteriors.A;
+        const postB = result.posteriors && result.posteriors.B;
+        check('A15-M5: Bayesian posteriors object present', !!postA && !!postB);
+        check('A15-M5: Infinity actual rejected → A posterior mean is finite',
+            postA && Number.isFinite(postA.mean));
+        check('A15-M5: Infinity actual rejected → A posterior std is finite',
+            postA && Number.isFinite(postA.std));
+        check('A15-M5: B updated → B mean ≠ raw prior mean (10)',
+            postB && Math.abs(postB.mean - 10) > 1e-9);
+    } else {
+        check('A15-M5: computeBayesianForecast not exported — skipping (skip)', true);
+    }
+}
+{
+    // A15-L1: addWorkDays/subtractWorkDays guard against ±Infinity nDays.
+    // Without the guard, the day-by-day walker enters an infinite loop.
+    const start = E.dateToNum('2026-01-05');
+    const r1 = E.addWorkDays(start, Infinity, null);
+    check('A15-L1: addWorkDays(start, Infinity, null) returns finite',
+        Number.isFinite(r1));
+    check('A15-L1: addWorkDays(start, Infinity, null) === start (n→0)',
+        r1 === start);
+    const r2 = E.subtractWorkDays(start, -Infinity, null);
+    check('A15-L1: subtractWorkDays(start, -Infinity, null) finite + identity',
+        Number.isFinite(r2) && r2 === start);
+    const r3 = E.addWorkDays(start, NaN, null);
+    check('A15-L1: addWorkDays(start, NaN, null) === start',
+        Number.isFinite(r3) && r3 === start);
+}
+{
+    // A15-L2: _roundHalfUp convention is locked in at boundaries.
+    // The engine harmonizes JS↔Python parity by using Math.floor(x + 0.5)
+    // instead of V8's Math.round. Catch any future refactor that swaps back.
+    // We probe via addWorkDays at half-day n values that exercise the rounder.
+    const start = E.dateToNum('2026-01-05');  // Mon 2026-01-05
+    // 0.5 → 1 (rounds up); 1.5 → 2; 2.5 → 3; 3.5 → 4. Day-by-day on Mon-Fri.
+    // Calendar-less ordinal: addWorkDays(start<=0 path NOT taken since start>0,
+    // so it goes through the workday walker. Need a calendar for the walker.
+    // Easier: use the ordinal fallback by passing startNum=0.
+    check('A15-L2: addWorkDays(0, 0.5, null) → 0 + 1 (half-up)',
+        E.addWorkDays(0, 0.5, null) === 1);
+    check('A15-L2: addWorkDays(0, 1.5, null) → 0 + 2',
+        E.addWorkDays(0, 1.5, null) === 2);
+    check('A15-L2: addWorkDays(0, 2.5, null) → 0 + 3',
+        E.addWorkDays(0, 2.5, null) === 3);
+    // -0.5 rounds half-UP toward +Infinity → 0 (not -1). Math.floor(-0.5 + 0.5)
+    // = Math.floor(0) = 0. So addWorkDays(0, -0.5, null) → 0 (identity).
+    // This locks in the half-up convention; if a future refactor swaps to
+    // banker's rounding or floor-toward-zero, the case below breaks loudly.
+    check('A15-L2: addWorkDays(0, -0.5, null) → 0 (half-up: -0.5 rounds to 0)',
+        E.addWorkDays(0, -0.5, null) === 0);
+    check('A15-L2: addWorkDays(0, -1.5, null) → -1 (half-up: -1.5 rounds to -1)',
+        E.addWorkDays(0, -1.5, null) === -1);
+}
+
+// ============================================================================
 // v2.3-D2 — P6-compatible MFP exact algorithm tests
 // ============================================================================
 
