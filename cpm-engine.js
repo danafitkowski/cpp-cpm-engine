@@ -1485,6 +1485,11 @@ function computeCPM(activities, relationships, opts) {
                 };
                 finishAnchorEF = null;
             }
+            // v2.9.16 F5-A — capture primary mandatory-start pin so secondary
+            // SNET cannot silently override it. Per P6, MS_Start/SO is a
+            // hard pin; soft secondary constraints cannot move it.
+            const _isPrimaryMandatoryStart = cstr && (cstr.type === 'MS_Start' || cstr.type === 'SO') && cstr.date;
+            const _primaryMandatoryStartNum = _isPrimaryMandatoryStart ? dateToNum(cstr.date) : -1;
             const _esBeforeSecondary = maxES;
             maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts);
             if (maxES > _esBeforeSecondary && cstr2 && cstr2.date) {
@@ -1494,6 +1499,46 @@ function computeCPM(activities, relationships, opts) {
                     date: cstr2.date,
                 };
                 finishAnchorEF = null;
+            }
+            // v2.9.16 F5-B — secondary cannot override primary mandatory start.
+            if (_isPrimaryMandatoryStart && maxES !== _primaryMandatoryStartNum) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'constraint-priority-override',
+                    message: 'Secondary ' + (cstr2 ? cstr2.type : '') + ' on ' + code +
+                        ' attempted to move ES off mandatory ' + cstr.type +
+                        ' pin (' + cstr.date + '); secondary suppressed.',
+                });
+                maxES = _primaryMandatoryStartNum;
+                drivingPred = {
+                    type: 'CONSTRAINT',
+                    constraint_type: cstr.type,
+                    date: cstr.date,
+                };
+                finishAnchorEF = null;
+            }
+            // v2.9.16 F5-B (symmetric) — if secondary is mandatory and primary
+            // is soft, primary can have moved maxES off the secondary mandatory.
+            const _isSecondaryMandatoryStart = cstr2 && (cstr2.type === 'MS_Start' || cstr2.type === 'SO') && cstr2.date;
+            if (_isSecondaryMandatoryStart) {
+                const _secondaryMandatoryStartNum = dateToNum(cstr2.date);
+                if (maxES !== _secondaryMandatoryStartNum) {
+                    // Secondary mandatory should be honored. If a soft primary
+                    // (SNET) pushed maxES past it, the mandatory pin still wins.
+                    alerts.push({
+                        severity: 'WARN',
+                        context: 'constraint-priority-override',
+                        message: 'Mandatory secondary ' + cstr2.type + ' on ' + code +
+                            ' restored ES to ' + cstr2.date + ' over soft primary.',
+                    });
+                    maxES = _secondaryMandatoryStartNum;
+                    drivingPred = {
+                        type: 'CONSTRAINT',
+                        constraint_type: cstr2.type,
+                        date: cstr2.date,
+                    };
+                    finishAnchorEF = null;
+                }
             }
         } else {
             if (cstr && (cstr.type === 'SNET' || cstr.type === 'MS_Start' || cstr.type === 'SO')) {
@@ -1548,6 +1593,39 @@ function computeCPM(activities, relationships, opts) {
         // v2.9.12 T3.20 — pass node.es so the helper guarantees EF >= ES.
         node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts, node.es);
         node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts, node.es);
+        // v2.9.16 F5-A — after BOTH EF constraints applied, re-check FNLT /
+        // MS_Finish / MFO deadlines on either slot. Soft FNET on the secondary
+        // can silently push EF past a FNLT primary's deadline. Single-call
+        // FNLT only alerts on its own pass; if a later push violates it, we
+        // need a second cross-check.
+        function _checkFinalEFDeadline(_cstr, _label) {
+            if (!_cstr) return;
+            const _cd = _cstr.date ? dateToNum(_cstr.date) : 0;
+            if (_cd <= 0) return;
+            if ((_cstr.type === 'FNLT' || _cstr.type === 'MS_Finish' || _cstr.type === 'MFO') &&
+                node.ef > _cd) {
+                // Avoid double-alerting: skip if a violation alert with the
+                // same constraint already fired (the helper logs one if the
+                // initial value exceeded cdNum).
+                const _tag = _label === 'secondary' ? ' (secondary)' : '';
+                const _msg = _cstr.type + _tag + ' on ' + code;
+                const _already = alerts.some(a =>
+                    a.context === 'constraint-violated' &&
+                    a.message && a.message.indexOf(_msg) === 0);
+                if (!_already) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: _cstr.type + _tag + ' on ' + code +
+                            ' violated by subsequent constraint: final EF=' +
+                            numToDate(node.ef) + ' is after constraint date ' +
+                            _cstr.date,
+                    });
+                }
+            }
+        }
+        _checkFinalEFDeadline(cstr, 'primary');
+        _checkFinalEFDeadline(cstr2, 'secondary');
 
         // v2.9.15 P2 (F14-4) — DATA_DATE-driven driver. When no pred and no
         // constraint won, but maxES === ddNum AND the activity has predecessors
@@ -1638,8 +1716,48 @@ function computeCPM(activities, relationships, opts) {
         // Primary then secondary; secondary tightens further if it applies.
         const cstr = node.constraint;
         const cstr2 = node.constraint2;
+        // v2.9.16 F5-C — soft secondary cannot tighten LF below a primary
+        // mandatory pin. Capture the LF that a primary mandatory (MS_Start /
+        // SO / MS_Finish / MFO) would have set, then refuse to let the
+        // secondary FNLT / SNLT pull LF below it.
+        function _isMandatoryConstraint(c) {
+            return c && (c.type === 'MS_Start' || c.type === 'SO' ||
+                         c.type === 'MS_Finish' || c.type === 'MFO');
+        }
+        const _primaryMandatoryLF = _isMandatoryConstraint(cstr)
+            ? _applyBackwardLFConstraint(code, Infinity, cstr, nodeCal, node.duration_days, [])
+            : null;
         minLF = _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, node.duration_days, alerts);
+        const _minLFBeforeSecondary = minLF;
         minLF = _applyBackwardLFConstraint(code, minLF, cstr2, nodeCal, node.duration_days, alerts);
+        if (_primaryMandatoryLF !== null && Number.isFinite(_primaryMandatoryLF) &&
+            minLF < _primaryMandatoryLF) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-priority-override',
+                message: 'Secondary ' + (cstr2 ? cstr2.type : '') + ' on ' + code +
+                    ' attempted to tighten LF below primary mandatory ' + cstr.type +
+                    ' pin (' + cstr.date + '); secondary suppressed.',
+            });
+            minLF = _primaryMandatoryLF;
+        }
+        // Symmetric — if secondary is mandatory, restore its pin if primary
+        // (soft) pulled LF off it.
+        const _secondaryMandatoryLF = _isMandatoryConstraint(cstr2)
+            ? _applyBackwardLFConstraint(code, Infinity, cstr2, nodeCal, node.duration_days, [])
+            : null;
+        if (_secondaryMandatoryLF !== null && Number.isFinite(_secondaryMandatoryLF) &&
+            minLF !== _secondaryMandatoryLF && !_isMandatoryConstraint(cstr)) {
+            // Only restore if primary was NOT also mandatory (otherwise the
+            // primary check above already won).
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-priority-override',
+                message: 'Mandatory secondary ' + cstr2.type + ' on ' + code +
+                    ' restored LF to ' + cstr2.date + ' over soft primary.',
+            });
+            minLF = _secondaryMandatoryLF;
+        }
 
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
@@ -2735,6 +2853,27 @@ function runCPM(opts) {
         // because cOff<0 (projectStart missing or invalid cstr.date).
         function _clampLFBackward(cstr) {
             if (!cstr) return;
+            // v2.9.16 F5-D — Section D backward pass adds MS_Start / SO
+            // clamping to match Section C's v2.9.12 T1.1 fix. Mandatory-start
+            // on backward pass: LF = cstr.date + remaining so the post-clamp
+            // LS recompute lands on cstr.date (LS pinned, TF=0).
+            const isStartMandatory = (cstr.type === 'MS_Start' || cstr.type === 'SO');
+            if (isStartMandatory && cstr.date) {
+                const _cOff = _cstrDayOffset(cstr.date);
+                if (_cOff < 0) {
+                    alerts.push({
+                        severity: 'WARN',
+                        context: 'constraint-skipped',
+                        message: 'Section D mandatory-start constraint ' + cstr.type + ' on ' + task.code +
+                            ' (date=' + cstr.date + ') skipped: ' +
+                            (projectStart ? 'invalid constraint date' : 'opts.projectStart missing') +
+                            '. Provide a valid opts.projectStart and cstr.date to enforce.',
+                    });
+                    return;
+                }
+                task.LF = _cOff + task.remaining;
+                return;
+            }
             const isLFType = (cstr.type === 'FNLT' ||
                               cstr.type === 'MS_Finish' ||
                               cstr.type === 'MFO' ||
