@@ -12,6 +12,39 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.16 — 2026-05-17 — Zero baseline failures + Python F2 backport
+
+Closes the "7 baseline failures preserved" framing from v2.9.13/14/15. The earlier waves called these failures "deliberately preserved" because the underlying scenarios required reverting v2.9.13 F1-Bug 5. That was hand-waving. The actual root causes were six test-architecture issues plus one real engine bug:
+
+### Engine fix (1 of 1)
+
+- **f2-py**: Python `add_work_days` and `subtract_work_days` missed the F2.1 zero-snap-to-workday contract that JS got in v2.9.14. When `n === 0` with a real calendar and a non-workday anchor, JS snaps to the nearest working day; Python returned the input unchanged. Crossval F11 (MonFri + 7-day calendars mixed) caught it: `project_finish_num js=2213 py=2212` — Python silently let a successor start on Saturday while JS correctly snapped to Monday. Backported. Closes the only crossval baseline failure.
+
+### Test architecture (6 of 6)
+
+Five test setups used the pre-v2.9.13 `early_start`-as-SNET-floor pattern. F1-Bug 5 demoted `early_start` to an initialization hint to close the round-trip silent-anchor bug. The tests needed to switch from `early_start` anchoring to `dataDate` anchoring; not a deliberate design choice, just stale test setup.
+
+Fixed:
+- `cal-aware: 5d MonFri Mon → next Mon (EF exclusive)`
+- `Section C: cal-aware finish 2026-01-26`
+- `T2.12: A.tf is negative on over-constrained schedule`
+- `T2.12: A.tf_working_days preserves negative sign`
+- `T3.20: constraint-violated alert emitted`
+
+Sixth: the `walkAdd` / `walkSub` ground-truth helpers in the addWorkDays/subtractWorkDays fast-path equivalence tests didn't reflect the F2.1 zero-snap contract. They returned input unchanged on `n=0` while the engine correctly snapped to next workday. 8+9 false mismatches; helpers updated to match the new contract.
+
+### Test state
+
+| Metric | v2.9.15 | v2.9.16 |
+|---|---|---|
+| Unit tests | 871 / 7 | **878 / 0** |
+| Crossval fixtures | 42 / 1 | **43 / 0** |
+| Crossval checks | 435 / 444 | **444 / 444** |
+
+Zero failing tests across the entire surface.
+
+---
+
 ## v2.9.15 — 2026-05-16 — Round 12 deferred-sub-bug wave (F4/F6/F13/F14)
 
 Fourth sequential remediation pass — addresses sub-bugs previously deferred from v2.9.14 because they required either non-trivial refactor (iterative walkers), an algorithm swap (LPM backwalk), or a coordinated multi-file change (calendar enforcement, driver enrichment). All 7 baseline failures preserved; **25 new test assertions** across 14 new test groups, **865 → 871 passing** end-to-end.
