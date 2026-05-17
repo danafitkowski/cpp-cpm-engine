@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="canonical" href="https://criticalpathpartners.ca/blog/cpm-engine-open-source-launch.html" />
 <title>We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.</title>
-<meta name="description" content="cpp-cpm-engine v2.9.16 ships MIT-licensed on npm, GitHub, MCP registry, and Railway. 871 unit tests, 42 fixtures times 444 cross-validation checks, Sigstore-signed CI, Daubert disclosure built in.">
+<meta name="description" content="cpp-cpm-engine v2.9.16 ships MIT-licensed on npm, GitHub, MCP registry, and Railway. 878 unit tests, 43 fixtures times 444 cross-validation checks, Sigstore-signed CI, Daubert disclosure built in.">
 <meta name="keywords" content="open source CPM engine, npm cpp-cpm-engine, MIT forensic scheduling, Daubert FRE 702 707, Sigstore Rekor transparency log, AACE 29R-03 windows analysis, MCP registry forensic, bit-identical reproducibility, Critical Path Partners open source">
 <meta name="author" content="Dana Fitkowski">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
@@ -20,10 +20,10 @@
 <meta property="og:locale" content="en_CA">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.">
-<meta name="twitter:description" content="cpp-cpm-engine v2.9.16 ships MIT-licensed across npm, GitHub, MCP registry, and Railway. 871 unit tests plus 42 fixtures times 444 cross-validation checks. Run it on your own machine.">
+<meta name="twitter:description" content="cpp-cpm-engine v2.9.16 ships MIT-licensed across npm, GitHub, MCP registry, and Railway. 878 unit tests plus 43 fixtures times 444 cross-validation checks. Run it on your own machine.">
 <meta name="twitter:image" content="https://criticalpathpartners.ca/og-image.png">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Article","headline":"We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.","author":{"@type":"Person","name":"Dana Fitkowski","jobTitle":"Forensic Construction Schedule Claims Expert","worksFor":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca"}},"publisher":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca","logo":{"@type":"ImageObject","url":"https://criticalpathpartners.ca/og-image.png"}},"image":"https://criticalpathpartners.ca/og-image.png","datePublished":"2026-05-16","dateModified":"2026-05-16","description":"cpp-cpm-engine v2.9.16 ships MIT-licensed across four public deployment surfaces: npm, GitHub releases, MCP registry, Railway-hosted MCP. 871 unit tests plus 42 fixtures times 444 cross-validation checks. Sigstore-signed CI on Rekor. Built for FRE 702 (amended 2023) and the proposed FRE 707."}
+{"@context":"https://schema.org","@type":"Article","headline":"We Open-Sourced Our Forensic CPM Engine. Verify It in Under a Minute.","author":{"@type":"Person","name":"Dana Fitkowski","jobTitle":"Forensic Construction Schedule Claims Expert","worksFor":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca"}},"publisher":{"@type":"Organization","name":"Critical Path Partners","url":"https://criticalpathpartners.ca","logo":{"@type":"ImageObject","url":"https://criticalpathpartners.ca/og-image.png"}},"image":"https://criticalpathpartners.ca/og-image.png","datePublished":"2026-05-16","dateModified":"2026-05-16","description":"cpp-cpm-engine v2.9.16 ships MIT-licensed across four public deployment surfaces: npm, GitHub releases, MCP registry, Railway-hosted MCP. 878 unit tests plus 43 fixtures times 444 cross-validation checks. Sigstore-signed CI on Rekor. Built for FRE 702 (amended 2023) and the proposed FRE 707."}
 </script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -393,7 +393,7 @@ a:focus-visible, .btn:focus-visible, .nav a:focus-visible, button:focus-visible,
     <p><code>npm install cpp-cpm-engine</code></p>
     <p>Or, to reproduce the full verification suite:</p>
     <p><code>git clone https://github.com/danafitkowski/cpp-cpm-engine &amp;&amp; cd cpp-cpm-engine &amp;&amp; npm install &amp;&amp; npm run test:all</code></p>
-    <p>Measured at five seconds on a 2023-era laptop (Win11, Node 22, NVMe SSD). 871 unit tests pass. 42 fixtures times 444 cross-validation checks pass. DCMA-14 and AACE 29R-03 compliance checks pass.</p>
+    <p>Measured at five seconds on a 2023-era laptop (Win11, Node 22, NVMe SSD). 878 unit tests pass. 43 fixtures times 444 cross-validation checks pass. DCMA-14 and AACE 29R-03 compliance checks pass.</p>
 </div>
 
 <h2>1. The four public deployment surfaces, locked to one SHA-256</h2>
@@ -429,13 +429,13 @@ a:focus-visible, .btn:focus-visible, .nav a:focus-visible, button:focus-visible,
 <h2>2. What the test suite actually proves</h2>
 
 <div class="discipline">
-    <h3>871 unit tests, 42 fixtures times 444 cross-validation checks, DCMA-14 and AACE 29R-03 compliance gates.</h3>
+    <h3>878 unit tests, 43 fixtures times 444 cross-validation checks, DCMA-14 and AACE 29R-03 compliance gates.</h3>
     <div class="field">
-        <div class="field-label">Unit tests &mdash; 871</div>
+        <div class="field-label">Unit tests &mdash; 878</div>
         <div class="field-text">Every algorithmic primitive of the engine has unit coverage: forward pass, backward pass, total float, free float, longest-path identification, calendar arithmetic across 66 jurisdictions, constraint propagation (FNLT, SNLT, MSO, MFO, As-Late-As-Possible), driving-predecessor selection under float ties, in-progress activity handling, hammock semantics across SS / FF / SF relationships, retained-logic vs progress-override convergence.</div>
     </div>
     <div class="field">
-        <div class="field-label">Cross-validation &mdash; 42 fixtures times 444 checks</div>
+        <div class="field-label">Cross-validation &mdash; 43 fixtures times 444 checks</div>
         <div class="field-text">The engine ships in two synchronized implementations &mdash; a JavaScript port for browser, MCP, and dashboard surfaces, and a Python sibling (<code>cpm.py</code>) that drives batch claim-preparation pipelines. They are kept bit-identical via a 42-fixture, 444-check cross-validation harness that runs in CI on every commit. JS and Python disagree on a single Early Start by even one minute and the build fails. This is how an opposing expert can be confident the dashboard they are reviewing and the DOCX they are reading were computed from the same primitives.</div>
     </div>
     <div class="field">
@@ -458,7 +458,7 @@ a:focus-visible, .btn:focus-visible, .nav a:focus-visible, button:focus-visible,
     </div>
     <div class="field">
         <div class="field-label">What this means for opposing counsel</div>
-        <div class="field-text">If CPP claims a particular build of the engine passed 871 / 42×444 / DCMA-14 / AACE 29R-03, opposing counsel can look up the Sigstore attestation, follow it to the Rekor entry, and read the original GitHub Actions log on hardware CPP does not control and cannot edit. The disclosure is not "trust the expert" &mdash; it is "trust the public log."</div>
+        <div class="field-text">If CPP claims a particular build of the engine passed 878 / 43×444 / DCMA-14 / AACE 29R-03, opposing counsel can look up the Sigstore attestation, follow it to the Rekor entry, and read the original GitHub Actions log on hardware CPP does not control and cannot edit. The disclosure is not "trust the expert" &mdash; it is "trust the public log."</div>
     </div>
     <div class="field">
         <div class="field-label">How to verify</div>
