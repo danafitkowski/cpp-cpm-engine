@@ -2354,6 +2354,169 @@ console.log('\n=== v2.9.20 A19 — Bayesian module MED ===');
 }
 
 // ============================================================================
+// v2.9.20 A1-A11 — Engine math edge cases MED/LOW
+// ============================================================================
+console.log('\n=== v2.9.20 A1-A11 — Engine math edge cases MED/LOW ===');
+{
+    // A1 (forward pass): Activity with both early_start AND actual_start.
+    // Per v2.9.13 F1-Bug5: input early_start is no longer an SNET floor.
+    // actual_start should take precedence; the early_start input is ignored.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-01',
+           actual_start: '2026-01-03' }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    check('A1: actual_start beats input early_start',
+        r.nodes.A.actual_start === '2026-01-03');
+    check('A1: A.ES reflects actual (not the 2026-01-01 input early_start)',
+        r.nodes.A.es_date !== '2026-01-01');
+}
+{
+    // A2 (backward pass): Terminal milestone with no successors has TF=0.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'MILE', duration_days: 0 }],
+        [{ from_code: 'A', to_code: 'MILE', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05' }
+    );
+    check('A2: terminal milestone tf === 0', r.nodes.MILE.tf === 0);
+    check('A2: terminal milestone ef === ls (zero-dur identity)',
+        r.nodes.MILE.ef === r.nodes.MILE.ls);
+}
+{
+    // A3 (constraints): Two activities with identical SNET dates — both
+    // clamp identically without interference.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 3,
+           constraint: { type: 'SNET', date: '2026-01-15' } },
+         { code: 'B', duration_days: 3,
+           constraint: { type: 'SNET', date: '2026-01-15' } }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    check('A3: parallel SNETs both clamp to 2026-01-15',
+        r.nodes.A.es_date === '2026-01-15' && r.nodes.B.es_date === '2026-01-15');
+}
+{
+    // A4 (calendar fallback): No cal_map supplied — 7-day ordinal arithmetic.
+    // A 5-day duration becomes 5 calendar days, not 5 working days.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    check('A4: no calendar → 5-day duration produces ES=2026-01-05',
+        r.nodes.A.es_date === '2026-01-05');
+    check('A4: no calendar → EF + duration logic produces a valid date',
+        typeof r.nodes.A.ef_date === 'string' && r.nodes.A.ef_date.length === 10);
+}
+{
+    // A5 (hammocks): Two parallel hammocks anchored to the same predecessor
+    // resolve independently without interference.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 },
+         { code: 'H1', duration_days: 0, is_hammock: true },
+         { code: 'H2', duration_days: 0, is_hammock: true }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+         { from_code: 'A', to_code: 'H1', type: 'SS', lag_days: 0 },
+         { from_code: 'B', to_code: 'H1', type: 'FF', lag_days: 0 },
+         { from_code: 'A', to_code: 'H2', type: 'SS', lag_days: 0 },
+         { from_code: 'B', to_code: 'H2', type: 'FF', lag_days: 0 }],
+        { dataDate: '2026-01-05' }
+    );
+    check('A5: H1 resolved (es_date present)',
+        typeof r.nodes.H1.es_date === 'string');
+    check('A5: H2 resolved (es_date present)',
+        typeof r.nodes.H2.es_date === 'string');
+    check('A5: H1 and H2 have identical es_date (same anchors)',
+        r.nodes.H1.es_date === r.nodes.H2.es_date);
+}
+{
+    // A7 (Section D constraint clamps): MS_Finish constraint pins B.EF.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3,
+           constraint: { type: 'MS_Finish', date: '2026-02-01' } }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05' }
+    );
+    check('A7: MS_Finish pins B.EF = 2026-02-01',
+        r.nodes.B.ef_date === '2026-02-01');
+}
+{
+    // A8 (P6 calendar inheritance): Activity with no clndr_id inherits from
+    // a sensible default (no calendar) rather than throwing.
+    let threw = false;
+    try {
+        E.computeCPM(
+            [{ code: 'A', duration_days: 5, early_start: '2026-01-05' }],
+            [],
+            { dataDate: '2026-01-05', cal_map: { 'C1': { workDays: [1,2,3,4,5] } } }
+        );
+    } catch (e) {
+        threw = true;
+    }
+    check('A8: cal_map present + no clndr_id on activity → no throw', !threw);
+}
+{
+    // A9 (TIA fragnet shape): TIA returns a result with manifest even when
+    // the fragnet doesn't actually change the projectFinish.
+    const r = E.computeTIA(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        [{ id: 'F1', is_fragnet: true,
+           activities: [{ code: 'F1A', duration_days: 1 }],
+           relationships: [] }],
+        { dataDate: '2026-01-05' }
+    );
+    check('A9: TIA result has manifest', r && r.manifest);
+    check('A9: TIA method_id = computeTIA',
+        r.manifest.method_id === 'computeTIA');
+}
+{
+    // A10 (Strategies / MFP): computeCPMWithStrategies on a linear chain
+    // identifies all 3 activities on the critical path (TF=0 for all).
+    const r = E.computeCPMWithStrategies(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05',
+           crt_path_num: '1' },
+         { code: 'B', duration_days: 3, crt_path_num: '1' },
+         { code: 'C', duration_days: 2, crt_path_num: '1' }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+         { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05' }
+    );
+    check('A10: linear chain → all on CP (TF=0)',
+        r.nodes.A.tf === 0 && r.nodes.B.tf === 0 && r.nodes.C.tf === 0);
+}
+{
+    // A11 (crossval-style parity smoke): JSON round-trip preserves CPM result
+    // structure so the crossval harness can serialize/diff it.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05' }
+    );
+    let roundTrip = null;
+    let threw = false;
+    try {
+        roundTrip = JSON.parse(JSON.stringify(r));
+    } catch (e) {
+        threw = true;
+    }
+    check('A11: result JSON round-trip does not throw', !threw);
+    check('A11: round-trip preserves nodes.A.es_date',
+        roundTrip && roundTrip.nodes && roundTrip.nodes.A &&
+        roundTrip.nodes.A.es_date === r.nodes.A.es_date);
+    check('A11: round-trip preserves manifest.engine_version',
+        roundTrip && roundTrip.manifest &&
+        roundTrip.manifest.engine_version === r.manifest.engine_version);
+}
+
+// ============================================================================
 // v2.9.20 A17 — Public-API surface test coverage MED/LOW
 // ============================================================================
 console.log('\n=== v2.9.20 A17 — Public-API surface coverage ===');
