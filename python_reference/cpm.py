@@ -1330,6 +1330,79 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
             n['tf_working_days'] = _count_work_days_between(n['ef'], n['lf'], n_cal)
 
+    # v2.9.27 — audit F24 PAIRED FIX. Free Float computation backported.
+    # JS computed ff + ff_working_days; Python emitted neither — F24 was
+    # documented as an intentional JS-only gap. Closing the gap so an
+    # opposing expert can rely on the Python reference for FF too.
+    # Mirrors JS cpm-engine.js:2289-2367.
+    for c, n in nodes.items():
+        if n['is_complete']:
+            n['ff'] = 0
+            n['ff_working_days'] = 0
+            continue
+        successors = succ_map.get(c, [])
+        if not successors:
+            n['ff'] = n['tf']
+            n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+            n['ff_working_days'] = _count_work_days_between(
+                n['ef'], n['lf'], n_cal)
+            continue
+        min_slack = float('inf')
+        binding_succ_code = ''
+        binding_succ_type = ''
+        for s in successors:
+            sn = nodes.get(s['to_code'])
+            if not sn:
+                continue
+            succ_cal = (cal_map.get(sn.get('clndr_id', ''))
+                        if sn.get('clndr_id') else None)
+            lag = s.get('lag_days', 0) or 0
+            # Suppress duplicate alerts — forward pass already fired them.
+            _slack_sink = []
+            stype = s['type']
+            if stype == 'FS':
+                pred_anchor = _advance_workdays(n['ef'], lag, succ_cal,
+                    alerts=_slack_sink, ctx='FF-slack FS')
+                succ_anchor = sn['es']
+            elif stype == 'SS':
+                pred_anchor = _advance_workdays(n['es'], lag, succ_cal,
+                    alerts=_slack_sink, ctx='FF-slack SS')
+                succ_anchor = sn['es']
+            elif stype == 'FF':
+                pred_anchor = _advance_workdays(n['ef'], lag, succ_cal,
+                    alerts=_slack_sink, ctx='FF-slack FF')
+                succ_anchor = sn['ef']
+            elif stype == 'SF':
+                pred_anchor = _advance_workdays(n['es'], lag, succ_cal,
+                    alerts=_slack_sink, ctx='FF-slack SF')
+                succ_anchor = sn['ef']
+            else:
+                pred_anchor = _advance_workdays(n['ef'], lag, succ_cal,
+                    alerts=_slack_sink, ctx='FF-slack default')
+                succ_anchor = sn['es']
+            slack = succ_anchor - pred_anchor
+            if slack < min_slack:
+                min_slack = slack
+                binding_succ_code = s['to_code']
+                binding_succ_type = stype
+        # Free Float is SIGNED — no Math.max(0, …) clamp. Over-constrained
+        # networks (FNLT, FS-leads) report negative FF as forensic signal.
+        if min_slack == float('inf'):
+            ff = n['tf']
+        else:
+            ff = _round_half_up_to(min_slack, 3)
+        n['ff'] = ff
+        # FF/SF use binding successor's calendar; FS/SS use own.
+        if binding_succ_type in ('FF', 'SF') and binding_succ_code:
+            sn = nodes.get(binding_succ_code)
+            ff_cal = (cal_map.get(sn.get('clndr_id', ''))
+                      if sn and sn.get('clndr_id') else None)
+        else:
+            ff_cal = (cal_map.get(n.get('clndr_id', ''))
+                      if n.get('clndr_id') else None)
+        n['ff_working_days'] = _count_work_days_between(
+            n['ef'], n['ef'] + ff, ff_cal)
+
     critical = {c for c, n in nodes.items() if n['tf'] <= 0.0 and not n['is_complete']}
 
     return {

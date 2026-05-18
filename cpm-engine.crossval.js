@@ -130,6 +130,9 @@ result_json = {
             'ls_date': n['ls_date'], 'lf_date': n['lf_date'],
             # v2.9.27 — audit R9 LOW PAIRED FIX. Backported field.
             'tf_working_days': n.get('tf_working_days'),
+            # v2.9.27 — audit F24 PAIRED FIX. Free Float backported.
+            'ff': n.get('ff'),
+            'ff_working_days': n.get('ff_working_days'),
         }
         for c, n in result['nodes'].items()
     }
@@ -177,6 +180,9 @@ function runJS(payload) {
             ls_date: n.ls_date, lf_date: n.lf_date,
             // v2.9.27 — audit R9 LOW PAIRED FIX. Backported field.
             tf_working_days: n.tf_working_days,
+            // v2.9.27 — audit F24 PAIRED FIX. Free Float backported.
+            ff: n.ff,
+            ff_working_days: n.ff_working_days,
         };
     }
     // Severity-level alert breakdown for crossval parity (Round 6).
@@ -294,6 +300,16 @@ function compareFixture(name, payload, opts) {
         if (a.tf_working_days !== undefined && b.tf_working_days !== undefined) {
             eq('node ' + code + '.tf_working_days',
                 a.tf_working_days, b.tf_working_days);
+        }
+        // v2.9.27 — audit F24. ff + ff_working_days backported to Python.
+        if (a.ff !== undefined && b.ff !== undefined &&
+            a.ff !== null && b.ff !== null) {
+            eq('node ' + code + '.ff', a.ff, b.ff);
+        }
+        if (a.ff_working_days !== undefined && b.ff_working_days !== undefined &&
+            a.ff_working_days !== null && b.ff_working_days !== null) {
+            eq('node ' + code + '.ff_working_days',
+                a.ff_working_days, b.ff_working_days);
         }
     }
     if (fails === 0) fixturesPassed += 1; else fixturesFailed += 1;
@@ -784,34 +800,18 @@ compareFixture('F23 — Cycle detection (both engines refuse)', {
 }, { expect_throw: true });
 
 // =====================================================================
-// FIXTURE 24 — Free-Float parity DOCUMENTED GAP
+// FIXTURE 24 — Free-Float parity (gap LIFTED in v2.9.27)
 // =====================================================================
 // JS computes free_float (ff / ff_working_days) per AACE 29R-03 §4 (Forensic
 // Schedule Analysis, peer-reviewed RP) and Wickwire et al., Construction
 // Scheduling: Preparation, Liability, and Claims (3rd ed., Aspen Publishers,
-// 2010). The earlier citation here named AACE 10S-90 — that document is the
-// AACE Cost Engineering Terminology glossary (which does carry FF in its
-// term-definition section, but 29R-03 §4 is the more direct, methodology-
-// level source for the forensic FF definition). See cpm-engine.js Section
-// ~1120-1158. Python reference does NOT
-// compute ff; the field is absent from compute_cpm's output. Per A4 Round
-// 6 audit recommendation, this is an INTENTIONAL parity gap: the public
-// API of the Python reference is documented as the cross-validatable
-// surface, and FF is a JS-only extension.
+// 2010). See cpm-engine.js Section ~1120-1158.
 //
-// To LIFT this gap in a future round: backport the FF loop from
-// cpm-engine.js to python_reference/cpm.py, bump the SHA-256 pin in
-// python_reference/README.md, and extend compareFixture's per-node eq
-// to compare {ff, ff_working_days}. Until then, this fixture asserts
-// that for a SIMPLE chain with no float, both engines agree on the
-// quantities they DO share (es/ef/ls/lf/tf), proving FF would be 0 if
-// computed — i.e. the parity gap is real but the underlying float
-// arithmetic agrees.
-//
-// Network: A(5d) → B(3d). Linear, no float. JS reports B.ff = 0 and
-// B.ff_working_days = 0 (already covered by Section B2 in test.js).
-// Crossval here verifies the underlying quantities (es/ef/ls/lf/tf)
-// agree — which is what FF is derived from.
+// v2.9.27 paired fix: ff + ff_working_days backported to Python
+// (python_reference/cpm.py lines ~1336-1410). The crossval per-node
+// comparison in compareFixture now includes both fields; this fixture
+// retains its original chain (A→B linear) as a sanity anchor + early-
+// regression detector.
 compareFixture('F24 — Free-float parity DOCUMENTED GAP (no FF in Python ref)', {
     activities: [
         { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
