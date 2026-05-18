@@ -1682,13 +1682,13 @@ function computeCPM(activities, relationships, opts) {
             maxES = actStartNum;
         } else {
             // No actual — forecasts cannot precede dataDate.
-            // v2.9.13 F1-Bug5 — DROPPED node.es floor. Input `early_start` is
-            // an initialization hint only, not a SNET floor. The previous
-            // Math.max(node.es, ddNum) silently anchored every recompute at
-            // the previously-computed ES, so round-tripping (parseXER →
-            // computeCPM → save → re-run) silently pinned each activity at
-            // its prior ES. To enforce an ES floor, use constraint:
-            // {type:'SNET', date:...} explicitly.
+            // v2.9.13 F1-Bug5 — DROPPED node.es floor.
+            // v2.9.24 — KNOWN ISSUE (audit HIGH R12): data_date floor is NOT
+            // calendar-aware. If data_date falls on a non-workday for the
+            // activity's calendar, ES anchors to a Saturday / holiday. JS-
+            // only snap-forward fix broke 444/444 → 440/444 crossval bit-
+            // identity (Python doesn't snap). Paired JS+Python patch
+            // required; deferred.
             maxES = ddNum;
         }
         let drivingPred = null;  // tracks which pred (if any) gave maxES
