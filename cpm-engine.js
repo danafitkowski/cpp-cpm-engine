@@ -5246,7 +5246,10 @@ function computeKinematicDelay(slipSeries, opts) {
                     const sqrtDisc = Math.sqrt(disc);
                     const t1 = (-b + sqrtDisc) / (2 * a);
                     const t2 = (-b - sqrtDisc) / (2 * a);
-                    // Smallest positive root
+                    // Smallest positive root.
+                    // v2.9.23 — invariant: candidates.length > 0 must guard
+                    // the spread, else Math.min(...[]) returns Infinity and
+                    // pollutes t. Audit LOW R13.
                     const candidates = [t1, t2].filter(x => x > 0);
                     if (candidates.length > 0) t = Math.min(...candidates);
                 }
