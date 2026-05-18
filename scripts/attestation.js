@@ -185,6 +185,22 @@ const outFile = OUTPUT_PATH || path.join(REPO_ROOT, 'attestations', 'latest.json
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.writeFileSync(outFile, witnessJSON + '\n', 'utf8');
 log(`\nWitness written to: ${path.relative(REPO_ROOT, outFile)}`);
+
+// v2.9.25 — audit LOW R20. Write mechanically-diffable SHA-256 sidecar
+// files next to the source. SECURITY.md §"Sigstore attestation" tells
+// auditors the Python reference is byte-pinned by SHA-256 in DAUBERT.md
+// §3.1; sidecar files give them a one-line file diff alongside the
+// prose. Sidecars are gitignored (regenerated on every `npm run
+// attest`); the canonical pinned value lives in DAUBERT.md.
+if (engineSha) {
+  fs.writeFileSync(path.join(REPO_ROOT, 'cpm-engine.js.sha256'),
+    engineSha + '  cpm-engine.js\n', 'utf8');
+}
+if (pythonRefSha) {
+  fs.writeFileSync(path.join(REPO_ROOT, 'python_reference', 'cpm.py.sha256'),
+    pythonRefSha + '  cpm.py\n', 'utf8');
+}
+
 log(`Verdict: ${witness.verdict}`);
 
 // Exit code reflects verdict so CI can gate on it
