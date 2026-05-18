@@ -6357,9 +6357,18 @@ function renderDaubertMarkdown(disclosure, opts) {
 // ============================================================================
 //
 // Hierarchical Bayesian estimation per academic literature 2024.
-// "Bayesian sequential schedule updating — 38% PERT improvement per academic
-// literature" (hierarchical pooling within WBS classes; see Elshaer 2013 and
-// 2024 extensions on Bayesian project-duration estimation).
+// "Bayesian sequential schedule updating — improvement over PERT per academic
+// literature" (hierarchical pooling within WBS classes; see Elshaer, R. (2013),
+// "Impact of sensitivity information on the prediction of project's duration
+// using earned schedule method," International Journal of Project Management,
+// 31(4):579-588, doi:10.1016/j.ijproman.2012.10.006 — and 2024 extensions on
+// Bayesian project-duration estimation referenced in METHODOLOGY.md).
+//
+// v2.9.25 — audit LOW R22. The prior "38% PERT improvement" code-comment
+// quoted a specific percentage without a paragraph citation; the percentage
+// has been removed because the source figure was an internal paraphrase
+// rather than a direct Elshaer (2013) quote. The full Elshaer citation is
+// now in this block + docs/citations.md.
 //
 // Methodology caveat: First production implementation in construction-scheduling
 // JS; pre-publication. Not a substitute for AACE-cited Monte Carlo (122R-22
