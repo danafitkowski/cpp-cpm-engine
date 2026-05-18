@@ -1175,4 +1175,8 @@ console.log('\n=========================================');
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks);
 console.log('=========================================\n');
-process.exit(fixturesFailed > 0 ? 1 : 0);
+// v2.9.23 — exit 1 if EITHER fixture-level OR per-check counter is non-zero
+// (audit LOW R21). Currently they're always in lockstep (any per-check
+// fail bumps fixturesFailed via the inner branches), but a future refactor
+// of the inner loops could break the linkage. Belt-and-suspenders.
+process.exit((fixturesFailed > 0 || totalFails > 0) ? 1 : 0);
