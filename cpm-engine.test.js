@@ -3197,6 +3197,74 @@ console.log('\n=== Section M D4 — Test 7: HTML render smoke ===');
 }
 
 // ============================================================================
+// v2.9.22 — strict parser + typed input validation + whitespace trim (audit HIGH)
+// ============================================================================
+console.log('\n=== v2.9.22 — strict parse + typed input + rel-trim ===');
+{
+    // Strict parser rejects '5abc' instead of silently returning 5.
+    let threw = false, code = null;
+    try {
+        E.computeCPM(
+            [{ code: 'A', duration_days: '5abc', early_start: '2026-01-05' }],
+            [], { dataDate: '2026-01-05' }
+        );
+    } catch (e) { threw = true; code = e.code; }
+    check('strictParse: duration "5abc" → INVALID_DURATION (not silent 5)',
+        threw && code === 'INVALID_DURATION');
+    // Strict parser still accepts valid strings.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: '5.0', early_start: '2026-01-05' }],
+        [], { dataDate: '2026-01-05' }
+    );
+    check('strictParse: duration "5.0" still accepted',
+        r.nodes.A && r.nodes.A.duration_days === 5);
+    // Lag strict parse — '2abc' on a relationship → lag-non-finite WARN.
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: '2abc' }],
+        { dataDate: '2026-01-05' }
+    );
+    check('strictParse: lag "2abc" emits lag-non-finite WARN',
+        r2.alerts.some(a => a.context === 'lag-non-finite'));
+}
+{
+    // Typed input validation: null/non-array → INVALID_INPUT typed error.
+    let threw = false, code = null, arg = null;
+    try { E.computeCPM('not-an-array', [], {}); }
+    catch (e) { threw = true; code = e.code; arg = e.argument; }
+    check('typedInput: activities=string → INVALID_INPUT err.argument=activities',
+        threw && code === 'INVALID_INPUT' && arg === 'activities');
+    threw = false; code = null; arg = null;
+    try { E.computeCPM([], { not: 'an-array' }, {}); }
+    catch (e) { threw = true; code = e.code; arg = e.argument; }
+    check('typedInput: relationships=object → INVALID_INPUT err.argument=relationships',
+        threw && code === 'INVALID_INPUT' && arg === 'relationships');
+    // Null is accepted (normalized to []).
+    let nullOk = false;
+    try { E.computeCPM(null, null, {}); nullOk = true; } catch (e) {}
+    check('typedInput: null activities/relationships normalized to []', nullOk);
+}
+{
+    // Whitespace trim on relationship endpoints.
+    // Activities have trimmed codes (a.code='A'). Rel has from_code=' A ' (with spaces).
+    // Pre-v2.9.22: rel silently dropped as dangling. Post-v2.9.22: rel matches.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' },
+         { code: 'B', duration_days: 3 }],
+        [{ from_code: ' A ', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05' }
+    );
+    // The rel should be applied — B's ES depends on A's EF, not the bare data_date.
+    // If the rel were dropped, B.ES = data_date.
+    check('rel-trim: " A "→"B" rel applied (B.ES != data_date)',
+        r.nodes.B && r.nodes.B.es_date !== '2026-01-05');
+    // Should NOT emit dangling-rel alert.
+    check('rel-trim: no dangling-rel alert for trimmable codes',
+        !r.alerts.some(a => a.context === 'dangling-rel'));
+}
+
+// ============================================================================
 // v2.9.21 — Bayesian zero-input + Dirac-prior + Acklam (audit MED)
 // ============================================================================
 console.log('\n=== v2.9.21 — Bayesian zero-input + Dirac-prior ===');

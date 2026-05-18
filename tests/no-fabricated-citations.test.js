@@ -90,7 +90,9 @@ const SKIP_FILES = new Set([
     'no-fabricated-citations.test.js',
 ]);
 
-const SCAN_DIRS = ['.', 'docs'];
+// v2.9.22 — extended scan to python_reference/ so any fabricated citation
+// in cpm.py docstrings or its README is caught. Audit HIGH finding.
+const SCAN_DIRS = ['.', 'docs', 'python_reference'];
 const SCAN_EXTENSIONS = ['.md', '.js', '.html', '.py'];
 const SKIP = ['node_modules', '.git', 'tests'];
 

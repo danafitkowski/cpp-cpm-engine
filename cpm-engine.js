@@ -385,6 +385,24 @@ function _roundHalfUp(x) {
     //   half-up: 0.5→1, 1.5→2, 2.5→3, -0.5→0, -1.5→-1
     return Math.floor(x + 0.5);
 }
+
+// v2.9.22 — strict numeric parser. `parseFloat('5abc')` silently returns 5;
+// for forensic CPM inputs this is a silent partial-parse poison vector
+// (a corrupt duration_days='5abc' becomes 5 with no diagnostic). This helper
+// rejects trailing garbage and returns NaN — letting the caller emit the
+// proper INVALID_DURATION / lag-non-finite alert path. Accepts numbers
+// directly, trimmed numeric strings, and `null`/`undefined`/'' as NaN.
+function _strictParseFloat(x) {
+    if (x === null || x === undefined || x === '') return NaN;
+    if (typeof x === 'number') return x;
+    if (typeof x !== 'string') return NaN;
+    const s = x.trim();
+    if (s === '') return NaN;
+    // Accepts: integers, decimals, scientific notation, leading +/-.
+    // Rejects: '5abc', '5.0xyz', '1e', '1.2.3', ' 5 abc '.
+    if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(s)) return NaN;
+    return Number(s);
+}
 function _roundHalfUpTo(x, decimals) {
     if (decimals === undefined || decimals === null) decimals = 0;
     if (!Number.isFinite(x)) return x;
@@ -1158,6 +1176,28 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
 
 function computeCPM(activities, relationships, opts) {
     opts = opts || {};
+    // v2.9.22 — typed validation of input arrays. Previously passing
+    // `null` (or any non-array) for activities/relationships produced a
+    // raw `TypeError: ... is not iterable` from the for-of loop, leaking
+    // V8 internals to forensic-tool consumers. Now: typed INVALID_INPUT
+    // error with err.code so callers can branch cleanly.
+    if (activities !== undefined && activities !== null && !Array.isArray(activities)) {
+        const err = new Error('computeCPM: activities must be an Array (got ' +
+            typeof activities + ')');
+        err.code = 'INVALID_INPUT';
+        err.argument = 'activities';
+        throw err;
+    }
+    if (relationships !== undefined && relationships !== null && !Array.isArray(relationships)) {
+        const err = new Error('computeCPM: relationships must be an Array (got ' +
+            typeof relationships + ')');
+        err.code = 'INVALID_INPUT';
+        err.argument = 'relationships';
+        throw err;
+    }
+    // Normalize null → [] so downstream code (for-of, _enforceEngineCaps) sees arrays.
+    if (activities === null || activities === undefined) activities = [];
+    if (relationships === null || relationships === undefined) relationships = [];
     // v2.9.20 A20-M5 — DOS guard on caller-supplied arrays.
     _enforceEngineCaps(activities, relationships, 'computeCPM');
     const dataDate = opts.dataDate || opts.data_date || '';
@@ -1306,7 +1346,8 @@ function computeCPM(activities, relationships, opts) {
             });
         }
         if (!(code in nodes)) nodeCodesOrdered.push(code);
-        const durRaw = parseFloat(a.duration_days);
+        // v2.9.22 — strict-parse to reject `'5abc'`-style partial-parse poison.
+        const durRaw = _strictParseFloat(a.duration_days);
         if (!Number.isFinite(durRaw)) {
             const err = new Error('Activity ' + code + ' has non-finite duration_days=' +
                 a.duration_days +
@@ -1468,8 +1509,12 @@ function computeCPM(activities, relationships, opts) {
     const predMap = Object.create(null);
     const succMap = Object.create(null);
     for (const r of relationships) {
-        const fc = r.from_code;
-        const tc = r.to_code;
+        // v2.9.22 — trim whitespace on relationship endpoints to match the
+        // activity-side trim at line ~1251. Activities are keyed by trimmed
+        // code; if a rel has ' A ' for from_code while the activity has 'A',
+        // the rel silently dropped as DANGLING before this fix.
+        const fc = (r.from_code != null) ? String(r.from_code).trim() : r.from_code;
+        const tc = (r.to_code != null) ? String(r.to_code).trim() : r.to_code;
         // v2.9.20 A16-L4 — explicit self-loop detection. Self-referential
         // relationships (A → A) would be caught later by cycle detection
         // with a generic CYCLE error; the dedicated SELF_LOOP signal points
@@ -1502,7 +1547,8 @@ function computeCPM(activities, relationships, opts) {
         // F10 — non-finite lag silently coerced to 0 prior. A real XER never
         // emits Infinity/NaN as lag_days; if we see one the file is corrupt
         // or hand-edited and the analyst must be told.
-        const _lagRaw = parseFloat(r.lag_days);
+        // v2.9.22 — strict-parse rejects `'5abc'`-style partial-parse poison.
+        const _lagRaw = _strictParseFloat(r.lag_days);
         let lag = 0;
         if (Number.isFinite(_lagRaw)) {
             lag = _lagRaw;
@@ -6202,6 +6248,19 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
                 _bad('sigma_ln must be >= 0 (got ' + act.sigma_ln + ' for code ' + act.code + ')');
             }
             const sigma_ln = (!isNaN(sigmaLnRaw) && sigmaLnRaw >= 0) ? sigmaLnRaw : 0.15;
+            // v2.9.22 — convention disclosure (audit HIGH).
+            // For lognormal priors, `act.duration_days` is treated as the
+            // MEDIAN of the distribution (i.e. exp(mu_ln) where mu_ln is the
+            // underlying normal's mean). The arithmetic mean is then
+            //   E[X] = median · exp(0.5·σ_ln²)
+            // which is what the conjugate update consumes. Forensic users
+            // who supplied `duration_days` thinking it was the mean will see
+            // posteriors that are slightly higher than expected by exactly
+            // the exp(0.5σ²) factor — this is the lognormal's right-skew
+            // built into the parameterization, not a bug.
+            // The convention (median, not mean) is documented here for
+            // disclosure traceability; a v3.0 API may add `lognormal_param:
+            // 'median'|'mean'` so the caller can pick.
             const mu = dur * Math.exp(0.5 * sigma_ln * sigma_ln);
             const sigma = Math.sqrt((Math.exp(sigma_ln * sigma_ln) - 1) * mu * mu);
             _diracCheck(sigma, act.code, 'lognormal', 'sigma_ln == 0');
@@ -6251,14 +6310,27 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
     }
 
     // ── Normal-Normal conjugate posterior update ──────────────────────────────
-    // prior N(mu0, sigma0), observed value x (treated as point estimate with
-    // likelihood variance = sigma0^2 / prior_strength to represent our
-    // confidence in the prior relative to the single observation).
+    // v2.9.22 — docstring correction (audit HIGH).
+    //
+    // `prior_strength` is NOT a Bayesian pseudocount in the formal sense.
+    // A true pseudocount would scale the likelihood-variance as
+    //   likeVar = sigma0² / prior_strength
+    // (more pseudocount → tighter likelihood → prior less dominant). The
+    // engine actually uses
+    //   likeVar = sigma0² · prior_strength
+    // i.e. it multiplies — so HIGH prior_strength → WIDE likelihood → prior
+    // dominates the posterior. This is a heuristic "prior-confidence" knob,
+    // not a count-of-pseudo-observations. Documented here so the parameter
+    // name doesn't mislead expert witnesses who may read the source.
+    //
+    // Behavior (mu update):
+    //   posterior_mu = (likeVar·mu0 + sigma0²·x) / (likeVar + sigma0²)
+    //   With likeVar = sigma0²·strength:
+    //     strength →  0  : posterior_mu → x          (data dominates)
+    //     strength →  1  : posterior_mu = (mu0 + x)/2 (equal weight)
+    //     strength →  ∞  : posterior_mu → mu0        (prior dominates)
     function _conjugateUpdate(mu0, sigma0, x, strength) {
         const s0sq = sigma0 * sigma0;
-        // Likelihood variance: prior_strength is pseudocount weighting on the
-        // prior. High prior_strength → large likeVar → prior dominates.
-        // Low prior_strength → small likeVar → observation dominates.
         const likeVar = s0sq * strength;
         const denom = likeVar + s0sq;
         const postMu = (likeVar * mu0 + s0sq * x) / denom;
