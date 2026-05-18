@@ -6166,28 +6166,45 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         const dur = durRaw || 1;
         const distrib = (act.distribution || 'pert').toLowerCase();
 
+        // v2.9.21 — analyst-supplied 0 is a legitimate input (e.g., a
+        //   milestone with theoretical zero floor). Previously `> 0` silently
+        //   rewrote 0 to the `dur*0.7/0.15/...` heuristic default. Now `>= 0`
+        //   respects the input, AND when the resulting distribution would be
+        //   a Dirac (collapsed band, std=0) we throw INVALID_PRIOR rather
+        //   than silently clamping σ to 1e-6.
+        const SIGMA_DEGENERATE = 1e-6;
+        function _diracCheck(sigma, code, distName, hint) {
+            if (sigma < SIGMA_DEGENERATE) {
+                _bad('degenerate prior (σ ≈ 0) for code ' + code + ' on ' +
+                    distName + ' distribution' + (hint ? ' — ' + hint : '') +
+                    '. A Dirac prior produces CI = [μ, μ] and posterior collapse; ' +
+                    'supply a non-degenerate band or change distribution.');
+            }
+        }
+
         if (distrib === 'normal') {
-            // Analyst-supplied std cannot be negative.
             const stdRaw = parseFloat(act.std);
             if (!isNaN(stdRaw) && stdRaw < 0) {
                 _bad('std must be >= 0 (got ' + act.std + ' for code ' + act.code + ')');
             }
-            const std = (!isNaN(stdRaw) && stdRaw > 0) ? stdRaw : dur * 0.15;
-            return { mu: dur, sigma: Math.max(std, 1e-6), distribution: 'normal' };
+            // v2.9.21 — `>= 0` respects analyst-supplied 0; falls back to
+            // dur*0.15 only when stdRaw is NaN (not supplied at all).
+            const std = (!isNaN(stdRaw) && stdRaw >= 0) ? stdRaw : dur * 0.15;
+            _diracCheck(std, act.code, 'normal', 'std == 0');
+            return { mu: dur, sigma: std, distribution: 'normal' };
         }
         if (distrib === 'lognormal') {
-            // sigma_ln cannot be negative (variance is non-negative).
             const sigmaLnRaw = parseFloat(act.sigma_ln);
             if (!isNaN(sigmaLnRaw) && sigmaLnRaw < 0) {
                 _bad('sigma_ln must be >= 0 (got ' + act.sigma_ln + ' for code ' + act.code + ')');
             }
-            const sigma_ln = (!isNaN(sigmaLnRaw) && sigmaLnRaw > 0) ? sigmaLnRaw : 0.15;
+            const sigma_ln = (!isNaN(sigmaLnRaw) && sigmaLnRaw >= 0) ? sigmaLnRaw : 0.15;
             const mu = dur * Math.exp(0.5 * sigma_ln * sigma_ln);
             const sigma = Math.sqrt((Math.exp(sigma_ln * sigma_ln) - 1) * mu * mu);
-            return { mu, sigma: Math.max(sigma, 1e-6), distribution: 'lognormal' };
+            _diracCheck(sigma, act.code, 'lognormal', 'sigma_ln == 0');
+            return { mu, sigma, distribution: 'lognormal' };
         }
         if (distrib === 'beta') {
-            // Beta on [a,b]; durations can't be negative; band can't be inverted.
             const aRaw = parseFloat(act.optimistic);
             const bRaw = parseFloat(act.pessimistic);
             if (!isNaN(aRaw) && aRaw < 0) {
@@ -6196,14 +6213,15 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
             if (!isNaN(bRaw) && bRaw < 0) {
                 _bad('pessimistic must be >= 0 (got ' + act.pessimistic + ' for code ' + act.code + ')');
             }
-            const a = (!isNaN(aRaw) && aRaw > 0) ? aRaw : dur * 0.7;
-            const b = (!isNaN(bRaw) && bRaw > 0) ? bRaw : dur * 1.3;
+            const a = (!isNaN(aRaw) && aRaw >= 0) ? aRaw : dur * 0.7;
+            const b = (!isNaN(bRaw) && bRaw >= 0) ? bRaw : dur * 1.3;
             if (a > b) {
                 _bad('optimistic > pessimistic (a=' + a + ', b=' + b + ' for code ' + act.code + ')');
             }
             const mu = (a + b) / 2;
-            const sigma = (b - a) / Math.sqrt(20); // var of Beta(2,2) on [a,b]
-            return { mu, sigma: Math.max(sigma, 1e-6), distribution: 'beta' };
+            const sigma = (b - a) / Math.sqrt(20);
+            _diracCheck(sigma, act.code, 'beta', 'optimistic == pessimistic (band collapsed)');
+            return { mu, sigma, distribution: 'beta' };
         }
         // Default: PERT  μ=(a+4m+b)/6  σ=(b-a)/6
         const aRaw = parseFloat(act.optimistic);
@@ -6214,10 +6232,9 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         if (!isNaN(bRaw) && bRaw < 0) {
             _bad('pessimistic must be >= 0 (got ' + act.pessimistic + ' for code ' + act.code + ')');
         }
-        const a = (!isNaN(aRaw) && aRaw > 0) ? aRaw : dur * 0.7;
-        const b_pert = (!isNaN(bRaw) && bRaw > 0) ? bRaw : dur * 1.3;
+        const a = (!isNaN(aRaw) && aRaw >= 0) ? aRaw : dur * 0.7;
+        const b_pert = (!isNaN(bRaw) && bRaw >= 0) ? bRaw : dur * 1.3;
         const m = dur;
-        // PERT contract: optimistic <= likely <= pessimistic.
         if (a > m) {
             _bad('optimistic > likely (a=' + a + ', m=' + m + ' for code ' + act.code + ')');
         }
@@ -6225,7 +6242,8 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
             _bad('likely > pessimistic (m=' + m + ', b=' + b_pert + ' for code ' + act.code + ')');
         }
         const mu = (a + 4 * m + b_pert) / 6;
-        const sigma = Math.max((b_pert - a) / 6, 1e-6);
+        const sigma = (b_pert - a) / 6;
+        _diracCheck(sigma, act.code, 'pert', 'optimistic == pessimistic (band collapsed)');
         return { mu, sigma, distribution: 'pert' };
     }
 
@@ -6246,7 +6264,11 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
     }
 
     // ── Approximate quantile for normal distribution (inverse CDF) ───────────
-    // Use Beasley-Springer-Moro approximation (accurate to ~3e-4)
+    // v2.9.21 — docstring correction. The coefficient table below is from
+    // Peter J. Acklam's 2003 algorithm (https://web.archive.org/web/20150910044729/
+    // home.online.no/~pjacklam/notes/invnorm/), not Beasley-Springer-Moro.
+    // Max relative error is ~1.15e-9 in [pLow, pHigh], ~10e-9 in the tails —
+    // roughly 5 orders of magnitude better than the prior comment claimed.
     function _normalQuantile(p) {
         if (p <= 0) return -Infinity;
         if (p >= 1) return Infinity;

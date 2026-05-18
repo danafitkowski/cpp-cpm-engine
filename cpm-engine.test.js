@@ -2317,10 +2317,19 @@ console.log('\n=== v2.9.20 A19 — Bayesian module MED ===');
 }
 {
     // A19-M4: small-denominator percentages emit null with abs delta fallback.
-    // Use a near-zero prior (duration=0.0000001 → prior.mu ≈ 1e-7 — below SMALL_DENOM)
+    // v2.9.21 — the prior MU must be < SMALL_DENOM (1e-6) while the SIGMA
+    // must be >= SIGMA_DEGENERATE (1e-6) to avoid the new Dirac-throw.
+    // PERT: mu=(a+4m+b)/6, sigma=(b-a)/6. With duration_days=1e-7, a=0, b=1e-5
+    //  → mu=(0 + 4e-7 + 1e-5)/6 ≈ 1.73e-6 ... hmm that's > SMALL_DENOM.
+    //  Use even-smaller likely while keeping band wide enough:
+    //  duration=1e-8, a=0, b=1e-5 → mu ≈ 1.67e-6 (just over SMALL_DENOM).
+    //  Better: explicitly test the std (sigma) small-denom branch using
+    //  distribution=normal with a very small std.
+    // Easier — re-test with mu below threshold for STD specifically; use
+    // a distribution=normal with tiny duration_days so prior.mu = dur ≈ 1e-7.
     const acts = [
-        { code: 'TINY', duration_days: 1e-7, distribution: 'pert',
-          optimistic: 1e-7, pessimistic: 1e-6 },
+        { code: 'TINY', duration_days: 1e-7, distribution: 'normal',
+          std: 0.0001 },  // 1e-4 sigma — non-degenerate but tiny
     ];
     const result = E.computeBayesianUpdate(acts, { TINY: 0.5 }, {});
     const shift = result.prior_vs_posterior_shift.TINY;
@@ -3185,6 +3194,61 @@ console.log('\n=== Section M D4 — Test 7: HTML render smoke ===');
         windowLabels: ['W1', 'W2', 'W3'],
     });
     check('D4-T7: without renderHTML, html field absent', rNoHtml.html === undefined);
+}
+
+// ============================================================================
+// v2.9.21 — Bayesian zero-input + Dirac-prior + Acklam (audit MED)
+// ============================================================================
+console.log('\n=== v2.9.21 — Bayesian zero-input + Dirac-prior ===');
+{
+    // Analyst-supplied optimistic=0 must be RESPECTED, not silently rewritten
+    // to dur*0.7. Build a PERT with a=0, m=5, b=10 and verify mu = (0+20+10)/6 ≈ 5.
+    const acts = [
+        { code: 'A', duration_days: 5, distribution: 'pert',
+          optimistic: 0, pessimistic: 10 },
+    ];
+    const r = E.computeBayesianUpdate(acts, {}, {});
+    const post = r.posterior_by_code.A;
+    // mu = (a + 4m + b)/6 = (0 + 20 + 10)/6 ≈ 5.0
+    check('Bayesian: optimistic=0 respected (not silently rewritten)',
+        post && Math.abs(post.mean - 5.0) < 0.01);
+}
+{
+    // Dirac prior (collapsed band) now throws INVALID_PRIOR instead of
+    // silently clamping σ to 1e-6 and emitting a meaningless CI=[μ,μ].
+    const acts = [
+        { code: 'DIRAC', duration_days: 5, distribution: 'pert',
+          optimistic: 5, pessimistic: 5 }, // band fully collapsed
+    ];
+    let threw = false, code = null;
+    try {
+        E.computeBayesianUpdate(acts, {}, {});
+    } catch (e) {
+        threw = true; code = e.code;
+    }
+    check('Bayesian: Dirac PERT band throws INVALID_PRIOR',
+        threw && code === 'INVALID_PRIOR');
+    // Normal with std=0 same behavior.
+    let threw2 = false, code2 = null;
+    try {
+        E.computeBayesianUpdate(
+            [{ code: 'D2', duration_days: 5, distribution: 'normal', std: 0 }],
+            {}, {});
+    } catch (e) {
+        threw2 = true; code2 = e.code;
+    }
+    check('Bayesian: Normal std=0 throws INVALID_PRIOR',
+        threw2 && code2 === 'INVALID_PRIOR');
+}
+{
+    // _normalQuantile docstring now correctly identifies Acklam (not BSM).
+    // (The historical-correction comment may still mention the old name; we
+    // assert there is no live "Use Beasley-Springer-Moro approximation" line.)
+    const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
+    check('Bayesian: docstring credits Acklam',
+        src.indexOf("Acklam's 2003 algorithm") > -1);
+    check('Bayesian: no stale "Use Beasley-Springer-Moro approximation" line',
+        src.indexOf('Use Beasley-Springer-Moro approximation') === -1);
 }
 
 // ============================================================================
