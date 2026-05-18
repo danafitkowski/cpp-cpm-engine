@@ -86,7 +86,7 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 ```js
 [
     {
-        code: 'A',                       // Required. Unique string ID.
+        code: 'A',                       // Required. Unique string ID. Recommended: match /^[\w.-]+$/ — alphanumeric, dot, underscore, hyphen. The engine coerces numeric codes via String() at hash boundaries (audit A12-M1) and trims surrounding whitespace at relationship-endpoint matching (audit R19), but codes containing control characters / pipe / colon / null bytes are accepted, hashed, and propagated — they may be unwieldy in dashboards. Avoid `__proto__` / `constructor` / `prototype` as activity codes (Object.create(null) maps guard against prototype pollution but adversarial codes are bad hygiene). Codepoint sort is used at hash boundaries so non-ASCII codes work correctly JS↔Python (audit R13).
         duration_days: 5,                // Required. Calendar-day duration.
         early_start: '2026-01-05',       // Optional. Pin ES to this date (or later via predecessors).
         clndr_id: 'MF',                  // Optional. Calendar key in opts.calMap.
