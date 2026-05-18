@@ -2146,12 +2146,14 @@ console.log('\n=== v2.9.20 A13-M1 / A14-M1/M2/M4 — Daubert provenance enrichme
         d2.provenance && d2.provenance.attestation_url === 'https://example.com/witness.json');
 }
 {
-    // A13-M1: audit_date is structured + supplied.
+    // audit_date is caller-supplied — no hardcoded default. A fabricated
+    // audit date in a Daubert disclosure is a Daubert-material false claim,
+    // so the default is null and the caller must pass a real date.
     const d = E.buildDaubertDisclosure(null);
-    check('A13-M1: provenance.audit_date is YYYY-MM-DD string',
-        d.provenance && /^\d{4}-\d{2}-\d{2}$/.test(d.provenance.audit_date));
+    check('audit_date is null when not supplied (no fabricated default)',
+        d.provenance && d.provenance.audit_date === null);
     const d2 = E.buildDaubertDisclosure(null, { audit_date: '2026-12-01' });
-    check('A13-M1: audit_date override flows through',
+    check('audit_date override flows through',
         d2.provenance && d2.provenance.audit_date === '2026-12-01');
 }
 {

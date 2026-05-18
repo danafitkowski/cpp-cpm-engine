@@ -5566,11 +5566,10 @@ function buildDaubertDisclosure(result, opts) {
         const n = Number(opts.test_count);
         return Number.isFinite(n) ? n : null;
     })();
-    // v2.9.20 A13-M1 — structured audit-date field. Previously the
-    // "peer-reviewed via 8-lens forensic audit 2026-05-09" sentence was the
-    // only place the audit date appeared; downstream consumers had to regex
-    // it out of evidence prose.
-    const auditDate = opts.audit_date || manifest.audit_date || '2026-05-09';
+    // Structured audit-date field. Caller must supply an actual audit date
+    // via opts.audit_date or manifest.audit_date; no default is hardcoded
+    // because a fabricated date in a Daubert disclosure is a false statement.
+    const auditDate = opts.audit_date || manifest.audit_date || null;
 
     return {
         rule: 'FRE 702 (Dec 1, 2023 amendment) / Daubert v. Merrell Dow Pharmaceuticals (1993) / FRCP 26(a)(2)(B); also forward-compatible with proposed FRE 707.',
