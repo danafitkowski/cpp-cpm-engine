@@ -46,7 +46,7 @@ All AACE RPs are peer-reviewed and adopted by AACE International, the leading pr
 
 > AACE International Recommended Practice 29R-03. *Forensic Schedule Analysis.* AACE International, originally 2003, revised 2011.
 
-Defines the standard methods for forensic schedule analysis (Method Implementation Protocols 3.1 through 3.9). The engine implements MIP 3.3 (Observational / Dynamic / Contemporaneous As-Is — Windows), MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA), MIP 3.7 (Modeled / Additive / Multiple Base — TIA), and MIP 3.8 (Modeled / Subtractive / Single Simulation — Collapsed As-Built).
+Defines the standard methods for forensic schedule analysis (Method Implementation Protocols 3.1 through 3.9). The engine provides the CPM math primitives supporting MIP 3.3 (Observational / Dynamic / Contemporaneous As-Is — also called Modified Schedule / Windows Analysis), MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA), MIP 3.7 (Modeled / Additive / Multiple Base — TIA), and MIP 3.8 (Modeled / Subtractive / Single Simulation — Collapsed As-Built). Both "Contemporaneous As-Is" and "Modified Schedule / Windows Analysis" descriptors for MIP 3.3 appear in AACE materials across editions; an opposing expert citing one descriptor will be looking at the same protocol.
 
 - **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
