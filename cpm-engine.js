@@ -2368,11 +2368,15 @@ function computeCPM(activities, relationships, opts) {
         // analyst needs to see every retained-logic anomaly.
         const _unstartedPreds = [];
         const _prematureStartPreds = [];
+        // v2.9.24 — audit HIGH R8. Additionally catch the case where pred's
+        // actual_start falls AFTER the data_date — a forensic red flag for
+        // retroactive actual-start editing (actuals after the schedule's
+        // update window shouldn't normally exist).
+        const _postDataDateStartPreds = [];
         const _aStartNum = a.actual_start ? dateToNum(a.actual_start) : 0;
         for (const p of preds) {
             const pred = nodes[p.from_code];
             if (!pred) continue;
-            // Predecessor unstarted = no actual_start AND not is_complete
             const predAct = _actByCode.get(p.from_code);
             if (!predAct) continue;
             if (!predAct.actual_start && !predAct.is_complete) {
@@ -2381,13 +2385,18 @@ function computeCPM(activities, relationships, opts) {
             }
             // v2.9.12 T3.21 — also catch true OoS-progress: pred has
             // actual_start but the successor started EARLIER than the
-            // predecessor did. Both in-progress is the common case; both
-            // complete with successor finishing first is another forensic
-            // signal.
+            // predecessor did.
             if (_aStartNum > 0 && predAct.actual_start) {
                 const _pStartNum = dateToNum(predAct.actual_start);
                 if (_pStartNum > 0 && _pStartNum > _aStartNum) {
                     _prematureStartPreds.push({
+                        code: p.from_code,
+                        pred_start: predAct.actual_start,
+                    });
+                }
+                // v2.9.24 — pred.actual_start > data_date check.
+                if (ddNum > 0 && _pStartNum > 0 && _pStartNum > ddNum) {
+                    _postDataDateStartPreds.push({
                         code: p.from_code,
                         pred_start: predAct.actual_start,
                     });
@@ -2416,6 +2425,22 @@ function computeCPM(activities, relationships, opts) {
                     ' started ' + a.actual_start +
                     ' but ' + _prematureStartPreds.length + ' predecessor(s) ' +
                     'started AFTER it (retained-logic anomaly): ' + _premList,
+            });
+        }
+        // v2.9.24 — audit HIGH R8. WARN when a pred's actual_start is after
+        // the data_date. Forensic red flag for retroactive actual editing.
+        if (_postDataDateStartPreds.length > 0) {
+            const _ddList = _postDataDateStartPreds
+                .map(x => x.code + ' (started ' + x.pred_start + ')')
+                .join(', ');
+            alerts.push({
+                severity: 'WARN',
+                context: 'post-data-date-actual',
+                message: 'Activity ' + a.code +
+                    ' has ' + _postDataDateStartPreds.length + ' predecessor(s) ' +
+                    'with actual_start AFTER the data_date (' + dataDate + '). ' +
+                    'Actuals after the schedule update window are a retroactive-' +
+                    'edit signature: ' + _ddList,
             });
         }
     }
