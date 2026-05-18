@@ -3102,12 +3102,17 @@ function runCPM(opts) {
     }
     // v2.9.7 — Convert constraint date to Section D's day-number scale.
     // Returns -1 if conversion impossible (no projectStart or invalid date).
+    // v2.9.24 — audit LOW R21. Hoist projectStart parse once. Previously
+    // each call to _cstrDayOffset re-parsed projectStart via dateToNum;
+    // across forward + backward × 2 constraint slots × 50k tasks that's
+    // ~300k redundant Date constructions.
+    const _psNumHoisted = projectStart ? dateToNum(projectStart) : -1;
     function _cstrDayOffset(cstrDate) {
         if (!projectStart || !cstrDate) return -1;
-        const psNum = dateToNum(projectStart);
+        if (_psNumHoisted <= 0) return -1;
         const cNum = dateToNum(cstrDate);
-        if (psNum <= 0 || cNum <= 0) return -1;
-        return cNum - psNum;
+        if (cNum <= 0) return -1;
+        return cNum - _psNumHoisted;
     }
 
     // v2.9.11 OPT-2: hoist _MC.tasks to local; ForInFilter is ~5% of runCPM
@@ -3136,12 +3141,13 @@ function runCPM(opts) {
     // we cannot anchor actuals safely, so we fall back to the pre-v2.9.12
     // behavior AND emit a one-time WARN so the analyst sees the silent gap.
     let _actualStartClashAlerted = false;
+    // v2.9.24 — also use hoisted projectStart parse (audit LOW R21).
     function _actOffset(actStartStr) {
         if (!actStartStr || !projectStart) return -1;
-        const psNum = dateToNum(projectStart);
+        if (_psNumHoisted <= 0) return -1;
         const aNum = dateToNum(actStartStr);
-        if (psNum <= 0 || aNum <= 0) return -1;
-        return aNum - psNum;
+        if (aNum <= 0) return -1;
+        return aNum - _psNumHoisted;
     }
     // F11 — dataDate offset in Section D's day-number scale. Requires
     // projectStart anchor; -1 when not derivable (no floor applied).
