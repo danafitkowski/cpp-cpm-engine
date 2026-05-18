@@ -304,6 +304,8 @@ Three engine features are first-publication or pre-publication in construction s
 
 - **P6 `progress_override` schedule mode not implemented.** The engine implements P6 retained-logic mode only (the P6 default, AACE 29R-03 §4 recommended for forensic analysis). Callers passing `opts.scheduleMode = 'progress_override'` get a `progress-override-not-supported` ALERT and the computation proceeds under retained-logic. progress_override changes how in-progress activities with completed-predecessor logic resolve (treats the completed pred as removed from the network); this matters for a narrow class of schedules and is rarely the correct forensic mode. v3.0 candidate. Audit HIGH R8 documented limitation.
 
+- **Bayesian and kinematic surfaces are JS-only (no Python cross-validation).** `computeBayesianUpdate` (Bayesian posterior duration) and `computeKinematicDelay` (slip velocity / acceleration / jerk) are not implemented in `python_reference/cpm.py`. The crossval harness therefore covers zero of the Bayesian + kinematic code paths. Bit-identical JS↔Python parity claims in §3.1 apply ONLY to the core CPM math (forward/backward pass, Kahn topo, Tarjan SCC, FF/SF calendar arithmetic). Bayesian and kinematic outputs are validated by the JS unit-test suite + the structural cross-checks in `cpm-engine.crossval.js`; no second-implementation comparison exists. Audit LOW R22 documented limitation.
+
 ---
 
 ## §10 Roadmap — Forward-looking Daubert hardening
