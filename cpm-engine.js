@@ -1422,6 +1422,22 @@ function computeCPM(activities, relationships, opts) {
         const _remParsed = parseFloat(a.remaining_duration);
         if (Number.isFinite(_remParsed) && _remParsed >= 0) {
             remDur = _remParsed;
+            // v2.9.21 — RD > OD red flag. Real P6 schedules occasionally
+            // produce this when an activity's RD is extended after AS
+            // without re-baselining OD. The engine accepts it (engine uses
+            // RD for the EF anchor under retained-logic mode), but the
+            // analyst needs to see the inconsistency.
+            if (remDur > dur) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'remaining-exceeds-duration',
+                    message: 'REMAINING_EXCEEDS_DURATION on ' + code +
+                        ': remaining_duration=' + remDur + ' > duration_days=' + dur +
+                        '. Engine uses remaining_duration for EF anchor (retained-logic ' +
+                        'mode); investigate whether OD should have been re-baselined ' +
+                        'or whether RD was incorrectly extended.',
+                });
+            }
         }
         nodes[code] = {
             code,
@@ -4029,8 +4045,21 @@ function computeCPMSalvaging(activities, relationships, opts) {
                 e.salvage_log = salvage_log;
                 throw e;
             }
-            // Pick the first cycle reported; isolate its edges from workingRels.
-            const cycleSet = new Set(e.cycles[0]);
+            // v2.9.21 — Tarjan returns cycles in node-iteration order, which
+            // depends on relationship-insertion order. The SAME XER loaded
+            // twice with rels in different orders would have salvage drop a
+            // different edge and emit different CPM dates — breaking Daubert
+            // reproducibility. Sort cycles deterministically: smaller cycles
+            // first (less destructive), then alphabetically by min-code.
+            const sortedCycles = (e.cycles || []).slice().sort(function (a, b) {
+                if (a.length !== b.length) return a.length - b.length;
+                const amin = a.slice().sort()[0] || '';
+                const bmin = b.slice().sort()[0] || '';
+                if (amin !== bmin) return amin < bmin ? -1 : 1;
+                return 0;
+            });
+            // Pick the deterministic first cycle; isolate its edges from workingRels.
+            const cycleSet = new Set(sortedCycles[0]);
             const inCycle = workingRels.filter(r =>
                 cycleSet.has(r.from_code) && cycleSet.has(r.to_code));
             // Heuristic: highest |lag|, alpha tiebreak by (from_code, to_code).
@@ -4061,9 +4090,9 @@ function computeCPMSalvaging(activities, relationships, opts) {
                 category: 'DROPPED_EDGE',
                 message: 'Dropped edge ' + drop.from_code + '->' + drop.to_code +
                     ' (' + drop.type + ', lag=' + drop.lag_days + 'd) to break cycle [' +
-                    e.cycles[0].join(', ') + ']',
+                    sortedCycles[0].join(', ') + ']',
                 details: {
-                    cycle_codes: e.cycles[0],
+                    cycle_codes: sortedCycles[0],
                     dropped_edge: {
                         from_code: drop.from_code,
                         to_code: drop.to_code,

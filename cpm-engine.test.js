@@ -3188,6 +3188,78 @@ console.log('\n=== Section M D4 — Test 7: HTML render smoke ===');
 }
 
 // ============================================================================
+// v2.9.21 — RD > OD red-flag alert (audit MED)
+// ============================================================================
+console.log('\n=== v2.9.21 — RD > OD red-flag alert ===');
+{
+    // Activity with remaining_duration > duration_days emits a WARN. The
+    // engine still uses RD for the EF anchor (retained-logic semantics),
+    // but the analyst needs to see the inconsistency surface.
+    const r = E.computeCPM(
+        [{
+            code: 'A', duration_days: 5, remaining_duration: 12,
+            actual_start: '2026-01-05',
+        }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    const warn = r.alerts.find(a => a.context === 'remaining-exceeds-duration');
+    check('RD>OD: REMAINING_EXCEEDS_DURATION WARN emitted', !!warn);
+    check('RD>OD: WARN names the activity code', warn && warn.message.indexOf('A') > -1);
+    check('RD>OD: WARN names the offending RD value', warn && warn.message.indexOf('12') > -1);
+    // No alert when RD <= OD.
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 5, remaining_duration: 3,
+           actual_start: '2026-01-05' }],
+        [],
+        { dataDate: '2026-01-05' }
+    );
+    const warn2 = r2.alerts.find(a => a.context === 'remaining-exceeds-duration');
+    check('RD<=OD: no REMAINING_EXCEEDS_DURATION WARN', !warn2);
+}
+
+// ============================================================================
+// v2.9.21 — Salvager cycle ordering determinism (audit MED, reproducibility)
+// ============================================================================
+console.log('\n=== v2.9.21 — Salvage cycle determinism ===');
+{
+    // Two relationship orderings of the same network must yield the same
+    // salvage_log DROPPED_EDGE choice. Without deterministic cycle sort,
+    // Tarjan returns SCCs in node-iteration order which depends on
+    // relationship insertion order.
+    const acts = [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3 },
+        { code: 'C', duration_days: 3 },
+        { code: 'D', duration_days: 3 },
+    ];
+    // Two cycles: A→B→A and C→D→C. Identical |lag| so cycle-pick order
+    // determines which edge gets dropped. Same set, two orderings.
+    const relsOrderA = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'A', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'D', type: 'FS', lag_days: 0 },
+        { from_code: 'D', to_code: 'C', type: 'FS', lag_days: 0 },
+    ];
+    const relsOrderB = [
+        { from_code: 'C', to_code: 'D', type: 'FS', lag_days: 0 },
+        { from_code: 'D', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'A', type: 'FS', lag_days: 0 },
+    ];
+    const rA = E.computeCPMSalvaging(acts, relsOrderA, { dataDate: '2026-01-05' });
+    const rB = E.computeCPMSalvaging(acts, relsOrderB, { dataDate: '2026-01-05' });
+    const dropsA = rA.salvage_log.filter(e => e.category === 'DROPPED_EDGE')
+        .map(e => e.details.dropped_edge.from_code + '->' + e.details.dropped_edge.to_code);
+    const dropsB = rB.salvage_log.filter(e => e.category === 'DROPPED_EDGE')
+        .map(e => e.details.dropped_edge.from_code + '->' + e.details.dropped_edge.to_code);
+    check('salvage: deterministic — same DROPPED_EDGE set across rel orderings',
+        dropsA.slice().sort().join('|') === dropsB.slice().sort().join('|'));
+    check('salvage: deterministic — same DROPPED_EDGE SEQUENCE across orderings',
+        dropsA.join('|') === dropsB.join('|'));
+}
+
+// ============================================================================
 // v2.9.21 — XSS escaper hardening (audit MED: esc / _svgEsc)
 // ============================================================================
 console.log('\n=== v2.9.21 — XSS escaper hardening ===');
