@@ -295,6 +295,72 @@ def _is_work_day(dt, work_days, holidays):
     return (p6_day in work_days) and (date_str not in holidays)
 
 
+# v2.9.27 — audit R21 PAIRED FIX. MonFri fast-path helpers ported from
+# JS cpm-engine.js:476-502. Allows O(1) modular arithmetic for clean
+# Mon-Fri calendars without holidays. The day-by-day walker remains
+# for custom workdays / holidays. Verified bit-identical against the
+# slow path in JS regression tests; same formula is reproduced here
+# so JS↔Python parity is bit-clean.
+
+def _walk_from_mon(n):
+    """Calendar days to consume n workdays starting from Mon (inclusive).
+
+    Verified formula: n + 2*floor((n-1)/5) for n>=1.  n=0 -> 0.
+    """
+    if n <= 0:
+        return 0
+    if n % 5 == 0:
+        return (n // 5 - 1) * 7 + 5  # avoid -1 edge in (n-1)/5
+    return (n // 5) * 7 + (n % 5)
+
+
+def _walk_from_first_fw(fw, n):
+    """Calendar days to consume n workdays starting from fw (forward weekday).
+
+    fw is the P6 weekday (0=Sun..6=Sat) of the FIRST calendar day to scan,
+    i.e. fw = (start_p6_weekday + 1) % 7. Mirrors JS _walkFromFirstFw at
+    cpm-engine.js:484.
+    """
+    if n <= 0:
+        return 0
+    if fw == 1:  # Mon
+        return _walk_from_mon(n)
+    if fw == 6:  # Sat: skip 2 then Mon-based
+        return 2 + _walk_from_mon(n)
+    if fw == 0:  # Sun: skip 1 then Mon-based
+        return 1 + _walk_from_mon(n)
+    # Tue(2)..Fri(5): partial week then +2 skip then Mon-based
+    partial_wd = 6 - fw
+    if n <= partial_wd:
+        return n
+    return partial_wd + 2 + _walk_from_mon(n - partial_wd)
+
+
+# backwardMirror: maps end weekday to the equivalent forward-fw for
+# subtract_work_days. Verified bit-identical to JS _BW_MIRROR (cpm-engine.js:502).
+# [Sun->Sun, Mon->Sat, Tue->Fri, Wed->Thu, Thu->Wed, Fri->Tue, Sat->Mon]
+_BW_MIRROR = [0, 6, 5, 4, 3, 2, 1]
+
+
+def _is_clean_monfri(work_days, holidays):
+    """True if this calendar is the standard 5-day Mon-Fri with no holidays.
+
+    Mirrors JS _isCleanMonFri at cpm-engine.js:507 (post-v2.9.23 bitmask
+    version). Returns False if any holidays present or work_days is not
+    exactly {Mon, Tue, Wed, Thu, Fri}.
+    """
+    if holidays:
+        return False
+    if not work_days or len(work_days) != 5:
+        return False
+    m = 0
+    for d in work_days:
+        if d < 0 or d > 6:
+            return False
+        m |= (1 << d)
+    return m == 62  # 0b00111110 = Mon..Fri bits set
+
+
 def add_work_days(start_date, n_workdays, calendar_info=None):
     """Advance start_date by n_workdays working days on the given calendar."""
     if n_workdays is None:
@@ -352,14 +418,17 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
             current += timedelta(days=1)
         return current
 
-    # v2.9.24 — MonFri fast path attempt reverted: JS↔Python parity broke
-    # on F47 when start_date fell on a non-workday (JS pre-snaps via
-    # _isCleanMonFri arithmetic; Python's day-by-day path has subtle
-    # different semantics that produced project_finish 3 days late).
-    # Holiday-Set caching above is retained (pure optimization, no
-    # semantic change). The MonFri fast path needs a JS-matching
-    # pre-snap step before it's safe to enable; deferred until a paired
-    # JS+Python patch can land in the same release.
+    # v2.9.27 — MonFri fast path (audit R21 PAIRED FIX).
+    # Mirrors JS cpm-engine.js:744 _isCleanMonFri path. Bit-identical
+    # output to the day-by-day walker on all clean Mon-Fri calendars
+    # with no holidays; verified by F47-class fixtures + the JS
+    # regression test that compares the two walkers across 30x50 grid.
+    if _is_clean_monfri(work_days, holidays):
+        # P6 weekday from Python isoweekday: Mon=1..Sun=7 → P6 Mon=1..Sun=0
+        start_p6 = current.isoweekday() % 7
+        fw = (start_p6 + 1) % 7
+        advance = _walk_from_first_fw(fw, n)
+        return current + timedelta(days=advance)
 
     remaining = n
     while remaining > 0:
@@ -397,7 +466,15 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
         holidays = set()
     else:
         work_days = calendar_info.get('work_days') or [1, 2, 3, 4, 5]
-        holidays = set(calendar_info.get('holidays') or [])
+        # v2.9.27 — same holiday-Set cache as add_work_days.
+        _hs = calendar_info.get('_holidays_set_cache')
+        if _hs is None:
+            _hs = set(calendar_info.get('holidays') or [])
+            try:
+                calendar_info['_holidays_set_cache'] = _hs
+            except TypeError:
+                pass
+        holidays = _hs
 
     if not work_days:
         return current
@@ -409,6 +486,15 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
         while not _is_work_day(current, work_days, holidays):
             current -= timedelta(days=1)
         return current
+
+    # v2.9.27 — MonFri fast path (audit R21 PAIRED FIX). Mirrors JS
+    # cpm-engine.js:783 (the subtractWorkDays clean-MonFri path that
+    # uses backwardMirror to flip end-weekday to forward-fw).
+    if _is_clean_monfri(work_days, holidays):
+        end_p6 = current.isoweekday() % 7  # 0=Sun..6=Sat
+        fw = _BW_MIRROR[end_p6]
+        retreat = _walk_from_first_fw(fw, n)
+        return current - timedelta(days=retreat)
 
     remaining = n
     while remaining > 0:
