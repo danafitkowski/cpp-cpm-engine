@@ -323,7 +323,19 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
         holidays = set()
     else:
         work_days = calendar_info.get('work_days') or [1, 2, 3, 4, 5]
-        holidays = set(calendar_info.get('holidays') or [])
+        # v2.9.24 — audit R21. Cache the holiday Set on the calendar_info
+        # dict so we don't re-build a 365-entry set per call. On a 50k-
+        # activity × 4-edge-call schedule with a 365-day holiday list,
+        # this was ~73M list-to-set operations per CPM run.
+        _hs = calendar_info.get('_holidays_set_cache')
+        if _hs is None:
+            _hs = set(calendar_info.get('holidays') or [])
+            try:
+                calendar_info['_holidays_set_cache'] = _hs
+            except TypeError:
+                # immutable mapping — fall back without caching
+                pass
+        holidays = _hs
 
     if not work_days:
         return current
@@ -339,6 +351,15 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
         while not _is_work_day(current, work_days, holidays):
             current += timedelta(days=1)
         return current
+
+    # v2.9.24 — MonFri fast path attempt reverted: JS↔Python parity broke
+    # on F47 when start_date fell on a non-workday (JS pre-snaps via
+    # _isCleanMonFri arithmetic; Python's day-by-day path has subtle
+    # different semantics that produced project_finish 3 days late).
+    # Holiday-Set caching above is retained (pure optimization, no
+    # semantic change). The MonFri fast path needs a JS-matching
+    # pre-snap step before it's safe to enable; deferred until a paired
+    # JS+Python patch can land in the same release.
 
     remaining = n
     while remaining > 0:
