@@ -794,7 +794,8 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
 # Public surface: compute_cpm
 # =============================================================================
 
-def compute_cpm(activities, relationships, data_date='', cal_map=None):
+def compute_cpm(activities, relationships, data_date='', cal_map=None,
+                project_calendar=''):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -967,9 +968,17 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
     if has_cycle:
         raise ValueError('CPM network contains a cycle - cannot compute a forward pass.')
 
+    # v2.9.27 — audit HIGH R10 PAIRED FIX. project_calendar fallback tier.
+    # Mirrors JS cpm-engine.js:1671. When a node has no clndr_id but the
+    # caller has supplied a project-default calendar, use it instead of
+    # falling all the way back to ordinal 7-day arithmetic.
+    _project_cal = cal_map.get(project_calendar) if project_calendar else None
+
     def _cal_for(node):
         cid = node.get('clndr_id', '')
-        return cal_map.get(cid) if cid else None
+        if cid and cal_map.get(cid) is not None:
+            return cal_map.get(cid)
+        return _project_cal
 
     # Forward Pass
     for code in order:
