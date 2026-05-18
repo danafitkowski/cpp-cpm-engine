@@ -96,8 +96,8 @@ Every output manifest reads `ENGINE_VERSION` and embeds it in the report. A vers
 
 ## Pull-request checklist
 
-- [ ] `npm test` passes (792 tests, 0 fail).
-- [ ] `npm run crossval` passes (416/416 checks across 40 fixtures).
+- [ ] `npm test` passes (1064 tests, 0 fail).
+- [ ] `npm run crossval` passes (747/747 checks across 43 fixtures).
 - [ ] If you added a new citation, the URL is in `docs/citations.md` and the case/RP is real.
 - [ ] If you bumped the engine version, both `cpm-engine.js` and `package.json` are updated.
 - [ ] If you added a new public API, it is documented in `docs/api.md`.
