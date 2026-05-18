@@ -2027,10 +2027,25 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: caveats is array', Array.isArray(d.caveats));
     check('E3: caveats has no null entries', d.caveats.every(c => c !== null && c !== undefined));
     check('E3: caveats has at least 1 entry (jurisdiction caveat)', d.caveats.length >= 1);
-    // With method_caveat supplied → 2 entries
-    const d2 = E.buildDaubertDisclosure(null, { method_caveat: 'Test caveat here.' });
-    check('E3: caveats with method_caveat → 2 entries', d2.caveats.length === 2);
+    // v2.9.27 — audit LOW R14. Without activities supplied, the topology-
+    // hash coverage-gap caveat now appears too, so a method_caveat call
+    // produces 3 entries (method, jurisdiction, hash-gap). Re-test with
+    // activities supplied so the hash is computed and the gap caveat
+    // doesn't fire.
+    const d2 = E.buildDaubertDisclosure(null, {
+        method_caveat: 'Test caveat here.',
+        activities: [{ code: 'A', duration_days: 5 }],
+        relationships: [],
+    });
+    check('E3: caveats with method_caveat + activities → 2 entries (no hash gap)',
+        d2.caveats.length === 2);
     check('E3: method_caveat appears first', d2.caveats[0] === 'Test caveat here.');
+    // R14: hash-gap caveat fires when activities is missing.
+    const d3 = E.buildDaubertDisclosure(null, { method_caveat: 'Test.' });
+    check('E3: caveats with method_caveat but NO activities → 3 entries (hash gap caveat)',
+        d3.caveats.length === 3);
+    check('E3: hash-gap caveat mentions input_topology_hash',
+        d3.caveats.some(c => c.indexOf('input_topology_hash') > -1));
 }
 {
     // Disclosure structure passes JSON.stringify round-trip (no Set/Map/Date/Infinity issues)

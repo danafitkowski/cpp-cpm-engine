@@ -5915,10 +5915,23 @@ function buildDaubertDisclosure(result, opts) {
         return 'CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03';
     })();
 
-    // Compute or use supplied topology hash.
-    const inputHash = opts.inputHash || ((opts.activities && opts.relationships)
-        ? computeTopologyHash(opts.activities, opts.relationships).topology_hash
-        : null);
+    // v2.9.27 — audit LOW R14. Compute the topology hash from caller-
+    // supplied arrays. The prior `opts.activities && opts.relationships`
+    // truthiness check silently no-op'd the hash when `relationships`
+    // was `null` (verifiers saw `input_topology_hash: null` instead of
+    // a real hash). Empty `relationships: []` is a valid topology
+    // (parallel activities with no logic links) and DOES warrant a hash.
+    // Now: compute the hash whenever activities is an Array (even if
+    // empty), with `relationships` defaulting to []. Log a coverage-gap
+    // caveat when activities is also missing/empty so the disclosure
+    // reader sees why the hash field is null.
+    const inputHash = opts.inputHash || (
+        Array.isArray(opts.activities)
+            ? computeTopologyHash(opts.activities,
+                Array.isArray(opts.relationships) ? opts.relationships : []
+              ).topology_hash
+            : null
+    );
 
     const testCountStr = (opts.test_count !== undefined && opts.test_count !== null)
         ? String(opts.test_count)
@@ -6062,6 +6075,16 @@ function buildDaubertDisclosure(result, opts) {
             'CPR Part 35; Canadian courts apply White Burgess Langille Inman v. Abbott ' +
             '(2015 SCC 23) — both substantively similar in requiring methodology + ' +
             'independence disclosure.',
+            // v2.9.27 — audit LOW R14. Surface the topology-hash coverage gap
+            // when the caller didn't supply activities (or supplied a non-
+            // Array). Verifiers should see "(not computed)" with a reason
+            // rather than silently null.
+            (!opts.inputHash && !Array.isArray(opts.activities))
+                ? 'provenance.input_topology_hash is null because no activities ' +
+                  'were supplied to buildDaubertDisclosure(); rerun with ' +
+                  '{ activities, relationships } in opts to compute the hash, ' +
+                  'or pass opts.inputHash directly.'
+                : null,
         ].filter(Boolean),
         engine_version: ENGINE_VERSION,
         // v2.9.20 A13-M1 / A14-M1/M2/M4 — bumped 1.0 → 1.1 (additive only):
