@@ -12,6 +12,36 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.26 — 2026-05-18 — Provenance + citation polish (3 items)
+
+### Provenance
+- **R20 LOW** — `npm run attest` writes `cpm-engine.js.sha256` and
+  `python_reference/cpm.py.sha256` sidecar files for mechanical
+  `shasum -c` verification. Sidecars gitignored; canonical pinned
+  values remain in DAUBERT.md §3.1 prose.
+
+### Bayesian citations
+- **R22 LOW** — Elshaer (2013) citation expanded to full publication
+  reference (IJPM 31(4):579-588, DOI). "38% PERT improvement"
+  paraphrased percentage removed.
+- **R22 LOW** — Bayesian + kinematic Python parity gap explicitly
+  disclosed in DAUBERT.md Known Limitations. Bit-identical Python
+  parity claim in §3.1 now scoped to core CPM math only.
+
+### Test state
+| Metric | v2.9.25 | v2.9.26 |
+|---|---|---|
+| Unit tests | 1056 / 0 | 1056 / 0 |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit ledger
+- Cumulative closed v2.9.13–v2.9.26: ~98 findings
+- Still open: ~12 (Python F4/F6 backports, hammock-of-hammocks LS
+  walker, MCP-side items, ~7 v3.0 architectural deferrals)
+
+---
+
 ## v2.9.25 — 2026-05-18 — Perf wave + Python parity partial (4 items)
 
 ### Engine perf (3)
