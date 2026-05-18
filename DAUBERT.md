@@ -302,6 +302,8 @@ Three engine features are first-publication or pre-publication in construction s
 
 - **Engine epoch = 2020-01-01.** The engine's day-offset arithmetic uses 2020-01-01 as offset 0. Activities with `actual_start = '2020-01-01'` collide with the "no actual_start" sentinel (offset 0) — the immutability gate `actStartNum > 0` treats them as not-started. Narrow real-world exposure (only affects schedules with actuals literally on Jan 1, 2020); fix requires moving the epoch back, v3.0 candidate. Audit HIGH R12 documented limitation.
 
+- **P6 `progress_override` schedule mode not implemented.** The engine implements P6 retained-logic mode only (the P6 default, AACE 29R-03 §4 recommended for forensic analysis). Callers passing `opts.scheduleMode = 'progress_override'` get a `progress-override-not-supported` ALERT and the computation proceeds under retained-logic. progress_override changes how in-progress activities with completed-predecessor logic resolve (treats the completed pred as removed from the network); this matters for a narrow class of schedules and is rarely the correct forensic mode. v3.0 candidate. Audit HIGH R8 documented limitation.
+
 ---
 
 ## §10 Roadmap — Forward-looking Daubert hardening
