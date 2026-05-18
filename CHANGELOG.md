@@ -12,6 +12,122 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.27 — 2026-05-18 — Audit closeout (13 items) + crossval 444→747
+
+Final addressable-scope release before v3.0. Closes 13 specific audit
+findings by direct file:line cross-reference, including all three
+longest-standing deferred paired-fix items (R6, R12, R21). Crossval
+JS↔Python bit-identical surface expanded from 444 → 747 checks via
+backporting tf_working_days, ff, and ff_working_days to Python
+(F24 documented JS-only gap LIFTED).
+
+### Paired JS+Python fixes (the three deferred items)
+
+- **R6 MED** — Skip completed successors in backward propagation.
+  Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic, completed
+  succs do not pull predecessor LF backward through historical-fact
+  dates. Both engines now emit `completed-succ-skipped-in-backward`
+  INFO per affected code. Crossval F47 now passes with TF=0 instead
+  of the prior negative-TF artifact.
+- **R12 HIGH** — data_date floor snaps forward to next workday when
+  the date falls on a non-workday for the activity's calendar.
+  Mirrors v2.9.12 F2.1 zero-advance snap convention. Both engines
+  in lockstep.
+- **R21 (perf)** — Python `add_work_days` / `subtract_work_days`
+  MonFri fast path (port of JS `_walkFromMon` / `_walkFromFirstFw`
+  formulas). Bit-identical to the day-by-day walker on clean Mon-Fri
+  with no holidays; ~13×/250×/900× speedup at 5d/30d/120d walks.
+  Holiday Set cached on `calendar_info['_holidays_set_cache']`
+  (~73M list-to-set operations eliminated on 50k×365-holiday).
+
+### Python parity backports (F24 gap LIFTED)
+
+- **R9 LOW** — `tf_working_days` (working-day TF on each activity's
+  calendar) now in Python. New `_count_work_days_between` helper.
+- **F24** — `ff` and `ff_working_days` now in Python. Full FF loop
+  ported including FF/SF-binding-successor calendar correction.
+- **A12-M1/M2/M4** — Python `compute_topology_hash` gets the v2.9.20
+  JS hardenings: `str()` coercion of codes (numeric `1` and string
+  `'1'` hash identically), `input_relationship_count` vs
+  `hashed_relationship_count` distinction, `algorithm: null` for
+  empty-schedule branch.
+
+### Crossval harness extended
+
+Per-node comparison now includes `tf_working_days`, `ff`,
+`ff_working_days`. Both extractors (PY_HARNESS + JS) emit the fields.
+F24 fixture comment rewritten: "gap LIFTED in v2.9.27."
+
+Result: **JS↔Python crossval went from 444 → 747 bit-identical checks
+across 43 fixtures.**
+
+### Engine MED/LOW
+
+- **R10 HIGH** — Python `_cal_for` honors `project_calendar` fallback
+  (was JS-only via opts.projectCalendar; Python's _cal_for hard-fell
+  to 7-day ordinal even when a project-default calendar was supplied).
+- **R6 HIGH** — Paired MS_Start/SO `constraint-widens-lf` WARN. Was
+  emitted only for MS_Finish/MFO (v2.9.14 F5 Bug F); symmetric branch
+  for MS_Start/SO was silent. Now both engines emit the WARN on all
+  four mandatory constraint types when a hard pin widens minLF.
+- **R18 HIGH** — Five `method_id`s gained explicit AACE-canonical
+  methodology labels: computeScheduleHealth (DCMA 14-Point + AACE
+  49R-06 §4), computeBayesianUpdate (Carlin & Louis 2008 §5.4;
+  Elshaer 2013 IJPM 31:579-588), computeKinematicDelay (pre-pub;
+  AACE 29R-03 / 52R-06 companions), computeTopologyHash (industry-
+  first), computeFloatBurndown (AACE 29R-03 §4 + Sanders 2024 IBA).
+
+### Disclosure / docs / test gaps
+
+- **R16 HIGH** — DAUBERT.md + CONTRIBUTING.md crossval counts
+  refreshed (792/416/40 → 1071/747/43).
+- **R14 LOW** — `buildDaubertDisclosure` topology-hash gate switched
+  from `opts.activities && opts.relationships` truthiness to
+  `Array.isArray(opts.activities)`. Empty `relationships: []` no
+  longer silently no-ops the hash. New coverage-gap caveat fires
+  in the disclosure when activities are absent so verifiers see
+  WHY `input_topology_hash` is null.
+- **R8 LOW** — T3.18 in-progress test extended to assert
+  `tf === 0`, `lf_date === ef_date`, and `criticalCodesArray`
+  membership. New T3.18-pair test asserts criticality propagates
+  through an in-progress predecessor.
+- **R7 LOW** — docs/api.md activity-code field documents the
+  recommended `/^[\w.-]+$/` pattern + the engine's coercion
+  behavior at hash and rel-endpoint boundaries.
+
+### Test state
+
+| Metric | v2.9.26 | v2.9.27 |
+|---|---|---|
+| Unit tests | 1056 / 0 | **1071 / 0** (+15 regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | **444 / 444** | **747 / 747** (+303 new comparisons) |
+
+### Audit ledger status
+
+This release closes every patchable engineering item from the
+20-agent audit ledger. Remaining items are all v3.0 architectural
+scope:
+
+1. Section D full calendar-awareness (fold Section C into runCPM)
+2. Welford's online variance for Bayesian group evidence
+3. Lognormal/Beta exact-quantile inverse-CDF CIs
+4. Sub-day lag precision (would change every date-arithmetic
+   call signature; engine-wide ripple)
+5. Python TT_Hammock + TT_LOE implementation
+6. Engine epoch move 2020-01-01 → 1900-01-01 (fixes R12 epoch
+   collision)
+7. Hammock-of-hammocks LS_CEIL walker class
+
+Plus two v3.0-adjacent items:
+- Python `compute_cpm_with_strategies` (LPM/TFM/MFP entry point)
+- Larger-schedule crossval fixture (procedurally generated 1k-10k)
+
+The audit-driven engineering wave is complete. v3.0 will be a
+design-and-implement cycle, not a patch wave.
+
+---
+
 ## v2.9.26 — 2026-05-18 — Provenance + citation polish (3 items)
 
 ### Provenance
