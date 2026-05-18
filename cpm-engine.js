@@ -2950,7 +2950,16 @@ function _mcTopologicalSort() {
             if (d === 0) queue.push(taskId);
         }
     } else {
-        for (const taskId in tasks) {
+        // v2.9.24 — fallback path (legacy hand-constructed _MC.tasks).
+        // JavaScript's `for (const k in obj)` hoists integer-like string
+        // keys to the front in numeric ascending order, NOT input-preserving.
+        // Audit HIGH R7 — produce a deterministic codepoint-sorted order
+        // so Section D output doesn't flip based on whether activity codes
+        // are numeric vs alphanumeric. Costs O(N log N) up-front but
+        // guarantees reproducibility.
+        const keys = Object.keys(tasks).slice().sort(_codepointCmp);
+        for (let i = 0; i < keys.length; i++) {
+            const taskId = keys[i];
             total += 1;
             const d = tasks[taskId].preds.length;
             inDegree[taskId] = d;
