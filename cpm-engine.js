@@ -6727,7 +6727,11 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         manifest: {
             engine_version: ENGINE_VERSION,
             method_id: 'computeBayesianUpdate',
-            computed_at: new Date().toISOString(),
+            // v2.9.23 — opts.computed_at override for byte-identical
+            // determinism across reruns (audit LOW R22). Default is wall-
+            // clock UTC; tests / Daubert "byte-identical parity" PDFs
+            // can pin a fixed value.
+            computed_at: opts.computed_at || new Date().toISOString(),
             credible_interval: credibleInterval,
             prior_strength: priorStrength,
             // v2.9.23 — empirical-Bayes σ shrinkage factor in manifest
