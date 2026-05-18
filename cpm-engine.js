@@ -5898,6 +5898,20 @@ function buildDaubertDisclosure(result, opts) {
         }
         if (id === 'computeCPMWithStrategies') return 'AACE 49R-06 §3 + AACE TFM + P6 native MFP (multi-method critical-path identification with divergence analysis)';
         if (id === 'computeCPMSalvaging') return 'AACE 29R-03 source validation + iterative cycle-break (highest-|lag| heuristic with alphabetical tiebreak)';
+        // v2.9.27 — audit HIGH R18. Explicit AACE-canonical mappings for
+        // the remaining engine method_ids. Previously these collapsed to
+        // the generic "CPM forward/backward pass..." line, leaving an
+        // opposing expert without a clear methodology citation.
+        if (id === 'computeScheduleHealth')
+            return 'DCMA 14-Point Schedule Health Assessment (DCMA, GAO Schedule Assessment Guide, AACE 49R-06 §4) with letter-grade rollup';
+        if (id === 'computeBayesianUpdate')
+            return 'Normal-Normal conjugate Bayesian update with optional hierarchical pooling per WBS group (Carlin & Louis 2008, §5.4; Elshaer 2013 IJPM 31:579-588). Pre-publication; not a substitute for AACE 122R-22 QRAMM.';
+        if (id === 'computeKinematicDelay')
+            return 'Kinematic extension of slip velocity — velocity / acceleration / jerk via finite differences with Newtonian quadratic extrapolation for breach forecasting. Pre-publication; CPP first-mover. Not an AACE-cited method; companions AACE 29R-03 / 52R-06.';
+        if (id === 'computeTopologyHash')
+            return 'SHA-256 of canonical-v2 form (sorted activity codes + deduplicated preds, JSON-encoded line per code). Industry-first schedule-topology fingerprint; no AACE precedent, intended as a provenance primitive.';
+        if (id === 'computeFloatBurndown')
+            return 'Float Burndown — per-snapshot total-float evolution + cumulative slip velocity (AACE 29R-03 §4 + Sanders 2024 IBA on retrospective TIA). Companion to MIP 3.3 windows analysis.';
         return 'CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03';
     })();
 
