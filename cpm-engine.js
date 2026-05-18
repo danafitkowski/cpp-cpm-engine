@@ -507,8 +507,18 @@ const _BW_MIRROR = [0, 6, 5, 4, 3, 2, 1];
 function _isCleanMonFri(workDays, holidaysSet) {
     if (holidaysSet && holidaysSet.size > 0) return false;
     if (!workDays || workDays.length !== 5) return false;
-    const s = new Set(workDays);
-    return s.has(1) && s.has(2) && s.has(3) && s.has(4) && s.has(5);
+    // v2.9.24 — audit LOW R21. Avoid the per-call `new Set(workDays)`
+    // allocation. On a 50k-activity × ~4-work-day-calls schedule that's
+    // 200k throw-away Set allocations. Direct integer membership check
+    // is O(5) and allocation-free.
+    let m = 0;
+    for (let i = 0; i < workDays.length; i++) {
+        const d = workDays[i];
+        if (d < 0 || d > 6) return false;
+        m |= (1 << d);
+    }
+    // Bits 1..5 = Mon..Fri = 0b00111110 = 62.
+    return m === 62;
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
