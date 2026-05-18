@@ -6288,6 +6288,15 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
         && Number.isFinite(opts.prior_strength)
         && opts.prior_strength > 0)
         ? opts.prior_strength : 1.0;
+    // v2.9.23 — empirical-Bayes σ shrinkage factor configurable (audit MED R22).
+    // Default 0.5 is the prior CPP heuristic (sigma_post = sigma_prior · sqrt(1 - 0.5·shrinkage)).
+    // Range [0,1]: 0 = no σ shrinkage (CI width preserved), 1 = full shrinkage
+    // (sigma_post can collapse for large groups — fails FRE 702 review).
+    const sigmaShrinkFactor = (typeof opts.sigma_shrinkage_factor === 'number'
+        && Number.isFinite(opts.sigma_shrinkage_factor)
+        && opts.sigma_shrinkage_factor >= 0
+        && opts.sigma_shrinkage_factor <= 1)
+        ? opts.sigma_shrinkage_factor : 0.5;
     const wbsGroups = opts.wbs_groups || null;
     // v2.9.20 A19-M1 — alerts channel for actuals validation. Negative
     // actual durations are physically impossible; emit a WARN per code
@@ -6652,7 +6661,9 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
                 // hierarchical models) for the general approach; the 0.5
                 // factor specific to this implementation is a CPP heuristic,
                 // not a textbook constant.
-                postSigma = prior.sigma * Math.sqrt(1 - shrinkage * 0.5);
+                // v2.9.23 — caller can override via opts.sigma_shrinkage_factor
+                // (audit MED R22); default 0.5 preserves prior behavior.
+                postSigma = prior.sigma * Math.sqrt(1 - shrinkage * sigmaShrinkFactor);
             }
         }
 
@@ -6719,6 +6730,9 @@ function computeBayesianUpdate(priorActivities, actualsByCode, opts) {
             computed_at: new Date().toISOString(),
             credible_interval: credibleInterval,
             prior_strength: priorStrength,
+            // v2.9.23 — empirical-Bayes σ shrinkage factor in manifest
+            // so an opposing expert can see what knob the analyst chose.
+            sigma_shrinkage_factor: sigmaShrinkFactor,
             activity_count: priorActivities.length,
             actual_count: Object.keys(actuals).length,
             // v2.9.20 A19-M1 — distinguish supplied actuals from applied ones.
