@@ -4847,7 +4847,7 @@ function computeTIA(activities, relationships, fragnets, opts) {
             methodology: mode === 'cumulative-additive'
                 ? 'AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base)'
                 : 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)',
-            method_caveat: 'SCL Protocol 2nd Ed (2017) and AACE recommend fragnet TIA for contemporaneous analysis. Retrospective TIA has limited forensic acceptance (cf. Sanders, M.C. 2024-07-25, "Junk science: the fallacy of retrospective time impact analysis," International Bar Association). Caller is responsible for method selection.',
+            method_caveat: 'SCL Protocol 2nd Ed (2017) and AACE recommend fragnet TIA for contemporaneous analysis. Retrospective TIA has limited forensic acceptance (cf. Sanders, M.C. (July 2024), "Junk science: the fallacy of retrospective time impact analysis," International Bar Association). Caller is responsible for method selection.',
             activity_count: activities.length,
             relationship_count: (relationships || []).length,
             fragnet_count: (fragnets || []).length,
@@ -5817,7 +5817,7 @@ function buildDaubertDisclosure(result, opts) {
                 'delay-claim consultancies. The CPP engine is one implementation of that ' +
                 'shared methodology; engine-level adoption is the open-source release goal ' +
                 '(§10 roadmap). SCL Protocol 2nd Edition endorses TIA for ' +
-                'contemporaneous analysis (Sanders, M.C. 2024-07-25 IBA "Junk science: the ' +
+                'contemporaneous analysis (Sanders, M.C. (July 2024), IBA, "Junk science: the ' +
                 'fallacy of retrospective time impact analysis" — caveat acknowledged for ' +
                 'retrospective TIA acceptance limits).',
         },
