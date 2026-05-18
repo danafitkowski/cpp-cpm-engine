@@ -3274,6 +3274,46 @@ console.log('\n=== v2.9.22 — Daubert prong updates ===');
 }
 
 // ============================================================================
+// v2.9.27 — R12 data_date calendar-aware floor (paired JS+Python)
+// ============================================================================
+console.log('\n=== v2.9.27 — data_date floor snaps to workday ===');
+{
+    // data_date falls on a Saturday; activity has Mon-Fri calendar.
+    // Before fix: ES anchors to Saturday (forensic anomaly).
+    // After fix:  ES snaps forward to Monday.
+    const r = E.computeCPM(
+        [{ code: 'A', duration_days: 5, clndr_id: 'C1' }],
+        [],
+        {
+            dataDate: '2026-01-10',  // Saturday
+            cal_map: { C1: { work_days: [1, 2, 3, 4, 5], holidays: [] } },
+        }
+    );
+    // 2026-01-10 = Sat → snap to Mon 2026-01-12.
+    check('R12: data_date on Sat snaps ES to Mon',
+        r.nodes.A && r.nodes.A.es_date === '2026-01-12');
+    // Sanity: no calendar → no snap (ordinal fallback path).
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 5 }],
+        [],
+        { dataDate: '2026-01-10' }
+    );
+    check('R12: data_date Sat without calendar → ES stays Sat (no snap)',
+        r2.nodes.A && r2.nodes.A.es_date === '2026-01-10');
+    // Sanity: data_date already on a workday → no change.
+    const r3 = E.computeCPM(
+        [{ code: 'A', duration_days: 5, clndr_id: 'C1' }],
+        [],
+        {
+            dataDate: '2026-01-12',  // Monday
+            cal_map: { C1: { work_days: [1, 2, 3, 4, 5], holidays: [] } },
+        }
+    );
+    check('R12: data_date on Mon stays Mon (no snap)',
+        r3.nodes.A && r3.nodes.A.es_date === '2026-01-12');
+}
+
+// ============================================================================
 // v2.9.27 — R6 completed-successor skip in backward pass (paired JS+Python)
 // ============================================================================
 console.log('\n=== v2.9.27 — completed-succ skipped in backward pass ===');

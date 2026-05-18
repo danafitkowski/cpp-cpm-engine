@@ -1693,13 +1693,20 @@ function computeCPM(activities, relationships, opts) {
         } else {
             // No actual — forecasts cannot precede dataDate.
             // v2.9.13 F1-Bug5 — DROPPED node.es floor.
-            // v2.9.24 — KNOWN ISSUE (audit HIGH R12): data_date floor is NOT
-            // calendar-aware. If data_date falls on a non-workday for the
-            // activity's calendar, ES anchors to a Saturday / holiday. JS-
-            // only snap-forward fix broke 444/444 → 440/444 crossval bit-
-            // identity (Python doesn't snap). Paired JS+Python patch
-            // required; deferred.
+            // v2.9.27 — audit HIGH R12 PAIRED FIX (JS + Python in lockstep).
+            // Snap data_date floor forward to the next workday when it
+            // falls on a non-workday for this activity's calendar.
+            // Previously ES could anchor to a Saturday/holiday data_date
+            // for an activity on a Mon-Fri calendar — a forensic anomaly
+            // the analyst should never see. Mirrors the v2.9.12 F2.1
+            // zero-advance snap in addWorkDays.
+            // Python paired site: python_reference/cpm.py:~932 same snap.
             maxES = ddNum;
+            if (maxES > 0 && nodeCal) {
+                const _floored = _advanceWithAlerts(maxES, 0, nodeCal, alerts,
+                    'ddNum-snap ' + code);
+                if (_floored !== maxES) maxES = _floored;
+            }
         }
         let drivingPred = null;  // tracks which pred (if any) gave maxES
         // v2.9.18 A4-HIGH — shadow-driver accumulator for in-progress activities.

@@ -832,7 +832,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
             # `max(node['es'], dd_num)` silently anchored every recompute at
             # the previously-computed ES (round-trip bug). For an ES floor,
             # use an explicit SNET constraint. Mirrors JS Section C fix.
+            # v2.9.27 — audit HIGH R12 PAIRED FIX. Snap data_date floor
+            # forward to the next workday when it falls on a non-workday
+            # for this activity's calendar. Mirrors JS cpm-engine.js:~1705
+            # and the v2.9.12 F2.1 zero-advance snap in add_work_days.
             max_es = dd_num
+            if max_es > 0 and node_cal:
+                _floored = _advance_workdays(max_es, 0, node_cal,
+                    alerts=alerts, ctx=f'ddNum-snap {code}')
+                if _floored != max_es:
+                    max_es = _floored
         # v2.9.14 F2.2 backport — FF/SF finish-anchor identity. Round-tripping
         # retreat→advance through duration drifts off the anchor whenever the
         # anchor lies on a non-workday under node_cal. Capture the winning
