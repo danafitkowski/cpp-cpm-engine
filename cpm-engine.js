@@ -2194,6 +2194,35 @@ function computeCPM(activities, relationships, opts) {
             n.es = n.ls;
             n.ef = n.lf;
             n.tf = 0;
+            // v2.9.23 — audit LOW R9. The ALAP slide shifts THIS activity's
+            // ES/EF forward without re-running the forward pass through its
+            // successors. If A is ALAP and A→B (FS+0), B.ES was set when A.EF
+            // was earlier; after the slide, A.EF can exceed B.ES — a logic
+            // violation the forward pass would have caught. Detect and emit
+            // a WARN per affected successor so the analyst sees the gap.
+            const succsAfter = succMap[c] || [];
+            for (const s of succsAfter) {
+                const bn = nodes[s.to_code];
+                if (!bn) continue;
+                // FS predicate: predEF must <= succES. SS: predES <= succES.
+                // FF: predEF <= succEF. SF: predES <= succEF.
+                let predRef, succRef, edgeDesc;
+                if (s.type === 'FS') { predRef = n.ef; succRef = bn.es; edgeDesc = 'pred.EF > succ.ES'; }
+                else if (s.type === 'SS') { predRef = n.es; succRef = bn.es; edgeDesc = 'pred.ES > succ.ES'; }
+                else if (s.type === 'FF') { predRef = n.ef; succRef = bn.ef; edgeDesc = 'pred.EF > succ.EF'; }
+                else if (s.type === 'SF') { predRef = n.es; succRef = bn.ef; edgeDesc = 'pred.ES > succ.EF'; }
+                else continue;
+                if (predRef > succRef) {
+                    alerts.push({
+                        severity: 'WARN',
+                        context: 'alap-slide-violates-succ',
+                        message: 'ALAP slide on ' + c + ' produced ' + edgeDesc +
+                            ' for ' + s.type + ' relation to ' + s.to_code +
+                            ' (no forward-pass rerun; successor dates are stale). ' +
+                            'Re-run computeCPM or accept the documented limitation.',
+                    });
+                }
+            }
         }
     }
 
