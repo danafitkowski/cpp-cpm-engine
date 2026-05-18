@@ -3798,6 +3798,15 @@ function _resolveHammocks(projectFinish, log, alerts, projectStart) {
                         }
                     }
                 } else if (top.kind === _WK_LF_CEIL) {
+                    // v2.9.24 — known limitation (audit HIGH R15). For an FS-
+                    // successor that is itself a hammock, recursion on LF_CEIL
+                    // walks down the chain seeking a normal-task LS. If the
+                    // chain terminates without reaching a normal task (all-
+                    // hammock graph), the final value is a hammock's LF — not
+                    // LS. Zero-float hammocks (LS == LF == ES == EF) are not
+                    // affected; the gap shows up only on hammock-of-hammocks
+                    // chains with float. Real-world likelihood: very low in
+                    // P6 schedules. Architectural fix candidate for v3.0.
                     for (const s of top.h.succs) {
                         const sh = _MC.hammocks[s.taskId];
                         if (!sh) continue;
