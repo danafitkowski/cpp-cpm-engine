@@ -12,6 +12,53 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.24 — 2026-05-18 — Continued small-batch fix wave (5 items)
+
+Five more audit findings closed/documented. Same per-fix-per-commit
+cadence as v2.9.23.
+
+### Engine
+
+- **R7 HIGH** — `_mcTopologicalSort` fallback uses codepoint sort.
+  Legacy hand-constructed `_MC.tasks` without `taskIdsOrdered` now
+  iterates in deterministic codepoint order instead of JS's integer-
+  hoisted `for...in` order.
+- **R8 HIGH** — OoS detector flags `pred.actual_start > data_date` as
+  retroactive-edit signature. New `post-data-date-actual` WARN with
+  the offending pred codes + dates.
+- **R12 HIGH** — data_date floor calendar-aware attempt → reverted as
+  Python-parity blocker. Documented inline. Paired JS+Python patch
+  required.
+- **R15 HIGH** — Hammock-of-hammocks FS-succ all-hammock chain edge
+  case documented as v3.0 architectural fix candidate (very low real-
+  world likelihood; zero-float hammocks are unaffected).
+
+### Five investigations that turned out already-closed
+
+R6 LF backward pin, R9 FF clamp, R9 _findLatestFinish, R10 lag math,
+R12 actual_start>actual_finish, R13 parseInt, R14 verifyReport,
+R14 delimiter escape, R14 float roundoff, R16 fixture-count stale,
+R17 rule string FRE 707, R18 prong-4 firm names, R19 self-loop —
+all checked against current code state; were already addressed in
+v2.9.13–v2.9.22 waves. Not double-counted.
+
+### Test state
+
+| Metric | v2.9.23 | v2.9.24 |
+|---|---|---|
+| Unit tests | 1056 / 0 | 1056 / 0 |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit ledger
+
+- Cumulative closed v2.9.13–v2.9.24: ~90 findings
+- Still open: ~20-25 (perf optimizations, Python parity backports for
+  R6 + R12, MCP-side items, hammock FS hard-precedence)
+- Deferred to v3.0 (architectural): ~7
+
+---
+
 ## v2.9.23 — 2026-05-18 — Small-batch fix wave (16 audit items closed)
 
 Continuing the per-fix-per-commit cadence. Each commit cites the audit
