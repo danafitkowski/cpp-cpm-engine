@@ -12,6 +12,111 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.23 — 2026-05-18 — Small-batch fix wave (16 audit items closed)
+
+Continuing the per-fix-per-commit cadence. Each commit cites the audit
+finding it closes by R-number; each was tested + crossval-verified
+before moving to the next. Single-writer protocol.
+
+### Engine math + correctness
+
+- **R12 MED** — `SUB_DAY_LAG_ROUNDED` alert dedup. A schedule with 500
+  4-hour lags fired 500 identical alerts; the helper now dedupes per
+  (value, ctx) pair.
+- **R13 MED** — `_codepointCmp` string comparator for non-ASCII JS↔
+  Python sort parity. Default JS sort uses UTF-16 code units; Python
+  uses codepoints. The hash sort site now uses the codepoint comparator.
+- **R15 MED** — `TARGET_DRTN_MISSING` WARN when target_drtn_hr_cnt is
+  absent on an in-progress activity. originalRemaining falls back to
+  the shortened post-progress duration; FF/SF successors could shift
+  earlier without diagnostic.
+- **R6 MED** — completed-successor LF-backward-pull documented as
+  Python-parity blocker. Attempted JS-only fix broke 444/444 → 442/444
+  crossval bit-identity; reverted with inline comment so it lands as
+  a paired JS+Python patch.
+- **R9 LOW** — ALAP-slide emits `alap-slide-violates-succ` WARN
+  per affected successor when the slide creates pred.EF > succ.ES (no
+  forward-pass rerun).
+- **R21 LOW** — Stable quadratic-formula form for kinematic breach
+  forecast. Avoids `(-b ± √disc)/(2a)` cancellation when 4ac « b².
+- **R13 LOW** — `Math.min(...candidates)` invariant comment so the
+  length guard isn't silently removed.
+
+### Bayesian
+
+- **R22 MED** — `opts.sigma_shrinkage_factor` (range [0,1], default 0.5)
+  configurable empirical-Bayes σ shrinkage. Surfaced in
+  manifest.sigma_shrinkage_factor for forensic traceability.
+- **R22 LOW** — `opts.computed_at` override on Bayesian manifest for
+  byte-identical determinism across reruns.
+
+### Holiday rules
+
+- **R11 HIGH** — CA-AB Family Day `effective_from: 1990`,
+  CA-SK Family Day `effective_from: 2007`. Pre-enactment historical
+  claims no longer emit a fabricated holiday.
+
+### Daubert / brand polish
+
+- **R17 HIGH** — README MIP 3.3/3.6/3.7/3.8 claims rescoped from
+  "engine implements" to "engine provides the CPM math primitives
+  supporting" — accurate against actual scope.
+- **R17 LOW** — `docs/citations.md` MIP 3.3 descriptor acknowledges
+  both "Contemporaneous As-Is" and "Modified Schedule / Windows
+  Analysis" synonyms.
+- **R17 LOW** — Sanders, M.C. citation date format normalized from
+  ISO `2024-07-25` to `(July 2024)` matching the year-only convention
+  used by every other citation.
+- **R18 LOW** — Kinematic `method_caveat` label tokens use backticks
+  not escaped straight-quotes (cleaner DOCX / markdown rendering).
+
+### Test infrastructure
+
+- **R21 LOW** — Crossval exits 1 if EITHER fixture-level OR per-check
+  counter is non-zero (belt-and-suspenders against future refactor
+  that breaks counter linkage).
+- **R21 LOW** — `close()` epsilon helper retention rationale documented.
+
+### Supply chain / docs
+
+- **R20 MED** — `package.json` `files` whitelist narrowed from
+  `attestations/` (wholesale) to `attestations/README.md` only.
+  Canonical Sigstore witness ships as a GitHub Release asset, not
+  inside the npm tarball.
+- **R20 MED** — `SECURITY.md` adds Forked-PR isolation note
+  documenting the `pull_request` + push-only Sigstore gating.
+- **R8 MED + R12 HIGH** — `DAUBERT.md` Known Limitations expanded
+  with percent_complete, Section D cal-awareness, and epoch=2020-01-01
+  collision (all 3 explicitly documented as engineering limitations
+  rather than silent gaps).
+
+### Test state
+
+| Metric | v2.9.22 | v2.9.23 |
+|---|---|---|
+| Unit tests | 1056 / 0 | **1056 / 0** (no assertions removed) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+| `test:cites` | PASS | PASS |
+| `test:truncation` | PASS | PASS |
+
+### Audit ledger status
+
+- Closed v2.9.13–v2.9.22 (cumulative): ~85 audit findings
+- Closed in v2.9.23: 16 (real, per-commit cross-reference; some R-codes
+  were "investigate" findings that turned out already-closed and are
+  not double-counted)
+- Still open: ~25-35 (mostly Python parity backports, hammock FS
+  hard-precedence, MCP-side, perf, R6 paired backport)
+- Deferred to v3.0 (architectural): ~7
+
+The ledger is still NOT closed. Per-commit honest progress; the
+"engineering label vs audit closure" distinction from v2.9.20
+correction note continues to hold — each v2.9.23 commit cites the
+specific R-number by file:line.
+
+---
+
 ## v2.9.22 — 2026-05-18 — Audit HIGH wave (10 real items)
 
 Closes 10 specific HIGH-priority findings from the 20-agent audit by
