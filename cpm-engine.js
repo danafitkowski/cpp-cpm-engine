@@ -386,6 +386,29 @@ function _roundHalfUp(x) {
     return Math.floor(x + 0.5);
 }
 
+// v2.9.23 — codepoint-deterministic string comparator (audit MED R13).
+// JS Array.sort coerces to UTF-16 code-unit order; Python sorted() uses
+// Unicode codepoint order. For ASCII codes these orderings agree, but
+// any activity code containing a non-BMP character (rare in P6 but
+// legal — e.g. a Chinese-language code) sorts differently between
+// engines, breaking the topology-hash + critical_codes parity claim.
+// This comparator iterates by codePointAt so JS matches Python's
+// scalar-value ordering bit-identically.
+function _codepointCmp(a, b) {
+    const sa = String(a);
+    const sb = String(b);
+    const la = sa.length, lb = sb.length;
+    let i = 0, j = 0;
+    while (i < la && j < lb) {
+        const ca = sa.codePointAt(i);
+        const cb = sb.codePointAt(j);
+        if (ca !== cb) return ca - cb;
+        i += ca > 0xFFFF ? 2 : 1;
+        j += cb > 0xFFFF ? 2 : 1;
+    }
+    return la - lb;
+}
+
 // v2.9.22 — strict numeric parser. `parseFloat('5abc')` silently returns 5;
 // for forensic CPM inputs this is a silent partial-parse poison vector
 // (a corrupt duration_days='5abc' becomes 5 with no diagnostic). This helper
@@ -5364,7 +5387,11 @@ function computeTopologyHash(activities, relationships) {
     }
 
     // Sort activities by code.
-    const sortedCodes = Object.keys(predsByCode).sort();
+    // v2.9.23 — codepoint comparator so non-ASCII activity codes sort
+    // identically to Python's sorted() (audit MED R13). Default JS sort
+    // uses UTF-16 code-unit order; Python uses Unicode codepoint order.
+    // These agree for ASCII but diverge on non-BMP characters.
+    const sortedCodes = Object.keys(predsByCode).slice().sort(_codepointCmp);
 
     // v2.9.14 F9 Bug D — JSON-encode each canonical line so delimiter chars
     // in `code` / `type` (e.g. an activity code containing `|` or `:`) cannot
@@ -5375,8 +5402,11 @@ function computeTopologyHash(activities, relationships) {
     for (const code of sortedCodes) {
         const dur = durByCode[code];
         const preds = predsByCode[code].slice().sort((x, y) => {
-            if (x.from !== y.from) return x.from < y.from ? -1 : 1;
-            if (x.type !== y.type) return x.type < y.type ? -1 : 1;
+            // v2.9.23 — codepoint comparator for `from` and `type` too.
+            const fcmp = _codepointCmp(x.from, y.from);
+            if (fcmp !== 0) return fcmp;
+            const tcmp = _codepointCmp(x.type, y.type);
+            if (tcmp !== 0) return tcmp;
             return x.lag - y.lag;
         });
         // Canonical key order: code, dur, preds. Preds is array of
