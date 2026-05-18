@@ -128,6 +128,8 @@ result_json = {
             'tf': n['tf'],
             'es_date': n['es_date'], 'ef_date': n['ef_date'],
             'ls_date': n['ls_date'], 'lf_date': n['lf_date'],
+            # v2.9.27 — audit R9 LOW PAIRED FIX. Backported field.
+            'tf_working_days': n.get('tf_working_days'),
         }
         for c, n in result['nodes'].items()
     }
@@ -173,6 +175,8 @@ function runJS(payload) {
             tf: n.tf,
             es_date: n.es_date, ef_date: n.ef_date,
             ls_date: n.ls_date, lf_date: n.lf_date,
+            // v2.9.27 — audit R9 LOW PAIRED FIX. Backported field.
+            tf_working_days: n.tf_working_days,
         };
     }
     // Severity-level alert breakdown for crossval parity (Round 6).
@@ -285,6 +289,12 @@ function compareFixture(name, payload, opts) {
         eq('node ' + code + '.dates',
             { es_date: a.es_date, ef_date: a.ef_date, ls_date: a.ls_date, lf_date: a.lf_date },
             { es_date: b.es_date, ef_date: b.ef_date, ls_date: b.ls_date, lf_date: b.lf_date });
+        // v2.9.27 — audit R9 LOW. tf_working_days now backported to Python;
+        // compare bit-identically. Only compare if BOTH sides emit the field.
+        if (a.tf_working_days !== undefined && b.tf_working_days !== undefined) {
+            eq('node ' + code + '.tf_working_days',
+                a.tf_working_days, b.tf_working_days);
+        }
     }
     if (fails === 0) fixturesPassed += 1; else fixturesFailed += 1;
 }

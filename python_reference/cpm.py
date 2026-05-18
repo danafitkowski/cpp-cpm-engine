@@ -361,6 +361,56 @@ def _is_clean_monfri(work_days, holidays):
     return m == 62  # 0b00111110 = Mon..Fri bits set
 
 
+def _count_work_days_between(from_num, to_num, calendar_info=None):
+    """Count working days between two date-offsets on the given calendar.
+
+    v2.9.27 — audit R9 LOW PAIRED FIX. Mirrors JS _countWorkDaysBetween
+    at cpm-engine.js:814. Returns a signed integer count so callers
+    (tf_working_days, ff_working_days) can preserve negative-float
+    forensic signal on over-constrained networks.
+
+    from_num / to_num are integer day-offsets from the engine epoch
+    (2020-01-01). Without a calendar, returns the calendar-day count
+    (signed). With a calendar, walks day-by-day counting only working
+    days on that calendar.
+    """
+    if not isinstance(from_num, int) and not isinstance(from_num, float):
+        return 0
+    if not isinstance(to_num, int) and not isinstance(to_num, float):
+        return 0
+    from math import isfinite
+    if not isfinite(from_num) or not isfinite(to_num):
+        return 0
+    if to_num == from_num:
+        return 0
+    if to_num < from_num:
+        return -_count_work_days_between(to_num, from_num, calendar_info)
+    if calendar_info is None:
+        return _round_half_up(to_num - from_num)
+    work_days = calendar_info.get('work_days') or [1, 2, 3, 4, 5]
+    # Reuse the cached holiday Set added in v2.9.27.
+    _hs = calendar_info.get('_holidays_set_cache')
+    if _hs is None:
+        _hs = set(calendar_info.get('holidays') or [])
+        try:
+            calendar_info['_holidays_set_cache'] = _hs
+        except TypeError:
+            pass
+    holidays = _hs
+    if not work_days:
+        return 0
+    # Walk day-by-day from from_num+1 to to_num inclusive.
+    n = 0
+    cur = _round_half_up(from_num)
+    end = _round_half_up(to_num)
+    while cur < end:
+        cur += 1
+        dt = date.fromordinal(cur + _epoch_ordinal())
+        if _is_work_day(dt, work_days, holidays):
+            n += 1
+    return n
+
+
 def add_work_days(start_date, n_workdays, calendar_info=None):
     """Advance start_date by n_workdays working days on the given calendar."""
     if n_workdays is None:
@@ -1269,6 +1319,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         n['ef_date'] = num_to_date(n['ef'])
         n['ls_date'] = num_to_date(n['ls'])
         n['lf_date'] = num_to_date(n['lf'])
+        # v2.9.27 — audit R9 LOW PAIRED FIX. tf_working_days companion to
+        # tf (calendar days). P6 reports float in working days on the
+        # activity's own calendar; an expert quoting tf=13 against a
+        # MonFri-cal activity will be impeached if P6 shows 10. Mirrors
+        # JS cpm-engine.js:2270.
+        if n['is_complete']:
+            n['tf_working_days'] = 0
+        else:
+            n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+            n['tf_working_days'] = _count_work_days_between(n['ef'], n['lf'], n_cal)
 
     critical = {c for c, n in nodes.items() if n['tf'] <= 0.0 and not n['is_complete']}
 
