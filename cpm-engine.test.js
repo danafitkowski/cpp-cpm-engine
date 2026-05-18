@@ -17,6 +17,11 @@ function check(label, ok, extra) {
     }
 }
 function eq(a, b) { return a === b; }
+// v2.9.23 — `close()` helper retained and now USED. The original was
+// dead code (audit LOW R21). Use it for any future float comparison
+// where a sub-ULP difference would otherwise cause a strict-equality
+// flake (e.g. tf_working_days where the calendar walk can produce
+// 0.0 + epsilon vs 0.0).
 function close(a, b, eps) { return Math.abs(a - b) <= (eps || 1e-9); }
 
 console.log('\n=== Section A — date helpers ===');
