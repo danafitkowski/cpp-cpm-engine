@@ -7677,10 +7677,13 @@ const _HOLIDAY_RULES = {
 
     // ── Alberta ───────────────────────────────────────────────────────────────
     // Source: alberta.ca/statutory-holidays
-    // Family Day 3rd Mon Feb; Heritage Day 1st Mon Aug (optional/civic)
+    // Family Day 3rd Mon Feb (statutory since 1990); Heritage Day 1st Mon Aug
+    // (optional/civic since 1974)
     'CA-AB': [
         _CA_NEW_YEARS,
-        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3 },
+        // v2.9.23 — effective_from: 1990 (audit HIGH R11). Pre-1990 calls
+        // would otherwise emit a Family Day that didn't statutorily exist.
+        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3, effective_from: 1990 },
         _CA_GOOD_FRIDAY,
         _CA_VICTORIA_DAY,
         _CA_CANADA_DAY,
@@ -7693,10 +7696,12 @@ const _HOLIDAY_RULES = {
 
     // ── Saskatchewan ──────────────────────────────────────────────────────────
     // Source: saskatchewan.ca (Employment Act statutory holidays)
-    // Family Day 3rd Mon Feb; Saskatchewan Day 1st Mon Aug
+    // Family Day 3rd Mon Feb (statutory since 2007); Saskatchewan Day 1st Mon Aug
     'CA-SK': [
         _CA_NEW_YEARS,
-        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3 },
+        // v2.9.23 — effective_from: 2007 (audit HIGH R11). SK Family Day
+        // was added in 2007.
+        { name: 'Family Day', type: 'nth_weekday', month: 2, weekday: 1, n: 3, effective_from: 2007 },
         _CA_GOOD_FRIDAY,
         _CA_VICTORIA_DAY,
         _CA_CANADA_DAY,
