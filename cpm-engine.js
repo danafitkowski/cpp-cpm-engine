@@ -5244,13 +5244,29 @@ function computeKinematicDelay(slipSeries, opts) {
                 const disc = b * b - 4 * a * c;
                 if (disc >= 0) {
                     const sqrtDisc = Math.sqrt(disc);
-                    const t1 = (-b + sqrtDisc) / (2 * a);
-                    const t2 = (-b - sqrtDisc) / (2 * a);
+                    // v2.9.23 — stable quadratic-formula form (audit LOW R21).
+                    // The classical `(-b ± √disc)/(2a)` subtracts two near-
+                    // equal numbers when 4ac « b² (the common kinematic-
+                    // delay regime: low accel, high velocity), losing
+                    // precision. Use the algebraically-equivalent form
+                    //   r1 = -2c / (b + √disc)    (when b ≥ 0)
+                    //   r2 = (-b - √disc)/(2a)    (companion root)
+                    // The Math.round(*100)/100 final truncation hides the
+                    // lost digits in display, but the underlying t is more
+                    // accurate this way.
+                    let t1, t2;
+                    if (b >= 0) {
+                        t1 = -2 * c / (b + sqrtDisc);          // numerically stable for the smaller positive root
+                        t2 = (-b - sqrtDisc) / (2 * a);
+                    } else {
+                        t1 = (-b + sqrtDisc) / (2 * a);
+                        t2 = -2 * c / (b - sqrtDisc);          // stable form for b<0 case
+                    }
                     // Smallest positive root.
                     // v2.9.23 — invariant: candidates.length > 0 must guard
                     // the spread, else Math.min(...[]) returns Infinity and
                     // pollutes t. Audit LOW R13.
-                    const candidates = [t1, t2].filter(x => x > 0);
+                    const candidates = [t1, t2].filter(x => x > 0 && Number.isFinite(x));
                     if (candidates.length > 0) t = Math.min(...candidates);
                 }
             }
