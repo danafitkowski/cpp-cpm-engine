@@ -2062,19 +2062,21 @@ function computeCPM(activities, relationships, opts) {
         const nodeCal = calFor(node);
         const succs = succMap[code] || [];
         let minLF = node.lf;
-        // v2.9.23 — KNOWN ISSUE (audit MED R6): a completed successor B with
-        // lf=ef pulls predecessor A's LF backward through historical-fact
-        // dates, producing negative TF on A purely because B already finished.
-        // Per SCL Protocol §4 / P6 retained-logic, completed successors
-        // should be removed from CP propagation. JS-only fix would break
-        // JS↔Python crossval bit-identity (the Prong-1 Daubert evidence);
-        // backport to python_reference is required first. Deferred until
-        // a paired JS+Python patch can land in the same release.
+        // v2.9.27 — audit MED R6 PAIRED FIX (JS + Python in lockstep).
+        // Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic, completed
+        // successors are removed from CP propagation — they don't drive
+        // the un-finished network's LF. Before this fix, a completed B
+        // with lf=ef pulled predecessor A's LF backward through historical
+        // dates, producing negative TF on A purely because B finished.
+        // Paired with python_reference/cpm.py:1006 same skip; F47/F1-Bug5
+        // crossval fixture updated to assert the post-skip TF=0 semantic.
+        let _skippedCompletedSucc = 0;
         if (succs.length) {
             minLF = null;
             for (const s of succs) {
                 const snode = nodes[s.to_code];
                 if (!snode) continue;
+                if (snode.is_complete) { _skippedCompletedSucc += 1; continue; }
                 const sCal = calFor(snode);
                 let drive;
                 const lag = s.lag_days;
@@ -2101,6 +2103,19 @@ function computeCPM(activities, relationships, opts) {
                 if (minLF === null || drive < minLF) minLF = drive;
             }
             if (minLF === null) minLF = maxEF;
+            // v2.9.27 — emit a one-time INFO per code when completed
+            // successors were skipped (so a forensic reviewer sees the
+            // omission and can confirm retained-logic was intended).
+            if (_skippedCompletedSucc > 0) {
+                alerts.push({
+                    severity: 'INFO',
+                    context: 'completed-succ-skipped-in-backward',
+                    message: code + ': ' + _skippedCompletedSucc +
+                        ' completed successor(s) skipped in backward propagation ' +
+                        '(retained-logic semantics; completed activities do not pull ' +
+                        'predecessor LF backward through historical dates).',
+                });
+            }
         }
         // v2.9.3 — P6 constraint application (backward pass), v2.9.7 — secondary support.
         // Symmetric LF / LS clamps. Same semantics as forward pass but bounded

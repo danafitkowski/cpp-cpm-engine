@@ -3274,6 +3274,63 @@ console.log('\n=== v2.9.22 — Daubert prong updates ===');
 }
 
 // ============================================================================
+// v2.9.27 — R6 completed-successor skip in backward pass (paired JS+Python)
+// ============================================================================
+console.log('\n=== v2.9.27 — completed-succ skipped in backward pass ===');
+{
+    // Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic: completed
+    // successors are removed from CP propagation. Before this fix, a
+    // completed B with lf=ef pulled predecessor A's LF backward through
+    // historical dates, producing negative TF on A purely because B
+    // finished.
+    //
+    // Setup: A in-progress, B completed earlier. With the skip, A's
+    // LF stays at maxEF (project finish), giving A a positive TF.
+    // Without the skip (the broken pre-v2.9.27 behavior), A's LF would
+    // be pulled back through B's historical dates → negative TF.
+    const r = E.computeCPM(
+        [
+            { code: 'A', duration_days: 5,
+              actual_start: '2026-01-05',  // in-progress
+              remaining_duration: 3 },
+            { code: 'B', duration_days: 3, is_complete: true,
+              actual_start: '2025-12-01', actual_finish: '2025-12-15' },
+        ],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-10' }
+    );
+    check('R6: A is in-progress + has completed succ B → A.tf NOT negative',
+        r.nodes.A && r.nodes.A.tf >= 0,
+        'A.tf=' + (r.nodes.A && r.nodes.A.tf));
+    // INFO alert names A and the skip count.
+    const skipInfo = r.alerts.find(a => a.context === 'completed-succ-skipped-in-backward' &&
+        a.message.indexOf('A:') === 0 && a.message.indexOf('1 completed') > -1);
+    check('R6: completed-succ-skipped-in-backward INFO emitted for A', !!skipInfo);
+    // B (completed) still gets tf=0 from its own pin (unchanged).
+    check('R6: completed B still has tf=0 (own pin)',
+        r.nodes.B && r.nodes.B.tf === 0);
+}
+{
+    // Negative case: when the in-progress activity has a LIVE successor,
+    // backward propagation still drives LF from that succ. The skip
+    // only suppresses completed succs; live succs work normally.
+    const r = E.computeCPM(
+        [
+            { code: 'A', duration_days: 5,
+              actual_start: '2026-01-05', remaining_duration: 3 },
+            { code: 'B', duration_days: 3 },  // live
+        ],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-10' }
+    );
+    // A's LF should be driven by B (LF=B.LS=B.ES); the skip count is 0.
+    const skipInfo = r.alerts.find(a => a.context === 'completed-succ-skipped-in-backward');
+    check('R6: live-succ case → no skip INFO emitted', !skipInfo);
+    check('R6: live-succ case → A.tf is finite',
+        r.nodes.A && Number.isFinite(r.nodes.A.tf));
+}
+
+// ============================================================================
 // v2.9.22 — strict parser + typed input validation + whitespace trim (audit HIGH)
 // ============================================================================
 console.log('\n=== v2.9.22 — strict parse + typed input + rel-trim ===');

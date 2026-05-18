@@ -1046,11 +1046,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
         node_cal = _cal_for(node)
         succs = succ_map.get(code, [])
         min_lf = node['lf']
+        # v2.9.27 — audit MED R6 PAIRED FIX (JS + Python in lockstep).
+        # Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic, completed
+        # successors are removed from CP propagation. JS paired site is
+        # cpm-engine.js:2073. INFO alert emitted on JS side; Python
+        # tracks the count for diagnostic parity.
+        skipped_completed_succ = 0
         if succs:
             min_lf = None
             for s in succs:
                 snode = nodes.get(s['to_code'])
                 if not snode:
+                    continue
+                if snode.get('is_complete'):
+                    skipped_completed_succ += 1
                     continue
                 s_cal = cal_map.get(snode.get('clndr_id', '')) if snode.get('clndr_id') else None
                 t = s['type']
@@ -1085,6 +1094,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None):
                     min_lf = drive
             if min_lf is None:
                 min_lf = max_ef
+            # v2.9.27 — INFO alert when completed successors were skipped
+            # (matches JS cpm-engine.js:2110).
+            if skipped_completed_succ > 0:
+                alerts.append({
+                    'severity': 'INFO',
+                    'context': 'completed-succ-skipped-in-backward',
+                    'message': (
+                        f'{code}: {skipped_completed_succ} completed successor(s) '
+                        f'skipped in backward propagation '
+                        f'(retained-logic semantics; completed activities do not pull '
+                        f'predecessor LF backward through historical dates).'
+                    ),
+                })
 
         # v2.9.7 — P6 constraint application (backward pass). Primary then
         # secondary; secondary tightens further.
