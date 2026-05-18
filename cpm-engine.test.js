@@ -6768,6 +6768,43 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     check('T3.18: A.ef === data_date + 3 working days (2026-01-15)',
         A.ef_date === '2026-01-15',
         'ef_date=' + A.ef_date);
+    // v2.9.27 — audit LOW R8. T3.18 previously asserted EF only. The
+    // retained-logic LF pin (v2.9.13 F1-Bug1: in-progress critical
+    // activities pin LF = EF, TF = 0) was uncovered. Strengthen:
+    // Note on LS: for a single-activity schedule, the backward init
+    // sets LS = retreat(maxEF, duration), which can be EARLIER than ES.
+    // The v2.9.13 F1-Bug1 immutability pin only fires when LS > ES
+    // (i.e. LS would drift LATER than the historical actual). Earlier-
+    // LS is forensically benign — the activity has unconsumed float
+    // on its early side. We assert TF=0 and LF=EF only.
+    check('T3.18 (R8): in-progress sole activity is critical — TF=0',
+        A.tf === 0, 'tf=' + A.tf);
+    check('T3.18 (R8): in-progress sole activity has LF = EF (immutable)',
+        A.lf_date === A.ef_date,
+        'lf=' + A.lf_date + ' ef=' + A.ef_date);
+    check('T3.18 (R8): A is in critical-path set',
+        Array.isArray(r.criticalCodesArray) &&
+        r.criticalCodesArray.indexOf('A') > -1);
+}
+
+// T3.18-pair — propagation across an in-progress chain. A is in-progress;
+// B is its sole successor. B's TF should also be 0 (critical chain).
+{
+    const r = E.computeCPM(
+        [
+            { code: 'A', duration_days: 10, actual_start: '2026-01-08',
+              remaining_duration: 3, clndr_id: 'MF' },
+            { code: 'B', duration_days: 5, clndr_id: 'MF' },
+        ],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+        { data_date: '2026-01-12',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    check('T3.18-pair (R8): A is critical (in-progress immutable)',
+        r.nodes.A && r.nodes.A.tf === 0);
+    check('T3.18-pair (R8): B inherits criticality from in-progress A',
+        r.nodes.B && r.nodes.B.tf === 0,
+        'B.tf=' + (r.nodes.B && r.nodes.B.tf));
 }
 
 // T3.18b — without remaining_duration, falls back to duration_days (no regression).
