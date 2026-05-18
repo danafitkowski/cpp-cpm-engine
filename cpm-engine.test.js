@@ -1309,7 +1309,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     );
     check('manifest present', r.manifest !== undefined);
     check('manifest.engine_version === 2.9.12',
-        r.manifest.engine_version === '2.9.21');
+        r.manifest.engine_version === '2.9.22');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1345,7 +1345,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.21');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.22');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1598,7 +1598,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.21');
+    check('D3: engine_version present', h.engine_version === '2.9.22');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2042,7 +2042,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.1');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.21');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.22');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2062,7 +2062,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.21');
+        dCaught && dCaught.engine_version === '2.9.22');
 }
 
 // ============================================================================
@@ -3194,6 +3194,78 @@ console.log('\n=== Section M D4 — Test 7: HTML render smoke ===');
         windowLabels: ['W1', 'W2', 'W3'],
     });
     check('D4-T7: without renderHTML, html field absent', rNoHtml.html === undefined);
+}
+
+// ============================================================================
+// v2.9.22 — getHolidays year-range clamp (audit HIGH R11)
+// ============================================================================
+console.log('\n=== v2.9.22 — getHolidays year-range clamp ===');
+{
+    // Calling getHolidays('CA-ON', 2027, 2027) should not emit dates with
+    // years outside the requested window. The cascade-collision loop used
+    // to roll Dec 31 observances into January of fromYear+1.
+    const yrs = E.getHolidays('CA-ON', 2027, 2027);
+    const escaped = yrs.filter(d => {
+        const yr = parseInt(d.slice(0, 4), 10);
+        return yr < 2027 || yr > 2027;
+    });
+    check('R11: getHolidays(CA-ON, 2027) emits no escapees outside 2027',
+        escaped.length === 0,
+        'escaped=' + JSON.stringify(escaped));
+    // Sanity: at least some holidays returned.
+    check('R11: getHolidays(CA-ON, 2027) returns at least one date',
+        yrs.length > 0);
+}
+
+// ============================================================================
+// v2.9.22 — Daubert prong updates (audit HIGH R16/R18)
+// ============================================================================
+console.log('\n=== v2.9.22 — Daubert prong updates ===');
+{
+    // R16: Provenance now exposes engine_sha256 + python_reference_sha256.
+    const d = E.buildDaubertDisclosure(null, {
+        engine_sha256: 'abc123',
+        python_reference_sha256: 'def456',
+    });
+    check('R16: provenance.engine_sha256 flowed from opts',
+        d.provenance && d.provenance.engine_sha256 === 'abc123');
+    check('R16: provenance.python_reference_sha256 flowed from opts',
+        d.provenance && d.provenance.python_reference_sha256 === 'def456');
+    // Default is null, not a fake hash.
+    const d2 = E.buildDaubertDisclosure(null);
+    check('R16: engine_sha256 defaults to null',
+        d2.provenance && d2.provenance.engine_sha256 === null);
+    check('R16: python_reference_sha256 defaults to null',
+        d2.provenance && d2.provenance.python_reference_sha256 === null);
+
+    // R16: Prong 2 answer is now binary "Yes".
+    check('R16: prong_2_peer_review.answer is "Yes" (binary)',
+        d2.prong_2_peer_review && d2.prong_2_peer_review.answer === 'Yes');
+}
+{
+    // R18: TIA methodology now switches on tia_mode.
+    const d_3_6 = E.buildDaubertDisclosure({
+        manifest: { method_id: 'computeTIA', tia_mode: 'single_base_prospective' }
+    });
+    check('R18: tia_mode=single_base_prospective → MIP 3.6 (no DEFAULT tag)',
+        d_3_6.methodology && d_3_6.methodology.description.indexOf('MIP 3.6') > -1 &&
+        d_3_6.methodology.description.indexOf('DEFAULT') === -1);
+    const d_3_7 = E.buildDaubertDisclosure({
+        manifest: { method_id: 'computeTIA', tia_mode: 'multi_base_prospective' }
+    });
+    check('R18: tia_mode=multi_base_prospective → MIP 3.7',
+        d_3_7.methodology && d_3_7.methodology.description.indexOf('MIP 3.7') > -1);
+    const d_retro = E.buildDaubertDisclosure({
+        manifest: { method_id: 'computeTIA', tia_mode: 'single_base_retrospective' }
+    });
+    check('R18: tia_mode=*_retrospective → SCL Protocol §4 caveat appended',
+        d_retro.methodology && d_retro.methodology.description.indexOf('SCL Protocol') > -1);
+    // Unspecified mode → MIP 3.6 with DEFAULT tag warning the analyst.
+    const d_default = E.buildDaubertDisclosure({
+        manifest: { method_id: 'computeTIA' }
+    });
+    check('R18: no tia_mode → MIP 3.6 with [DEFAULT: ...] note',
+        d_default.methodology && d_default.methodology.description.indexOf('DEFAULT') > -1);
 }
 
 // ============================================================================
@@ -7643,7 +7715,7 @@ console.log('\n=== v2.9.14 Bug F9 — Topology hash v2 (Python parity + JSON-enc
 {
     const acts = [{ code: 'A', duration_days: 5 }];
     const fakeReport = {
-        engine_version: '2.9.21',
+        engine_version: '2.9.22',
         provenance: {
             // Plausible v1 64-hex hash — no v2 prefix.
             input_topology_hash: 'a'.repeat(64),

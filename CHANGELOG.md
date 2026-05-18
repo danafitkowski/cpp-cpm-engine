@@ -12,6 +12,97 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.22 — 2026-05-18 — Audit HIGH wave (10 real items)
+
+Closes 10 specific HIGH-priority findings from the 20-agent audit by
+direct file:line cross-reference. No "X/X closed" framing.
+
+### Engine correctness
+
+- **R19/cpm-engine.js:994** — Relationship endpoint whitespace trim.
+  `' A '`→`'B'` rel now matches activity coded `'A'` instead of
+  silently dropping as DANGLING.
+- **R19/cpm-engine.js:1309, 1528** — `_strictParseFloat` helper rejects
+  partial-parse poison (`'5abc'` → NaN instead of silently 5). Wired
+  into `duration_days` and `lag_days`.
+- **R19/cpm-engine.js:1180** — `computeCPM` with non-array
+  `activities`/`relationships` now throws typed `INVALID_INPUT` error
+  (with `err.argument`) instead of leaky V8 `TypeError`.
+- **R11/cpm-engine.js:7884** — `getHolidays` clamps cascade-collision
+  escapees that rolled past the requested year window.
+- **R12/cpm-engine.js:1379** — `_alertOnSilentDateCoerce` no longer
+  false-positives on the literal string `'2020-01-01'` (the engine's
+  epoch). Regex-validates YYYY-MM-DD shape first.
+- **R12/cpm-engine.js:1627** — Documented limitation: an activity
+  legitimately started on 2020-01-01 (engine epoch) silently misses
+  immutability gate. Fix requires epoch move; deferred to v3.0.
+
+### Daubert disclosure
+
+- **R16/cpm-engine.js** — `provenance.engine_sha256` and
+  `provenance.python_reference_sha256` added (caller-supplied, default
+  null — no fake hashes).
+- **R16/cpm-engine.js** — `prong_2_peer_review.answer` is now binary
+  `"Yes"` matching the other three prongs (was a non-binary
+  self-narration).
+- **R18/cpm-engine.js** — `manifest.tia_mode` switches methodology
+  description between MIP 3.6 (single-base prospective),
+  MIP 3.7 (multi-base prospective), and the retrospective variants
+  with SCL Protocol §4 caveat. Default (no mode) carries an inline
+  `[DEFAULT: caller did not specify tia_mode]` warning so the analyst
+  sees the assumption.
+
+### Bayesian
+
+- **R22/cpm-engine.js:6203** — Lognormal `mu = dur · exp(0.5·σ_ln²)`
+  convention now documented in JSDoc: `duration_days` is treated as
+  the MEDIAN. Math unchanged (would break existing users); v3.0 may
+  add `lognormal_param: 'median'|'mean'` switch.
+- **R22/cpm-engine.js:6312** — `prior_strength` docstring corrected.
+  It's NOT a Bayesian pseudocount — true pseudocount would divide
+  likelihood-variance; engine multiplies. Renamed conceptually as a
+  prior-confidence knob with `strength→0/1/∞` limit semantics.
+
+### Test infrastructure
+
+- **R18/tests/no-truncation.test.js** — New regression guard against
+  silent `[:N]` / "top 10" / `first` truncation in engine output
+  surfaces. Exercises a 60-activity all-critical schedule and asserts
+  full counts in `result.nodes`, `criticalCodesArray`,
+  `strategy_summary.TFM.codes`, alerts (100-entry probe), and Daubert
+  `provenance.activity_count`. Wired into `npm run test:all`.
+- **R18/tests/no-fabricated-citations.test.js** — `SCAN_DIRS` now
+  includes `python_reference/` so cmp.py docstrings are scanned for
+  the same forbidden-citation patterns as the JS sources.
+
+### Test state
+
+| Metric | v2.9.21 | v2.9.22 |
+|---|---|---|
+| Unit tests | 1037 / 0 | **1056 / 0** (+19 assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+| `test:cites` | PASS | PASS (now scans python_reference/) |
+| `test:truncation` | (new) | PASS (new gate) |
+
+### Audit ledger status
+
+- Closed in v2.9.13–v2.9.18: 27 CRITICAL
+- Closed in v2.9.19: 9 HIGH
+- Closed in v2.9.20: ~15 MED (the rest of the v2.9.20 claims were
+  fabricated — see v2.9.20 correction note)
+- Closed in v2.9.21: 13 MED + LOW (real, cross-referenced)
+- Closed in v2.9.22: **10 HIGH** (real, cross-referenced)
+- Still open: ~50 (per v2.9.21 cross-reference, minus ~10 closed here,
+  plus ~10 stale findings rediscovered to already be closed)
+- Deferred to v3.0 (architectural): ~6
+
+The ledger is still NOT closed. v2.9.22 is honest progress, not a
+closeout. ~50 engineering items remain (mostly Python parity backports,
+perf optimizations, hammock FS hard-precedence, doc updates).
+
+---
+
 ## v2.9.21 — 2026-05-18 — Real audit cross-reference (post-v2.9.20 correction)
 
 The v2.9.20 release was framed as "218/218 audit ledger closed". That

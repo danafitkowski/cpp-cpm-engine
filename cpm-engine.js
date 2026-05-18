@@ -144,7 +144,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.21';
+const ENGINE_VERSION = '2.9.22';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -5636,10 +5636,32 @@ function buildDaubertDisclosure(result, opts) {
     opts = opts || {};
     const manifest = (result && result.manifest) ? result.manifest : {};
 
-    // Derive methodology description from method_id if not in manifest.
+    // v2.9.22 (audit HIGH R18) — MIP selection by manifest.tia_mode for
+    // computeTIA. Prior code hardcoded MIP 3.6 (single-base prospective)
+    // regardless of how the caller used the function. Multi-base TIA is
+    // 3.7, retrospective TIA is the bifurcated set (3.6 retro vs 3.7
+    // retro); hardcoding one descriptor in a Daubert disclosure was a
+    // mislabel risk on cross-examination. Caller now passes
+    // manifest.tia_mode ('single_base_prospective' | 'multi_base_prospective'
+    // | 'single_base_retrospective' | 'multi_base_retrospective'); falls
+    // back to 3.6 single-base prospective only when no mode is supplied
+    // and a WARN-style note is appended so the analyst sees the default.
     const methodology = manifest.methodology || (function () {
         const id = manifest.method_id || 'computeCPM';
-        if (id === 'computeTIA') return 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)';
+        if (id === 'computeTIA') {
+            const mode = (manifest.tia_mode || '').toLowerCase();
+            if (mode === 'multi_base_prospective')
+                return 'AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base — Prospective Multi-Base TIA)';
+            if (mode === 'single_base_retrospective')
+                return 'AACE 29R-03 MIP 3.6 retrospective (Modeled / Additive / Single Simulation — see SCL Protocol §4 on retrospective TIA caveat)';
+            if (mode === 'multi_base_retrospective')
+                return 'AACE 29R-03 MIP 3.7 retrospective (Modeled / Additive / Multiple Base — see SCL Protocol §4)';
+            if (mode === 'single_base_prospective' || mode === '')
+                return 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)' +
+                    (mode === '' ? ' [DEFAULT: caller did not specify tia_mode — confirm before filing]' : '');
+            return 'AACE 29R-03 TIA family (unrecognized tia_mode=' + JSON.stringify(manifest.tia_mode) +
+                ' — defaulted to 3.6 single-base prospective)';
+        }
         if (id === 'computeCPMWithStrategies') return 'AACE 49R-06 §3 + AACE TFM + P6 native MFP (multi-method critical-path identification with divergence analysis)';
         if (id === 'computeCPMSalvaging') return 'AACE 29R-03 source validation + iterative cycle-break (highest-|lag| heuristic with alphabetical tiebreak)';
         return 'CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03';
@@ -5687,7 +5709,12 @@ function buildDaubertDisclosure(result, opts) {
                 'Test suite hash and source available on the public repository.',
         },
         prong_2_peer_review: {
-            answer: 'Methodology peer-reviewed; engine validated.',
+            // v2.9.22 (audit HIGH R16) — answer made binary ("Yes"). The
+            // prior "Methodology peer-reviewed; engine validated." was a
+            // non-binary self-narration that left the prong's answer
+            // ambiguous on a quick read. Binary answer + evidence prose
+            // matches the structure of the other three prongs.
+            answer: 'Yes',
             evidence: 'Controlling rule: FRE 702 (Dec 1, 2023 amendment) — the structured ' +
                 'methodology + error rate + provenance fields below are intended to satisfy ' +
                 'Rule 702(c) (reliable principles and methods) and Rule 702(d) (reliable ' +
@@ -5730,6 +5757,17 @@ function buildDaubertDisclosure(result, opts) {
         },
         provenance: {
             input_topology_hash: inputHash,
+            // v2.9.22 (audit HIGH R16) — engine + Python-reference SHA-256
+            // pins. Without these in the disclosure, an opposing expert
+            // cannot cryptographically prove the byte-image of the engine
+            // and reference they're rebutting matches what produced the
+            // result. Caller can override via opts.engine_sha256 /
+            // opts.python_reference_sha256 (typical source: the Sigstore
+            // witness JSON). Defaults are null so a missing override
+            // doesn't masquerade as verification.
+            engine_sha256: opts.engine_sha256 || manifest.engine_sha256 || null,
+            python_reference_sha256: opts.python_reference_sha256 ||
+                manifest.python_reference_sha256 || null,
             output_method_id: manifest.method_id || null,
             // v2.9.20 A14-M2 — fall back to current ISO timestamp when the
             // manifest doesn't carry one (standalone disclosure builds without
@@ -7881,7 +7919,17 @@ function getHolidays(jurisdiction, fromYear, toYear) {
             set.add(date);
         }
     }
-    return Array.from(set).sort();
+    // v2.9.22 — clamp to requested [fromYear, toYear] window (audit HIGH R11).
+    // The cascade-collision loop above can roll an observance into the next
+    // calendar year (e.g., a Dec 31 collision walks to Jan N of fromYear+1).
+    // Filter such escapees so callers passing fromYear===toYear don't see
+    // dates outside the requested year.
+    return Array.from(set)
+        .filter(function (d) {
+            const yr = parseInt(d.slice(0, 4), 10);
+            return Number.isFinite(yr) && yr >= fromYear && yr <= toYear;
+        })
+        .sort();
 }
 
 // ── Public: getJurisdictionCalendar ──────────────────────────────────────────
