@@ -1376,7 +1376,15 @@ function computeCPM(activities, relationships, opts) {
         // every activity-date callsite so the analyst sees the silent coercion.
         function _alertOnSilentDateCoerce(rawStr, fieldName, activityCode) {
             if (!rawStr) return;
-            if (dateToNum(rawStr) === 0) {
+            // v2.9.22 — `dateToNum(rawStr) === 0` falsely flagged the literal
+            // string '2020-01-01' (which legitimately parses to offset 0 in
+            // this engine's epoch). Distinguish "invalid parse → 0 fallback"
+            // from "valid 2020-01-01 → 0" by first regex-validating the
+            // YYYY-MM-DD shape; only emit the alert when the shape is wrong
+            // AND the parse fell to 0.
+            const trimmed = String(rawStr).slice(0, 10);
+            const shapeOk = /^\d{4}-\d{2}-\d{2}$/.test(trimmed);
+            if (!shapeOk || (dateToNum(rawStr) === 0 && trimmed !== '2020-01-01')) {
                 alerts.push({
                     severity: 'ALERT',
                     context: 'invalid-date-coerced',
@@ -1625,6 +1633,15 @@ function computeCPM(activities, relationships, opts) {
         // (the normal case — schedule updated days after work began) ES was
         // pinned to data_date, not actual_start.
         const actStartNum = node.actual_start ? dateToNum(node.actual_start) : 0;
+        // v2.9.22 — KNOWN LIMITATION (audit HIGH R12): an activity with
+        // actual_start='2020-01-01' (the engine's epoch) has actStartNum
+        // === 0, which collides with the "no actual_start" sentinel. The
+        // immutability gate below treats it as "not started" and lets ES
+        // drift to data_date. Affects forensic schedules whose actual
+        // start dates fall on the epoch boundary — narrow real-world
+        // exposure but documented for traceability. v3.0 will move the
+        // epoch back to 1900-01-01 so offset 0 is no longer a plausible
+        // real date.
         const hasActualStart = actStartNum > 0;
         let maxES;
         if (hasActualStart) {

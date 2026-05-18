@@ -6,8 +6,9 @@
   "scripts": {
     "test": "node cpm-engine.test.js",
     "test:cites": "node tests/no-fabricated-citations.test.js",
+    "test:truncation": "node tests/no-truncation.test.js",
     "crossval": "node cpm-engine.crossval.js",
-    "test:all": "npm test && npm run crossval && npm run test:cites",
+    "test:all": "npm test && npm run crossval && npm run test:cites && npm run test:truncation",
     "verify": "node scripts/attestation.js",
     "attest": "node scripts/attestation.js --silent --output attestations/latest.json"
   },
