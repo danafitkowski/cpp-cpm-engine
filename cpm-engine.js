@@ -812,6 +812,16 @@ function _emitFractionalLagAlertIfNeeded(nDays, alerts, ctx) {
     const raw = Number(nDays);
     if (!Number.isFinite(raw)) return;
     if (raw === Math.round(raw)) return;
+    // v2.9.23 — dedup spam (audit MED R12). On a schedule with 500 4-hour
+    // lags, this helper fired 500 identical ALERTs through _advance/
+    // _retreatWithAlerts. Forensic readers got buried in noise. Dedup
+    // per (value, ctx) pair so the analyst sees ONE alert per unique
+    // fractional-lag value per callsite rather than N copies.
+    const _seenKey = '_sub_day_lag_seen';
+    if (!alerts[_seenKey]) alerts[_seenKey] = Object.create(null);
+    const dedupKey = String(raw) + '\x1f' + String(ctx);
+    if (alerts[_seenKey][dedupKey]) return;
+    alerts[_seenKey][dedupKey] = true;
     alerts.push({
         severity: 'ALERT',
         context: ctx,
