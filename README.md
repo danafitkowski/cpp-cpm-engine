@@ -69,7 +69,7 @@ The engine math is a commodity. The competitive moat in forensic scheduling is t
 
 ## What you can build
 
-- **Forensic delay analysis** — windows analysis (AACE MIP 3.3), collapsed as-built (MIP 3.8 Single Simulation), prospective TIA (MIP 3.6 Single Simulation or MIP 3.7 Multiple Base, depending on mode)
+- **Forensic delay analysis primitives** — CPM forward/backward pass that supports analyses under AACE 29R-03 MIPs 3.3 (windows), 3.6/3.7 (prospective TIA single-base / multi-base), and 3.8 (collapsed as-built). The engine provides the CPM math; full method implementations (period selection, fragnet integration, as-built reconstruction) live in the CPP forensic skill suite — this OSS engine is the math core they build on, not the full method.
 - **Claim packages** — owner-submission EOT bundles with cover letter, exhibits, mitigation logs
 - **Daubert disclosures** — FRCP 26(a)(2)(B) reports, FRE 702/707 four-prong methodology statements
 - **Schedule risk primitives** — Bayesian posterior estimation (`computeBayesianUpdate`); per-iteration CPM (`runCPM`) suitable as an inner loop for Monte Carlo wrappers built on top of this engine. Full Monte Carlo / QRAMM scoring lives in the CPP forensic skill suite (`schedule-risk-analysis`), built atop this primitive.
