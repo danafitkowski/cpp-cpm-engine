@@ -111,4 +111,4 @@ Out of scope:
 
 ---
 
-*Last updated: 2026-05-16 (v2.9.11 / Round 8 OSS hygiene).*
+*Last updated: 2026-05-18 (v2.9.27 / audit closeout + Python parity wave).*

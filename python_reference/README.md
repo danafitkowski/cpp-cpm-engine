@@ -23,19 +23,31 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  4b65db3b76a56c802118fe80b0a8a29bfa863b387a1bc0bf429c5db634d05fe3
+cpm.py  SHA-256:  50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7
 ```
 
-(v2.9.12 Round 9 — bumped from 9779f268 with substantial Python parity edits:
-T1.1 MS_Start hard-pin on backward LF, T1.2 constraint-noop WARN on
-actual_start suppression, T1.6 constraint-unrecognized / constraint-incomplete
-WARN with optional alerts parameter, T1.7 CS_MANSTART / CS_MANFINISH alias,
-T2.16 invalid-calendar-falling-back WARN, T3.19 backward LS=ES pin for
-in-progress, T4.25 MISSING_ACTUAL_START ES derivation, T4.26 ALAP secondary
-slot. JS-only fixes (free float, Section D MC, OoS enumeration, hammock,
-dateToNum rollover, SUB_DAY_LAG message, EF>=ES guard in Section C, etc.)
-intentionally remain JS-only. See CHANGELOG.md v2.9.12 entry for the full
-T1-T4 fix index.
+The hash is regenerated on every `npm run attest` and written to
+`python_reference/cpm.py.sha256` (gitignored sidecar) for mechanical
+`shasum -c` verification.
+
+(v2.9.27 — bumped substantially from v2.9.12's `4b65db3b...`. Three paired
+JS+Python fixes landed: **R6** completed-successor skip in backward
+propagation per SCL Protocol §4 retained-logic; **R12** data_date floor
+snaps forward to next workday when it falls on a non-workday for the
+activity's calendar; **R21** MonFri fast path ported from JS (~13×/250×/
+900× speedup at 5d/30d/120d walks, bit-identical to the day-by-day
+walker on clean Mon-Fri with no holidays). Three F24-class Python
+parity backports closed the longest-standing JS-only gaps: `tf_working_days`,
+`ff`, `ff_working_days` now in Python with a new `_count_work_days_between`
+helper. `compute_topology_hash` got the v2.9.20 JS hardenings:
+`str()` coercion of codes for numeric/string parity (A12-M1),
+`input_relationship_count` vs `hashed_relationship_count` distinction
+(A12-M2), `algorithm: null` for empty-schedule branch (A12-M4). Python
+`_cal_for` now honors a `project_calendar` fallback (R10). Mandatory
+`constraint-widens-lf` WARN now fires symmetrically on all four P6
+mandatory types (MS_Start/SO + MS_Finish/MFO — R6). Crossval JS↔Python
+bit-identical surface expanded from 444 → 747 checks across 43 fixtures.
+See CHANGELOG.md v2.9.27 entry for the full audit-cross-reference.
 
 Prior v2.9.11 Round 8 R8A — bumped from 924a8bb2 with ENGINE_VERSION sync
 only (2.9.10 → 2.9.11). The R8A engine math fix wave is JS-only — see
