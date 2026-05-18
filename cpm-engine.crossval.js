@@ -776,8 +776,14 @@ compareFixture('F23 — Cycle detection (both engines refuse)', {
 // =====================================================================
 // FIXTURE 24 — Free-Float parity DOCUMENTED GAP
 // =====================================================================
-// JS computes free_float (ff / ff_working_days) per AACE 10S-90 / Wickwire
-// — see cpm-engine.js Section ~1120-1158. Python reference does NOT
+// JS computes free_float (ff / ff_working_days) per AACE 29R-03 §4 (Forensic
+// Schedule Analysis, peer-reviewed RP) and Wickwire et al., Construction
+// Scheduling: Preparation, Liability, and Claims (3rd ed., Aspen Publishers,
+// 2010). The earlier citation here named AACE 10S-90 — that document is the
+// AACE Cost Engineering Terminology glossary (which does carry FF in its
+// term-definition section, but 29R-03 §4 is the more direct, methodology-
+// level source for the forensic FF definition). See cpm-engine.js Section
+// ~1120-1158. Python reference does NOT
 // compute ff; the field is absent from compute_cpm's output. Per A4 Round
 // 6 audit recommendation, this is an INTENTIONAL parity gap: the public
 // API of the Python reference is documented as the cross-validatable

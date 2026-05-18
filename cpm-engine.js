@@ -826,7 +826,7 @@ function _advanceWithAlerts(startNum, nDays, calendarInfo, alerts, ctx) {
         alerts.push({
             severity: 'ALERT',
             context: ctx,
-            message: 'Calendar-aware arithmetic unavailable (no cal_map/clndr_id) — falling back to 7-day ordinal arithmetic.',
+            message: 'Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.',
         });
         return startNum + _roundHalfUp(_nSafe);
     }
@@ -843,7 +843,7 @@ function _retreatWithAlerts(endNum, nDays, calendarInfo, alerts, ctx) {
         alerts.push({
             severity: 'ALERT',
             context: ctx,
-            message: 'Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) — falling back to 7-day ordinal arithmetic.',
+            message: 'Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.',
         });
         return endNum - _roundHalfUp(_nSafe);
     }
@@ -2873,7 +2873,7 @@ function runCPM(opts) {
         alerts.push({
             severity: 'ALERT',
             context: 'section-d-ordinal-only',
-            message: 'runCPM (Section D) is ORDINAL-day arithmetic only — lag ' +
+            message: 'runCPM (Section D) is ORDINAL-day arithmetic only - lag ' +
                 'and duration are not calendar-converted on non-7-day calendars. ' +
                 'Activities with clndr_id were detected; for calendar-aware ' +
                 'results use computeCPM (Section C) with opts.calMap. ' +
@@ -3432,6 +3432,9 @@ function runCPM(opts) {
         // v2.9.9 — preserved as back-compat; always 0/empty under full
         // SS/FF/SF semantics. Downstream consumers reading these fields
         // continue to work.
+        // v2.9.21 — these fields are fossils (always 0/empty since v2.9.9).
+        // Kept for backward-compat with any consumer that pinned to them
+        // pre-v2.9.9; will be removed in v3.0 per docs/api.md deprecations.
         hammock_non_fs_alerts: hammockReport.non_fs_alerts || [],
         hammock_unsupported_rel_count: (hammockReport.non_fs_alerts || []).length,
         // v2.9.8 Bug B2/B8 — Section D constraint + hammock alerts collector.
