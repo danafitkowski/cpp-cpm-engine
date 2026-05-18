@@ -5581,14 +5581,23 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '40 cross-validation fixtures × 416 checks bit-identical (including ' +
+                '43 cross-validation fixtures × 444 checks bit-identical (including ' +
                 'severity-level alert parity). Real XER (282 activities) 0 mismatches. ' +
                 testCountStr +
-                ' unit tests passing in CI. Test suite hash and source available on request.',
+                ' unit tests passing in CI. ' +
+                'Public CI runs verification on every push (GitHub Actions verify.yml across ' +
+                '9 OS × Node combinations). Witness JSON cryptographically signed via Sigstore ' +
+                'and recorded on the public Rekor transparency log. One-command third-party ' +
+                'reproduction via `npm run verify` (zero npm dependencies). ' +
+                'Test suite hash and source available on the public repository.',
         },
         prong_2_peer_review: {
             answer: 'Methodology peer-reviewed; engine validated.',
-            evidence: 'CPM forward/backward pass per Kelley, J. E. & Walker, M. R. (1959). ' +
+            evidence: 'Controlling rule: FRE 702 (Dec 1, 2023 amendment) — the structured ' +
+                'methodology + error rate + provenance fields below are intended to satisfy ' +
+                'Rule 702(c) (reliable principles and methods) and Rule 702(d) (reliable ' +
+                'application). ' +
+                'CPM forward/backward pass per Kelley, J. E. & Walker, M. R. (1959). ' +
                 'Critical-Path Planning and Scheduling. Proceedings of the Eastern Joint ' +
                 'IRE-AIEE-ACM Computer Conference, Boston, Dec 1-3, 1959, pp. 160-173. ' +
                 'Tarjan SCC per Tarjan (1972) SIAM J. Comput. 1(2):146-160. ' +
@@ -5596,18 +5605,22 @@ function buildDaubertDisclosure(result, opts) {
                 'AACE 29R-03 (2003, rev. 2011) Forensic Schedule Analysis (peer-reviewed RP). ' +
                 'AACE 49R-06 (2006, rev. 2010) Identifying the Critical Path (peer-reviewed RP). ' +
                 'AACE 52R-06 (2017) Prospective Time Impact Analysis (peer-reviewed RP). ' +
-                'SCL Protocol 2nd Edition (2017) Society of Construction Law. ' +
-                'Engine implementation peer-reviewed via 8-lens forensic audit 2026-05-09.',
+                'SCL Protocol 2nd Edition (2017) Society of Construction Law.',
         },
         prong_3_error_rate: {
-            answer: 'Zero on validation suite; not formally characterized on adversarial inputs.',
-            evidence: 'Engine produces bit-identical output to Python reference implementation ' +
-                'on 40 fixtures + 282-activity real XER (0 mismatches). Edge-case torture ' +
-                'audit identified pre-flight conditions (NEGATIVE_DURATION, OUT_OF_SEQUENCE, ' +
+            answer: 'Computational error rate: zero on the validation suite. Epistemic ' +
+                '(analyst-judgment) error: not characterized by the engine and not zero.',
+            evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
+                'produces bit-identical output to the Python reference implementation on ' +
+                '43 fixtures + 282-activity real XER (0 mismatches). Edge-case torture audit ' +
+                'identified pre-flight conditions (NEGATIVE_DURATION, OUT_OF_SEQUENCE, ' +
                 'DISCONNECTED) where strict mode now throws; salvage mode logs and continues. ' +
-                'No silent wrong-answer paths after v2.1.0. ' +
-                'Adversarial inputs (corrupt XER, hand-edited topology) handled by salvage_log ' +
-                'with full audit trail.',
+                'No silent wrong-answer paths after v2.1.0. Adversarial inputs (corrupt XER, ' +
+                'hand-edited topology) handled by salvage_log with full audit trail. ' +
+                'EPISTEMIC error rate (subjective expert judgments — causation attribution, ' +
+                'concurrency assessment, fragnet selection, method selection, calendar choice) ' +
+                'is the analyst\'s responsibility and is NOT characterized by the engine. ' +
+                'The engine cannot and does not warrant the inputs it receives.',
         },
         prong_4_general_acceptance: {
             answer: 'Yes',

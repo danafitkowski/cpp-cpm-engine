@@ -5381,20 +5381,26 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
 
 // R-v298-B10: Daubert disclosure string fixture-count parity.
 // This text is baked into emitted Daubert disclosures = court filings.
-// Round 6 expansion: 13 → 16 → 25 fixtures. Round 8 → 32 fixtures.
-// Round 9 (v2.9.12) → 40 fixtures. Test enforces that the disclosure
-// references the CURRENT count and that no earlier count strings persist
-// in the source.
+// Round 6 expansion: 13 → 16 → 25 fixtures. Round 8 → 32. Round 9 (v2.9.12) → 40.
+// v2.9.21: refreshed to current 43 fixtures × 444 checks (per `npm run crossval`).
+// Test enforces that the disclosure references the CURRENT count and that no
+// earlier count strings persist in the source.
 {
     const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
-    check('R-v298-B10: Daubert disclosure references 40 fixtures (current Round 9 count)',
-        src.indexOf('40 fixtures + 282-activity') >= 0);
+    check('R-v298-B10: Daubert disclosure references 43 fixtures (current count)',
+        src.indexOf('43 fixtures + 282-activity') >= 0);
+    check('R-v298-B10: Daubert disclosure references 43 × 444 checks (current)',
+        src.indexOf('43 cross-validation fixtures × 444 checks') >= 0);
     check('R-v298-B10: no remaining "13 fixtures" reference in source',
         src.indexOf('13 fixtures') === -1);
     check('R-v298-B10: no remaining "16 fixtures" reference in source',
         src.indexOf('16 fixtures') === -1);
     check('R-v298-B10: no remaining "25 fixtures" reference in source',
         src.indexOf('25 fixtures') === -1);
+    check('R-v298-B10: no remaining "40 fixtures + 282" reference (stale)',
+        src.indexOf('40 fixtures + 282') === -1);
+    check('R-v298-B10: no remaining "× 416 checks" reference (stale)',
+        src.indexOf('× 416 checks') === -1);
 }
 
 // ============================================================================
