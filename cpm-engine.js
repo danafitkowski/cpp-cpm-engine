@@ -2052,6 +2052,14 @@ function computeCPM(activities, relationships, opts) {
         const nodeCal = calFor(node);
         const succs = succMap[code] || [];
         let minLF = node.lf;
+        // v2.9.23 — KNOWN ISSUE (audit MED R6): a completed successor B with
+        // lf=ef pulls predecessor A's LF backward through historical-fact
+        // dates, producing negative TF on A purely because B already finished.
+        // Per SCL Protocol §4 / P6 retained-logic, completed successors
+        // should be removed from CP propagation. JS-only fix would break
+        // JS↔Python crossval bit-identity (the Prong-1 Daubert evidence);
+        // backport to python_reference is required first. Deferred until
+        // a paired JS+Python patch can land in the same release.
         if (succs.length) {
             minLF = null;
             for (const s of succs) {
