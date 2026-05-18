@@ -296,6 +296,12 @@ Three engine features are first-publication or pre-publication in construction s
 
 - **Hammock non-FS relationship types** (SS / FF / SF tying a hammock to a non-hammock activity) are fully computed as of v2.9.9 via four axis-specific transitive walkers (`esFloor`, `lfFloor`, `lfCeiling`, `esCeiling`). Hammock-of-hammocks DAG joins resolved via per-axis memoization. Genuine hammock-cycle topology (mutual succ↔pred between hammocks) is detected and emits `hammock-cycle` ALERT — cycle-affected hammocks still resolve from their non-cyclic anchors but may have incomplete anchor sets.
 
+- **Percent-complete consistency.** P6 stores `act_complete_pct`, `phys_complete_pct`, and `dur_complete_pct` per activity. A common forensic red flag is the RD/OD ratio implying X% complete while `phys_complete_pct` reports Y%. The engine does not consume any of those fields; the consistency check is out of scope and must be performed one layer up (e.g., `claim-workbench`) using `parseXER` or the upstream P6 export. Audit MED R8 documented limitation.
+
+- **Section D calendar-awareness.** `runCPM` (Section D) uses ordinal 7-day arithmetic. For calendar-aware results, callers must use `computeCPM` (Section C) with `opts.calMap`. `runCPM` emits a `section-d-ordinal-only` ALERT when activities carry `clndr_id` so the caller is loudly told to switch APIs. Section-D calendar integration is a v3.0 architectural item.
+
+- **Engine epoch = 2020-01-01.** The engine's day-offset arithmetic uses 2020-01-01 as offset 0. Activities with `actual_start = '2020-01-01'` collide with the "no actual_start" sentinel (offset 0) — the immutability gate `actStartNum > 0` treats them as not-started. Narrow real-world exposure (only affects schedules with actuals literally on Jan 1, 2020); fix requires moving the epoch back, v3.0 candidate. Audit HIGH R12 documented limitation.
+
 ---
 
 ## §10 Roadmap — Forward-looking Daubert hardening
