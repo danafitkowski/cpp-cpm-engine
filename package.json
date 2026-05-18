@@ -56,6 +56,6 @@
     "python_reference/",
     "tests/",
     "scripts/",
-    "attestations/"
+    "attestations/README.md"
   ]
 }
