@@ -2653,10 +2653,36 @@ function parseXER(content) {
                             _MC.parseAlerts,
                             (row.task_code || taskId));
                     }
+                    // v2.9.23 — emit WARN when targetDur is missing on an
+                    // in-progress activity (audit MED R15). originalRemaining
+                    // is supposed to be the at-baseline planned duration;
+                    // when target_drtn_hr_cnt is missing (rare — status-only
+                    // exports), the fallback used `remaining` (post-progress
+                    // shortened duration), pulling FF/SF successors earlier
+                    // by the progress amount. Loud WARN so the analyst sees
+                    // the silent substitution.
+                    if (!isMilestone && targetDur <= 0 && actStart && !actFinish) {
+                        _MC.parseAlerts.push({
+                            severity: 'WARN',
+                            context: 'target-drtn-missing',
+                            message: 'TARGET_DRTN_MISSING on ' + (row.task_code || taskId) +
+                                ': target_drtn_hr_cnt absent on in-progress activity; ' +
+                                'originalRemaining falls back to remaining=' + remaining +
+                                ' (progressed duration, not at-baseline). FF/SF ' +
+                                'successors may shift earlier by the progress amount. ' +
+                                'Re-run with target_drtn_hr_cnt populated for forensic accuracy.',
+                        });
+                    }
                     _MC.tasks[taskId] = {
                         id: taskId,
                         code: row.task_code || taskId,
-                        name: row.task_name || 'Unnamed',
+                        // v2.9.23 — placeholder unified (audit MED R16): use
+                        // task_code as the fallback so the activity is at
+                        // least identifiable in dashboards. Previously a
+                        // missing task_name rendered as 'Unnamed' next to
+                        // hammocks rendered as 'Hammock' — three different
+                        // placeholders for "missing" within one engine.
+                        name: row.task_name || (row.task_code || taskId),
                         remaining: isMilestone ? 0 : remaining,
                         originalRemaining: isMilestone ? 0 : (targetDur > 0 ? targetDur : remaining),
                         actual_start: actStart,
