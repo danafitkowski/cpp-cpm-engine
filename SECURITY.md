@@ -81,6 +81,12 @@ A failing `gh attestation verify` on a release artifact is itself a security fin
 
 The Python reference (`python_reference/cpm.py`) is byte-pinned by SHA-256 in `DAUBERT.md` §3.1. If the published bytes do not match the pinned hash, that is also a security finding.
 
+### Forked-PR isolation
+
+The CI workflows (`.github/workflows/verify.yml`, `test.yml`, `crossval.yml`) trigger on `pull_request` (NOT `pull_request_target`). This ensures forked-PR builds run in the fork's context and cannot read the `id-token` OIDC secret that authorizes Sigstore signing — only pushes to `main` and tag pushes produce signed witnesses. A fork's CI cannot forge an attestation.
+
+If a future workflow change uses `pull_request_target` on the verify / attest jobs, that is a security finding and should be reported through this channel.
+
 ---
 
 ## No bug-bounty program
