@@ -12,6 +12,42 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.25 — 2026-05-18 — Perf wave + Python parity partial (4 items)
+
+### Engine perf (3)
+- **R21 LOW** — OoS detector memoizes `actual_start` offsets (saves
+  ~500k Date constructions on a 25k-activity × 5-pred schedule).
+- **R21 LOW** — `_isCleanMonFri` uses bitmask not Set allocation
+  (saves ~200k throw-away Sets per CPM run).
+- **R21 LOW** — Section D `_cstrDayOffset` / `_actOffset` hoist
+  projectStart parse (saves ~300k redundant Date constructions).
+
+### Python parity (1 partial)
+- **R21** — `python_reference/cpm.py` add_work_days caches the
+  holiday Set on calendar_info (avoids 73M list-to-set ops on 50k×
+  365-holiday). MonFri fast-path attempt reverted (parity broke
+  444/444 → 440/444); inline comment documents the paired-fix
+  requirement.
+
+### Daubert doc (1)
+- **R8 HIGH** — DAUBERT.md notes `progress_override` schedule mode
+  is unsupported (retained-logic only). Already enforced by alert;
+  now also surfaced in the public disclosure docs.
+
+### Test state
+| Metric | v2.9.24 | v2.9.25 |
+|---|---|---|
+| Unit tests | 1056 / 0 | 1056 / 0 |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit ledger
+- Cumulative closed v2.9.13–v2.9.25: ~95 findings
+- Still open: ~15-20 (Python F4/F6 backports, hammock FS hard-
+  precedence, MCP-side, ~7 v3.0 architectural)
+
+---
+
 ## v2.9.24 — 2026-05-18 — Continued small-batch fix wave (5 items)
 
 Five more audit findings closed/documented. Same per-fix-per-commit
