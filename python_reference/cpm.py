@@ -1477,7 +1477,10 @@ def compute_topology_hash(activities, relationships):
             'topology_hash': None,
             'activity_count': 0,
             'relationship_count': 0,
-            'algorithm': 'sha256-canonical-v2',
+            # v2.9.27 — audit A12-M4 PAIRED FIX. algorithm: None when no hash
+            # actually computed; reporting 'sha256-canonical-v2' for an
+            # empty schedule was misleading. Matches JS cpm-engine.js:5490.
+            'algorithm': None,
             'error': 'empty activity list',
             'engine_version': ENGINE_VERSION,
         }
@@ -1485,9 +1488,13 @@ def compute_topology_hash(activities, relationships):
     coercion_alerts = []
     dur_by_code = {}
     for a in activities:
-        if not a or not a.get('code'):
+        if not a or a.get('code') is None or a.get('code') == '':
             continue
-        code = a['code']
+        # v2.9.27 — audit A12-M1 PAIRED FIX. Coerce code to string at hash
+        # boundary so a.code = 1 and a.code = '1' produce the same hash
+        # (JSON pipelines sometimes emit numeric codes; parseXER emits
+        # strings). Matches JS cpm-engine.js:5510.
+        code = str(a['code'])
         dq = _f9_quantize(a.get('duration_days'))
         if dq is None:
             coercion_alerts.append({
@@ -1506,11 +1513,16 @@ def compute_topology_hash(activities, relationships):
     preds_by_code = {c: [] for c in dur_by_code}
     pred_seen = {c: set() for c in dur_by_code}
     for r in (relationships or []):
-        if not r or not r.get('from_code') or not r.get('to_code'):
+        if not r or r.get('from_code') in (None, '') or r.get('to_code') in (None, ''):
             continue
-        if r['to_code'] not in preds_by_code:
+        # v2.9.27 — audit A12-M1 PAIRED FIX. Same string coercion as
+        # activity code so {from: 1, to: 2} and {from: '1', to: '2'}
+        # produce the same hash.
+        from_str = str(r['from_code'])
+        to_str = str(r['to_code'])
+        if to_str not in preds_by_code:
             continue
-        if r['from_code'] not in preds_by_code:
+        if from_str not in preds_by_code:
             continue
         ptype = (r.get('type') or 'FS').upper()
         lq = _f9_quantize(r.get('lag_days'))
@@ -1520,17 +1532,17 @@ def compute_topology_hash(activities, relationships):
                 'severity': 'ALERT',
                 'context': 'COERCED_FIELD_IN_HASH',
                 'message': (
-                    f'Relationship {r["from_code"]}->{r["to_code"]} '
+                    f'Relationship {from_str}->{to_str} '
                     f'lag_days={json.dumps(r.get("lag_days"))} is non-finite; '
                     f'coerced to 0 for hash. Verify source XER.'
                 ),
             })
-        pkey = f'{r["from_code"]}\x1f{ptype}\x1f{plag}'
-        if pkey in pred_seen[r['to_code']]:
+        pkey = f'{from_str}\x1f{ptype}\x1f{plag}'
+        if pkey in pred_seen[to_str]:
             continue
-        pred_seen[r['to_code']].add(pkey)
-        preds_by_code[r['to_code']].append({
-            'from': r['from_code'],
+        pred_seen[to_str].add(pkey)
+        preds_by_code[to_str].append({
+            'from': from_str,
             'type': ptype,
             'lag': plag,
         })
@@ -1563,13 +1575,20 @@ def compute_topology_hash(activities, relationships):
     byte_count = len(canonical.encode('utf-8'))
     rel_count = sum(
         1 for r in (relationships or [])
-        if r and r.get('from_code') and r.get('to_code')
+        if r and r.get('from_code') not in (None, '') and r.get('to_code') not in (None, '')
     )
+    # v2.9.27 — audit A12-M2 PAIRED FIX. Distinguish raw vs hashed
+    # relationship counts. Verifiers recomputing the canonical form
+    # count post-dedup edges; comparing against raw rel_count gives
+    # a spurious mismatch.
+    hashed_rel_count = sum(len(preds_by_code[c]) for c in preds_by_code)
 
     return {
         'topology_hash': 'v2:' + sha,
         'activity_count': len(sorted_codes),
-        'relationship_count': rel_count,
+        'input_relationship_count': rel_count,
+        'relationship_count': rel_count,  # retained for backward compat
+        'hashed_relationship_count': hashed_rel_count,
         'algorithm': 'sha256-canonical-v2',
         'canonical_byte_count': byte_count,
         'engine_version': ENGINE_VERSION,
