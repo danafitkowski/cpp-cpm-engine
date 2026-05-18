@@ -88,15 +88,25 @@ Ten batches, single-writer sequential execution (no parallel agents — the v2.9
 | Unit tests | 913 / 0 | **1018 / 0** (+105 new regression assertions) |
 | Crossval fixtures | 43 / 0 | 43 / 0 |
 | Crossval checks | 444 / 444 | 444 / 444 |
-| Audit close rate | 218 / 218 CRIT+HIGH | **218 / 218 (full ledger)** |
 
-### Of the original 218-finding audit
+### Correction (2026-05-18)
 
-- 36 CRITICAL closed (v2.9.18)
-- 69 HIGH closed (v2.9.19)
-- 70 MEDIUM closed (v2.9.20)
-- 43 LOW closed (v2.9.20)
-- 6 deferrals documented as v3.0 architectural scope (above)
+The original v2.9.20 release framed this release as "218/218 audit
+ledger closed (70 MEDIUM + 43 LOW)". That framing overstated what
+shipped: this release reflects natural MED/LOW improvements to the
+engine surfaces (Daubert provenance, numeric robustness, Bayesian
+validation, security caps, brand polish, edge-case test coverage),
+not a one-to-one closure of the 20-agent audit's MED+LOW backlog.
+
+The 36 CRITICAL (v2.9.18) and 69 HIGH (v2.9.19) closures were
+direct one-to-one fixes against the audit's enumerated findings.
+For v2.9.20 the per-batch `A1x-Mx`-style labels in the commit
+messages are descriptive of the change made, not a cross-reference
+to a specific audit finding. Treat them as engineering labels, not
+audit closures.
+
+A proper one-to-one cross-reference of v2.9.20 changes against the
+audit's enumerated MED+LOW backlog is open work, not done.
 
 ---
 
