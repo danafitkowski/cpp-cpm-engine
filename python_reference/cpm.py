@@ -747,6 +747,19 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
             return cd_num
     elif ctype in ('MS_Finish', 'MFO'):
         if cd_num > 0:
+            # v2.9.27 — audit HIGH R6. WARN when MS_Finish/MFO widens LF.
+            # Mirrors JS cpm-engine.js:1191 — soft-side hard-pin disclosure.
+            if cd_num > min_lf and alerts is not None and isinstance(alerts, list):
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'constraint-widens-lf',
+                    'message': (
+                        f'Mandatory Finish on {code} widens backward-pass LF from '
+                        f'{num_to_date(min_lf)} to {cstr["date"]} '
+                        f'(cstr.date > predecessor-logic LF). P6-spec hard-pin '
+                        f'behaviour; verify the constraint date matches scheduler intent.'
+                    ),
+                })
             return cd_num
     elif ctype == 'SNLT' and cd_num > 0:
         lf_from_snlt = _advance_workdays(
@@ -756,9 +769,24 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
             return lf_from_snlt
     elif ctype in ('MS_Start', 'SO') and cd_num > 0:
         # v2.9.12 T1.1 — Mandatory Start hard-pin on backward pass.
-        return _advance_workdays(
+        lf_from_ms = _advance_workdays(
             cd_num, duration_days, node_cal,
             alerts=alerts, ctx=f'MS_Start LF {code}')
+        # v2.9.27 — audit HIGH R6 PAIRED FIX. WARN when MS_Start/SO widens LF.
+        # Mirrors JS cpm-engine.js paired fix.
+        if (lf_from_ms > min_lf and isinstance(min_lf, (int, float))
+                and alerts is not None and isinstance(alerts, list)):
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-widens-lf',
+                'message': (
+                    f'Mandatory Start on {code} widens backward-pass LF from '
+                    f'{num_to_date(min_lf)} to {num_to_date(lf_from_ms)} '
+                    f'(cstr.date + duration > predecessor-logic LF). P6-spec hard-pin '
+                    f'behaviour; verify the constraint date matches scheduler intent.'
+                ),
+            })
+        return lf_from_ms
     return min_lf
 
 

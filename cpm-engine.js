@@ -1211,8 +1211,23 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
         // post-clamp `LS = retreat(LF, duration)` recompute lands on
         // cstr.date. Forward pass has already pinned ES = cstr.date, so
         // TF = LF - EF = 0 (critical, as intended by P6).
-        return _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
+        const lfFromMS = _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
             'MS_Start LF ' + code);
+        // v2.9.27 — audit HIGH R6. Symmetric to the MS_Finish/MFO WARN at
+        // line 1191: emit WARN when MS_Start/SO WIDENS LF (cdNum-derived
+        // LF > predecessor-logic minLF). Forensic disclosure rule —
+        // soft-side clamps from mandatory hard pins must be visible.
+        if (lfFromMS > minLF && Number.isFinite(minLF) && alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-widens-lf',
+                message: 'Mandatory Start on ' + code + ' widens backward-pass LF from ' +
+                    numToDate(minLF) + ' to ' + numToDate(lfFromMS) +
+                    ' (cstr.date + duration > predecessor-logic LF). P6-spec hard-pin ' +
+                    'behaviour; verify the constraint date matches scheduler intent.',
+            });
+        }
+        return lfFromMS;
     }
     return minLF;
 }
