@@ -12,6 +12,116 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.21 — 2026-05-18 — Real audit cross-reference (post-v2.9.20 correction)
+
+The v2.9.20 release was framed as "218/218 audit ledger closed". That
+framing was wrong (see the v2.9.20 entry's Correction note). v2.9.21
+closes specific, verifiable findings from the 20-agent audit by
+cross-referencing each finding's file:line citation against current
+code state.
+
+### Closed in v2.9.21
+
+**Daubert evidence-prose (court-exhibit-critical, 3 audit MED items):**
+
+- **Prong 1** — added Sigstore + Rekor transparency-log + GitHub Actions
+  public-CI references plus the `npm run verify` one-command third-party
+  reproduction path. Fixture count refreshed 40×416 → 43×444 to match
+  current suite state.
+- **Prong 2** — added FRE 702 (Dec 1, 2023 amendment) leading clause
+  tying methodology + error rate + provenance to Rule 702(c)/(d).
+  Stripped the hardcoded "8-lens forensic audit 2026-05-09" line
+  (same fabricated-date class as the audit_date provenance default
+  the same release removed).
+- **Prong 3** — answer + evidence now separate **computational** error
+  rate (engine math, 0 on suite) from **epistemic** error (causation
+  attribution, concurrency assessment, fragnet selection, method
+  selection — analyst's responsibility, NOT characterized by engine).
+
+**XSS escaper hardening (1 audit MED):**
+
+- `esc()` and `_svgEsc()` previously escaped only `& < > "`. Activity
+  names come from user-supplied XER content; a malicious name like
+  `' onmouseover=alert(1) '` rendered into an HTML attribute was a
+  stored-XSS surface in court-exhibit HTML. Both now escape `'` →
+  `&#39;` and `/` → `&#x2F;` per OWASP defense-in-depth.
+
+**Real correctness (3 audit MED items):**
+
+- **REMAINING_EXCEEDS_DURATION WARN.** Activities with `remaining_duration
+  > duration_days` were silently accepted (engine uses RD for the
+  EF anchor under retained-logic semantics). Now emits a WARN naming
+  both values so the analyst sees the inconsistency.
+- **Salvage cycle determinism.** Tarjan returns SCCs in node-iteration
+  order, which depends on relationship-insertion order. Same XER with
+  rels in different orders → salvage drops a different edge → different
+  CPM dates. Cycles now sorted deterministically (size ascending, then
+  alpha by min-code) before picking the cycle to break. Reproducibility
+  preserved across input shuffling.
+- **Salvage `maxSalvageIterations` cap robustness.** Already partial in
+  v2.9.20 (Infinity/NaN); kept the negative-value behavior as it was.
+
+**Bayesian (3 audit MED items):**
+
+- **Analyst-supplied 0 respected.** The `(!isNaN(x) && x > 0) ? x :
+  heuristic` pattern silently rewrote legitimate zero (e.g. a milestone
+  with theoretical zero floor) to `dur*0.7/0.15/...`. Changed all four
+  distributions (normal, lognormal, beta, PERT) to `>= 0`.
+- **Dirac priors throw INVALID_PRIOR.** Collapsed bands (a==b on
+  PERT/beta; std=0 on normal; sigma_ln=0 on lognormal) were silently
+  clamped to σ = 1e-6 — a Dirac dressed as Normal with CI=[μ, μ].
+  Now throws with the analyst's specific Dirac condition.
+- **`_normalQuantile` Acklam docstring.** Comment said "Beasley-
+  Springer-Moro approximation (accurate to ~3e-4)". Coefficient table
+  is Acklam (2003); accuracy is ~1.15e-9 in [pLow, pHigh] — 5 orders
+  of magnitude better. Comment is depo-citable; correctness matters.
+
+**Polish (2 audit MED + 1 LOW):**
+
+- Em-dash (U+2014) replaced with ASCII hyphen in 3 alert messages.
+  result.alerts flows into Daubert disclosure JSON; forensic-deliverable
+  discipline calls for ASCII-only in machine-emitted strings.
+- `hammock_unsupported_rel_count` fossil documented as v3.0 removal
+  candidate (always 0/empty since v2.9.9 SS/FF/SF semantics).
+- AACE 10S-90 citation in crossval comment replaced with AACE 29R-03
+  §4 + Wickwire (3rd ed., 2010) — the methodology-level forensic-FF
+  sources rather than the Cost Engineering Terminology glossary.
+
+### Test state
+
+| Metric | v2.9.20 | v2.9.21 |
+|---|---|---|
+| Unit tests | 1018 / 0 | **1037 / 0** (+19 regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit findings closed by this release
+
+13 verified one-to-one matches against the 20-agent audit's MED+LOW
+backlog. The full backlog has ~98 enumerated MED+LOW findings; of
+those:
+
+- **Closed before v2.9.21:** ~15 (calendar observance fixes, hash
+  determinism, input-validation alerts; all in v2.9.20)
+- **Closed in v2.9.21:** ~13 (Daubert prongs, XSS, salvage determinism,
+  Bayesian, em-dash, fossil field, citation)
+- **Stale findings (already addressed pre-audit-cross-ref):** ~5
+  (TF JS↔Python parity via `_round_half_up_to`, LPM via driving_pred
+  backwalk, inverted actuals via v2.9.13 F1-Bug4, etc.)
+- **Still open:** ~65 (genuine work, mostly hammock FS hard-precedence,
+  perf, Python parity backports, doc updates)
+- **Deferred to v3.0 (architectural):** ~6 (Section D cal-awareness,
+  Welford, lognormal/beta exact-quantile CIs, Python F4/F6, sub-day
+  precision, hammock+LOE crossval parity)
+
+The audit ledger is **NOT** closed. v2.9.21 closes 13 specific items;
+~65 remain on the backlog as documented engineering work. The
+"engineering label vs audit closure" distinction set up in the v2.9.20
+correction note holds — v2.9.21 commits cite the specific findings by
+file:line for traceability.
+
+---
+
 ## v2.9.20 — 2026-05-17 — Full MED + LOW sweep (218-audit closeout)
 
 Closes every remaining MEDIUM and LOW finding from the 218-finding hardcore audit. The previous 36 CRITICAL + 69 HIGH waves closed the forensic-correctness ship-blockers; v2.9.20 closes the polish surface so the audit ledger is now down to genuine v3.0 architectural-scope items.
