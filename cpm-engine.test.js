@@ -3187,6 +3187,43 @@ console.log('\n=== Section M D4 — Test 7: HTML render smoke ===');
     check('D4-T7: without renderHTML, html field absent', rNoHtml.html === undefined);
 }
 
+// ============================================================================
+// v2.9.21 — XSS escaper hardening (audit MED: esc / _svgEsc)
+// ============================================================================
+console.log('\n=== v2.9.21 — XSS escaper hardening ===');
+{
+    // The Daubert HTML render escapes activity names via esc(); the float-
+    // burndown SVG render uses _svgEsc. Both previously escaped only
+    // & < > " — leaving ' and / unescaped is a stored-XSS surface when a
+    // malicious XER activity name is rendered into an HTML attribute.
+    const d = E.buildDaubertDisclosure(null);
+    const html = E.renderDaubertHTML(d, {
+        expert_name: "O'Malley/Smith",          // contains both ' and /
+        project_name: "Project</title><script>x", // canonical XSS probe
+    });
+    check('esc: apostrophe escaped to &#39;',
+        html.indexOf("'") === -1 || html.indexOf('&#39;') > -1);
+    check('esc: forward-slash escaped to &#x2F;',
+        html.indexOf('&#x2F;') > -1);
+    check('esc: the <script> probe payload does not appear as literal <script>',
+        html.indexOf('<script>x') === -1);
+    check("esc: O'Malley name still recognizable after escape",
+        html.indexOf('O&#39;Malley') > -1 || html.indexOf('O&#x27;Malley') > -1);
+    // SVG escaper — exercise the float-burndown render with an XSS-flavored code.
+    const acts = [
+        { code: "evil'name", duration_days: 5, early_start: '2026-01-05', tf: 0 },
+    ];
+    const snaps = [
+        { window_label: 'W1', activities: [{ code: acts[0].code, tf: 5 }] },
+        { window_label: 'W2', activities: [{ code: acts[0].code, tf: 0 }] },
+    ];
+    const r = E.computeFloatBurndown(snaps, {
+        activityCodes: [acts[0].code], windowLabels: ['W1','W2'], renderHTML: true,
+    });
+    check('_svgEsc: apostrophe in activity code escaped in SVG output',
+        r.html.indexOf("evil'name") === -1 && r.html.indexOf('evil&#39;name') > -1);
+}
+
 console.log('\n=== Section M D4 — Test 8: Degenerate case (<2 snapshots) ===');
 {
     // 0 snapshots

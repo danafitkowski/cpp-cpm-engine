@@ -5774,11 +5774,18 @@ function renderDaubertHTML(disclosure, opts) {
     ];
 
     function esc(s) {
+        // v2.9.21 — escape apostrophe and forward-slash in addition to the
+        // four canonical chars. Activity names come from user-supplied XER
+        // content; an activity name like `' onmouseover=alert(1) '` rendered
+        // inside an HTML attribute via renderDaubertHTML would be a stored-
+        // XSS surface in the rendered court-exhibit HTML.
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/\//g, '&#x2F;');
     }
 
     function renderProng(p) {
@@ -6987,13 +6994,16 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
     return parts.join('\n');
 }
 
-/** Escape SVG text content (minimal: &amp; &lt; &gt; &quot;). */
+/** Escape SVG text content. v2.9.21 — adds &#39; and &#x2F; to match esc()
+ *  (defense-in-depth for activity names rendered inside SVG attributes). */
 function _svgEsc(str) {
     return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/\//g, '&#x2F;');
 }
 
 // ============================================================================
