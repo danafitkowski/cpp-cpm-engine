@@ -2,7 +2,7 @@
 
 **Operating Procedure for using `cpm-engine` to produce expert opinions or claim deliverables.**
 
-This document is for the **analyst** — the human producing the schedule analysis the engine supports. The engine is reliable. The OPINION is the analyst's. FRE 702 / Daubert attacks land on application as much as on principles; this SOP is the application discipline.
+This document is for the **analyst** — the human producing the schedule analysis the engine supports. The engine has a documented validation record (see [`DAUBERT.md`](DAUBERT.md), [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release [`release-evidence/`](release-evidence/) folders). The OPINION is the analyst's. FRE 702 / Daubert attacks land on application as much as on principles; this SOP is the application discipline.
 
 > **Required pairing.** Use this SOP together with [`DAUBERT.md`](DAUBERT.md) (engine disclosure), [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md) (verification chain), and the per-release [`release-evidence/`](release-evidence/) folder. If you are producing a deliverable for contested use, all four artifacts should be referenced in the report manifest. Do **not** cite `README.md` in a court-facing report — README carries marketing positioning; cite DAUBERT.md, VERIFY_RELEASE.md, METHODOLOGY.md, and this SOP.
 
@@ -257,7 +257,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - Verify the deliverable's report manifest references:
-  - Engine version (e.g., `cpm-engine v2.9.31`)
+  - Engine version (e.g., `cpm-engine v2.9.32`)
   - Source SHA-256 (from Step 2)
   - This SOP (`FORENSIC_USE_SOP.md`)
   - DAUBERT.md (engine disclosure)
@@ -276,9 +276,9 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 FRE 702 attacks come in two flavors:
 
-1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.31 verification chain answer this layer.
+1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.32 verification chain answer this layer.
 
-2. **Attacks on application.** "Even if the engine is reliable, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
+2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
 Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,104 unit tests, 747/747 crossval, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
 
@@ -311,4 +311,4 @@ Use this checklist as the cover sheet of the case folder. Opposing counsel askin
 
 ## Document version
 
-This SOP is aligned to `cpm-engine` v2.9.31. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.
+This SOP is aligned to `cpm-engine` v2.9.32. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.

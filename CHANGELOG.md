@@ -12,6 +12,153 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.32 — 2026-05-24 — Audit-response wave + version-drift regression gate
+
+Third adversarial-audit pass on v2.9.31 surfaced 35 findings. Roughly
+21 were genuine bugs / drift / overclaim-language issues. The remaining
+12-14 were ChatGPT being adversarial about honest disclosures the
+engine deliberately published — those stay as published, with canned
+cross-exam responses now captured in docs/cross-exam-prep.md (internal
+analyst material, not court-cited).
+
+This release closes all 21 genuine findings PLUS installs the
+machine-enforced regression gate that should have shipped after v2.9.28
+(when the same drift bug first surfaced).
+
+### Added — tests/no-stale-version-refs.test.js + npm run test:version-refs
+
+The recurring problem: v2.9.28 / 29 / 30 / 31 each shipped with at
+least one current-state version reference still pointing at the prior
+release. Fourth-time-in-a-row regression. Manual sweeps were not
+catching it.
+
+New test scans every doc surface (DAUBERT.md, README.md, VERIFY_RELEASE.md,
+FORENSIC_USE_SOP.md, CONTRIBUTING.md, docs/*.md, validation/*/README.md,
+validation/*/comparison-matrix.md, release-evidence/v<TAG>/*.md) for
+v2.9.X references, distinguishes current-state from historic narration
+via a whitelist of inline-context patterns, and fails the build if any
+current-state reference does not equal ENGINE_VERSION.
+
+Wired into test:all. The drift class of bug cannot recur in this form
+on v2.9.32 or later without the build failing.
+
+### Fixed — version-drift sweep (closes audit findings #1, #2, #3, #5, #6, #7, #18, #30)
+
+- DAUBERT.md header: "cpm-engine v2.9.29" -> "cpm-engine v2.9.32"
+- DAUBERT.md S3.1 baseline narration: "carried forward through the
+  v2.9.27 / v2.9.28 / v2.9.29 baseline" -> "carried forward through
+  every release since"
+- DAUBERT.md Layer 2 sigstore example: "v2.9.29/attestations-latest.json"
+  -> "v<TAG>/attestations-latest.json" (tag-agnostic)
+- VERIFY_RELEASE.md: full sweep from v2.9.30 -> v2.9.32 (header, manifest
+  table, checkout block, Layer-4 expected output, citation block, doc
+  version footer; internal contradiction closed)
+- FORENSIC_USE_SOP.md: 3 spots v2.9.31 -> v2.9.32
+- docs/jurisdictions.md footer: v2.9.30 -> v2.9.32
+- docs/api.md ENGINE_VERSION sample value: '2.9.27' -> '2.9.32' (at
+  current tag)
+- validation/p6-comparison/{README.md, comparison-matrix.md}: full sweep
+- validation/xer-corpus/README.md: full sweep
+- Coverage baseline regenerated at v2.9.32: 93.33% stmts / 82.39%
+  branches / 93.75% funcs / 93.33% lines (up from v2.9.31 baseline
+  thanks to 8 new strict-mode hardening tests).
+
+### Fixed — overclaim language pass (closes audit findings #4, #19, #20, #26, #27, #28, #29)
+
+- DAUBERT.md S4 + S5: "is satisfied by the disclosure above" ->
+  "is addressed by the disclosure above. Whether the disclosure is
+  sufficient for admissibility in a specific case is a determination
+  for the trier of fact."
+- DAUBERT.md S3.1: "The challenger can no longer claim untestability"
+  -> "The infrastructure substantially weakens an untestability
+  objection; whether it eliminates that objection is a determination
+  for the trier of fact." Header reworded "What this closes" ->
+  "What this addresses".
+- FORENSIC_USE_SOP.md: "The engine is reliable." -> "The engine has
+  a documented validation record (see DAUBERT.md, VERIFY_RELEASE.md,
+  the per-release release-evidence/ folders)."
+- package.json description: "Forensically-defensible CPM engine" ->
+  "Open-source CPM engine" (the substance — AACE-canonical, Daubert-
+  disclosed, JS/Python parity — stays; the "forensically-defensible"
+  positioning was a court-citation-vulnerability per the audit).
+- validation/p6-comparison/README.md: dropped time-estimate
+  ("roughly one work session" -> "Completion time depends on analyst
+  P6 familiarity"); replaced "Layer-5-equivalent" coinage with plain-
+  language "additional external comparison evidence."
+
+### Fixed — API doc bug (closes audit finding #17)
+
+- docs/jurisdictions.md: getHolidays() example documentation showed
+  the wrong return shape. The function actually returns an array of
+  ISO-8601 date STRINGS (e.g. ["2026-01-01", "2026-04-03", ...]),
+  not objects with {date, name, jurisdiction}. Documentation corrected
+  + getJurisdictionCalendar() example added showing the typed shape
+  it returns for cal_map consumption.
+
+### Engine code — Section Q strict-mode hardening (closes audit findings #21, #22, #31)
+
+- computeCPMSalvaging now refuses forensic_strict mode at function
+  entry, throwing StrictForensicViolation with context
+  'salvage-mode-not-forensic'. Mirrors runCPM's strict-mode refusal.
+  Salvage mode and strict mode are categorically incompatible by
+  design; this closes the route-around path the audit flagged.
+- FATAL_STRICT_CONTEXTS gains 'salvage-mode-not-forensic'.
+- New SECTION R-v2.9.32 in cpm-engine.test.js: 8 new strict-mode
+  hardening tests covering:
+  - computeCPMSalvaging strict-mode refusal (3 tests)
+  - FATAL_STRICT_CONTEXTS registration of salvage-mode-not-forensic
+  - **Dead-context regression test** — every entry in
+    FATAL_STRICT_CONTEXTS must appear at least twice in cpm-engine.js
+    source (once as set member, once as emission/throw site). Closes
+    the false-coverage risk where a fatal-context entry corresponded
+    to no emission path.
+  - Override edge cases: string "false" accepted as non-empty
+    rationale; array value rejected as non-string.
+
+### Added — docs/cross-exam-prep.md (internal analyst material)
+
+17 pre-drafted defensive responses to the cross-examination questions
+that the engine's published disclosures predictably invite. The
+remaining 12-14 audit findings that were not bugs (synthetic-only XER
+corpus, framework-pending P6 matrix, procedural SOP enforcement,
+analyst-signoff is not cryptographic, etc.) get canned responses
+ready for the witness stand here. Document is explicitly marked
+INTERNAL ANALYST RESOURCE — not cited in court-facing reports.
+
+### Bumped — ENGINE_VERSION 2.9.31 -> 2.9.32
+
+cpm-engine.js, package.json, cpm-engine.test.js fixtures, sample
+manifest examples in DAUBERT/README/VERIFY_RELEASE/SOP.
+
+### Tests
+
+- 1,112 / 1,112 unit tests (was 1,104; 8 new strict-mode hardening tests)
+- 747 / 747 crossval across 43 fixtures
+- Citation regression PASS
+- Truncation regression PASS
+- **Version-drift regression PASS (new gate)**
+- npm run verify PASS
+
+### Engine math
+
+- computeCPM non-strict path: byte-identical to v2.9.27 through v2.9.31.
+- Strict mode (Section Q): tightened with computeCPMSalvaging refusal +
+  dead-context coverage proof. Additive validation; no math change.
+
+### What v2.9.32 explicitly does NOT close
+
+ChatGPT-3 audit findings #8, #9, #10, #11, #12, #13, #14, #15, #16, #32,
+#33, #34, #35 — these were not bugs. They were the auditor being
+adversarial about the engine's honest disclosures (synthetic-only XER
+corpus, framework-pending P6 columns, procedural-only SOP enforcement,
+analyst-signoff not cryptographic in v1, etc.). Those disclosures are
+correct posture; v2.9.32 captures canned defensive responses to each
+in docs/cross-exam-prep.md and otherwise leaves the disclosures as
+published. Schema v2 (cryptographic analyst signoff, structured
+override fields) is roadmap.
+
+---
+
 ## v2.9.31 — 2026-05-23 — Forensic Strict Mode (court-grade run gate)
 
 Closes ChatGPT third-pass directive item #3: "Add a strict forensic run

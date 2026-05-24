@@ -8,7 +8,7 @@ It addresses the ChatGPT third-pass directive item #2:
 
 ---
 
-## Status as of v2.9.31
+## Status as of v2.9.32
 
 | Layer | Status | Owner |
 |---|---|---|
@@ -21,7 +21,7 @@ It addresses the ChatGPT third-pass directive item #2:
 | `verdict_pass_fail` columns marked PASS / FAIL — `<delta>` | ⏳ Pending | **analyst with P6 access** |
 | Aggregate pass-rate roll-up + per-case verdict summary | ⏳ Pending | analyst |
 
-Once the analyst populates the P6 columns, the matrix becomes a forensic-defensible "engine vs P6" reproduction record citable in a Daubert disclosure as Layer-5-equivalent external verification on the proponent's chosen comparison surface.
+Once the analyst populates the P6 columns, the matrix becomes additional external comparison evidence — engine output vs. native P6 output on a defined case set — citable alongside the engine's existing Daubert disclosure and verification chain. It does not by itself adjudicate admissibility; it adds evidence to the reliability record the trier of fact considers.
 
 ---
 
@@ -87,7 +87,7 @@ For each case:
    - `FAIL — <field>: engine=<x> p6=<y>` if any field differs (capture the delta, do not just say FAIL).
 7. After all 15 cases are populated, regenerate the verdict roll-up in `comparison-matrix.md`.
 
-The cases are deliberately small so the analyst can complete all 15 in roughly one work session.
+The cases are deliberately small — each is a 2–5-activity schedule. Completion time depends on the analyst's P6 familiarity and the precision required for each capture; the framework imposes no time estimate.
 
 ---
 

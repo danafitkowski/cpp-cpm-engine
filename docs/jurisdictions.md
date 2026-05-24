@@ -19,10 +19,22 @@ E.LISTED_JURISDICTIONS
 
 // Holiday list for a jurisdiction across a calendar year range:
 const holidays = E.getHolidays('CA-FED', 2026, 2028);
-// → [{ date: '2026-01-01', name: "New Year's Day", jurisdiction: 'CA-FED' }, ...]
+// → ["2026-01-01", "2026-04-03", "2026-05-18", "2026-07-01", ...]
+//   (array of ISO-8601 date strings, sorted ascending)
+
+// To inject the holidays into a computeCPM calendar map, use
+// getJurisdictionCalendar() which packages the holiday list with a
+// workday-week and a year range in the shape computeCPM expects:
+const onCalendar = E.getJurisdictionCalendar('CA-ON',
+                                              { from_year: 2026, to_year: 2028 });
+// → { work_days: [1,2,3,4,5], holidays: ['2026-01-01', ...],
+//     jurisdiction: 'CA-ON', year_range: [2026, 2028] }
 ```
 
-The default rule sets are exposed at module scope as `E.LISTED_JURISDICTIONS` and are queryable via `E.getHolidays(jurisdiction, startYear, endYear)`.
+The default rule sets are exposed at module scope as `E.LISTED_JURISDICTIONS` and are queryable via:
+
+- `E.getHolidays(jurisdiction, startYear, endYear)` — returns a sorted array of ISO-8601 date strings (no holiday names or metadata; the engine only needs dates for its calendar math).
+- `E.getJurisdictionCalendar(jurisdiction, opts)` — returns a `{ work_days, holidays, jurisdiction, year_range }` object suitable as a `cal_map` entry passed into `computeCPM(activities, relationships, { cal_map: { ... } })`.
 
 ---
 
@@ -146,4 +158,4 @@ For non-forensic CPM (planning, lookahead, monthly progress reporting), the defa
 
 ---
 
-*Document version: aligned to `cpm-engine` v2.9.30. Framework citations verified at top-level (Canada Labour Code, 5 U.S.C. § 6103); provincial / state framework names are reference-level pointers and should be reconciled to current statute by the analyst per the [Forensic-use guidance](#forensic-use-guidance) above.*
+*Document version: aligned to `cpm-engine` v2.9.32. Framework citations verified at top-level (Canada Labour Code, 5 U.S.C. § 6103); provincial / state framework names are reference-level pointers and should be reconciled to current statute by the analyst per the [Forensic-use guidance](#forensic-use-guidance) above.*

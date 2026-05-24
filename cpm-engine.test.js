@@ -1313,8 +1313,8 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
         { dataDate: '2026-01-05' }
     );
     check('manifest present', r.manifest !== undefined);
-    check('manifest.engine_version === 2.9.31',
-        r.manifest.engine_version === '2.9.31');
+    check('manifest.engine_version === 2.9.32',
+        r.manifest.engine_version === '2.9.32');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1350,7 +1350,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.31');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.32');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1603,7 +1603,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.31');
+    check('D3: engine_version present', h.engine_version === '2.9.32');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2062,7 +2062,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.1');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.31');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.32');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2082,7 +2082,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.31');
+        dCaught && dCaught.engine_version === '2.9.32');
 }
 
 // ============================================================================
@@ -8737,6 +8737,116 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
     } catch (e) { threw = true; }
     check('strict mode truthy-not-true: does NOT enable strict (string "true" rejected)',
         !threw);
+}
+
+// ============================================================================
+// SECTION R-v2.9.32 — Forensic Strict Mode hardening (audit response)
+// ============================================================================
+//
+// Closes ChatGPT third-pass audit findings on Section Q:
+//   #21 — strict mode walks alerts only; salvage_log was not bound to strict.
+//   #22 — no test proved every FATAL_STRICT_CONTEXTS entry corresponds to a
+//          real emission path (dead-entry false-coverage risk).
+// computeCPMSalvaging now refuses strict mode at entry (mirroring runCPM).
+//
+console.log('\n=== v2.9.32 — Forensic Strict Mode hardening ===');
+
+// computeCPMSalvaging refuses strict mode at entry (same posture as runCPM).
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 'NaN' },  // would trigger salvage WARN
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    let caught = null;
+    try {
+        E.computeCPMSalvaging(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+        });
+    } catch (e) { caught = e; }
+    check('strict mode salvage refusal: throws StrictForensicViolation',
+        caught && caught.name === 'StrictForensicViolation');
+    check('strict mode salvage refusal: error.context === salvage-mode-not-forensic',
+        caught && caught.context === 'salvage-mode-not-forensic');
+    check('strict mode salvage refusal: message names Section L / salvage',
+        caught && /salvag/i.test(caught.message));
+}
+
+// salvage-mode-not-forensic is in the fatal-context set so a programmatic
+// caller of computeCPM that somehow emitted this context (it cannot, by
+// construction — only computeCPMSalvaging emits it at entry, never as an
+// alert) would still throw. This is defense-in-depth.
+{
+    check('strict mode fatal-set: salvage-mode-not-forensic registered',
+        E.FATAL_STRICT_CONTEXTS.has('salvage-mode-not-forensic'));
+}
+
+// Dead-entry regression — every FATAL_STRICT_CONTEXTS entry must be a real
+// alert emitted somewhere in the engine source. Closes ChatGPT #22.
+{
+    const fs = require('fs');
+    const path = require('path');
+    const enginePath = path.join(__dirname, 'cpm-engine.js');
+    const source = fs.readFileSync(enginePath, 'utf8');
+    const orphans = [];
+    for (const ctx of E.FATAL_STRICT_CONTEXTS) {
+        // The context string must appear at least once as a quoted literal
+        // somewhere in the engine source (either as an alert.context= emission,
+        // or as the explicit throw context for the two refusal paths). A
+        // context that exists only inside FATAL_STRICT_CONTEXTS itself is a
+        // dead entry — it claims to be fatal-in-strict but no code path
+        // emits it.
+        const quoted = "'" + ctx + "'";
+        // Count occurrences. The set definition itself counts as 1; we
+        // need at least 2 (set + at least one emission/throw site).
+        const occurrences = (source.match(new RegExp(quoted.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        if (occurrences < 2) {
+            orphans.push({ ctx, occurrences });
+        }
+    }
+    check('strict mode fatal-context coverage: every FATAL_STRICT_CONTEXTS entry has at least one emission path',
+        orphans.length === 0,
+        'orphans: ' + JSON.stringify(orphans));
+}
+
+// Override discipline edge cases the v2.9.31 suite missed:
+// - Override value that is exactly the string "false" — still non-empty, accepted.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, {
+        dataDate: '2026-01-05',
+        forensic_strict: true,
+        forensic_strict_overrides: { 'duplicate-activity-code': 'false' },
+    });
+    check('strict mode override edge: string "false" is non-empty, accepted as rationale',
+        r && r.manifest.forensic_strict === true);
+    check('strict mode override edge: rationale "false" recorded verbatim in audit trail',
+        r.manifest.forensic_strict_overrides_applied[0].rationale === 'false');
+}
+
+// Override value that is an array — non-string, must throw.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+    ];
+    const rels = [];
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+            forensic_strict_overrides: { 'duplicate-activity-code': ['rationale'] },
+        });
+    } catch (e) { caught = e; }
+    check('strict mode override edge: array value throws (non-string)',
+        caught && caught.name === 'StrictForensicViolation');
 }
 
 console.log('\n========================================');

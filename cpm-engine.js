@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.31';
+const ENGINE_VERSION = '2.9.32';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -4210,6 +4210,27 @@ function resetMC() {
 
 function computeCPMSalvaging(activities, relationships, opts) {
     opts = opts || {};
+    // v2.9.32 — Section Q strict-mode refusal. Salvage mode is the
+    // inverse posture of forensic strict mode (best-effort triage of
+    // corrupt input vs hard-fail on any signal-of-doubt alert). The
+    // two modes are categorically incompatible; combining them silently
+    // would let a court-grade run smuggle through salvage-coerced data.
+    // Throw immediately rather than letting the result land.
+    if (opts.forensic_strict === true) {
+        throw new StrictForensicViolation(
+            {
+                severity: 'ALERT',
+                context: 'salvage-mode-not-forensic',
+                message:
+                    'computeCPMSalvaging is the best-effort triage path. ' +
+                    'It is incompatible with forensic_strict mode. Use ' +
+                    'computeCPM (or computeCPMForensicStrict) for forensic ' +
+                    'opinion. If your input requires salvage, fix the input ' +
+                    'before invoking strict mode.',
+            },
+            'salvage-mode-not-forensic'
+        );
+    }
     // v2.9.20 A20-M5 — DOS guard on caller-supplied arrays.
     _enforceEngineCaps(activities, relationships, 'computeCPMSalvaging');
     const salvage_log = [];
@@ -8403,6 +8424,7 @@ const FATAL_STRICT_CONTEXTS = new Set([
     // Empty / degenerate
     'empty-schedule',                   // no valid activities after filtering
     'section-d-ordinal-only',           // Section D used where calendar-aware Section C required
+    'salvage-mode-not-forensic',        // computeCPMSalvaging refuses strict mode at entry (v2.9.32)
 ]);
 
 /**
