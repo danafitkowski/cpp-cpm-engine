@@ -1,0 +1,23 @@
+PENDING — populated post-tag-push.
+
+The Sigstore attestation is produced by `actions/attest-build-provenance` inside the
+verify.yml workflow. Once the v2.9.34 tag is pushed:
+
+  1. CI generates the witness JSON and submits it to Sigstore (Fulcio + Rekor).
+  2. The signed attestation is attached to the GitHub release as a release asset.
+  3. Verify locally with:
+
+       gh attestation verify release-evidence/v2.9.34/witness-v2.9.34.json \
+           --owner danafitkowski \
+           --format json
+
+  4. Paste the verification output here, replacing this stub.
+
+Expected output shape (per the v2.9.33 packet):
+  ✓ Verification succeeded!
+  predicate types:
+    - https://slsa.dev/provenance/v1
+  signed by:
+    - workflow: .github/workflows/verify.yml
+    - repo:     danafitkowski/cpp-cpm-engine
+    - issuer:   https://token.actions.githubusercontent.com

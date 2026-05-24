@@ -1,0 +1,17 @@
+PENDING — populated post-tag-push.
+
+The CI matrix on `.github/workflows/verify.yml` runs against the public commit at tag time
+and emits the Sigstore-signed witness JSON. Once the v2.9.34 tag is pushed to origin:
+
+  1. The verify.yml workflow auto-runs on `git push --tags`.
+  2. The matrix run URL appears at https://github.com/danafitkowski/cpp-cpm-engine/actions.
+  3. Copy that URL into this file and replace this stub.
+
+Matrix axes (per `verify.yml` at v2.9.33 baseline):
+  - OS:        ubuntu-latest, macos-latest, windows-latest
+  - Node:      18, 20, 22
+  - Coverage:  c8 statement + branch coverage on the ubuntu-latest × Node 20 leg
+
+Pre-tag local result (this packet's witness, generated 2026-05-24):
+  Verdict: PASS
+  Tests:   1,128 / 1,128 unit + 747 / 747 crossval + 4 new gates (sop, crypto, p6-comparison, corpus-dag)

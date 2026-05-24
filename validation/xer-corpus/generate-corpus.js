@@ -590,6 +590,125 @@ CASES.push({
     }),
 });
 
+// ---------------------------------------------------------------------
+// Case 13 — large-1000-dag-branching
+// ---------------------------------------------------------------------
+//
+// Closes AUDIT_LEDGER_v2.9.34.md row #10 + ROADMAP_OPEN.md item #10
+// ("1k-activity scale stress is trivial FS chain"). Case 02 is a
+// 1,000-activity linear chain; this case adds a 1,020-activity DAG
+// with branching and merging at every phase boundary.
+//
+// Topology — "diamond cascade":
+//   - 10 phases, each bounded by start/end milestones.
+//   - Inside each phase: 5 parallel tracks of 20 activities each, all
+//     FS-chained.
+//   - Each phase-start milestone fans OUT to the first activity of all
+//     5 tracks (branching).
+//   - Each phase-end milestone fans IN from the last activity of all
+//     5 tracks (merging).
+//   - Phase-end milestone N+1 has the previous phase-end as predecessor
+//     (FS chain between phases at the milestone level).
+//
+// Activity count: 10 phases * (2 milestones + 5*20 work) = 1020.
+// Relationship count: 10 * (5 fan-out + 5*19 internal + 5 fan-in) + 9 phase-to-phase = 1059.
+//
+// Strict mode: PASS — clean DAG, no constraints, no progress, no
+// edge-case input. Alerts are calendar-fallback informationals only,
+// same root cause as case 01 (engine emits one per arithmetic site
+// because the corpus harness does not pass a cal_map; documented in
+// validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md).
+
+function buildDiamondCascade(opts) {
+    const numPhases = opts.numPhases;
+    const pathsPerPhase = opts.pathsPerPhase;
+    const activitiesPerPath = opts.activitiesPerPath;
+
+    const tasks = [];
+    const preds = [];
+    let nextTaskId = 5000;
+    let nextPredId = 5000;
+
+    function newTaskId() { return nextTaskId++; }
+    function newPredId() { return nextPredId++; }
+
+    let prevPhaseEndTid = null;
+
+    for (let phase = 0; phase < numPhases; phase++) {
+        const phaseStartTid = newTaskId();
+        const phaseStartCode = 'P' + String(phase + 1).padStart(2, '0') + '_START';
+        tasks.push(task(phaseStartTid, phaseStartCode,
+            'Phase ' + (phase + 1) + ' start milestone',
+            { duration_days: 0, task_type: 'TT_Mile' }));
+
+        if (prevPhaseEndTid !== null) {
+            preds.push(pred(newPredId(), phaseStartTid, prevPhaseEndTid, 'PR_FS', 0));
+        }
+
+        const phaseEndTid = newTaskId();
+        const phaseEndCode = 'P' + String(phase + 1).padStart(2, '0') + '_END';
+
+        for (let track = 0; track < pathsPerPhase; track++) {
+            let prevInTrack = null;
+            for (let step = 0; step < activitiesPerPath; step++) {
+                const tid = newTaskId();
+                const code = 'P' + String(phase + 1).padStart(2, '0') +
+                    'T' + String(track + 1) + 'S' + String(step + 1).padStart(2, '0');
+                tasks.push(task(tid, code,
+                    'Phase ' + (phase + 1) + ' track ' + (track + 1) +
+                    ' step ' + (step + 1), { duration_days: 1 }));
+
+                if (step === 0) {
+                    // Fan-out from phase start
+                    preds.push(pred(newPredId(), tid, phaseStartTid, 'PR_FS', 0));
+                } else {
+                    // Internal FS chain inside the track
+                    preds.push(pred(newPredId(), tid, prevInTrack, 'PR_FS', 0));
+                }
+
+                prevInTrack = tid;
+            }
+            // Fan-in to phase end
+            preds.push(pred(newPredId(), phaseEndTid, prevInTrack, 'PR_FS', 0));
+        }
+
+        tasks.push(task(phaseEndTid, phaseEndCode,
+            'Phase ' + (phase + 1) + ' end milestone',
+            { duration_days: 0, task_type: 'TT_FinMile' }));
+
+        prevPhaseEndTid = phaseEndTid;
+    }
+
+    return { tasks, preds };
+}
+
+CASES.push({
+    id: '13-large-1000-dag-branching',
+    title: 'Large DAG — 1,020 activities, branching/merging at every phase boundary',
+    description:
+        'Closes the audit-ledger gap that the existing 1k case (#02) was a ' +
+        'trivial FS chain. This case is a 10-phase diamond cascade: each ' +
+        'phase has a start milestone, 5 parallel tracks of 20 activities, ' +
+        'and a finish milestone. Phase boundaries are 5-way fan-out + 5-way ' +
+        'fan-in, exercising the topo sort, the multi-predecessor LS resolution, ' +
+        'and the multi-successor LF resolution at scale.',
+    activity_count: 1020,
+    relationship_count: 1059,
+    calendar_count: 1,
+    known_issues: [],
+    expected_alerts: 'minimal — calendar-fallback informationals at every ' +
+        'arithmetic site (same root cause as case 01; see ALERT_TRIAGE.md)',
+    strict_mode_pass: true,
+    spec: () => {
+        const dag = buildDiamondCascade({ numPhases: 10, pathsPerPhase: 5, activitiesPerPath: 20 });
+        return {
+            calendars: [defaultMonFriCalendar(1)],
+            tasks: dag.tasks,
+            taskpreds: dag.preds,
+        };
+    },
+});
+
 // =====================================================================
 // Generator
 // =====================================================================

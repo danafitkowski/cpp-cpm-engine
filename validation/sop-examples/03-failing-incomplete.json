@@ -1,0 +1,126 @@
+{
+  "_README": "Synthetic example of an INCOMPLETE / NON-CONFORMING SOP checklist. Used by tests/sop-validator.test.js as the negative-path fixture. Validator MUST reject this.",
+  "sop_version": "2.9.34",
+  "engine_version": "2.9.34",
+  "case_id": "synthetic-failing-case",
+  "deliverable_id": "should-not-pass",
+  "analyst": {
+    "name": "Imposter Analyst",
+    "credential": "",
+    "signature_date": "2026-05-24"
+  },
+  "computed_at": "2026-05-24T16:00:00Z",
+  "steps": [
+    {
+      "step_number": 1,
+      "step_name": "Intake",
+      "status": "done",
+      "evidence": {
+        "source_filename": "owner-baseline.xer"
+      }
+    },
+    {
+      "step_number": 2,
+      "step_name": "Preserve + hash",
+      "status": "n/a",
+      "na_reason": "too lazy"
+    },
+    {
+      "step_number": 3,
+      "step_name": "Confirm data date",
+      "status": "done",
+      "evidence": {}
+    },
+    {
+      "step_number": 4,
+      "step_name": "Confirm schedule mode",
+      "status": "done",
+      "evidence": {
+        "schedule_mode": "retained-logic",
+        "calendar_count": 1
+      }
+    },
+    {
+      "step_number": 5,
+      "step_name": "Confirm calendars",
+      "status": "done",
+      "evidence": {
+        "calendar_inventory": [],
+        "jurisdiction_code": "",
+        "verification_note": ""
+      }
+    },
+    {
+      "step_number": 6,
+      "step_name": "Run forensic strict validation",
+      "status": "n/a",
+      "na_reason": "skipped"
+    },
+    {
+      "step_number": 7,
+      "step_name": "Review alerts",
+      "status": "done",
+      "evidence": {
+        "alert_summary": { "by_severity": { "ALERT": 0 } }
+      }
+    },
+    {
+      "step_number": 8,
+      "step_name": "Compare to P6 if needed",
+      "status": "n/a",
+      "na_reason": "no p6"
+    },
+    {
+      "step_number": 9,
+      "step_name": "Select AACE method",
+      "status": "done",
+      "evidence": {
+        "aace_method_id": "MIP 3.3",
+        "aace_citation": "AACE 29R-03 §3.3",
+        "justification": "because"
+      }
+    },
+    {
+      "step_number": 10,
+      "step_name": "Record excluded activities",
+      "status": "done",
+      "evidence": {
+        "excluded_activities": []
+      }
+    },
+    {
+      "step_number": 11,
+      "step_name": "Record overrides",
+      "status": "done",
+      "evidence": {
+        "override_audit_trail": []
+      }
+    },
+    {
+      "step_number": 12,
+      "step_name": "Generate output",
+      "status": "done",
+      "evidence": {
+        "deliverable_filename": "out.docx"
+      }
+    },
+    {
+      "step_number": 13,
+      "step_name": "QA output against manifest",
+      "status": "done",
+      "evidence": {
+        "qa_checks": [
+          { "category": "numerical-claims", "verdict": "PASS" }
+        ]
+      }
+    },
+    {
+      "step_number": 14,
+      "step_name": "Analyst signoff",
+      "status": "done",
+      "evidence": {
+        "signed_deliverable_filename": "out-signed.pdf"
+      }
+    }
+  ]
+}

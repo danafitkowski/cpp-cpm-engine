@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-05-24T04:09:32.723Z",
-  "engine_version": "2.9.31",
+  "generated_at": "2026-05-24T16:16:00.909Z",
+  "engine_version": "2.9.34",
   "cases": [
     {
       "id": "01-small-clean-baseline",
@@ -132,6 +132,17 @@
       "strict_mode_pass": true,
       "engine_project_finish": "2026-02-04",
       "engine_alert_count": 38,
+      "engine_errored": false
+    },
+    {
+      "id": "13-large-1000-dag-branching",
+      "title": "Large DAG — 1,020 activities, branching/merging at every phase boundary",
+      "activity_count": 1020,
+      "relationship_count": 1059,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-07-24",
+      "engine_alert_count": 5178,
       "engine_errored": false
     }
   ]

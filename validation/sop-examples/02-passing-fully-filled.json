@@ -1,0 +1,188 @@
+{
+  "_README": "Synthetic example of a fully-filled SOP checklist. Used by tests/sop-validator.test.js as the positive-path fixture.",
+  "sop_version": "2.9.34",
+  "engine_version": "2.9.34",
+  "case_id": "synthetic-test-case-01",
+  "deliverable_id": "EOT-Submission-v1",
+  "analyst": {
+    "name": "Jane Analyst",
+    "credential": "PSP",
+    "signature_date": "2026-05-24",
+    "signature_method": "wet ink"
+  },
+  "computed_at": "2026-05-24T16:00:00Z",
+  "steps": [
+    {
+      "step_number": 1,
+      "step_name": "Intake",
+      "status": "done",
+      "evidence": {
+        "source_filename": "owner-baseline-2026-03.xer",
+        "sender": "owner@example.invalid",
+        "receipt_timestamp": "2026-03-15T14:22:00Z",
+        "transmission_method": "owner portal — secure download",
+        "file_size_bytes": 2147483
+      }
+    },
+    {
+      "step_number": 2,
+      "step_name": "Preserve + hash",
+      "status": "done",
+      "evidence": {
+        "source_sha256": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        "hash_timestamp": "2026-03-15T14:24:00Z"
+      }
+    },
+    {
+      "step_number": 3,
+      "step_name": "Confirm data date",
+      "status": "done",
+      "evidence": {
+        "data_date": "2026-03-01",
+        "data_date_source": "XER project header — matches owner transmittal",
+        "reconciliation_note": "File-embedded data date and transmittal agree."
+      }
+    },
+    {
+      "step_number": 4,
+      "step_name": "Confirm schedule mode",
+      "status": "done",
+      "evidence": {
+        "schedule_mode": "retained-logic",
+        "calendar_count": 2,
+        "reconciliation_note": "Owner XER computed under retained logic per project standard."
+      }
+    },
+    {
+      "step_number": 5,
+      "step_name": "Confirm calendars",
+      "status": "done",
+      "evidence": {
+        "calendar_inventory": [
+          { "clndr_id": "1", "name": "Project Mon-Fri", "workday_week": "Mon-Fri", "holiday_count": 12 },
+          { "clndr_id": "2", "name": "Concrete 6-day", "workday_week": "Mon-Sat", "holiday_count": 8 }
+        ],
+        "jurisdiction_code": "CA-ON",
+        "verification_note": "Holiday list verified against Ontario Employment Standards Act 2026 statutory list on 2026-03-16."
+      }
+    },
+    {
+      "step_number": 6,
+      "step_name": "Run forensic strict validation",
+      "status": "done",
+      "evidence": {
+        "forensic_strict_overrides_applied": [
+          {
+            "context": "progress-override-not-supported",
+            "rationale": "Source schedule was authored under retained logic; alert is a false positive triggered by a stale P6 user-preference field.",
+            "source_authority": "Owner transmittal 2026-03-15 confirming retained-logic computation.",
+            "analyst": "Jane Analyst",
+            "date": "2026-05-20"
+          }
+        ]
+      }
+    },
+    {
+      "step_number": 7,
+      "step_name": "Review alerts",
+      "status": "done",
+      "evidence": {
+        "alert_summary": {
+          "by_severity": { "ALERT": 0, "WARN": 3, "INFO": 18 },
+          "by_context": { "task-dropped": 12, "constraint-applied": 6, "lag-rounded": 3 }
+        },
+        "per_alert_notes": [
+          { "context": "lag-rounded", "note": "All three sub-day lags round in the same direction; no forensic impact on CP." }
+        ]
+      }
+    },
+    {
+      "step_number": 8,
+      "step_name": "Compare to P6 if needed",
+      "status": "done",
+      "evidence": {
+        "p6_comparison_results": [
+          { "activity_code": "CP-100", "field": "ef_date", "engine_value": "2026-08-15", "p6_value": "2026-08-15", "verdict": "PASS" },
+          { "activity_code": "CP-200", "field": "tf", "engine_value": 0, "p6_value": 0, "verdict": "PASS" }
+        ]
+      }
+    },
+    {
+      "step_number": 9,
+      "step_name": "Select AACE method",
+      "status": "done",
+      "evidence": {
+        "aace_method_id": "MIP 3.3 — Observational / Dynamic / Contemporaneous As-Is",
+        "aace_citation": "AACE Recommended Practice 29R-03 §3.3",
+        "justification": "Retrospective EOT claim with monthly windows aligns with MIP 3.3. Alternative MIP 3.7 (TIA) was considered and rejected because all events are historical; no prospective modeling is required."
+      }
+    },
+    {
+      "step_number": 10,
+      "step_name": "Record excluded activities",
+      "status": "done",
+      "evidence": {
+        "excluded_activities": [
+          { "code": "LOE-MGT", "reason": "Level of effort — TT_RsrcDep", "source": "engine task-dropped INFO" },
+          { "code": "WBS-PHASE-1", "reason": "WBS summary — TT_WBS", "source": "engine task-dropped INFO" }
+        ]
+      }
+    },
+    {
+      "step_number": 11,
+      "step_name": "Record overrides",
+      "status": "done",
+      "evidence": {
+        "override_audit_trail": [
+          {
+            "context": "progress-override-not-supported",
+            "rationale": "See Step 6 evidence.",
+            "source_authority": "Owner transmittal 2026-03-15.",
+            "analyst": "Jane Analyst",
+            "date": "2026-05-20"
+          }
+        ]
+      }
+    },
+    {
+      "step_number": 12,
+      "step_name": "Generate output",
+      "status": "done",
+      "evidence": {
+        "deliverable_filename": "EOT-Submission-v1.docx",
+        "generation_timestamp": "2026-05-24T15:00:00Z",
+        "downstream_skill_version": "forensic-delay-analysis v7.5",
+        "downstream_skill_manifest_reference": "case-folder/manifests/forensic-delay-analysis-manifest.json"
+      }
+    },
+    {
+      "step_number": 13,
+      "step_name": "QA output against manifest",
+      "status": "done",
+      "evidence": {
+        "qa_checks": [
+          { "category": "numerical-claims", "verdict": "PASS", "note": "All cited values cross-check against engine output." },
+          { "category": "cited-activities", "verdict": "PASS", "note": "All activity codes exist in source XER." },
+          { "category": "dates", "verdict": "PASS", "note": "All cited dates consistent with data date 2026-03-01." }
+        ]
+      }
+    },
+    {
+      "step_number": 14,
+      "step_name": "Analyst signoff",
+      "status": "done",
+      "evidence": {
+        "signed_deliverable_filename": "EOT-Submission-v1-signed.pdf",
+        "deliverable_sha256": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+        "manifest_references": {
+          "engine_version": "cpm-engine v2.9.34",
+          "source_sha256": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+          "sop": "FORENSIC_USE_SOP.md",
+          "daubert": "DAUBERT.md",
+          "verify_release": "VERIFY_RELEASE.md",
+          "release_evidence": "release-evidence/v2.9.34/"
+        }
+      }
+    }
+  ]
+}

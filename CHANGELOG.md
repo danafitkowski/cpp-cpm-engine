@@ -12,6 +12,149 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.34 — 2026-05-24 — Audit-ledger closure wave + CLAUDE.md operating contract
+
+Closes 4 of 7 carryover items from the `AUDIT_LEDGER_v2.9.34.md` v2.9.33-rollover plus the HS3 hard stop. Engine math byte-identical to v2.9.33; this is a docs + closures + test-gates release.
+
+### HS closes (hard-stop conditions on the audit ledger)
+
+- **HS3 / `CLAUDE.md` operating contract missing.** The v2.9.34 audit ledger
+  referenced `CLAUDE.md` three times (lines 6, 27, 63) as the source of
+  the four Definition-of-Done criteria, but no such file existed in the
+  repo. `CLAUDE.md` now lives in the repo root with the DoD, status
+  taxonomy, hard-stop conditions, ledger operating rules, forbidden
+  phrases, and the three-artifact `/ship-audit` output contract. The
+  file becomes the citable contract for every future ledger.
+
+### Ledger-row closes
+
+- **#9 / Alert investigation — 23 baseline alerts.**
+  `validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md`
+  enumerates all 23 alerts and identifies the single root cause: the
+  corpus harness does not pass `cal_map` through `runEngineOnXer`, so
+  the engine falls back to 7-day ordinal arithmetic and emits one
+  alert per arithmetic site (9 forward variants + 14 backward
+  variants = 23). Verification: `node scripts/verify-alert-triage-01.js`.
+- **#10 / 1k DAG fixture extension.** New corpus case
+  `13-large-1000-dag-branching` — 10-phase diamond cascade, 5-way
+  fan-out from each phase-start milestone + 5-way fan-in to each
+  phase-end milestone, 1020 activities / 1059 relationships /
+  strict-mode PASS. Closes the "trivial FS chain only" gap on the
+  existing 1k case (#02). Topology regression in
+  `tests/corpus-dag-fixture.test.js`.
+- **#16 / Cryptographic analyst signoff stub + schema v2.**
+  `scripts/crypto-signoff.js` ships real Ed25519 signing + verification
+  via Node's built-in `crypto` (zero external deps). The
+  `cpp-skill-manifest/v2` wire format documented at
+  `docs/crypto-signoff-schema-v2.md` covers canonicalization, threat
+  model, and the forward path to Sigstore Rekor (stubbed — the
+  transparency block carries a documented `_note` placeholder).
+  7-sub-suite regression: round-trip, payload tamper, signature
+  zeroing, public-key swap, full key swap, schema mismatch,
+  cross-keypair. Test gate `test:crypto`.
+- **#17 / Machine-readable SOP checklist + validator.**
+  `schemas/sop-checklist.schema.json` (JSON Schema draft-07) +
+  `scripts/validate-sop.js` (per-step semantic binding from
+  FORENSIC_USE_SOP.md's "Capture in manifest" sections) +
+  `validation/sop-examples/` (template, passing, failing fixtures).
+  Documentation at `docs/sop-checklist-schema.md`. 4-fixture regression
+  gate `test:sop`.
+
+### Partial close — engineering portion only
+
+- **#6 / P6 expected-value population.** Engineering scaffolding shipped:
+  `scripts/validate-p6-comparison.js` validates each `comparison.csv`
+  for header schema, engine-column accuracy against the case's
+  `engine-output.json`, P6-discipline (all-filled or all-blank, no
+  partial), and verdict-format grammar (`PASS` or `FAIL — <delta>`).
+  7-scenario regression `tests/p6-comparison-validator.test.js`.
+  Matrix-doc cleanup: stale row-14/15 references removed from
+  `validation/p6-comparison/comparison-matrix.md` after their move to
+  `validation/engine-limitations/` in the v2.9.33 audit cycle.
+  Schema doc at `docs/p6-comparison-schema.md`. The P6-VALUES portion
+  (filling `*_p6` columns from native P6 capture) remains user-blocked
+  on Dana's P6 access.
+
+### Carryover (unchanged status)
+
+- **#5 / Third-party reproduction memo** — BLOCKED on identifying an
+  outside reviewer.
+- **#8 / Real-XER sourcing** — ACCEPTED-LIMITATION; requires client
+  consent.
+
+### New test gates (release-blocking, wired into `test:all`)
+
+- `test:sop` → `tests/sop-validator.test.js`
+- `test:crypto` → `tests/crypto-signoff.test.js`
+- `test:p6-comparison` → `tests/p6-comparison-validator.test.js`
+- `test:corpus-dag` → `tests/corpus-dag-fixture.test.js`
+
+`scripts/attestation.js` continues to invoke the 5 pre-existing gates
+(unit, crossval, citation, truncation, version-drift); the new gates
+are exercised by `npm run test:all` separately. A v2.9.35+
+enhancement may extend `attestation.js` to include the new gates in
+the witness JSON; not in scope for this release.
+
+### Engine code
+
+- `cpm-engine.js:151` — `ENGINE_VERSION` bumped `'2.9.33'` → `'2.9.34'`.
+  No math-side edits. SHA-256 rotates as a consequence of the string
+  bump.
+- `python_reference/cpm.py:91` — `ENGINE_VERSION` bumped from a stale
+  pin (had not been updated since the v2.9.27 audit cycle — 7-version
+  drift). Behaviorally byte-identical; crossval 747/747 holds.
+
+### Tests modified
+
+- `cpm-engine.test.js` — 5 hard-coded `=== '2.9.33'` assertions
+  refreshed to `'2.9.34'` (lines 1316, 1353, 1606, 2065, 2085).
+- `cpm-engine.test.js` SECTION R historical narration preserved
+  (v2.9.33 section header references intentionally retained).
+
+### Files added (17 new)
+
+`CLAUDE.md`, `schemas/sop-checklist.schema.json`, `scripts/validate-sop.js`,
+`scripts/crypto-signoff.js`, `scripts/verify-alert-triage-01.js`,
+`scripts/validate-p6-comparison.js`, `tests/sop-validator.test.js`,
+`tests/crypto-signoff.test.js`, `tests/corpus-dag-fixture.test.js`,
+`tests/p6-comparison-validator.test.js`,
+`validation/sop-examples/{01-template-blank,02-passing-fully-filled,03-failing-incomplete}.json`,
+`validation/xer-corpus/cases/13-large-1000-dag-branching/{case.xer, engine-output.json, README.md}`,
+`validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md`,
+`docs/sop-checklist-schema.md`, `docs/crypto-signoff-schema-v2.md`,
+`docs/p6-comparison-schema.md`, `release-evidence/v2.9.34/`.
+
+### Files modified
+
+`package.json` (version + test gates + files list), `cpm-engine.js`
+(ENGINE_VERSION), `python_reference/cpm.py` (ENGINE_VERSION),
+`cpm-engine.test.js` (5 assertion refreshes),
+`validation/xer-corpus/generate-corpus.js` (case 13 + helper),
+`validation/p6-comparison/comparison-matrix.md` (row cleanup +
+version stamps), all `validation/**/engine-output.json` +
+`corpus-summary.json` + `engine-outputs-summary.json` (regenerated
+under new engine version stamp), `ROADMAP_OPEN.md` (status flips for
+#9 / #10 / #16 / #17), and version-header sweep across README,
+DAUBERT, VERIFY_RELEASE, FORENSIC_USE_SOP, docs/jurisdictions,
+docs/api, validation/p6-comparison/README, validation/xer-corpus/README.
+
+### Verification chain
+
+```
+Tag:                    v2.9.34
+Engine SHA-256:         5a6abd78fac05bde9951b17f9ca27d2fd163b85ef956df18ced84cc214cc1f78
+Python ref SHA-256:     fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68
+Unit tests:             1,128 / 1,128
+Crossval:               747 / 747 across 43 fixtures
+New gates:              4 / 4 (sop, crypto, p6-comparison, corpus-dag)
+npm run verify:         PASS
+npm run test:all:       PASS
+```
+
+Sigstore Rekor entry + GitHub Actions workflow URL populate post-tag.
+
+---
+
 ## v2.9.33 — 2026-05-24 — Audit-response wave pass 2 (closes ChatGPT fourth-pass findings)
 
 Fourth-pass ChatGPT audit on v2.9.32 surfaced 19 items. v2.9.33 closes 14

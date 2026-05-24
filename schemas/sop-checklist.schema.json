@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/danafitkowski/cpp-cpm-engine/blob/main/schemas/sop-checklist.schema.json",
+  "title": "Forensic Use SOP Checklist — cpp-cpm-engine",
+  "description": "Machine-readable form of the 14-step analyst checklist from FORENSIC_USE_SOP.md. Closes AUDIT_LEDGER_v2.9.34.md row #17.",
+  "type": "object",
+  "required": [
+    "sop_version",
+    "engine_version",
+    "case_id",
+    "deliverable_id",
+    "analyst",
+    "computed_at",
+    "steps"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "sop_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semver of the SOP this checklist conforms to. Matches the engine version FORENSIC_USE_SOP.md is aligned to."
+    },
+    "engine_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Engine version used for the analysis. Must match the version cited in the deliverable's report manifest."
+    },
+    "case_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Internal case identifier (e.g., 'Mulock-Park-EOT-01')."
+    },
+    "deliverable_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Deliverable identifier (e.g., 'EOT-Submission-v2', 'TIA-Fragnet-02')."
+    },
+    "analyst": {
+      "type": "object",
+      "required": ["name", "credential", "signature_date"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "credential": { "type": "string", "minLength": 1, "description": "Professional credential (e.g., 'PSP', 'PMP', 'PEng', 'CCM')." },
+        "signature_date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "ISO-8601 date." },
+        "signature_method": { "type": "string", "description": "Free-form signature method (wet ink, e-sign, Sigstore, etc.). Cryptographic signing is roadmap (ledger row #16)." }
+      }
+    },
+    "computed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when this checklist was finalized."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "description": "Exactly 14 step entries, matching FORENSIC_USE_SOP.md Steps 1–14.",
+      "items": {
+        "type": "object",
+        "required": ["step_number", "step_name", "status"],
+        "additionalProperties": true,
+        "properties": {
+          "step_number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 14
+          },
+          "step_name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": ["done", "n/a"]
+          },
+          "na_reason": {
+            "type": "string",
+            "description": "Required when status = 'n/a'. Must be substantive (>= 8 chars)."
+          },
+          "evidence": {
+            "type": "object",
+            "description": "Step-specific captured fields. Required when status = 'done'. Shape varies per step — see docs/sop-checklist-schema.md and scripts/validate-sop.js for the per-step required keys."
+          },
+          "analyst_note": {
+            "type": "string",
+            "description": "Free-form analyst note for the step."
+          }
+        }
+      }
+    }
+  }
+}

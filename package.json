@@ -1,6 +1,6 @@
 {
   "name": "cpp-cpm-engine",
-  "version": "2.9.33",
+  "version": "2.9.34",
   "description": "Open-source CPM engine — AACE-canonical, Daubert-disclosed, JS/Python parity across enumerated CPM comparison fields.",
   "main": "cpm-engine.js",
   "scripts": {
@@ -8,8 +8,12 @@
     "test:cites": "node tests/no-fabricated-citations.test.js",
     "test:truncation": "node tests/no-truncation.test.js",
     "test:version-refs": "node tests/no-stale-version-refs.test.js",
+    "test:sop": "node tests/sop-validator.test.js",
+    "test:crypto": "node tests/crypto-signoff.test.js",
+    "test:p6-comparison": "node tests/p6-comparison-validator.test.js",
+    "test:corpus-dag": "node tests/corpus-dag-fixture.test.js",
     "crossval": "node cpm-engine.crossval.js",
-    "test:all": "npm test && npm run crossval && npm run test:cites && npm run test:truncation && npm run test:version-refs",
+    "test:all": "npm test && npm run crossval && npm run test:cites && npm run test:truncation && npm run test:version-refs && npm run test:sop && npm run test:crypto && npm run test:p6-comparison && npm run test:corpus-dag",
     "coverage": "c8 --reporter=text --reporter=json-summary --reporter=html --include=cpm-engine.js npm test",
     "verify": "node scripts/attestation.js",
     "attest": "node scripts/attestation.js --silent --output attestations/latest.json"
@@ -60,9 +64,12 @@
     "python_reference/",
     "tests/",
     "scripts/",
+    "schemas/",
     "validation/",
     "release-evidence/",
-    "attestations/README.md"
+    "attestations/README.md",
+    "CLAUDE.md",
+    "ROADMAP_OPEN.md"
   ],
   "devDependencies": {
     "c8": "^11.0.0"

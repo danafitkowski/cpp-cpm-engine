@@ -1,0 +1,21 @@
+PENDING — populated post-tag-push.
+
+The Rekor transparency-log entry is created automatically when CI's Sigstore signing
+flow submits the witness JSON. Once available:
+
+  1. Find the logIndex on the GitHub release page (next to the Sigstore attestation).
+  2. Paste the Rekor entry metadata here, replacing this stub.
+
+Expected fields (per the v2.9.33 entry at logIndex 1624014603):
+  - logIndex:    <integer>
+  - logID:       <hex>
+  - integratedTime: <unix epoch>
+  - kindVersion: { kind: "intoto", version: "0.0.2" }
+  - subject:     release-evidence/v2.9.34/witness-v2.9.34.json
+  - SHA-256:     5a6abd78fac05bde9951b17f9ca27d2fd163b85ef956df18ced84cc214cc1f78
+                 (engine SHA, included in the in-toto statement)
+  - URL:         https://search.sigstore.dev/?logIndex=<index>
+
+The Rekor log is append-only and not under the project maintainer's control — opposing
+counsel can query Rekor directly and verify the entry exists, was signed at the
+documented timestamp, and points to this repository under the GitHub OIDC issuer.
