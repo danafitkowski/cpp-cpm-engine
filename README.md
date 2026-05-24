@@ -1,9 +1,9 @@
 # cpm-engine
 
-[![npm version](https://img.shields.io/badge/npm-v2.9.27-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
+[![npm version](https://img.shields.io/badge/npm-v2.9.28-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 792 passing](https://img.shields.io/badge/tests-792%20passing-brightgreen.svg)](cpm-engine.test.js)
-[![crossval: 416/416](https://img.shields.io/badge/JS%E2%86%94Python-416%2F416-brightgreen.svg)](cpm-engine.crossval.js)
+[![tests: 1071 passing](https://img.shields.io/badge/tests-1071%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![crossval: 747/747](https://img.shields.io/badge/JS%E2%86%94Python-747%2F747-brightgreen.svg)](cpm-engine.crossval.js)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
@@ -128,7 +128,7 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 43 fixtures × 747 checks. 0 deviations as of v2.9.27.
+# 43 fixtures × 747 checks. 0 deviations as of v2.9.28.
 ```
 
 Plus a 282-activity real-XER stress test reports 0 mismatches.
@@ -165,7 +165,7 @@ Verify a signed CI attestation:
 gh attestation verify attestations/latest.json --owner danafitkowski
 ```
 
-See [DAUBERT.md §3.1 — Independent Verification](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening) for the full Daubert framing.
+See [DAUBERT.md §3.1 — Independent Verification](DAUBERT.md#31-independent-verification) for the full Daubert framing.
 
 ---
 
@@ -201,15 +201,15 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.11 (2026-05-16) — Round 8 R8A engine math fix wave.** Four T1 silent-wrong-answer paths closed: `actual_finish` without `actual_start` no longer collapses ES to EF; sub-day fractional lags emit `SUB_DAY_LAG_ROUNDED` ALERT; FF / SF Free Float uses the successor's calendar; Section D constraint clamps emit `constraint-skipped` WARN when `opts.projectStart` is missing.
 
-**v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
+**v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.27.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.28.
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 792 unit tests and 416 cross-validation checks. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,071 unit tests and 747/747 cross-validation checks across 43 fixtures. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

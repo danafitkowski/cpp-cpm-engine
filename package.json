@@ -1,6 +1,6 @@
 {
   "name": "cpp-cpm-engine",
-  "version": "2.9.27",
+  "version": "2.9.28",
   "description": "Forensically-defensible CPM engine — AACE-canonical, Daubert-disclosed, bit-identical JS-Python parity.",
   "main": "cpm-engine.js",
   "scripts": {
@@ -18,7 +18,7 @@
     "forensic-delay-analysis",
     "schedule-analysis",
     "daubert",
-    "fre-707",
+    "fre-702",
     "aace",
     "scl-protocol",
     "construction",

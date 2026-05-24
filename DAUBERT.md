@@ -1,8 +1,8 @@
-# Daubert / Proposed FRE 707 Disclosure — `cpm-engine` v2.9.12
+# Daubert / FRE 702 Disclosure — `cpm-engine` v2.9.28
 
-This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits, FRCP 26(a)(2)(B) reports, and proposed FRE 707 compliance briefs.
+This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits and FRCP 26(a)(2)(B) reports under the *Daubert v. Merrell Dow Pharmaceuticals* (1993) framework as codified in Federal Rule of Evidence 702 (Dec 1, 2023 amendment), and is forward-compatible with proposed FRE 707.
 
-> **Note on FRE 707.** Proposed Federal Rule of Evidence 707 governs admissibility of AI-generated evidence. As of the date of this disclosure, FRE 707 is a proposed federal rule with final effective date pending. The four-prong framework below is the *Daubert v. Merrell Dow Pharmaceuticals* (1993) standard, which 707 is expected to formalize for AI-generated outputs.
+> **Note on FRE 702 / FRE 707.** The controlling rule for this disclosure is **FRE 702 as amended December 1, 2023**, which codifies the *Daubert* reliability framework. Proposed Federal Rule of Evidence 707 — which would govern admissibility of AI-generated evidence — remains a proposed federal rule with final effective date pending. The four-prong framework below is the *Daubert* standard; the engine's disclosure surface is designed to remain compliant if FRE 707 is enacted in its proposed form.
 
 ---
 
@@ -31,14 +31,14 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes (TFM/LPM/MFP with divergence), kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays (66+ jurisdictions), P6 primary + secondary constraints, TT_Hammock two-pass with full SS/FF/SF semantics, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, dateToNum 2-digit guard, Round 6 strong-assertion strengthening, Round 7 full hammock SS/FF/SF semantics, Round 8 R8A engine math fix wave, Round 9 v2.9.12 engine math fix wave, v2.9.22 audit HIGH wave (10 items: rel-trim, strict parse, typed input, getHolidays year-clamp, etc.), v2.9.23 small-batch wave (16 items: dedup, codepoint cmp, target_drtn WARN, etc.), v2.9.26 provenance + citation polish, v2.9.27 paired JS+Python fixes (R6 completed-succ skip, R12 data_date snap, R21 Python MonFri fast path, R9 tf_working_days backport, F24 ff/ff_working_days backport, A12 hash hardenings, R10 project_calendar fallback, R6 MS_Start widen WARN). | **1,064 / 1,064 passing** |
-| Cross-validation suite     | `cpm-engine.crossval.js` — 43 fixtures × 747 checks, JS engine vs Python `compute_cpm` reference. Severity-level alert parity asserted. v2.9.27 expanded crossval coverage by backporting tf_working_days, ff, and ff_working_days fields to Python (previously documented JS-only gaps in F24 — now fully compared bit-identically across all fixtures). | **747 / 747 bit-identical** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes (TFM/LPM/MFP with divergence), kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction holidays (66+ jurisdictions), P6 primary + secondary constraints, TT_Hammock two-pass with full SS/FF/SF semantics, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, dateToNum 2-digit guard, Round 6 strong-assertion strengthening, Round 7 full hammock SS/FF/SF semantics, Round 8 R8A engine math fix wave, Round 9 v2.9.12 engine math fix wave, v2.9.22 audit HIGH wave (10 items: rel-trim, strict parse, typed input, getHolidays year-clamp, etc.), v2.9.23 small-batch wave (16 items: dedup, codepoint cmp, target_drtn WARN, etc.), v2.9.26 provenance + citation polish, v2.9.27 paired JS+Python fixes (R6 completed-succ skip, R12 data_date snap, R21 Python MonFri fast path, R9 tf_working_days backport, F24 ff/ff_working_days backport, A12 hash hardenings, R10 project_calendar fallback, R6 MS_Start widen WARN). | **1,071 / 1,071 passing** |
+| Cross-validation suite     | `cpm-engine.crossval.js` — 43 fixtures × 747 checks, JS engine vs Python `compute_cpm` reference. Severity-level alert parity asserted on the enumerated comparison surface (forward/backward pass dates ES/EF/LS/LF, Kahn topo order, Tarjan SCC, critical-path codes, alert counts and severity, FF/SF working-day arithmetic, TF, FF, FF working days). v2.9.27 expanded crossval coverage by backporting tf_working_days, ff, and ff_working_days fields to Python (previously documented JS-only gaps in F24). Bayesian and kinematic surfaces are JS-only and **explicitly excluded** from the bit-identical claim — see §11. | **747 / 747 bit-identical across enumerated CPM comparison fields** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
-| Industry-first features    | Kinematic delay dynamics (velocity / acceleration / jerk), topology fingerprint hash, FRE 707 wrapper, Bayesian update with hierarchical pooling | All exposed via public API + tests |
+| Public-API surfaces        | Kinematic delay dynamics (velocity / acceleration / jerk; pre-publication, JS-only), topology fingerprint hash (canonicalized topology under hashed-field set; not a forensic-equivalence statement — see §11), Daubert / FRE 702 disclosure wrapper, Bayesian update with hierarchical pooling (pre-publication, JS-only). | All exposed via public API + tests |
 
 Performance benchmarks (Node 18, M1 Mac):
 
-- 792 unit tests
+- 1,071 unit tests
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
@@ -54,9 +54,9 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - **Externally reproducible cross-validation.** A Python reference implementation ships at `python_reference/cpm.py`. Its SHA-256 is regenerated on every `npm run attest` and written to `python_reference/cpm.py.sha256` (alongside `cpm-engine.js.sha256`) for mechanical `shasum -c` verification. The hash is also printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash, and confirm bytes-they're-testing match bytes-pinned. Drift from the pinned hash invalidates the "747 / 747" headline and must be reproduced from a clean checkout. v2.9.27 paired-fix wave brought the JS↔Python parity surface from 444 → 747 bit-identical checks by backporting `tf_working_days`, `ff`, `ff_working_days` (previously F24-documented JS-only gaps), plus paired-engine fixes for R6 completed-successor skip, R12 data_date calendar-aware floor, R21 Python MonFri fast path, R10 project_calendar fallback tier, R6 MS_Start widens-LF WARN, and A12 topology-hash hardenings (numeric/string code coercion, input vs hashed relationship counts, algorithm:null for empty).
 - Live-deployed at <https://mcp.criticalpathpartners.ca/try> where any party can run it against their own schedule.
 
-### §3.1 Independent Verification (v2.9.12 — Round 9 Daubert hardening)
+### §3.1 Independent Verification
 
-The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. v2.9.12 carries forward the v2.9.11 Round 7 independent-verification infrastructure with three layers of mitigation:
+The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. The engine ships three independently-verifiable layers of mitigation (introduced in v2.9.10 Round 7 and carried forward through the v2.9.27/v2.9.28 baseline):
 
 **Layer 1 — Public Continuous Integration.** Every push to `main` and every PR triggers `.github/workflows/verify.yml`, which runs:
 
@@ -68,8 +68,8 @@ Workflow runs are publicly visible at <https://github.com/danafitkowski/cpp-cpm-
 
 **Layer 2 — Cryptographic attestation via Sigstore.** On every push to `main` and every tag push, the workflow:
 
-1. Generates a **witness JSON file** (`attestations/latest.json`) containing: package version, engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version, runner OS, and the exact pass/fail counts from each test suite.
-2. Signs the witness via **Sigstore using GitHub OIDC** (`actions/attest-build-provenance@v1`). The signature is recorded on the public Sigstore transparency log, providing a tamper-evident audit trail.
+1. Generates a **witness JSON file** (`attestations/latest.json`) containing: package version, engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version, runner OS, and the exact pass/fail counts from each test suite. *Note: `attestations/latest.json` is intentionally gitignored — it is a per-machine generated artifact, not a committed file. The public Sigstore-signed witness is the **GitHub release asset** attached to each tagged release (e.g. `v2.9.28/attestations-latest.json`), permanent and externally verifiable.*
+2. Signs the witness via **Sigstore using GitHub OIDC** (`actions/attest-build-provenance@v1`). The signature is recorded on the public Sigstore transparency log (Rekor), providing a tamper-evident audit trail.
 3. Publishes the signed witness as a workflow artifact (90-day retention) and — on tag pushes — as a release asset (permanent).
 
 Anyone can verify a published attestation:
@@ -101,12 +101,14 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 ## §4 Error Rate
 
-**Cross-validation reports 416 / 416 = 0% deviation across 40 fixtures.**
+**Cross-validation reports 747 / 747 = 0% observed deviation across 43 fixtures on the enumerated CPM comparison surface (forward/backward pass dates, Kahn topo order, Tarjan SCC, FF/SF working-day arithmetic, TF, FF, FF working days, alert counts and severity). Bayesian and kinematic surfaces are JS-only and excluded — see §11.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
+
+This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.28. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
 
 Performance characteristics:
 
-- 792 unit tests run on Node 18.
+- 1,071 unit tests run on Node 18.
 - 5,000-node linear chain Tarjan SCC in **~8 ms**.
 - A 25,000-activity Mon-Fri schedule (full forward + backward pass) runs in **~1.6 s** after the v2.1-C1 / v2.1-C2 optimizations.
 

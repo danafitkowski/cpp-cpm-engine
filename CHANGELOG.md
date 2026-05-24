@@ -12,6 +12,98 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.28 — 2026-05-23 — Adversarial-audit response (Daubert disclosure hygiene + docs sweep)
+
+Docs-only release in response to a third-party adversarial audit of the
+Daubert disclosure surface. No engine math changes. Tightens the documentation
+surface that opposing counsel would attack first: stale version/test-count
+references, marketing language inside a Daubert disclosure, topology-hash
+overclaim, FRE 707 leading the wrapper instead of operative FRE 702, and the
+"bit-identical" headline missing an explicit scope statement.
+
+### DAUBERT.md — disclosure hygiene
+
+- **Header refreshed.** `# Daubert / Proposed FRE 707 Disclosure — cpm-engine v2.9.12` →
+  `# Daubert / FRE 702 Disclosure — cpm-engine v2.9.28`. Operative rule is
+  FRE 702 (Dec 1, 2023 amendment); FRE 707 demoted to forward-compatibility
+  note.
+- **Stale test/crossval counts swept.** `792 unit tests` → `1,071 unit tests`
+  (2 locations); `416 / 416 = 0% deviation across 40 fixtures` →
+  `747 / 747 = 0% observed deviation across 43 fixtures on the enumerated
+  CPM comparison surface` (§4); `1,064 / 1,064 passing` → `1,071 / 1,071
+  passing` (§2 unit-test row).
+- **"Industry-first features" row removed.** Marketing language inside a
+  Daubert disclosure is courtroom-fragile. Replaced with `Public-API
+  surfaces` row that names Bayesian + kinematic as pre-publication and
+  JS-only with cross-reference to §11.
+- **§3.1 "bit-identical" scoped.** The crossval row now reads
+  `747 / 747 bit-identical across enumerated CPM comparison fields` and
+  enumerates the surface (ES/EF/LS/LF, Kahn topo, Tarjan SCC, FF/SF
+  working-day arithmetic, TF, FF, FF working days). Bayesian and
+  kinematic surfaces are explicitly excluded with cross-reference to §11.
+- **§3.1 header de-versioned.** `### §3.1 Independent Verification (v2.9.12 — Round 9 Daubert hardening)` →
+  `### §3.1 Independent Verification`. The infrastructure (Sigstore witness,
+  one-command reproduction, public CI matrix) carries forward through every
+  version; the section anchor no longer drifts.
+- **`attestations/latest.json` clarifier added.** The gitignored
+  per-machine artifact vs. the public Sigstore-signed release asset is
+  explicitly disclosed in §3.1 Layer 2, closing the "where's the witness"
+  confusion any adversarial auditor will hit.
+- **§4 Error Rate framing tightened.** Now explicitly labeled as the
+  **observed** error rate on the disclosed validation suite, not a
+  general error-rate claim.
+
+### cpm-engine.js — disclosure-wrapper defaults
+
+- **Default Daubert disclosure title.** `renderDaubertHTML` /
+  `renderDaubertMarkdown` defaults: `'Daubert / FRE 707 Expert Disclosure'`
+  → `'Daubert / FRE 702 Expert Disclosure'`. The user-visible title now
+  matches the operative rule.
+- **`d.rule` fallback.** `d.rule || 'Daubert / FRE 707'` →
+  `d.rule || 'Daubert / FRE 702'` (2 locations).
+- **Topology-hash overclaim scoped.** Header doc-comment (§7 public-API
+  notes) and `computeTopologyHash` JSDoc: the prior text *"Two XERs with
+  identical hashes ARE the same schedule"* is replaced with an explicit
+  scope statement — identical hashes mean identical canonicalized topology
+  under the hashed-field set (codes, durations, predecessor links + types
+  + lags); **not a forensic-equivalence statement** since calendars,
+  resources, WBS, names, and constraints are excluded from the hash and
+  can still produce different schedules.
+- **Section L header comment updated.** `(E3 — FRE 707 compliance wrapper)`
+  → `(FRE 702 disclosure wrapper; forward-compatible with proposed FRE 707)`.
+
+### README.md + CONTRIBUTING.md — count + badge sync
+
+- **Badges:** `tests: 792 passing` → `tests: 1071 passing`; `crossval: 416/416` →
+  `crossval: 747/747`; `npm: v2.9.27` → `v2.9.28`.
+- **§4 contributing paragraph:** "every commit must pass 792 unit tests and
+  416 cross-validation checks" → "every commit must pass 1,071 unit tests
+  and 747/747 cross-validation checks across 43 fixtures".
+- **§3.1 anchor link:** `DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening` →
+  `DAUBERT.md#31-independent-verification` (2 locations; matches the
+  de-versioned header).
+- **CONTRIBUTING.md quick-rules:** `792 unit tests, 0 fail` → `1,071 unit
+  tests, 0 fail`; `416/416 cross-validation checks (40 fixtures)` →
+  `747/747 cross-validation checks (43 fixtures)`.
+
+### package.json
+
+- `version`: `2.9.27` → `2.9.28`.
+- `keywords`: `fre-707` → `fre-702` (operative rule).
+
+### Tests
+
+- 1,071 / 1,071 unit tests passing
+- 747 / 747 crossval checks across 43 fixtures bit-identical
+- Citation regression PASS
+- `npm run verify` PASS
+
+Engine math byte-identical to v2.9.27 by design — this is a docs +
+disclosure-wrapper-defaults release. The math attestation chain
+(engine SHA-256 + python_reference SHA-256) is unaffected.
+
+---
+
 ## v2.9.27 — 2026-05-18 — Audit closeout (13 items) + crossval 444→747
 
 Final addressable-scope release before v3.0. Closes 13 specific audit

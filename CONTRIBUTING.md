@@ -6,13 +6,13 @@ Thank you for considering a contribution. The engine is the core of an active fo
 
 ## Quick rules
 
-1. **Every commit must pass 792 unit tests, 0 fail.**
+1. **Every commit must pass 1,071 unit tests, 0 fail.**
 
    ```bash
    npm test
    ```
 
-2. **Every commit must pass 416/416 cross-validation checks against the Python sibling (40 fixtures).**
+2. **Every commit must pass 747/747 cross-validation checks against the Python sibling (43 fixtures).**
 
    ```bash
    npm run crossval

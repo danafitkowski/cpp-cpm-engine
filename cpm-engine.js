@@ -100,11 +100,15 @@
 //
 //    const h = E.computeTopologyHash(activities, relationships);
 //    // h.topology_hash = SHA-256 hex over canonical (code, duration, sorted preds).
-//    // Excludes P6 UIDs / timestamps / names / resources / calendars.
-//    // Two XERs with identical hashes ARE the same schedule regardless of
-//    // UID rotation — bid-collusion + retroactive-manipulation signal.
+//    // Excludes P6 UIDs / timestamps / names / resources / calendars / WBS metadata.
+//    // Two XERs with identical hashes have IDENTICAL CANONICALIZED TOPOLOGY under
+//    // the hashed-field set (activity codes, durations, predecessor links + types
+//    // + lags). NOT a forensic-equivalence statement — different calendars,
+//    // resources, WBS, names, or constraints can still produce different schedules.
+//    // Useful as a bid-collusion / retroactive-manipulation signal, not as a
+//    // schedule-equivalence proof.
 //
-// 8. Daubert / FRE 707 disclosure wrapper:
+// 8. Daubert / FRE 702 disclosure wrapper (forward-compatible with proposed FRE 707):
 //
 //    const d = E.buildDaubertDisclosure(result, opts);
 //    // d.prong_1_tested / prong_2_peer_review / prong_3_error_rate /
@@ -144,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.27';
+const ENGINE_VERSION = '2.9.28';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -5453,8 +5457,13 @@ function computeKinematicDelay(slipSeries, opts) {
  * computeTopologyHash(activities, relationships)
  *
  * SHA-256 over a canonical serialization of network topology. Two XERs with
- * identical hashes ARE the same schedule regardless of P6 UID renaming,
- * timestamps, or metadata.
+ * identical hashes have IDENTICAL CANONICALIZED TOPOLOGY under the hashed-field
+ * set (activity codes, durations, predecessor links + types + lags) regardless
+ * of P6 UID renaming, timestamps, or metadata. This is NOT a forensic-
+ * equivalence statement — different calendars, resources, WBS, names, or
+ * constraints can still produce different schedules. The hash is useful as a
+ * bid-collusion / retroactive-manipulation signal, not as a schedule-
+ * equivalence proof.
  *
  * Canonical form: sort activities by code; for each, serialize
  *   (code|duration_days|sorted_predecessor_list)
@@ -5838,7 +5847,7 @@ function verifyReport(report, activities, relationships, opts) {
 }
 
 // ============================================================================
-// SECTION L — buildDaubertDisclosure (E3 — FRE 707 compliance wrapper)
+// SECTION L — buildDaubertDisclosure (FRE 702 disclosure wrapper; forward-compatible with proposed FRE 707)
 // ============================================================================
 
 /**
@@ -6149,7 +6158,7 @@ const _CPP_MONO_FONT = "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace"
 function renderDaubertHTML(disclosure, opts) {
     opts = opts || {};
     const d = (disclosure && typeof disclosure === 'object') ? disclosure : {};
-    const title       = opts.title        || 'Daubert / FRE 707 Expert Disclosure';
+    const title       = opts.title        || 'Daubert / FRE 702 Expert Disclosure';
     const expertName  = opts.expert_name  || '[Expert Name]';
     const projectName = opts.project_name || '[Project Name]';
     const reportDate  = opts.date         || new Date().toISOString().slice(0, 10);
@@ -6210,7 +6219,7 @@ function renderDaubertHTML(disclosure, opts) {
     const provenance = d.provenance || {};
     const methodObj  = d.methodology || {};
     const caveats    = Array.isArray(d.caveats) ? d.caveats : [];
-    const rule       = d.rule || 'Daubert / FRE 707';
+    const rule       = d.rule || 'Daubert / FRE 702';
 
     const css = [
         // v2.9.20 A18-M1 — body font swapped Georgia → CPP canonical Inter
@@ -6330,7 +6339,7 @@ function renderDaubertHTML(disclosure, opts) {
 function renderDaubertMarkdown(disclosure, opts) {
     opts = opts || {};
     const d = (disclosure && typeof disclosure === 'object') ? disclosure : {};
-    const title       = opts.title        || 'Daubert / FRE 707 Expert Disclosure';
+    const title       = opts.title        || 'Daubert / FRE 702 Expert Disclosure';
     const expertName  = opts.expert_name  || '[Expert Name]';
     const projectName = opts.project_name || '[Project Name]';
     const reportDate  = opts.date         || new Date().toISOString().slice(0, 10);
@@ -6373,7 +6382,7 @@ function renderDaubertMarkdown(disclosure, opts) {
     const provenance = d.provenance || {};
     const methodObj  = d.methodology || {};
     const caveats    = Array.isArray(d.caveats) ? d.caveats : [];
-    const rule       = d.rule || 'Daubert / FRE 707';
+    const rule       = d.rule || 'Daubert / FRE 702';
 
     const prongsMd = prongs.map(renderProng).join('\n---\n\n');
 
