@@ -1,21 +1,23 @@
-PENDING — populated post-tag-push.
+Rekor transparency-log entry - v2.9.34 witness
 
-The Rekor transparency-log entry is created automatically when CI's Sigstore signing
-flow submits the witness JSON. Once available:
+UUID:           108e9186e8c5677a485ffa8301d092f4c2c9f1d6b27e6d54cc48bcb5f964044b90b52bdf28b17f5b
+logIndex:       1624543133
+logID:          c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d
+integratedTime: 1779640459 (2026-05-24T16:34:19Z)
+kindVersion:    {kind: "dsse", version: "0.0.1"}
+Signed payload subject: latest.json
+Signed payload SHA-256: b5ccfc26210dbd047c342d2e78f07da108514f298ceb15fc39a2841518cc1eff
+Engine SHA-256 (in attested manifest): 5a6abd78fac05bde9951b17f9ca27d2fd163b85ef956df18ced84cc214cc1f78
+Python ref SHA-256 (in attested manifest): fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68
+GitHub workflow ref: refs/tags/v2.9.34
+GitHub commit SHA: 5cf53c8317a0925d7340892427610958bc10e080
+CI run: https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26366713312/attempts/1
+Rekor browser:  https://search.sigstore.dev/?logIndex=1624543133
+Rekor API:      https://rekor.sigstore.dev/api/v1/log/entries?logIndex=1624543133
 
-  1. Find the logIndex on the GitHub release page (next to the Sigstore attestation).
-  2. Paste the Rekor entry metadata here, replacing this stub.
+To independently verify the entry from any machine:
+  curl -sf "https://rekor.sigstore.dev/api/v1/log/entries?logIndex=1624543133" | jq
 
-Expected fields (per the v2.9.33 entry at logIndex 1624014603):
-  - logIndex:    <integer>
-  - logID:       <hex>
-  - integratedTime: <unix epoch>
-  - kindVersion: { kind: "intoto", version: "0.0.2" }
-  - subject:     release-evidence/v2.9.34/witness-v2.9.34.json
-  - SHA-256:     5a6abd78fac05bde9951b17f9ca27d2fd163b85ef956df18ced84cc214cc1f78
-                 (engine SHA, included in the in-toto statement)
-  - URL:         https://search.sigstore.dev/?logIndex=<index>
-
-The Rekor log is append-only and not under the project maintainer's control — opposing
-counsel can query Rekor directly and verify the entry exists, was signed at the
-documented timestamp, and points to this repository under the GitHub OIDC issuer.
+The Rekor log is append-only and not under the project maintainer's control. An
+opposing expert can confirm the entry exists, was signed at the documented timestamp,
+and points to this repository under the GitHub OIDC issuer.

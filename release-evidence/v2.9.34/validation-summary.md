@@ -12,9 +12,9 @@ v2.9.34 closes 4 of 7 carryover items from the v2.9.33 audit ledger plus the HS3
 | `validation-summary.md` | This file |
 | `VERIFY_RELEASE.md` | Citation-ready expert-report packet (per-release snapshot) |
 | `witness-v2.9.34.json` | Local-attestation witness (Sigstore-signed copy generated post-tag) |
-| `sigstore-attestation-output.txt` | *Populated post-tag from CI's `gh attestation verify` output* |
-| `rekor-entry.txt` | *Populated post-tag from Rekor transparency-log entry* |
-| `github-actions-run-url.txt` | *Populated post-tag from the CI matrix run URL* |
+| `sigstore-attestation-output.txt` | Full `gh attestation verify` JSON output (Sigstore bundle + Rekor inclusion proof) |
+| `rekor-entry.txt` | Rekor transparency-log entry pointer (logIndex 1624543133) |
+| `github-actions-run-url.txt` | CI matrix run URL + per-leg outcomes |
 | `cpm-engine.js.sha256` | Engine source SHA pin |
 | `python_reference-cpm.py.sha256` | Python reference SHA pin |
 | `npm-run-verify-output.txt` | Local `npm run verify` reproduction output |
@@ -28,7 +28,7 @@ v2.9.34 closes 4 of 7 carryover items from the v2.9.33 audit ledger plus the HS3
 | 3. Cryptographic attestation | Sigstore + Rekor | `sigstore-attestation-output.txt`, `rekor-entry.txt` |
 | 4. Local reproduction | `npm run verify` (5 gates) | `npm-run-verify-output.txt` |
 
-Layers 2 and 3 populate post-tag-push — they document CI infrastructure that runs against the public commit, not the operator's laptop. Layers 1 and 4 are committed at packet-creation time.
+Layers 2 and 3 populated 2026-05-24T16:34Z from the matrix CI run + Sigstore signing job. Layers 1 and 4 were committed at packet-creation time.
 
 ## Key numerics — v2.9.34
 
@@ -49,11 +49,11 @@ Layers 2 and 3 populate post-tag-push — they document CI infrastructure that r
 
 ```
 Tag:                    v2.9.34
-Commit SHA:             populated at release tag time
+Commit SHA:             5cf53c8317a0925d7340892427610958bc10e080
 Engine SHA-256:         5a6abd78fac05bde9951b17f9ca27d2fd163b85ef956df18ced84cc214cc1f78
 Python ref SHA-256:     fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68
-Workflow run:           populated post-tag
-Rekor log index:        populated post-tag
+Workflow run:           https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26366713312
+Rekor log index:        1624543133
 ```
 
 ## What v2.9.34 closes vs leaves OPEN

@@ -1,17 +1,41 @@
-PENDING — populated post-tag-push.
+CI matrix run for v2.9.34 — Sigstore-signed Layer 2 evidence.
 
-The CI matrix on `.github/workflows/verify.yml` runs against the public commit at tag time
-and emits the Sigstore-signed witness JSON. Once the v2.9.34 tag is pushed to origin:
+Workflow:       verify
+Trigger:        push (annotated tag v2.9.34)
+Commit SHA:     5cf53c8317a0925d7340892427610958bc10e080
+Run URL:        https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26366713312
+Run number:     2
+Started:        2026-05-24T16:33:01Z
+Conclusion:     success
+Jobs:           10 / 10 passed
 
-  1. The verify.yml workflow auto-runs on `git push --tags`.
-  2. The matrix run URL appears at https://github.com/danafitkowski/cpp-cpm-engine/actions.
-  3. Copy that URL into this file and replace this stub.
+Job breakdown:
 
-Matrix axes (per `verify.yml` at v2.9.33 baseline):
-  - OS:        ubuntu-latest, macos-latest, windows-latest
-  - Node:      18, 20, 22
-  - Coverage:  c8 statement + branch coverage on the ubuntu-latest × Node 20 leg
+| Job                                                  | Conclusion |
+|------------------------------------------------------|------------|
+| Independent verification (Node 18 / ubuntu-latest)   | success    |
+| Independent verification (Node 20 / ubuntu-latest)   | success    |
+| Independent verification (Node 22 / ubuntu-latest)   | success    |
+| Independent verification (Node 18 / macos-latest)    | success    |
+| Independent verification (Node 20 / macos-latest)    | success    |
+| Independent verification (Node 22 / macos-latest)    | success    |
+| Independent verification (Node 18 / windows-latest)  | success    |
+| Independent verification (Node 20 / windows-latest)  | success    |
+| Independent verification (Node 22 / windows-latest)  | success    |
+| Sign witness (Sigstore via GitHub OIDC)              | success    |
 
-Pre-tag local result (this packet's witness, generated 2026-05-24):
-  Verdict: PASS
-  Tests:   1,128 / 1,128 unit + 747 / 747 crossval + 4 new gates (sop, crypto, p6-comparison, corpus-dag)
+The 9-leg matrix (3 OS x 3 Node versions) ran the verify chain
+(unit tests + crossval + citation + truncation + version-refs) on
+each leg. The 10th job uploaded the canonical witness and submitted
+it to Sigstore. The signed bundle is in `sigstore-attestation-output.txt`
+and the Rekor entry pointer is in `rekor-entry.txt`.
+
+To reproduce on a clean machine:
+
+  git clone https://github.com/danafitkowski/cpp-cpm-engine
+  cd cpp-cpm-engine
+  git checkout v2.9.34
+  npm run verify   # PASS verdict + locally-generated witness JSON
+
+Bit-identical engine and python-reference SHA-256s + matching pass
+counts = third-party reproduction confirmed.
