@@ -1,4 +1,4 @@
-# Daubert / FRE 702 Disclosure — `cpm-engine` v2.9.28
+# Daubert / FRE 702 Disclosure — `cpm-engine` v2.9.29
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits and FRCP 26(a)(2)(B) reports under the *Daubert v. Merrell Dow Pharmaceuticals* (1993) framework as codified in Federal Rule of Evidence 702 (Dec 1, 2023 amendment), and is forward-compatible with proposed FRE 707.
 
@@ -56,7 +56,7 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 
 ### §3.1 Independent Verification
 
-The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. The engine ships three independently-verifiable layers of mitigation (introduced in v2.9.10 Round 7 and carried forward through the v2.9.27/v2.9.28 baseline):
+The "same-author crossval" objection (JS engine + Python reference both authored by the proponent) is real under *Daubert v. Merrell Dow* Prong 1 (testing) and the *Joiner / Kumho Tire* trilogy. The engine ships three independently-verifiable layers of mitigation (introduced in v2.9.10 Round 7 and carried forward through the v2.9.27 / v2.9.28 / v2.9.29 baseline):
 
 **Layer 1 — Public Continuous Integration.** Every push to `main` and every PR triggers `.github/workflows/verify.yml`, which runs:
 
@@ -68,7 +68,7 @@ Workflow runs are publicly visible at <https://github.com/danafitkowski/cpp-cpm-
 
 **Layer 2 — Cryptographic attestation via Sigstore.** On every push to `main` and every tag push, the workflow:
 
-1. Generates a **witness JSON file** (`attestations/latest.json`) containing: package version, engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version, runner OS, and the exact pass/fail counts from each test suite. *Note: `attestations/latest.json` is intentionally gitignored — it is a per-machine generated artifact, not a committed file. The public Sigstore-signed witness is the **GitHub release asset** attached to each tagged release (e.g. `v2.9.28/attestations-latest.json`), permanent and externally verifiable.*
+1. Generates a **witness JSON file** (`attestations/latest.json`) containing: package version, engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version, runner OS, and the exact pass/fail counts from each test suite. *Note: `attestations/latest.json` is intentionally gitignored — it is a per-machine generated artifact, not a committed file. The public Sigstore-signed witness is the **GitHub release asset** attached to each tagged release (e.g. `v2.9.29/attestations-latest.json`), permanent and externally verifiable.*
 2. Signs the witness via **Sigstore using GitHub OIDC** (`actions/attest-build-provenance@v1`). The signature is recorded on the public Sigstore transparency log (Rekor), providing a tamper-evident audit trail.
 3. Publishes the signed witness as a workflow artifact (90-day retention) and — on tag pushes — as a release asset (permanent).
 
@@ -104,7 +104,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 **Cross-validation reports 747 / 747 = 0% observed deviation across 43 fixtures on the enumerated CPM comparison surface (forward/backward pass dates, Kahn topo order, Tarjan SCC, FF/SF working-day arithmetic, TF, FF, FF working days, alert counts and severity). Bayesian and kinematic surfaces are JS-only and excluded — see §11.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
 
-This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.28. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
+This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.29. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
 
 Performance characteristics:
 
@@ -144,7 +144,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.12',                   // Synchronized with package.json
+    engine_version: '2.9.29',                   // Synchronized with package.json (bump per release)
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -162,12 +162,12 @@ const h = E.computeTopologyHash(activities, relationships);
 // Excludes: P6 UIDs, timestamps, names, resources, calendars
 ```
 
-Two XERs that produce the same `topology_hash` are the same schedule regardless of UID rotation, file rename, or P6 cosmetic edits. This is the foundation for:
+Two XERs that produce the same `topology_hash` have IDENTICAL CANONICALIZED TOPOLOGY under the hashed-field set (activity codes, durations, predecessor links + types + lags) regardless of UID rotation, file rename, or P6 cosmetic edits. This is **not a forensic-equivalence statement** — different calendars, resources, WBS metadata, names, or constraints can still produce different schedules under those identical hashes. The hash is a signal, not a schedule-equivalence proof. It supports:
 
-- **Bid-collusion detection** (two contractors submitting matching schedules)
-- **Retroactive-manipulation detection** (a "baseline" XER with later edits)
-- **Copy-detection across XERs** (claim packages reusing a prior schedule)
-- **Post-hoc verification** (opposing counsel can recompute the hash from the same XER and confirm)
+- **Bid-collusion signal** (two contractors submitting topologically-identical activity networks)
+- **Retroactive-manipulation signal** (a "baseline" XER whose topology drifts in a later submission)
+- **Copy-detection signal across XERs** (claim packages reusing a prior schedule's network)
+- **Post-hoc topology verification** (opposing counsel can recompute the hash from the same XER and confirm the activity/relationship network was not altered)
 
 Reports can therefore be **verified post-hoc**: any party can rerun the engine against the disclosed XER, recompute the manifest, and confirm.
 
@@ -202,7 +202,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 792 + 416 = 1,208 verifications. Or `npm run verify` for the full attestation-witness flow.
+2. Run `npm run test:all` to reproduce the 1,071 unit tests + 747 cross-validation checks across 43 fixtures = 1,818 verifications. Or `npm run verify` for the full attestation-witness flow.
 3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
 4. Inspect the source — it is intentionally readable and well-commented (6,137 lines including narrative comments).
 
@@ -211,8 +211,8 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.12`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-16, refreshed for v2.9.12 Round 9 engine math fix wave — ~30 corrections across constraint handling (T1.1-T1.10), calendar/lag arithmetic (T2.11-T2.17), in-progress + actuals (T3.18-T3.24), and JS/Python parity (T4.25-T4.27). Prior milestones preserved: v2.9.11 Round 7 independent-verification infrastructure tag, v2.9.9 full hammock SS/FF/SF semantics, secondary-constraint surface, Section D MC-constraint enforcement, ALAP backward-pass tightening, Python reference constraint backport, Round 6 hardening (Section D MS_Finish alert, hammock visited-set memoization, dateToNum 2-digit guard), Round 7 full hammock semantics (four axis-specific transitive walkers with per-axis memoization), and Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
+`engine_version: 2.9.29`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-23, refreshed for v2.9.29 adversarial-audit second-pass residual cleanup — disclosure hygiene + docs sweep. FRE 702 (Dec 1, 2023 amendment) leads as the operative rule; FRE 707 demoted to forward-compatibility note. `bit-identical` claim explicitly field-scoped to the enumerated CPM comparison surface. Topology-hash language scoped from a schedule-equivalence claim to a hashed-field-set canonicalized-topology signal. "Industry-first features" row removed from §2. Engine math byte-identical to v2.9.27 by design — this is a docs + disclosure-defaults release. Prior milestones preserved: v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; secondary-constraint surface; Section D MC-constraint enforcement; ALAP backward-pass tightening; Python reference constraint backport; Round 6 hardening; Round 7 full hammock semantics with four axis-specific transitive walkers; Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
 
 ---
 
@@ -282,7 +282,7 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Hammock-cycle topology emits `{severity:'ALERT', context:'hammock-cycle'}`. Hammock negative-span emits `{severity:'ALERT', context:'hammock-negative-span'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.12'` to confirm the constraint module was active.
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.29'` to confirm the constraint module version.
 
 **v2.9.12 — Round 9 engine math fix wave.** The audit memo identified ~30 substantive math defects across constraint handling, calendar arithmetic, in-progress + actuals, and JS/Python parity. T1.1 added MS_Start hard-pin on backward LF clamp (was JS+Python silent gap). T1.2-T1.3 emit `constraint-noop` WARN and suppress ES-side constraint clamps when an `actual_start` is present (AACE 29R-03 §4.3 immutability — both engines). T1.4 added Section D actual_start pinning with one-time `actual-start-not-anchored` WARN when `projectStart` is missing. T1.5 surfaces TT_LOE/TT_WBS/completed/zero-remaining drops + dangling-relationship drops + non-finite-lag rejections as INFO/ALERT alerts. T1.6 emits `constraint-unrecognized` / `constraint-incomplete` WARN on unknown tokens / missing dates. T1.7 added `CS_MANSTART` / `CS_MANFINISH` aliases. T1.8-T1.10 added Section D SNLT/FNLT/MS_Start violated+applied alerts symmetric with Section C. T2.11 rewrote Free Float on the binding-link's calendar so coincident lag-walked-forward pairs produce 0 slack. T2.12 made `_countWorkDaysBetween` signed (preserves negative-float forensic signal). T2.13 removed the `Math.max(0, ...)` FF clamp. T2.14 added `dateToNum` rollover guard (Feb 30 → 0 instead of silent rewrite to Mar 2). T2.15 rejects non-finite `lag_hr_cnt` from parseXER. T2.16 emits `invalid-calendar-falling-back` WARN when work_days is empty/invalid. T2.17 updated SUB_DAY_LAG_ROUNDED message to disclose V8 Math.round direction-bias. T3.18 added `remaining_duration` for P6 retained-logic EF anchoring. T3.19 pins LS=ES on backward pass when actual_start is present (in-progress, both engines). T3.20 guards `EF >= ES` in Section C EF-side helpers. T3.21 enumerates every unstarted predecessor + catches premature-start OoS. T3.22 emits `hammock-orphan` ALERT when no anchors resolve. T3.23 adds `duration_working_days` to hammocks. T3.24 emits `unrecognized-task-type` WARN. T4.25-T4.26 backport R8A-1 (MISSING_ACTUAL_START ES derivation) and ALAP-secondary-slot guard to the Python reference, rotating the SHA-256 pin. T4.27 was already in place on the JS side from T1.3.
 

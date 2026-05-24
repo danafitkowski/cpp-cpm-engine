@@ -12,6 +12,75 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.29 — 2026-05-23 — Adversarial-audit second-pass residual cleanup
+
+Same-day follow-on to v2.9.28. The v2.9.28 sweep closed the headline
+findings of the adversarial audit (header, badges, contributing,
+disclosure title defaults, topology JSDoc), but a second-pass verification
+flagged six residual stale spots in DAUBERT.md §6, the Validator
+Independence section, the Disclosure Format Version section, and three
+spots in README.md (quick-start example, provenance block, citation).
+v2.9.29 closes all six.
+
+DAUBERT.md
+- §6 sample manifest: `engine_version: '2.9.12'` → `'2.9.29'`. Comment
+  clarifies the field is synchronized with `package.json` and bumps per
+  release (the sample is illustrative; runtime emits the literal current
+  `ENGINE_VERSION`).
+- §6 topology-hash overclaim closed: prior text *"Two XERs that produce
+  the same topology_hash are the same schedule"* replaced with the scoped
+  statement now consistent across DAUBERT.md, the engine header comment,
+  and the `computeTopologyHash` JSDoc — identical hashes mean identical
+  canonicalized topology under the hashed-field set (codes, durations,
+  predecessor links + types + lags); **not a forensic-equivalence
+  statement** since calendars, resources, WBS, names, and constraints are
+  excluded and can still produce different schedules.
+- Validator Independence: `792 + 416 = 1,208 verifications` → `1,071 unit
+  tests + 747 cross-validation checks across 43 fixtures = 1,818
+  verifications`.
+- Disclosure Format Version: `engine_version: 2.9.12` → `2.9.29`. The
+  v2.9.12-historic narrative paragraph in this block replaced with the
+  v2.9.29 refresh note (FRE 702 lead, scoped bit-identical, topology-hash
+  language scope, "Industry-first" row removed). Prior milestones
+  preserved chronologically.
+- §D constraint-disclosure pairing: `result.manifest.engine_version ===
+  '2.9.12'` → `=== '2.9.29'` to confirm constraint-module version on
+  current builds.
+
+README.md
+- Quick-start example: `// 2.9.27` → `// 2.9.29`.
+- Provenance block sample manifest: `engine_version: '2.9.27'` →
+  `'2.9.29'`.
+- Topology-hash quick-start comment: prior text *"Two XERs with identical
+  hashes ARE the same schedule, regardless of UID rotation"* replaced
+  with the scoped four-line statement matching the engine JSDoc.
+- Citation: `Version 2.9.27` → `Version 2.9.29`.
+- Badges: `npm v2.9.28` → `v2.9.29`.
+- "Release history through" pointer: `v2.9.28` → `v2.9.29`.
+
+cpm-engine.js / package.json / tests
+- ENGINE_VERSION 2.9.28 → 2.9.29 (engine constant + package.json + 4 test
+  fixtures pinning the literal).
+
+Engine math byte-identical to v2.9.27 / v2.9.28 by design — no math, no
+behavior change. The Sigstore witness will regenerate against v2.9.29 on
+push.
+
+### Tests
+- 1,071 / 1,071 unit tests passing
+- 747 / 747 crossval across 43 fixtures bit-identical
+- Citation regression PASS
+- `npm run verify` PASS
+
+### Residual v2.9.12 references that are now correctly historic
+- README.md "Release history" line for v2.9.12 (Round 9 engine math fix
+  wave) intentionally retained — it is historic release-notes content
+  describing what v2.9.12 actually shipped (792 unit tests / 416 crossval
+  at that snapshot). Editing it would revise history. Marked here so
+  future audits do not flag it as a current-state miss.
+
+---
+
 ## v2.9.28 — 2026-05-23 — Adversarial-audit response (Daubert disclosure hygiene + docs sweep)
 
 Docs-only release in response to a third-party adversarial audit of the

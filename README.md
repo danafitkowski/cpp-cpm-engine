@@ -1,6 +1,6 @@
 # cpm-engine
 
-[![npm version](https://img.shields.io/badge/npm-v2.9.28-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
+[![npm version](https://img.shields.io/badge/npm-v2.9.29-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![tests: 1071 passing](https://img.shields.io/badge/tests-1071%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: 747/747](https://img.shields.io/badge/JS%E2%86%94Python-747%2F747-brightgreen.svg)](cpm-engine.crossval.js)
@@ -42,7 +42,7 @@ const result = E.computeCPM(
 
 console.log('Project finish:', result.projectFinish);     // 2026-01-21
 console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
-console.log('Engine version:', result.manifest.engine_version); // 2.9.27
+console.log('Engine version:', result.manifest.engine_version); // 2.9.29
 ```
 
 That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
@@ -100,7 +100,7 @@ Every computation emits a manifest:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.27',
+    engine_version: '2.9.29',
     method_id: 'computeCPM',
     activity_count: 3,
     relationship_count: 2,
@@ -114,11 +114,14 @@ Plus, for forensic provenance, every input carries a SHA-256 topology hash:
 
 ```js
 const hash = E.computeTopologyHash(activities, relationships);
-console.log(hash.topology_hash);  // 64-char hex over canonical (code, duration, sorted preds)
-// Two XERs with identical hashes ARE the same schedule, regardless of UID rotation.
+console.log(hash.topology_hash);  // 64-char hex over canonical (code, duration, sorted preds + types + lags)
+// Two XERs with identical hashes have IDENTICAL CANONICALIZED TOPOLOGY under the hashed-field
+// set (activity codes, durations, predecessor links + types + lags). NOT a forensic-equivalence
+// statement — different calendars, resources, WBS, names, or constraints can still produce
+// different schedules under the same hash. The hash is a signal, not a schedule-equivalence proof.
 ```
 
-This is the single most important forensic feature in the engine. **Bid-collusion detection, retroactive-manipulation detection, and copy-detection across XERs all rely on it.** It is also the foundation that lets opposing counsel verify a CPP analysis post-hoc.
+This is the engine's network-topology fingerprint. **Bid-collusion signal, retroactive-manipulation signal, and copy-detection signal across XERs all rely on it.** It is also the foundation that lets opposing counsel verify topology-level integrity of a CPP analysis post-hoc — they can recompute the hash from the same XER and confirm the activity/relationship network was not altered between submission and review.
 
 ---
 
@@ -128,7 +131,7 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 43 fixtures × 747 checks. 0 deviations as of v2.9.28.
+# 43 fixtures × 747 checks. 0 deviations as of v2.9.29.
 ```
 
 Plus a 282-activity real-XER stress test reports 0 mismatches.
@@ -181,7 +184,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.9.27. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.9.29. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
@@ -203,7 +206,7 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.28.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.29.
 
 ---
 
