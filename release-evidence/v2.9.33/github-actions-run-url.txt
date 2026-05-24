@@ -1,0 +1,29 @@
+# GitHub Actions verification workflow run — cpm-engine v2.9.33
+
+## verify.yml run on tag v2.9.33
+
+  URL:           https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26364083208
+  Triggered by:  push to refs/tags/v2.9.33
+  Commit SHA:    f70cd38... (full SHA in sigstore-attestation-output.txt)
+  Conclusion:    success
+
+## Matrix coverage — 9 OS × Node combinations, all PASS
+
+## What this proves
+
+Layer 1 of the verification chain — the verify.yml workflow ran on
+GitHub Actions infrastructure (not the proponent's hardware) across
+9 OS × Node combinations and independently produced PASS for
+1,128 unit tests + 747/747 crossval + citation regression +
+truncation regression + version-drift regression.
+
+The witness was signed via GitHub OIDC and the signature is in the
+Sigstore transparency log (logIndex 1624014603).
+
+## How a third party verifies
+
+  gh run view 26364083208 --repo danafitkowski/cpp-cpm-engine
+  gh run download 26364083208 \
+      --repo danafitkowski/cpp-cpm-engine \
+      --name witness-canonical \
+      --dir ./verify-out/

@@ -1,0 +1,32 @@
+# Rekor transparency-log entry — cpm-engine v2.9.33 witness
+
+logIndex:                   1624014603
+kind:                       dsse
+Sigstore certificate subject: https://github.com/danafitkowski/cpp-cpm-engine/.github/workflows/verify.yml@refs/tags/v2.9.33
+Source commit SHA:          f70cd38... (full SHA in sigstore-attestation-output.txt)
+Workflow trigger:           push
+Source ref:                 refs/tags/v2.9.33
+Run invocation URL:         https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26364083208/attempts/1
+
+## Web lookup
+
+  https://search.sigstore.dev/?logIndex=1624014603
+
+## CLI lookup
+
+  gh attestation verify release-evidence/v2.9.33/witness-v2.9.33.json --owner danafitkowski
+
+## v2.9.32 → v2.9.33 — what changed under the chain
+
+v2.9.33 closes 14 of 19 audit findings from ChatGPT fourth-pass audit
+on v2.9.32. Engine code changes: structured override schema
+(`_normalizeForensicStrictOverride`) with backward compat for string
+form; SECTION R-v2.9.33 test suite (+16 tests; 1,112 → 1,128 unit
+tests); attestation.js now records truncation + version-drift gate
+results in the witness JSON.
+
+  Engine SHA-256 v2.9.32:  885947b5fa9eb6e84ebe500ee7472a4f6778244fcec3543398b5d58ea4fc5f69
+  Engine SHA-256 v2.9.33:  9bb2a80916df162bb73bdc042bff4bfa9248ec21ae347fb5692f3e02738e75b4
+
+  Python ref SHA-256 (unchanged through v2.9.31 - v2.9.33):
+                           50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7

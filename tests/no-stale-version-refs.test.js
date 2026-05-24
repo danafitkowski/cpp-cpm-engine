@@ -95,6 +95,13 @@ const HISTORIC_OK_PATTERNS = [
     /byte-identical to v2\.9\.\d+/,
     // "shipped in v2.9.X" / "shipped with ... in v2.9.X" historic narration
     /\bshipped (with .* )?in v2\.9\.\d+\b/i,
+    // "audit on v2.9.X" / "review on v2.9.X" / "audit against v2.9.X" — historic narration
+    // naming a prior release that was audited / reviewed
+    /\b(audit|review)\b.*\bon\s+v2\.9\.\d+\b/i,
+    /\b(audit|review)\b.*\bagainst\s+v2\.9\.\d+\b/i,
+    /\b(audit|review)\b.*\bof\s+v2\.9\.\d+\b/i,
+    // "ChatGPT third-pass / fourth-pass audit on v2.9.X" narration
+    /\b(audit|adversarial-audit|review)\s+on\s+v2\.9\.\d+\b/i,
     // SECTION header anchors in test files (e.g. "SECTION R-v2.9.31")
     // referenced from prose: "see SECTION R-v2.9.31"
     /SECTION [A-Z]-?v?2\.9\.\d+/,
