@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-05-24T04:09:32.723Z",
+  "engine_version": "2.9.31",
+  "cases": [
+    {
+      "id": "01-small-clean-baseline",
+      "title": "Small clean baseline — 5 activities, FS chain",
+      "activity_count": 5,
+      "relationship_count": 4,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-02-17",
+      "engine_alert_count": 23,
+      "engine_errored": false
+    },
+    {
+      "id": "02-large-1000-activities",
+      "title": "Large schedule — 1,000 activities, 999 FS relationships",
+      "activity_count": 1000,
+      "relationship_count": 999,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2031-06-28",
+      "engine_alert_count": 4998,
+      "engine_errored": false
+    },
+    {
+      "id": "03-multiple-calendars",
+      "title": "Multiple calendars — Mon-Fri + Mon-Sat (6-day) + 24x7",
+      "activity_count": 6,
+      "relationship_count": 5,
+      "calendar_count": 3,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-01-30",
+      "engine_alert_count": 36,
+      "engine_errored": false
+    },
+    {
+      "id": "04-constraints-heavy",
+      "title": "Constraints — every P6 constraint type covered",
+      "activity_count": 8,
+      "relationship_count": 0,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-01-10",
+      "engine_alert_count": 24,
+      "engine_errored": false
+    },
+    {
+      "id": "05-in-progress",
+      "title": "In-progress schedule — mid-execution, retained logic",
+      "activity_count": 6,
+      "relationship_count": 5,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-01-28",
+      "engine_alert_count": 18,
+      "engine_errored": false
+    },
+    {
+      "id": "06-fully-completed",
+      "title": "Fully-completed schedule — every activity has actuals",
+      "activity_count": 5,
+      "relationship_count": 4,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "N/A",
+      "engine_alert_count": 1,
+      "engine_errored": false
+    },
+    {
+      "id": "07-negative-float",
+      "title": "Negative float — finish constraint earlier than natural CP",
+      "activity_count": 3,
+      "relationship_count": 2,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-01-30",
+      "engine_alert_count": 13,
+      "engine_errored": false
+    },
+    {
+      "id": "08-disconnected-fragments",
+      "title": "Disconnected fragments — three independent FS chains",
+      "activity_count": 9,
+      "relationship_count": 6,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-01-29",
+      "engine_alert_count": 39,
+      "engine_errored": false
+    },
+    {
+      "id": "09-corrupt-xer",
+      "title": "Corrupt XER — malformed table headers + bad references",
+      "activity_count": 3,
+      "relationship_count": 3,
+      "calendar_count": 1,
+      "strict_mode_pass": false,
+      "engine_project_finish": "2026-01-15",
+      "engine_alert_count": 11,
+      "engine_errored": false
+    },
+    {
+      "id": "10-out-of-sequence-progress",
+      "title": "Out-of-sequence — successor started before predecessor",
+      "activity_count": 4,
+      "relationship_count": 3,
+      "calendar_count": 1,
+      "strict_mode_pass": false,
+      "engine_project_finish": "2026-01-18",
+      "engine_alert_count": 19,
+      "engine_errored": false
+    },
+    {
+      "id": "11-no-logic",
+      "title": "No logic — 10 activities, ZERO relationships",
+      "activity_count": 10,
+      "relationship_count": 0,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-01-17",
+      "engine_alert_count": 30,
+      "engine_errored": false
+    },
+    {
+      "id": "12-milestone-heavy",
+      "title": "Milestone-heavy schedule — start + finish milestones throughout",
+      "activity_count": 8,
+      "relationship_count": 7,
+      "calendar_count": 1,
+      "strict_mode_pass": true,
+      "engine_project_finish": "2026-02-04",
+      "engine_alert_count": 38,
+      "engine_errored": false
+    }
+  ]
+}

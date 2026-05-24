@@ -1,0 +1,469 @@
+{
+  "activity_count": 8,
+  "relationship_count": 7,
+  "engine_result": {
+    "nodes": {
+      "NTP": {
+        "code": "NTP",
+        "name": "",
+        "duration_days": 0,
+        "es": 2196,
+        "ef": 2196,
+        "ls": 2196,
+        "lf": 2196,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": null,
+        "es_date": "2026-01-05",
+        "ef_date": "2026-01-05",
+        "ls_date": "2026-01-05",
+        "lf_date": "2026-01-05",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "A": {
+        "code": "A",
+        "name": "",
+        "duration_days": 10,
+        "es": 2196,
+        "ef": 2206,
+        "ls": 2196,
+        "lf": 2206,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "type": "DATA_DATE",
+          "date": "2026-01-05"
+        },
+        "es_date": "2026-01-05",
+        "ef_date": "2026-01-15",
+        "ls_date": "2026-01-05",
+        "lf_date": "2026-01-15",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "MS1": {
+        "code": "MS1",
+        "name": "",
+        "duration_days": 0,
+        "es": 2206,
+        "ef": 2206,
+        "ls": 2206,
+        "lf": 2206,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "A",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-01-15",
+        "ef_date": "2026-01-15",
+        "ls_date": "2026-01-15",
+        "lf_date": "2026-01-15",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "B": {
+        "code": "B",
+        "name": "",
+        "duration_days": 10,
+        "es": 2206,
+        "ef": 2216,
+        "ls": 2206,
+        "lf": 2216,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "MS1",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-01-15",
+        "ef_date": "2026-01-25",
+        "ls_date": "2026-01-15",
+        "lf_date": "2026-01-25",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "MS2": {
+        "code": "MS2",
+        "name": "",
+        "duration_days": 0,
+        "es": 2216,
+        "ef": 2216,
+        "ls": 2216,
+        "lf": 2216,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "B",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-01-25",
+        "ef_date": "2026-01-25",
+        "ls_date": "2026-01-25",
+        "lf_date": "2026-01-25",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "C": {
+        "code": "C",
+        "name": "",
+        "duration_days": 10,
+        "es": 2216,
+        "ef": 2226,
+        "ls": 2216,
+        "lf": 2226,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "MS2",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-01-25",
+        "ef_date": "2026-02-04",
+        "ls_date": "2026-01-25",
+        "lf_date": "2026-02-04",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "SC": {
+        "code": "SC",
+        "name": "",
+        "duration_days": 0,
+        "es": 2226,
+        "ef": 2226,
+        "ls": 2226,
+        "lf": 2226,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "C",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-02-04",
+        "ef_date": "2026-02-04",
+        "ls_date": "2026-02-04",
+        "lf_date": "2026-02-04",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "PROJ_END": {
+        "code": "PROJ_END",
+        "name": "",
+        "duration_days": 0,
+        "es": 2226,
+        "ef": 2226,
+        "ls": 2226,
+        "lf": 2226,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "SC",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-02-04",
+        "ef_date": "2026-02-04",
+        "ls_date": "2026-02-04",
+        "lf_date": "2026-02-04",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      }
+    },
+    "projectFinishNum": 2226,
+    "projectFinish": "2026-02-04",
+    "criticalCodes": {},
+    "criticalCodesArray": [
+      "NTP",
+      "A",
+      "MS1",
+      "B",
+      "MS2",
+      "C",
+      "SC",
+      "PROJ_END"
+    ],
+    "topoOrder": [
+      "NTP",
+      "A",
+      "MS1",
+      "B",
+      "MS2",
+      "C",
+      "SC",
+      "PROJ_END"
+    ],
+    "topo_order": [
+      "NTP",
+      "A",
+      "MS1",
+      "B",
+      "MS2",
+      "C",
+      "SC",
+      "PROJ_END"
+    ],
+    "alerts": [
+      {
+        "severity": "ALERT",
+        "context": "forward NTP.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag NTP->A",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward A.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag A->MS1",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward MS1.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag MS1->B",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward B.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag B->MS2",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward MS2.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag MS2->C",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward C.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag C->SC",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward SC.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag SC->PROJ_END",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward PROJ_END.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS NTP",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS A",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS MS1",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS B",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS MS2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS C",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS SC",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS PROJ_END",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward PROJ_END.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag SC->PROJ_END",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward SC.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag C->SC",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward C.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag MS2->C",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward MS2.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag B->MS2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward B.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag MS1->B",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward MS1.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag A->MS1",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward A.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag NTP->A",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward NTP.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      }
+    ],
+    "manifest": {
+      "engine_version": "2.9.31",
+      "method_id": "computeCPM",
+      "activity_count": 8,
+      "relationship_count": 7,
+      "data_date": "2026-01-05",
+      "calendar_count": 0,
+      "computed_at": "2026-05-24T04:09:32.722Z"
+    }
+  }
+}

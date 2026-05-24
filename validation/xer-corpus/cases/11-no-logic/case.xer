@@ -1,0 +1,17 @@
+ERMHDR	20.12	2026-05-24	Project	CRITICAL_PATH_PARTNERS	cpp-cpm-engine	DB-Generated	NULL	A	CAD
+%T	CALENDAR
+%F	clndr_id	clndr_name	day_hr_cnt	clndr_type
+%R	1	Standard Mon-Fri	8	CA_Base
+%T	TASK
+%F	task_id	task_code	task_name	task_type	target_drtn_hr_cnt	remain_drtn_hr_cnt	clndr_id	cstr_type	cstr_date	cstr_type2	cstr_date2	act_start_date	act_end_date
+%R	1001	NL0	No-logic 0	TT_Task	24	24	1						
+%R	1002	NL1	No-logic 1	TT_Task	32	32	1						
+%R	1003	NL2	No-logic 2	TT_Task	40	40	1						
+%R	1004	NL3	No-logic 3	TT_Task	48	48	1						
+%R	1005	NL4	No-logic 4	TT_Task	56	56	1						
+%R	1006	NL5	No-logic 5	TT_Task	64	64	1						
+%R	1007	NL6	No-logic 6	TT_Task	72	72	1						
+%R	1008	NL7	No-logic 7	TT_Task	80	80	1						
+%R	1009	NL8	No-logic 8	TT_Task	88	88	1						
+%R	1010	NL9	No-logic 9	TT_Task	96	96	1						
+%E

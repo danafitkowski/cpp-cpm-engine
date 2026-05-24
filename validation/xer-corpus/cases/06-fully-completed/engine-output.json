@@ -1,0 +1,29 @@
+{
+  "activity_count": 0,
+  "relationship_count": 0,
+  "engine_result": {
+    "nodes": {},
+    "projectFinishNum": 0,
+    "projectFinish": "",
+    "criticalCodes": {},
+    "criticalCodesArray": [],
+    "topoOrder": [],
+    "topo_order": [],
+    "alerts": [
+      {
+        "severity": "WARN",
+        "context": "empty-schedule",
+        "message": "computeCPM called with zero activities. Result will have empty nodes/topo/criticalCodes and projectFinishNum=0. Verify the activity list was actually populated upstream."
+      }
+    ],
+    "manifest": {
+      "engine_version": "2.9.31",
+      "method_id": "computeCPM",
+      "activity_count": 0,
+      "relationship_count": 0,
+      "data_date": "2026-01-05",
+      "calendar_count": 0,
+      "computed_at": "2026-05-24T04:09:32.712Z"
+    }
+  }
+}

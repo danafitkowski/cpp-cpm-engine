@@ -1,0 +1,396 @@
+{
+  "activity_count": 6,
+  "relationship_count": 5,
+  "engine_result": {
+    "nodes": {
+      "M1": {
+        "code": "M1",
+        "name": "",
+        "duration_days": 5,
+        "es": 2196,
+        "ef": 2201,
+        "ls": 2196,
+        "lf": 2201,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": null,
+        "es_date": "2026-01-05",
+        "ef_date": "2026-01-10",
+        "ls_date": "2026-01-05",
+        "lf_date": "2026-01-10",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "M2": {
+        "code": "M2",
+        "name": "",
+        "duration_days": 5,
+        "es": 2201,
+        "ef": 2206,
+        "ls": 2201,
+        "lf": 2206,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "M1",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-01-10",
+        "ef_date": "2026-01-15",
+        "ls_date": "2026-01-10",
+        "lf_date": "2026-01-15",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "S1": {
+        "code": "S1",
+        "name": "",
+        "duration_days": 5,
+        "es": 2207,
+        "ef": 2212,
+        "ls": 2207,
+        "lf": 2212,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "M2",
+          "type": "FS",
+          "lag_days": 1
+        },
+        "es_date": "2026-01-16",
+        "ef_date": "2026-01-21",
+        "ls_date": "2026-01-16",
+        "lf_date": "2026-01-21",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "S2": {
+        "code": "S2",
+        "name": "",
+        "duration_days": 5,
+        "es": 2212,
+        "ef": 2217,
+        "ls": 2212,
+        "lf": 2217,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "S1",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-01-21",
+        "ef_date": "2026-01-26",
+        "ls_date": "2026-01-21",
+        "lf_date": "2026-01-26",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "C1": {
+        "code": "C1",
+        "name": "",
+        "duration_days": 1.6666666666666667,
+        "es": 2217,
+        "ef": 2219,
+        "ls": 2217,
+        "lf": 2219,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "S2",
+          "type": "FS",
+          "lag_days": 0.3333333333333333
+        },
+        "es_date": "2026-01-26",
+        "ef_date": "2026-01-28",
+        "ls_date": "2026-01-26",
+        "lf_date": "2026-01-28",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      },
+      "C2": {
+        "code": "C2",
+        "name": "",
+        "duration_days": 1.6666666666666667,
+        "es": 2219,
+        "ef": 2221,
+        "ls": 2219,
+        "lf": 2221,
+        "tf": 0,
+        "is_complete": false,
+        "is_fragnet": false,
+        "actual_start": "",
+        "actual_finish": "",
+        "clndr_id": "",
+        "constraint": null,
+        "constraint2": null,
+        "driving_predecessor": {
+          "code": "C1",
+          "type": "FS",
+          "lag_days": 0
+        },
+        "es_date": "2026-01-28",
+        "ef_date": "2026-01-30",
+        "ls_date": "2026-01-28",
+        "lf_date": "2026-01-30",
+        "tf_working_days": 0,
+        "ff": 0,
+        "ff_working_days": 0
+      }
+    },
+    "projectFinishNum": 2221,
+    "projectFinish": "2026-01-30",
+    "criticalCodes": {},
+    "criticalCodesArray": [
+      "M1",
+      "M2",
+      "S1",
+      "S2",
+      "C1",
+      "C2"
+    ],
+    "topoOrder": [
+      "M1",
+      "M2",
+      "S1",
+      "S2",
+      "C1",
+      "C2"
+    ],
+    "topo_order": [
+      "M1",
+      "M2",
+      "S1",
+      "S2",
+      "C1",
+      "C2"
+    ],
+    "alerts": [
+      {
+        "severity": "ALERT",
+        "context": "forward M1.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag M1->M2",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward M2.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag M2->S1",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward S1.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag S1->S2",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward S2.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag S2->C1",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 0.3333333333333333 is fractional; engine rounds to 0 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag S2->C1",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward C1.EF",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 1.6666666666666667 is fractional; engine rounds to 2 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward C1.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "FS lag C1->C2",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward C2.EF",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 1.6666666666666667 is fractional; engine rounds to 2 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "forward C2.EF",
+        "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS M1",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS M2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS S1",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS S2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS C1",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 1.6666666666666667 is fractional; engine rounds to 2 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS C1",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS C2",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 1.6666666666666667 is fractional; engine rounds to 2 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "init-LS C2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward C2.LS",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 1.6666666666666667 is fractional; engine rounds to 2 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward C2.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag C1->C2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward C1.LS",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 1.6666666666666667 is fractional; engine rounds to 2 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward C1.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag S2->C1",
+        "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 0.3333333333333333 is fractional; engine rounds to 0 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag S2->C1",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward S2.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag S1->S2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward S1.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag M2->S1",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward M2.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward FS lag M1->M2",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      },
+      {
+        "severity": "ALERT",
+        "context": "backward M1.LS",
+        "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+      }
+    ],
+    "manifest": {
+      "engine_version": "2.9.31",
+      "method_id": "computeCPM",
+      "activity_count": 6,
+      "relationship_count": 5,
+      "data_date": "2026-01-05",
+      "calendar_count": 0,
+      "computed_at": "2026-05-24T04:09:32.707Z"
+    }
+  }
+}
