@@ -1,0 +1,59 @@
+{
+  "$schema": "cpp-cpm-engine-attestation/v1",
+  "generated_by": "scripts/attestation.js",
+  "generated_at_utc": "2026-05-24T03:03:24.094Z",
+  "package": {
+    "name": "cpp-cpm-engine",
+    "version": "2.9.30"
+  },
+  "engine": {
+    "version": "2.9.30",
+    "file": "cpm-engine.js",
+    "sha256": "30c633e2c5850cfe24e4a42c146f62095295f5ac7193b04b10d37bde50c7ee94",
+    "bytes": 419571
+  },
+  "python_reference": {
+    "file": "python_reference/cpm.py",
+    "sha256": "50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7",
+    "bytes": 70281
+  },
+  "git": {
+    "commit_sha": "e87f524b851fe0194ed77e65d62b4d13bc45e88f",
+    "ref": "refs/tags/v2.9.30",
+    "workflow_run_url": "https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26350307830"
+  },
+  "environment": {
+    "node_version": "v20.20.2",
+    "platform": "linux",
+    "arch": "x64",
+    "runner": "Linux"
+  },
+  "results": {
+    "unit_tests": {
+      "command": "node cpm-engine.test.js",
+      "passed": 1071,
+      "failed": 0,
+      "ok": true
+    },
+    "crossval": {
+      "command": "node cpm-engine.crossval.js",
+      "fixtures_passed": 43,
+      "fixtures_failed": 0,
+      "checks_passed": 747,
+      "checks_total": 747,
+      "ok": true
+    },
+    "citation_regression": {
+      "command": "node tests/no-fabricated-citations.test.js",
+      "ok": true
+    }
+  },
+  "verdict": "PASS",
+  "reproducibility_notes": [
+    "To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,",
+    "(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,",
+    "(4) run `npm run verify` on your own machine,",
+    "(5) compare your engine.sha256, python_reference.sha256, and results to the values above.",
+    "Bit-identical SHA-256s + matching pass counts = reproduced; any drift documents the delta."
+  ]
+}
