@@ -148,7 +148,7 @@ For non-forensic CPM (planning, lookahead, monthly progress reporting), the defa
 
 - **Implementation:** 66 default holiday rule sets are encoded in `cpm-engine.js` and exposed via `E.LISTED_JURISDICTIONS` and `E.getHolidays()`.
 - **JS/Python parity:** The Python reference (`python_reference/cpm.py`) implements the same 66 rule sets; the crossval suite verifies them on every release.
-- **Public API:** `E.getHolidays(jurisdiction, startYear, endYear)` returns the rule-set output as a typed array of `{ date, name, jurisdiction }` objects.
+- **Public API:** `E.getHolidays(jurisdiction, startYear, endYear)` returns a sorted array of ISO-8601 date strings (e.g. `["2026-01-01", "2026-04-03", ...]`). For the full calendar map shape consumed by `computeCPM`, use `E.getJurisdictionCalendar(jurisdiction, opts)` which returns `{ work_days, holidays, jurisdiction, year_range }`.
 
 ## What the engine does not guarantee
 
@@ -158,4 +158,4 @@ For non-forensic CPM (planning, lookahead, monthly progress reporting), the defa
 
 ---
 
-*Document version: aligned to `cpm-engine` v2.9.32. Framework citations verified at top-level (Canada Labour Code, 5 U.S.C. § 6103); provincial / state framework names are reference-level pointers and should be reconciled to current statute by the analyst per the [Forensic-use guidance](#forensic-use-guidance) above.*
+*Document version: aligned to `cpm-engine` v2.9.33. Framework citations verified at top-level (Canada Labour Code, 5 U.S.C. § 6103); provincial / state framework names are reference-level pointers and should be reconciled to current statute by the analyst per the [Forensic-use guidance](#forensic-use-guidance) above.*

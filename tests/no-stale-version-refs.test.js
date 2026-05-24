@@ -153,12 +153,36 @@ let _filesScanned = 0;
 let _totalLines = 0;
 let _totalRefs = 0;
 
+// v2.9.33 — closes ChatGPT audit finding #5. Missing release-evidence
+// files for the CURRENT engine version are FATAL — silently skipping
+// them let v2.9.32 ship without its packet committed. Non-release-
+// evidence files (DAUBERT.md, README.md, etc.) still allowed to be
+// missing (the test only cares that EXISTING current-state references
+// match ENGINE_VERSION).
+const REQUIRED_FILES = new Set([
+    `release-evidence/v${CURRENT}/README.md`,
+    `release-evidence/v${CURRENT}/VERIFY_RELEASE.md`,
+    `release-evidence/v${CURRENT}/validation-summary.md`,
+    `release-evidence/v${CURRENT}/witness-v${CURRENT}.json`,
+    `release-evidence/v${CURRENT}/cpm-engine.js.sha256`,
+    `release-evidence/v${CURRENT}/python_reference-cpm.py.sha256`,
+    `release-evidence/v${CURRENT}/npm-run-verify-output.txt`,
+    `release-evidence/v${CURRENT}/github-actions-run-url.txt`,
+    `release-evidence/v${CURRENT}/sigstore-attestation-output.txt`,
+    `release-evidence/v${CURRENT}/rekor-entry.txt`,
+]);
+
+const missingRequired = [];
+for (const required of REQUIRED_FILES) {
+    if (!fs.existsSync(path.join(repoRoot, required))) {
+        missingRequired.push(required);
+    }
+}
+
 for (const rel of FILES) {
     const full = path.join(repoRoot, rel);
     if (!fs.existsSync(full)) {
-        // Don't fail on missing files — just note they're skipped.
-        // (Useful when a release-evidence path for the current tag is
-        // being prepared in the same commit that bumps the version.)
+        // Non-required files allowed to be missing.
         continue;
     }
     _filesScanned++;
@@ -190,6 +214,52 @@ console.log(
     `${_totalLines} lines / ${_totalRefs} version references; ` +
     `current engine = v${CURRENT}`
 );
+
+if (missingRequired.length > 0) {
+    // Two-phase release workflow accommodation:
+    //   Phase 1 — version bumped, commit pushed, tag created. CI then runs
+    //             verify.yml which produces the canonical Sigstore-signed
+    //             witness. Packet does not yet exist in the tree.
+    //   Phase 2 — author pulls CI witness, builds release-evidence/v<TAG>/,
+    //             commits the packet as a follow-up. Packet now exists.
+    //
+    // The check is WARN-by-default so phase 1 doesn't deadlock, but FATAL
+    // when CHECK_RELEASE_EVIDENCE=1 is set in the environment (CI / pre-
+    // release / pre-tag-push hooks). That way the absence of the packet
+    // surfaces at every commit-time test:all (audit-visible) but doesn't
+    // block the phase-1 commit that ENABLES building the packet in the
+    // first place.
+    const strict = process.env.CHECK_RELEASE_EVIDENCE === '1';
+    const banner = strict ? 'FAIL' : 'WARN';
+    console.error('');
+    console.error(banner + ': required release-evidence files for v' + CURRENT + ' are missing.');
+    console.error('Engine ENGINE_VERSION is "' + CURRENT + '" but the matching');
+    console.error('release-evidence packet is not committed:');
+    console.error('');
+    for (const m of missingRequired) {
+        console.error('  ' + m);
+    }
+    console.error('');
+    console.error('Build the packet via:');
+    console.error('  npm run verify      # generates witness + attestations');
+    console.error('  gh run download <RUN_ID> --name witness-canonical \\');
+    console.error('      --dir release-evidence/v' + CURRENT + '/');
+    console.error('  gh attestation verify release-evidence/v' + CURRENT +
+                  '/witness-v' + CURRENT + '.json --owner danafitkowski --format json \\');
+    console.error('      > release-evidence/v' + CURRENT +
+                  '/sigstore-attestation-output.txt');
+    console.error('');
+    if (strict) {
+        console.error('CHECK_RELEASE_EVIDENCE=1 was set — failing.');
+        console.error('');
+        process.exit(1);
+    } else {
+        console.error('CHECK_RELEASE_EVIDENCE not set — proceeding as WARN.');
+        console.error('Set CHECK_RELEASE_EVIDENCE=1 to fail the gate when the');
+        console.error('current packet is missing (used in CI / pre-tag hooks).');
+        console.error('');
+    }
+}
 
 if (failures.length > 0) {
     console.error('');

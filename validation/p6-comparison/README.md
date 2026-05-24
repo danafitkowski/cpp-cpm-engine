@@ -1,6 +1,6 @@
 # `validation/p6-comparison/` — Primavera P6 comparison matrix
 
-This folder holds the framework that compares `cpm-engine` output against Primavera P6 native scheduling output for 15 representative CPM cases (FS / SS / FF / SF, constraints, multi-calendar, retained logic, completed successors, out-of-sequence progress, fractional lag, dangling relationships).
+This folder holds the framework that compares `cpm-engine` output against Primavera P6 native scheduling output for 13 P6-comparable representative CPM cases (2 by-construction divergence cases moved to `validation/engine-limitations/` in v2.9.33) (FS / SS / FF / SF, constraints, multi-calendar, retained logic, completed successors, out-of-sequence progress, fractional lag, dangling relationships).
 
 It addresses the ChatGPT third-pass directive item #2:
 
@@ -8,7 +8,7 @@ It addresses the ChatGPT third-pass directive item #2:
 
 ---
 
-## Status as of v2.9.32
+## Status as of v2.9.33
 
 | Layer | Status | Owner |
 |---|---|---|
@@ -25,7 +25,7 @@ Once the analyst populates the P6 columns, the matrix becomes additional externa
 
 ---
 
-## The 15 cases
+## The 13 cases (P6-comparable)
 
 | # | Case ID | Tests |
 |---|---|---|

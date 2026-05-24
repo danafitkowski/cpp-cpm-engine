@@ -103,10 +103,28 @@ const xvalOk = xvalResult.status === 0 && fixturesFailed === 0 && checksPassed =
 log(`       → ${fixturesPassed}/${fixturesPassed + fixturesFailed} fixtures, ${checksPassed}/${checksTotal} checks (exit ${xvalResult.status})`);
 
 // ──────────────────────────── 3. Citation regression ──────────────────────
-log('[3/3] Running citation regression (node tests/no-fabricated-citations.test.js)...');
+log('[3/5] Running citation regression (node tests/no-fabricated-citations.test.js)...');
 const citeResult = runCapture('node', ['tests/no-fabricated-citations.test.js']);
 const citeOk = citeResult.status === 0 && /PASS/.test(citeResult.combined);
 log(`       → ${citeOk ? 'PASS' : 'FAIL'} (exit ${citeResult.status})`);
+
+// ──────────────────────────── 4. Truncation regression ────────────────────
+// v2.9.33 — closes ChatGPT audit finding #4 (npm run verify did not invoke
+// the truncation regression gate; witness JSON missed it as a result).
+log('[4/5] Running truncation regression (node tests/no-truncation.test.js)...');
+const truncResult = runCapture('node', ['tests/no-truncation.test.js']);
+const truncOk = truncResult.status === 0 && /PASS/.test(truncResult.combined);
+log(`       → ${truncOk ? 'PASS' : 'FAIL'} (exit ${truncResult.status})`);
+
+// ──────────────────────────── 5. Version-drift regression gate ────────────
+// v2.9.33 — closes ChatGPT audit finding #4 + #5 (the version-refs gate
+// installed in v2.9.32 was wired into test:all but not into the
+// attestation witness; verifiers running `npm run verify` were not
+// surfacing its result in their captured proof).
+log('[5/5] Running version-drift regression (node tests/no-stale-version-refs.test.js)...');
+const verRefResult = runCapture('node', ['tests/no-stale-version-refs.test.js']);
+const verRefOk = verRefResult.status === 0 && /PASS/.test(verRefResult.combined);
+log(`       → ${verRefOk ? 'PASS' : 'FAIL'} (exit ${verRefResult.status})`);
 
 // ──────────────────────────── Witness assembly ────────────────────────────
 const pkg = readJSON('package.json');
@@ -164,8 +182,16 @@ const witness = {
       command: 'node tests/no-fabricated-citations.test.js',
       ok: citeOk,
     },
+    truncation_regression: {
+      command: 'node tests/no-truncation.test.js',
+      ok: truncOk,
+    },
+    version_drift_regression: {
+      command: 'node tests/no-stale-version-refs.test.js',
+      ok: verRefOk,
+    },
   },
-  verdict: unitOk && xvalOk && citeOk ? 'PASS' : 'FAIL',
+  verdict: (unitOk && xvalOk && citeOk && truncOk && verRefOk) ? 'PASS' : 'FAIL',
   reproducibility_notes: [
     'To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,',
     '(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,',

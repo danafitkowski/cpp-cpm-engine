@@ -508,73 +508,12 @@ const CASES = [
             '5. F9 — verify B slides to its latest valid position.',
     },
 
-    // =====================================================================
-    // Case 14 — Fractional lag (warns/rounds)
-    // =====================================================================
-    {
-        id: '14-fractional-lag',
-        title: 'Fractional lag — SUB_DAY_LAG_ROUNDED ALERT',
-        description:
-            'P6 stores lags in hours. An 8-hour lag = 1 working day; a 4-hour ' +
-            'lag = 0.5 wd. The engine is day-granular; sub-day lags emit ' +
-            'SUB_DAY_LAG_ROUNDED ALERT and round via JS Math.round.',
-        expected_behavior:
-            'Lag value 0.5 wd: engine emits ALERT, rounds to 1 wd (Math.round ' +
-            'half-toward-+inf). Lag value 0.4 wd: rounds to 0. ' +
-            'In forensic_strict mode, this alert is FATAL — engine throws ' +
-            'unless overridden.',
-        activities: [
-            { code: 'A', duration_days: 5 },
-            { code: 'B', duration_days: 3 },
-        ],
-        relationships: [
-            { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0.5 },
-        ],
-        opts: { dataDate: '2026-01-05', projectStart: '2026-01-05' },
-        p6_setup_notes:
-            '1. Activities A (5d), B (3d).\n' +
-            '2. FS A→B with lag = 4h (0.5 wd).\n' +
-            '3. F9.\n' +
-            '4. Compare B.ES to engine output. Engine reports lag = 1 wd ' +
-            'after rounding; P6 honors 4h lag natively.\n' +
-            '5. This case documents the engine\'s known day-granular ' +
-            'limitation (see DAUBERT.md §11).',
-    },
-
-    // =====================================================================
-    // Case 15 — Dangling relationship
-    // =====================================================================
-    {
-        id: '15-dangling-relationship',
-        title: 'Dangling relationship — predecessor missing from activities',
-        description:
-            'A relationship references an activity code "Z" that is not in the ' +
-            'activities array. Engine emits "dangling-rel" ALERT and drops the ' +
-            'relationship. In forensic_strict mode this is FATAL.',
-        expected_behavior:
-            'Activities array has A, B. Relationships: A→B (valid), Z→B (dangling). ' +
-            'Z is not in activities. Engine emits "dangling-rel" alert and drops ' +
-            'the Z→B relationship; A→B is honored normally. ' +
-            'In strict mode, throws StrictForensicViolation with context "dangling-rel".',
-        activities: [
-            { code: 'A', duration_days: 5 },
-            { code: 'B', duration_days: 3 },
-        ],
-        relationships: [
-            { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
-            { from_code: 'Z', to_code: 'B', type: 'FS', lag_days: 0 },  // dangling
-        ],
-        opts: { dataDate: '2026-01-05', projectStart: '2026-01-05' },
-        p6_setup_notes:
-            '1. In P6 a relationship referencing a non-existent activity ' +
-            'cannot be created — P6 enforces referential integrity.\n' +
-            '2. This case tests the engine\'s defensive handling of corrupt ' +
-            'XER input. Compare against an XER that has been edited to ' +
-            'reference a non-existent activity, OR an XER from a non-P6 ' +
-            'source that did not enforce referential integrity.\n' +
-            '3. Engine output: dangling-rel ALERT in result.alerts; the ' +
-            'dropped relationship does not affect B\'s CPM dates.',
-    },
+    // Cases 14 (fractional lag) and 15 (dangling relationship) were
+    // moved to validation/engine-limitations/ in v2.9.33 per ChatGPT
+    // audit finding #7. Those two cases cannot be authored or compared
+    // in P6 by construction; including them in the P6 matrix diluted
+    // its evidentiary value. They are now documented as engine
+    // limitations rather than as P6 comparison cases.
 ];
 
 // =====================================================================

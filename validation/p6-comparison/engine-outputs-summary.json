@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-05-24T03:34:37.971Z",
-  "engine_version": "2.9.31",
+  "generated_at": "2026-05-24T14:31:40.035Z",
+  "engine_version": "2.9.33",
   "cases": [
     {
       "id": "01-fs-chain",
@@ -91,20 +91,6 @@
       "title": "ALAP — secondary constraint pushing activity as late as possible",
       "engine_project_finish": "2026-01-18",
       "engine_alerts": 13,
-      "engine_errored": false
-    },
-    {
-      "id": "14-fractional-lag",
-      "title": "Fractional lag — SUB_DAY_LAG_ROUNDED ALERT",
-      "engine_project_finish": "2026-01-14",
-      "engine_alerts": 10,
-      "engine_errored": false
-    },
-    {
-      "id": "15-dangling-relationship",
-      "title": "Dangling relationship — predecessor missing from activities",
-      "engine_project_finish": "2026-01-13",
-      "engine_alerts": 9,
       "engine_errored": false
     }
   ]

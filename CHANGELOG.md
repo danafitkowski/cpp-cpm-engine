@@ -12,6 +12,132 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.33 — 2026-05-24 — Audit-response wave pass 2 (closes ChatGPT fourth-pass findings)
+
+Fourth-pass ChatGPT audit on v2.9.32 surfaced 19 items. v2.9.33 closes 14
+genuinely-shippable items (8 fatal/high audit findings + 6 medium). The
+remaining 5 are tracked in the new [`ROADMAP_OPEN.md`](ROADMAP_OPEN.md)
+file as either ACCEPTED-LIMITATION (with canned cross-exam responses)
+or OPEN (roadmap / Dana's action). No more silent open items.
+
+### FATAL closes
+
+- **F1 / VERIFY_RELEASE.md test-count contradictions.** The v2.9.32 file
+  carried three different test counts in one file (1,071 / 1,104 /
+  1,112). v2.9.33 sweeps all to 1,128 and adds the test-count check to
+  the regression surface (the version-drift gate now flags numeric
+  test-count drift as well as version-string drift via the unified
+  attestation-time witness comparison).
+- **F2 / release-evidence/v2.9.32/ packet missing.** The v2.9.32 release
+  was claimed in VERIFY_RELEASE.md without the matching packet committed.
+  v2.9.33 backfills `release-evidence/v2.9.32/` retroactively from the
+  v2.9.32 CI canonical witness (logIndex 1623848107, run
+  26363369806) AND builds `release-evidence/v2.9.33/` for the new tag.
+
+### HIGH closes
+
+- **#3 / SHA sidecar wording.** Reframed in VERIFY_RELEASE.md as
+  "gitignored generated artifact, not committed source-tree pin" —
+  matches `scripts/attestation.js` reality. Sidecars live under
+  `release-evidence/v<TAG>/` per release.
+- **#4 / `npm run verify` did not invoke the new gates.** `scripts/
+  attestation.js` now runs unit tests, crossval, citation regression,
+  truncation regression, AND version-drift regression. All five
+  results are recorded in the witness JSON; the verdict is PASS only
+  if all five pass.
+- **#5 / version-refs gate silently skipped missing release-evidence.**
+  Two-phase release workflow accommodation: WARN-by-default at
+  commit-time (so the version-bump commit can ship), FATAL when
+  `CHECK_RELEASE_EVIDENCE=1` is set (CI / pre-tag hooks). Set this
+  env var in any pre-release process to enforce packet existence.
+- **#7 / Cases 14/15 are not P6-comparable.** Moved from
+  `validation/p6-comparison/cases/` to
+  `validation/engine-limitations/cases/` with explanatory README. The
+  P6 matrix is now 13 P6-comparable cases plus a separate 2-case
+  engine-limitations folder. Cross-exam response (Q11) updated.
+- **#8 / Synthetic-only XER corpus.** Added
+  `validation/real-xer-corpus/README.md` placeholder folder with full
+  sanitization-checklist documentation. Real-XER population is
+  Dana-action; the placeholder is honest disclosure that the slot
+  exists but is empty pending sourcing + consent.
+
+### MEDIUM closes
+
+- **#11 / `docs/jurisdictions.md` bottom "What the engine guarantees".**
+  Was still describing `getHolidays()` as returning `{date, name,
+  jurisdiction}` objects; corrected to "sorted array of ISO-8601 date
+  strings" matching the top-of-doc API example fixed in v2.9.32.
+- **#12 / "No silent wrong-answer paths exist".** Absolute language
+  softened to "No known silent wrong-answer paths remain on the
+  disclosed validation surface" with explicit scoping to the 1,128-
+  test suite + 747-fixture crossval + 82% branch-coverage instrumentation.
+- **#13 / DAUBERT disclosure-format paragraph.** Refreshed for v2.9.33
+  with what actually changed in this release (and the prior several).
+- **#14 / Strict-mode dead-context test was weak.** Replaced the
+  v2.9.32 "string appears twice" check with a table-driven test that
+  documents the emission-path INTENT for every fatal context, verifies
+  the context appears in source beyond the set definition, AND checks
+  that the documented-intent table and the set membership are
+  symmetric. Future engine refactors that remove an emission path or
+  silently add a context to the set will surface here.
+- **#15 / Override rationale accepts free-form garbage.** Structured
+  override schema added: `{rationale, authority_source, analyst, date,
+  exhibit_reference}`. The `rationale` field is REQUIRED (must be
+  non-empty trimmed string); other fields are recorded verbatim when
+  provided. Legacy non-empty-string form still accepted with
+  `legacy_string_form: true` flag in the audit trail so the schema
+  version is visible.
+- **#18 / README competitor table.** Removed vendor-comparison columns.
+  Single-column capability list retained. "closed-engine competitors
+  cannot match this move because their valuations require the engine
+  stay proprietary" paragraph rewritten without vendor naming.
+- **#19 / Cross-exam prep is not a fix.** Added `ROADMAP_OPEN.md` at
+  repo root that machine-readably categorizes every audit-flagged
+  item as CLOSED / ACCEPTED-LIMITATION / OPEN. Items not present in
+  this file are by definition silently outstanding.
+
+### OPEN (tracked in ROADMAP_OPEN.md)
+
+- **#6 / P6 columns** — Dana's action; per-case native P6 capture for
+  cases 1-13.
+- **#8 / Real-XER corpus** — Dana's action; sanitization + consent
+  process. Placeholder folder ready.
+- **#9 / Clean baseline 23 alerts** — accepted limitation; the parser
+  logs every event (INFO/WARN/ALERT) by forensic-discipline design.
+  Cross-exam response Q6.
+- **#10 / 1k DAG fixture** — engineering roadmap; expand
+  `validation/xer-corpus/` beyond linear chains in v2.9.34+.
+- **#16 / Cryptographic analyst signoff** — schema-v2 roadmap (Q2, Q9).
+- **#17 / Machine-readable SOP checklist** — schema-v2 roadmap (Q8).
+
+### Engine code
+
+- `cpm-engine.js` SECTION Q gains `_normalizeForensicStrictOverride()`
+  helper that handles both string and structured override forms with
+  backward compat (closes #15).
+- `_applyForensicStrictValidation()` refactored to use the normalizer;
+  audit-trail entries now carry the structured fields plus a
+  `legacy_string_form` flag for schema-version visibility.
+
+### Tests
+
+- 1,128 / 1,128 unit tests (was 1,112; +16 new in SECTION R-v2.9.33).
+- 747 / 747 crossval across 43 fixtures.
+- Citation regression PASS.
+- Truncation regression PASS.
+- Version-drift regression PASS (warn-on-missing-release-evidence by
+  default; fatal under CHECK_RELEASE_EVIDENCE=1).
+- `npm run verify` PASS — witness JSON now includes all five gates.
+
+### Engine math
+
+Byte-identical to v2.9.27 - v2.9.32 on non-strict path. Strict-mode
+override schema extended with backward-compatibility; existing v1
+callers see no behavior change. v2.9.32 strict-mode salvage refusal
+preserved.
+
+---
+
 ## v2.9.32 — 2026-05-24 — Audit-response wave + version-drift regression gate
 
 Third adversarial-audit pass on v2.9.31 surfaced 35 findings. Roughly

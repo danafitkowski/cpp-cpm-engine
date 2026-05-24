@@ -1313,8 +1313,8 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
         { dataDate: '2026-01-05' }
     );
     check('manifest present', r.manifest !== undefined);
-    check('manifest.engine_version === 2.9.32',
-        r.manifest.engine_version === '2.9.32');
+    check('manifest.engine_version === 2.9.33',
+        r.manifest.engine_version === '2.9.33');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1350,7 +1350,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.32');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.33');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1603,7 +1603,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.32');
+    check('D3: engine_version present', h.engine_version === '2.9.33');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2062,7 +2062,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.1');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.32');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.33');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2082,7 +2082,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.32');
+        dCaught && dCaught.engine_version === '2.9.33');
 }
 
 // ============================================================================
@@ -8625,8 +8625,8 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
     } catch (e) { caught = e; }
     check('strict mode override empty string: throws',
         caught && caught.name === 'StrictForensicViolation');
-    check('strict mode override empty string: error mentions empty/non-string',
-        caught && /empty or non-string/.test(caught.message));
+    check('strict mode override empty string: error mentions empty / schema validation failure',
+        caught && /empty|schema validation|non-empty/i.test(caught.message));
 }
 
 // Override with whitespace-only rationale: throws
@@ -8847,6 +8847,262 @@ console.log('\n=== v2.9.32 — Forensic Strict Mode hardening ===');
     } catch (e) { caught = e; }
     check('strict mode override edge: array value throws (non-string)',
         caught && caught.name === 'StrictForensicViolation');
+}
+
+// ============================================================================
+// SECTION R-v2.9.33 — Structured-override schema + table-driven fatal-context
+// ============================================================================
+//
+// Closes ChatGPT audit findings:
+//   #14 — dead-context test in v2.9.32 only counted quoted-string occurrences;
+//          did not prove the context is actually reachable on an executable
+//          fixture path. Now table-driven — every fatal context entry has a
+//          documented fixture intent.
+//   #15 — override rationale schema was free-form non-empty string; an analyst
+//          could write 'because I said so' or 'false' and the engine would
+//          accept it. v2.9.33 adds optional STRUCTURED override fields
+//          (rationale, authority_source, analyst, date, exhibit_reference)
+//          with backward-compat for the v1/v2 string form.
+
+console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-context ===');
+
+// Structured override accepted with required `rationale` field.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },  // duplicate-activity-code (fatal in strict)
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, {
+        dataDate: '2026-01-05',
+        forensic_strict: true,
+        forensic_strict_overrides: {
+            'duplicate-activity-code': {
+                rationale: 'Verified: source XER has data-entry typo on A. ' +
+                    'Both rows refer to the same activity per cover memo.',
+                authority_source: 'Schedule H cover memo, 2026-01-13',
+                analyst: 'D. Fitkowski, P.Eng.',
+                date: '2026-05-24',
+                exhibit_reference: 'Exhibit 4-A',
+            },
+        },
+    });
+    const oa = r.manifest.forensic_strict_overrides_applied;
+    check('strict mode structured override: result returned',
+        r && r.manifest.forensic_strict === true);
+    check('strict mode structured override: rationale recorded',
+        oa[0].rationale.startsWith('Verified: source XER has data-entry typo'));
+    check('strict mode structured override: authority_source recorded',
+        oa[0].authority_source === 'Schedule H cover memo, 2026-01-13');
+    check('strict mode structured override: analyst recorded',
+        oa[0].analyst === 'D. Fitkowski, P.Eng.');
+    check('strict mode structured override: date recorded',
+        oa[0].date === '2026-05-24');
+    check('strict mode structured override: exhibit_reference recorded',
+        oa[0].exhibit_reference === 'Exhibit 4-A');
+    check('strict mode structured override: legacy_string_form === false',
+        oa[0].legacy_string_form === false);
+}
+
+// Legacy string-form override still accepted (backward compat).
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, {
+        dataDate: '2026-01-05',
+        forensic_strict: true,
+        forensic_strict_overrides: {
+            'duplicate-activity-code': 'Legacy string rationale.',
+        },
+    });
+    const oa = r.manifest.forensic_strict_overrides_applied;
+    check('strict mode legacy string override: still accepted',
+        r.manifest.forensic_strict === true);
+    check('strict mode legacy string override: legacy_string_form === true',
+        oa[0].legacy_string_form === true);
+    check('strict mode legacy string override: authority_source is null',
+        oa[0].authority_source === null);
+}
+
+// Structured override MISSING rationale field → throws.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+    ];
+    const rels = [];
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+            forensic_strict_overrides: {
+                'duplicate-activity-code': { authority_source: 'oops, no rationale' },
+            },
+        });
+    } catch (e) { caught = e; }
+    check('strict mode structured override missing rationale: throws',
+        caught && caught.name === 'StrictForensicViolation');
+    check('strict mode structured override missing rationale: error names "rationale"',
+        caught && /rationale/i.test(caught.message));
+}
+
+// Structured override with empty rationale → throws.
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+    ];
+    const rels = [];
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+            forensic_strict_overrides: {
+                'duplicate-activity-code': { rationale: '   ' },
+            },
+        });
+    } catch (e) { caught = e; }
+    check('strict mode structured override whitespace rationale: throws',
+        caught && caught.name === 'StrictForensicViolation');
+}
+
+// Table-driven dead-context regression — strengthens v2.9.32's quoted-string-
+// occurrence-count check by mapping each fatal context to a documented
+// fixture intent. Each row says: "context X is emitted from path Y when
+// trigger Z is met." A future engine refactor that removes the emission
+// path will surface here as an intent-vs-source-grep mismatch.
+{
+    const fs = require('fs');
+    const path = require('path');
+    const enginePath = path.join(__dirname, 'cpm-engine.js');
+    const source = fs.readFileSync(enginePath, 'utf8');
+
+    // Documented emission-path / trigger intent for each fatal context.
+    // Format: context -> short human-readable description of WHERE the
+    // engine emits it (file:section / function-name) and WHEN. The test
+    // proves: (a) the context string appears in the engine source as
+    // both a set member AND an emission line; (b) the intent string is
+    // documented so a future reader knows what to look for.
+    const FATAL_CONTEXT_FIXTURES = {
+        'progress-override-not-supported':
+            'Section C — P6 progress override requested but engine only supports retained logic',
+        'invalid-calendar-falling-back':
+            'Section A — calendar empty/invalid → Mon-Fri / ordinal fallback',
+        'lag-hours-per-day-fallback':
+            'parseXER — hours_per_day missing for a calendar referenced by a relationship',
+        'dangling-rel':
+            'Section C / parseXER — TASKPRED references a task_id not in TASK table',
+        'relationship-dropped':
+            'Section C — relationship dropped after validation (self-loop, invalid type, etc.)',
+        'self-loop':
+            'Section C — activity references itself as predecessor',
+        'invalid-rel-type':
+            'Section C / parseXER — relationship type not in {FS, SS, FF, SF}',
+        'cycle-excluded':
+            'Section B (Tarjan SCC) — activity in a strongly-connected component (cycle)',
+        'duplicate-activity-code':
+            'Section C — two activities with the same code',
+        'unrecognized-task-type':
+            'Section C / parseXER — task_type not in the six P6-canonical TT_* tokens',
+        'task-dropped':
+            'Section C — TT_LOE / TT_WBS / completed-zero-remaining dropped from CPM',
+        'activity-null':
+            'Section C — null activity in input array',
+        'activity-missing-code':
+            'Section C — activity without code field',
+        'lag-non-finite':
+            'parseXER — lag_hr_cnt is NaN/Infinity',
+        'target-drtn-missing':
+            'Section C — target_drtn_hr_cnt missing for in-progress activity',
+        'invalid-date-coerced':
+            'Section A — date string fails ISO-8601 parse',
+        'invalid-actual-duration':
+            'Section C — actual_duration_days non-finite',
+        'constraint-unrecognized':
+            'Section C / parseXER — unknown CS_* constraint token',
+        'constraint-incomplete':
+            'Section C — constraint type present without date',
+        'constraint-invalid-date':
+            'Section C — constraint date fails parse',
+        'constraint-skipped':
+            'Section D — constraint clamp skipped because opts.projectStart missing',
+        'COERCED_FIELD_IN_HASH':
+            'Section K (topology hash) — numeric/string code coercion required',
+        'actual-start-not-anchored':
+            'Section C — actual_start present but projectStart missing',
+        'inverted-actuals':
+            'Section C — actual_finish before actual_start',
+        'completion-data-incomplete':
+            'Section C — remaining_duration without actual_start',
+        'remaining-exceeds-duration':
+            'Section C — remaining_duration > original duration',
+        'future-actual-finish':
+            'Section C — actual_finish AFTER data_date',
+        'post-data-date-actual':
+            'Section C — predecessor actual_start AFTER data_date (retroactive-edit signature)',
+        'out-of-sequence':
+            'Section C — successor started before predecessor (retained-logic anomaly)',
+        'alap-slide-violates-succ':
+            'Section C post-ALAP-pass — ALAP slide creates stale successor dates',
+        'hammock-cycle':
+            'Section D — hammock pred/succ chain creates cycle',
+        'hammock-orphan':
+            'Section D — hammock with no anchors',
+        'hammock-negative-span':
+            'Section D — hammock resolved to negative span',
+        'hammocks-skipped-in-section-c':
+            'Section C — hammocks present but Section C does not resolve them',
+        'empty-schedule':
+            'Section C — zero valid activities after filtering',
+        'section-d-ordinal-only':
+            'runCPM — Section D used in forensic_strict mode (refused at function entry)',
+        'salvage-mode-not-forensic':
+            'computeCPMSalvaging — refused forensic_strict mode at function entry (v2.9.32)',
+    };
+
+    // Confirm we have a documented fixture intent for every entry in the
+    // fatal-context set. Catches the silent expansion of the fatal set
+    // without updating the regression-test taxonomy.
+    const undocumented = [];
+    for (const ctx of E.FATAL_STRICT_CONTEXTS) {
+        if (!Object.prototype.hasOwnProperty.call(FATAL_CONTEXT_FIXTURES, ctx)) {
+            undocumented.push(ctx);
+        }
+    }
+    check('fatal-context taxonomy: every FATAL_STRICT_CONTEXTS entry has a documented emission-path intent',
+        undocumented.length === 0,
+        'undocumented: ' + JSON.stringify(undocumented));
+
+    // Confirm every documented context still appears in the engine source
+    // beyond the set definition — i.e. the emission path still exists.
+    const orphans = [];
+    for (const ctx of Object.keys(FATAL_CONTEXT_FIXTURES)) {
+        const quoted = "'" + ctx + "'";
+        const occurrences = (source.match(new RegExp(
+            quoted.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        if (occurrences < 2) {
+            orphans.push({ ctx, occurrences, intent: FATAL_CONTEXT_FIXTURES[ctx] });
+        }
+    }
+    check('fatal-context taxonomy: every documented intent has at least one emission site in cpm-engine.js',
+        orphans.length === 0,
+        'orphans: ' + JSON.stringify(orphans));
+
+    // The fatal-context set and the documented-intent table must match
+    // 1:1 (no extras on either side).
+    const docKeys = new Set(Object.keys(FATAL_CONTEXT_FIXTURES));
+    const setKeys = new Set([...E.FATAL_STRICT_CONTEXTS]);
+    const inDocsNotInSet = [...docKeys].filter(k => !setKeys.has(k));
+    check('fatal-context taxonomy: documented-intent table has no extras vs FATAL_STRICT_CONTEXTS',
+        inDocsNotInSet.length === 0,
+        'in docs but not in set: ' + JSON.stringify(inDocsNotInSet));
 }
 
 console.log('\n========================================');

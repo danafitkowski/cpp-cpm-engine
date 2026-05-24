@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.32';
+const ENGINE_VERSION = '2.9.33';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -8493,6 +8493,72 @@ function _matchFatalStrictAlert(alert) {
  * Returns the result object (with mutated manifest) on success; throws
  * on first unoverridden fatal alert.
  */
+// v2.9.33 — structured override schema (closes ChatGPT audit finding #15).
+// Backward-compatible: an override may be EITHER a non-empty rationale string
+// (the v2.9.31/v2.9.32 schema; e.g. 'analyst-confirmed: shop-floor calendar
+// is intentional fallback'), OR a structured object of the form:
+//   {
+//     rationale:        '<non-empty written rationale>',  // REQUIRED
+//     authority_source: '<contract clause / transmittal / RFI / etc.>',
+//     analyst:          '<analyst name + credential>',
+//     date:             '<ISO-8601 signoff date>',
+//     exhibit_reference:'<deliverable manifest path / exhibit number>'
+//   }
+// Object form: `rationale` is REQUIRED and must be a non-empty trimmed
+// string; the other fields are optional but recorded verbatim into the
+// audit trail when present. The structured form is the v3 schema posture;
+// the string form continues to work for v1/v2 callers but emits a
+// recorded entry that flags it as `legacy_string_form: true` so the
+// audit trail makes the schema version visible.
+function _normalizeForensicStrictOverride(override) {
+    // Returns { ok: bool, value: object|null, reason: 'why-invalid' }.
+    if (typeof override === 'string') {
+        if (override.trim().length === 0) {
+            return { ok: false, value: null, reason: 'string rationale is empty / whitespace-only' };
+        }
+        return {
+            ok: true,
+            value: {
+                rationale: override,
+                authority_source: null,
+                analyst: null,
+                date: null,
+                exhibit_reference: null,
+                legacy_string_form: true,
+            },
+        };
+    }
+    if (override && typeof override === 'object' && !Array.isArray(override)) {
+        const rationale = override.rationale;
+        if (typeof rationale !== 'string' || rationale.trim().length === 0) {
+            return {
+                ok: false,
+                value: null,
+                reason: 'structured override.rationale is required, must be a non-empty string',
+            };
+        }
+        // Whitelist of recognized structured fields. Unknown keys are
+        // recorded verbatim too so analyst-supplied case-specific metadata
+        // (e.g. WBS code, project phase) survives — but the four standard
+        // fields are always normalized to their canonical names.
+        const normalized = Object.assign({}, override, {
+            rationale: rationale,
+            authority_source: override.authority_source || null,
+            analyst: override.analyst || null,
+            date: override.date || null,
+            exhibit_reference: override.exhibit_reference || null,
+            legacy_string_form: false,
+        });
+        return { ok: true, value: normalized };
+    }
+    return {
+        ok: false,
+        value: null,
+        reason: 'override must be a non-empty rationale string or a ' +
+                'structured object with at minimum a non-empty rationale field',
+    };
+}
+
 function _applyForensicStrictValidation(result, opts) {
     if (!opts || opts.forensic_strict !== true) return result;
     const overrides = (opts && opts.forensic_strict_overrides) || {};
@@ -8509,25 +8575,30 @@ function _applyForensicStrictValidation(result, opts) {
         if (!matched) continue;
 
         const override = overrides[matched];
-        // Override must be a non-empty trimmed string
-        if (typeof override === 'string' && override.trim().length > 0) {
-            applied.push({
-                context: matched,
-                rationale: override,
-                alert: alert,
-            });
-            continue;
+
+        if (override === undefined || override === null) {
+            // No override → throw
+            throw new StrictForensicViolation(alert, matched);
         }
-        // Override present but invalid (empty / null / non-string)
-        if (override !== undefined && override !== null) {
+
+        const normalized = _normalizeForensicStrictOverride(override);
+        if (!normalized.ok) {
             const err = new StrictForensicViolation(alert, matched);
             err.message = err.message + ' [Override for "' + matched +
-                '" was provided but is empty or non-string; rationales must ' +
-                'be non-empty strings.]';
+                '" failed schema validation: ' + normalized.reason + ']';
             throw err;
         }
-        // No override → throw
-        throw new StrictForensicViolation(alert, matched);
+
+        applied.push({
+            context: matched,
+            rationale: normalized.value.rationale,
+            authority_source: normalized.value.authority_source,
+            analyst: normalized.value.analyst,
+            date: normalized.value.date,
+            exhibit_reference: normalized.value.exhibit_reference,
+            legacy_string_form: normalized.value.legacy_string_form,
+            alert: alert,
+        });
     }
 
     // All fatal alerts overridden — annotate manifest

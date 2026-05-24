@@ -10,7 +10,7 @@
 
 ## Origin
 
-The 2026-05-24 third-pass ChatGPT audit of `cpm-engine` v2.9.31 surfaced 35 findings. Roughly 21 were genuine bugs / drift / language issues and were fixed in the v2.9.32 release (see [`CHANGELOG.md`](../CHANGELOG.md)). The remaining 12-14 findings were not bugs — they were ChatGPT being adversarial about honest disclosures the engine deliberately published. Those disclosures are correct posture; this document is the analyst's response to each predictable cross-exam attack derived from them.
+The 2026-05-24 third-pass ChatGPT audit of `cpm-engine` v2.9.31 surfaced 35 findings. Roughly 21 were genuine bugs / drift / language issues and were fixed in the v2.9.33 release (see [`CHANGELOG.md`](../CHANGELOG.md)). The remaining 12-14 findings were not bugs — they were ChatGPT being adversarial about honest disclosures the engine deliberately published. Those disclosures are correct posture; this document is the analyst's response to each predictable cross-exam attack derived from them.
 
 Format below: each section names the cross-exam question, the file:line citation opposing counsel would quote, and the canned response. The response is structured for delivery at the witness stand — short answer first, then qualifier, then point-back to the engine's strength.
 
@@ -20,7 +20,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 **Quote source:** [`DAUBERT.md §9`](../DAUBERT.md#9-forensic-strict-mode-shipped-v2931); `FATAL_STRICT_CONTEXTS` in `cpm-engine.js`.
 
-**Response.** Correct. The fatal-alert taxonomy is enumerated in the engine source and disclosed in `DAUBERT.md §9`. It is published, versioned, source-controlled, and every entry is unit-tested to confirm it corresponds to a real alert emission path (see `cpm-engine.test.js` SECTION R-v2.9.32, dead-context regression test). Any party that disagrees with a specific entry can clone the public repository and propose a removal or addition via the same review process. The taxonomy is publicly auditable; that is the criterion FRE 702 prong-1 requires for a methodology's reliability.
+**Response.** Correct. The fatal-alert taxonomy is enumerated in the engine source and disclosed in `DAUBERT.md §9`. It is published, versioned, source-controlled, and every entry is unit-tested to confirm it corresponds to a real alert emission path (see `cpm-engine.test.js` SECTION R-v2.9.33, dead-context regression test). Any party that disagrees with a specific entry can clone the public repository and propose a removal or addition via the same review process. The taxonomy is publicly auditable; that is the criterion FRE 702 prong-1 requires for a methodology's reliability.
 
 **Concession to make.** "The taxonomy reflects my forensic-scheduling judgment about which alert classes should be fatal for court-grade work. A different scheduler could draw different lines. The point of strict mode is that the lines are documented and tested, not that they are universally agreed."
 
@@ -40,7 +40,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 **Quote source:** [`validation/p6-comparison/comparison-matrix.md`](../validation/p6-comparison/comparison-matrix.md); [`validation/p6-comparison/README.md`](../validation/p6-comparison/README.md).
 
-**Response.** As of the engine's released v2.9.32 baseline, the published framework includes 15 case definitions with engine outputs captured for each. The P6-native columns are populated case-by-case by the analyst running the comparison for a specific opinion. For *this opinion* I performed the following P6 comparisons: [analyst names which cases were run for this case]. The framework is published so any opposing expert can reproduce the same comparison case-by-case and confirm or dispute the field-level results.
+**Response.** As of the engine's released v2.9.33 baseline, the published framework includes 15 case definitions with engine outputs captured for each. The P6-native columns are populated case-by-case by the analyst running the comparison for a specific opinion. For *this opinion* I performed the following P6 comparisons: [analyst names which cases were run for this case]. The framework is published so any opposing expert can reproduce the same comparison case-by-case and confirm or dispute the field-level results.
 
 **Concession to make.** "The published matrix is the framework. The case-specific P6 captures are part of my expert work product for this opinion, not part of the published repository."
 
@@ -112,9 +112,9 @@ Format below: each section names the cross-exam question, the file:line citation
 
 **Quote source:** `cpm-engine.js` `_applyForensicStrictValidation`.
 
-**Response.** No, the route around is closed. As of v2.9.32, `computeCPMSalvaging` refuses strict mode at function entry — it throws `StrictForensicViolation` with context `salvage-mode-not-forensic` before any salvage path runs. The two modes are categorically incompatible by design (strict = hard-fail on signal-of-doubt; salvage = best-effort triage of corrupt input). Combining them silently would let coerced data smuggle through into a court-grade run; the v2.9.32 release wires the refusal so that can't happen.
+**Response.** No, the route around is closed. As of v2.9.33, `computeCPMSalvaging` refuses strict mode at function entry — it throws `StrictForensicViolation` with context `salvage-mode-not-forensic` before any salvage path runs. The two modes are categorically incompatible by design (strict = hard-fail on signal-of-doubt; salvage = best-effort triage of corrupt input). Combining them silently would let coerced data smuggle through into a court-grade run; the v2.9.33 release wires the refusal so that can't happen.
 
-**Concession to make.** "Prior to v2.9.32 the strict-mode validator walked `result.alerts` only. The v2.9.32 release added the entry-level refusal in `computeCPMSalvaging`. Any analyst using v2.9.32 or later cannot combine the two modes. Earlier versions of the engine had the gap, which is why the engine is versioned and the Daubert disclosure pins to a specific tag."
+**Concession to make.** "Prior to v2.9.33 the strict-mode validator walked `result.alerts` only. The v2.9.33 release added the entry-level refusal in `computeCPMSalvaging`. Any analyst using v2.9.33 or later cannot combine the two modes. Earlier versions of the engine had the gap, which is why the engine is versioned and the Daubert disclosure pins to a specific tag."
 
 ---
 
@@ -142,7 +142,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 **Quote source:** `_applyForensicStrictValidation` rationale-handling in `cpm-engine.js`.
 
-**Response.** Correct as to v2.9.32 — the engine requires a non-empty trimmed string but does not adjudicate the *quality* of the rationale. That is intentional. The engine cannot judge whether a rationale is professionally adequate; that judgment belongs to the analyst, to the reviewer, and ultimately to the trier of fact. The engine *records* the rationale in the result manifest's audit trail, so the rationale itself is preserved verbatim alongside the override that depends on it. Opposing counsel reviewing the manifest can quote the rationale at deposition; an inadequate rationale is itself a cross-exam exhibit.
+**Response.** Correct as to v2.9.33 — the engine requires a non-empty trimmed string but does not adjudicate the *quality* of the rationale. That is intentional. The engine cannot judge whether a rationale is professionally adequate; that judgment belongs to the analyst, to the reviewer, and ultimately to the trier of fact. The engine *records* the rationale in the result manifest's audit trail, so the rationale itself is preserved verbatim alongside the override that depends on it. Opposing counsel reviewing the manifest can quote the rationale at deposition; an inadequate rationale is itself a cross-exam exhibit.
 
 **Concession to make.** "Schema v2 (roadmap) will support optional structured override fields — `rationale`, `authority_source`, `analyst`, `date`, `exhibit_reference`. v1 accepts free-form text. An analyst writing 'because I said so' produces a discoverable artifact; the engine does not police rationale quality but it does preserve it."
 
@@ -160,11 +160,11 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ## Q15 — "Your engine's documentation has drifted between releases. The DAUBERT disclosure for v2.9.31 incorrectly identified the version as v2.9.29 in its header, didn't it?"
 
-**Quote source:** Historic — was true at v2.9.31; closed in v2.9.32 with the `npm run test:version-refs` regression gate.
+**Quote source:** Historic — was true at v2.9.31; closed in v2.9.33 with the `npm run test:version-refs` regression gate.
 
-**Response.** Yes, the v2.9.31 release contained a documentation-drift bug — the DAUBERT.md header was not bumped from v2.9.29 to v2.9.31 as part of the release sweep. That bug was identified by a third-party adversarial audit at v2.9.31 and closed in v2.9.32 with two changes: first, the headers were bumped to current; second, a machine-enforced regression gate (`npm run test:version-refs`) now scans every documentation surface against `ENGINE_VERSION` at every commit and fails the build if any current-state reference points at a non-current version. The drift cannot recur in this form on v2.9.32 or later.
+**Response.** Yes, the v2.9.31 release contained a documentation-drift bug — the DAUBERT.md header was not bumped from v2.9.29 to v2.9.31 as part of the release sweep. That bug was identified by a third-party adversarial audit at v2.9.31 and closed in v2.9.33 with two changes: first, the headers were bumped to current; second, a machine-enforced regression gate (`npm run test:version-refs`) now scans every documentation surface against `ENGINE_VERSION` at every commit and fails the build if any current-state reference points at a non-current version. The drift cannot recur in this form on v2.9.33 or later.
 
-**Concession to make.** "Version-drift in documentation is a legitimate concern under FRE 702 — the disclosure must match the engine being offered. Prior versions had drift; v2.9.32 closed it with a tested regression gate. The engine is now versioned, and the disclosure documents which specific tag is being offered."
+**Concession to make.** "Version-drift in documentation is a legitimate concern under FRE 702 — the disclosure must match the engine being offered. Prior versions had drift; v2.9.33 closed it with a tested regression gate. The engine is now versioned, and the disclosure documents which specific tag is being offered."
 
 ---
 
@@ -199,4 +199,4 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.32. Revisions are tracked in [`CHANGELOG.md`](../CHANGELOG.md). This document is **internal analyst material**; the public Daubert disclosure surface is [`DAUBERT.md`](../DAUBERT.md), and the verification chain is [`VERIFY_RELEASE.md`](../VERIFY_RELEASE.md) + the matching [`release-evidence/v<TAG>/`](../release-evidence/) packet.
+Aligned to `cpm-engine` v2.9.33. Revisions are tracked in [`CHANGELOG.md`](../CHANGELOG.md). This document is **internal analyst material**; the public Daubert disclosure surface is [`DAUBERT.md`](../DAUBERT.md), and the verification chain is [`VERIFY_RELEASE.md`](../VERIFY_RELEASE.md) + the matching [`release-evidence/v<TAG>/`](../release-evidence/) packet.

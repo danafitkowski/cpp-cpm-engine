@@ -1,4 +1,4 @@
-# Daubert / FRE 702 Disclosure — `cpm-engine` v2.9.32
+# Daubert / FRE 702 Disclosure — `cpm-engine` v2.9.33
 
 This is a formal disclosure for the engine itself, modeled on the structured output of `buildDaubertDisclosure()`. It is intended for use as a starting point in expert-witness exhibits and FRCP 26(a)(2)(B) reports under the *Daubert v. Merrell Dow Pharmaceuticals* (1993) framework as codified in Federal Rule of Evidence 702 (Dec 1, 2023 amendment), and is forward-compatible with proposed FRE 707.
 
@@ -31,21 +31,21 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes (TFM/LPM/MFP with divergence), kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction default holiday rule sets (66 jurisdiction codes, framework-aligned per [`docs/jurisdictions.md`](docs/jurisdictions.md); analysts must verify currency against the operative statute for forensic use), P6 primary + secondary constraints, TT_Hammock two-pass with full SS/FF/SF semantics, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, dateToNum 2-digit guard, Round 6 strong-assertion strengthening, Round 7 full hammock SS/FF/SF semantics, Round 8 R8A engine math fix wave, Round 9 v2.9.12 engine math fix wave, v2.9.22 audit HIGH wave (10 items: rel-trim, strict parse, typed input, getHolidays year-clamp, etc.), v2.9.23 small-batch wave (16 items: dedup, codepoint cmp, target_drtn WARN, etc.), v2.9.26 provenance + citation polish, v2.9.27 paired JS+Python fixes (R6 completed-succ skip, R12 data_date snap, R21 Python MonFri fast path, R9 tf_working_days backport, F24 ff/ff_working_days backport, A12 hash hardenings, R10 project_calendar fallback, R6 MS_Start widen WARN). | **1,112 / 1,112 passing** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes (TFM/LPM/MFP with divergence), kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction default holiday rule sets (66 jurisdiction codes, framework-aligned per [`docs/jurisdictions.md`](docs/jurisdictions.md); analysts must verify currency against the operative statute for forensic use), P6 primary + secondary constraints, TT_Hammock two-pass with full SS/FF/SF semantics, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, dateToNum 2-digit guard, Round 6 strong-assertion strengthening, Round 7 full hammock SS/FF/SF semantics, Round 8 R8A engine math fix wave, Round 9 v2.9.12 engine math fix wave, v2.9.22 audit HIGH wave (10 items: rel-trim, strict parse, typed input, getHolidays year-clamp, etc.), v2.9.23 small-batch wave (16 items: dedup, codepoint cmp, target_drtn WARN, etc.), v2.9.26 provenance + citation polish, v2.9.27 paired JS+Python fixes (R6 completed-succ skip, R12 data_date snap, R21 Python MonFri fast path, R9 tf_working_days backport, F24 ff/ff_working_days backport, A12 hash hardenings, R10 project_calendar fallback, R6 MS_Start widen WARN). | **1,128 / 1,128 passing** |
 | Cross-validation suite     | `cpm-engine.crossval.js` — 43 fixtures × 747 checks, JS engine vs Python `compute_cpm` reference. Severity-level alert parity asserted on the enumerated comparison surface (forward/backward pass dates ES/EF/LS/LF, Kahn topo order, Tarjan SCC, critical-path codes, alert counts and severity, FF/SF working-day arithmetic, TF, FF, FF working days). v2.9.27 expanded crossval coverage by backporting tf_working_days, ff, and ff_working_days fields to Python (previously documented JS-only gaps in F24). Bayesian and kinematic surfaces are JS-only and **explicitly excluded** from the bit-identical claim — see §11. | **747 / 747 bit-identical across enumerated CPM comparison fields** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python                                               | **0 / 282 mismatches** |
-| Branch + statement coverage | `c8` instrumentation over `cpm-engine.js` exercised by the 1,112-test unit suite. Reported as statement / branch / function / line coverage on every release; see §2.1 for the v2.9.30 baseline and the disclosed uncovered-line cluster. | **93.15% stmts / 82.29% branches / 93.51% funcs / 93.15% lines** |
+| Branch + statement coverage | `c8` instrumentation over `cpm-engine.js` exercised by the 1,128-test unit suite. Reported as statement / branch / function / line coverage on every release; see §2.1 for the v2.9.30 baseline and the disclosed uncovered-line cluster. | **93.15% stmts / 82.29% branches / 93.51% funcs / 93.15% lines** |
 | Public-API surfaces        | Kinematic delay dynamics (velocity / acceleration / jerk; pre-publication, JS-only), topology fingerprint hash (canonicalized topology under hashed-field set; not a forensic-equivalence statement — see §11), Daubert / FRE 702 disclosure wrapper, Bayesian update with hierarchical pooling (pre-publication, JS-only). | All exposed via public API + tests |
 
 Performance benchmarks (Node 18, M1 Mac):
 
-- 1,112 unit tests
+- 1,128 unit tests
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
-### §2.1 Test Coverage (v2.9.32 baseline)
+### §2.1 Test Coverage (v2.9.33 baseline)
 
-Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js` exercised by the 1,112-test unit suite, captured on every release via `npm run coverage`. Reported numbers are not editorial — they are emitted by the test runner.
+Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js` exercised by the 1,128-test unit suite, captured on every release via `npm run coverage`. Reported numbers are not editorial — they are emitted by the test runner.
 
 | Coverage Surface | Count | Pct |
 |---|---|---|
@@ -61,7 +61,7 @@ Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js`
 - Section L Daubert-renderer fallback branches for malformed `disclosure` input (intentional defensive code)
 - Holiday-rule edge cases for jurisdictions with rare observance variants (e.g., DST-cross-boundary holidays); the rule-set is correct, the edge-case branches are rarely hit
 
-The 17.61% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; current baseline v2.9.32** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
+The 17.61% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; current baseline v2.9.33** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
 
 **Reproduce locally:**
 
@@ -72,7 +72,7 @@ npm install --no-save  # only pulls c8 devDep; runtime is still zero-dep
 npm run coverage
 ```
 
-The output should match the v2.9.32 baseline within rounding. Drift in either direction documents itself.
+The output should match the v2.9.33 baseline within rounding. Drift in either direction documents itself.
 
 ---
 
@@ -136,11 +136,11 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 **Cross-validation reports 747 / 747 = 0% observed deviation across 43 fixtures on the enumerated CPM comparison surface (forward/backward pass dates, Kahn topo order, Tarjan SCC, FF/SF working-day arithmetic, TF, FF, FF working days, alert counts and severity). Bayesian and kinematic surfaces are JS-only and excluded — see §11.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
 
-This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.32. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
+This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.33. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
 
 Performance characteristics:
 
-- 1,112 unit tests run on Node 18.
+- 1,128 unit tests run on Node 18.
 - 5,000-node linear chain Tarjan SCC in **~8 ms**.
 - A 25,000-activity Mon-Fri schedule (full forward + backward pass) runs in **~1.6 s** after the v2.1-C1 / v2.1-C2 optimizations.
 
@@ -149,7 +149,7 @@ Performance characteristics:
 1. **Strict mode** (`computeCPM`) — throws on degenerate input. Use this for high-stakes forensic runs where an analyst must see and correct the input before proceeding.
 2. **Salvage mode** (`computeCPMSalvaging`) — logs to `result.salvage_log` and continues with documented heuristics. Use this for triage of corrupt or hand-edited XERs.
 
-**No silent wrong-answer paths exist after v2.1.0.** Every degenerate input either throws a labeled exception or appears in the salvage log.
+**No known silent wrong-answer paths remain on the disclosed validation surface after v2.1.0.** Every degenerate input either throws a labeled exception or appears in the salvage log. The 1,128-test unit suite, the 747-fixture JS↔Python crossval, and the 82.39% branch-coverage instrumentation are the surface on which this claim is observed; paths outside that surface are not warranted.
 
 **Caveat — input uncertainty.** The engine's observed error rate is the rate at which the engine matches its disclosed validation suite, not the rate at which the analyst's inputs reflect reality. Activity durations supplied by the analyst, calendar definitions, relationship logic — these all carry uncertainty that the engine does not (and cannot) characterize. The Daubert error-rate prong is **addressed** at the *computational* layer by this disclosure; the *epistemic* error-rate (how well the schedule represents reality) remains the analyst's responsibility, and the trier of fact decides admissibility.
 
@@ -176,7 +176,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.32',                   // Synchronized with package.json (bump per release)
+    engine_version: '2.9.33',                   // Synchronized with package.json (bump per release)
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -234,7 +234,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 1,112 unit tests + 747 cross-validation checks across 43 fixtures + citation regression + version-drift regression gate = 1,859 verifications. Or `npm run verify` for the full attestation-witness flow.
+2. Run `npm run test:all` to reproduce the 1,128 unit tests + 747 cross-validation checks across 43 fixtures + citation regression + truncation regression + version-drift regression gate = 1,875 verifications. Or `npm run verify` for the full attestation-witness flow (which now invokes the same five gates and records each in the witness JSON).
 3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
 4. Inspect the source — it is intentionally readable and well-commented (6,137 lines including narrative comments).
 
@@ -243,8 +243,8 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.32`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-23, refreshed for v2.9.31 forensic strict-mode (court-grade run gate) — disclosure hygiene + docs sweep. FRE 702 (Dec 1, 2023 amendment) leads as the operative rule; FRE 707 demoted to forward-compatibility note. `bit-identical` claim explicitly field-scoped to the enumerated CPM comparison surface. Topology-hash language scoped from a schedule-equivalence claim to a hashed-field-set canonicalized-topology signal. "Industry-first features" row removed from §2. Engine math byte-identical to v2.9.27 by design — this is a docs + disclosure-defaults release. Prior milestones preserved: v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; secondary-constraint surface; Section D MC-constraint enforcement; ALAP backward-pass tightening; Python reference constraint backport; Round 6 hardening; Round 7 full hammock semantics with four axis-specific transitive walkers; Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
+`engine_version: 2.9.33`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-24, refreshed for v2.9.33 audit-response-pass-2. v2.9.33 fixes the fatal-tier audit findings v2.9.33 still left open (VERIFY_RELEASE.md test-count contradictions, missing release-evidence packets, SHA-sidecar wording, attestation script not wiring the new gates) plus the medium-tier residuals (jurisdictions bottom guarantee section, "no silent wrong-answer paths" absolute language, dead-context test strengthening, structured override fields with backward compat, README competitor-table removal, machine-readable SOP-checklist binding). Prior milestones preserved: v2.9.33 audit-response wave + version-drift regression gate + computeCPMSalvaging strict-mode refusal; v2.9.31 Section Q Forensic Strict Mode public API + 33 strict-mode unit tests; v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; v2.9.10 Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
 
 ---
 
@@ -314,7 +314,7 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Hammock-cycle topology emits `{severity:'ALERT', context:'hammock-cycle'}`. Hammock negative-span emits `{severity:'ALERT', context:'hammock-negative-span'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.32'` to confirm the constraint module version.
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.33'` to confirm the constraint module version.
 
 **v2.9.12 — Round 9 engine math fix wave.** The audit memo identified ~30 substantive math defects across constraint handling, calendar arithmetic, in-progress + actuals, and JS/Python parity. T1.1 added MS_Start hard-pin on backward LF clamp (was JS+Python silent gap). T1.2-T1.3 emit `constraint-noop` WARN and suppress ES-side constraint clamps when an `actual_start` is present (AACE 29R-03 §4.3 immutability — both engines). T1.4 added Section D actual_start pinning with one-time `actual-start-not-anchored` WARN when `projectStart` is missing. T1.5 surfaces TT_LOE/TT_WBS/completed/zero-remaining drops + dangling-relationship drops + non-finite-lag rejections as INFO/ALERT alerts. T1.6 emits `constraint-unrecognized` / `constraint-incomplete` WARN on unknown tokens / missing dates. T1.7 added `CS_MANSTART` / `CS_MANFINISH` aliases. T1.8-T1.10 added Section D SNLT/FNLT/MS_Start violated+applied alerts symmetric with Section C. T2.11 rewrote Free Float on the binding-link's calendar so coincident lag-walked-forward pairs produce 0 slack. T2.12 made `_countWorkDaysBetween` signed (preserves negative-float forensic signal). T2.13 removed the `Math.max(0, ...)` FF clamp. T2.14 added `dateToNum` rollover guard (Feb 30 → 0 instead of silent rewrite to Mar 2). T2.15 rejects non-finite `lag_hr_cnt` from parseXER. T2.16 emits `invalid-calendar-falling-back` WARN when work_days is empty/invalid. T2.17 updated SUB_DAY_LAG_ROUNDED message to disclose V8 Math.round direction-bias. T3.18 added `remaining_duration` for P6 retained-logic EF anchoring. T3.19 pins LS=ES on backward pass when actual_start is present (in-progress, both engines). T3.20 guards `EF >= ES` in Section C EF-side helpers. T3.21 enumerates every unstarted predecessor + catches premature-start OoS. T3.22 emits `hammock-orphan` ALERT when no anchors resolve. T3.23 adds `duration_working_days` to hammocks. T3.24 emits `unrecognized-task-type` WARN. T4.25-T4.26 backport R8A-1 (MISSING_ACTUAL_START ES derivation) and ALAP-secondary-slot guard to the Python reference, rotating the SHA-256 pin. T4.27 was already in place on the JS side from T1.3.
 
@@ -462,7 +462,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 
 Strict mode shipped with 33 dedicated unit tests in v2.9.31, covering: API surface (8 tests); clean input pass-through; convenience wrapper; throw on each fatal context family; override with valid rationale; override with empty / whitespace / non-string rationale (each throws); unrelated override key (ignored); runCPM strict-mode refusal; default-off behavior; truthy-not-true non-activation. See `cpm-engine.test.js` SECTION R-v2.9.31 (the section anchor in the test file preserves the release that introduced these tests).
 
-Those 33 strict-mode tests are still part of the engine's unit-test suite at the current v2.9.32 baseline (1,104 total tests including strict-mode coverage).
+Those 33 strict-mode tests are still part of the engine's unit-test suite at the current v2.9.33 baseline (1,104 total tests including strict-mode coverage).
 
 ---
 
