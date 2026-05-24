@@ -1,6 +1,6 @@
 {
   "name": "cpp-cpm-engine",
-  "version": "2.9.29",
+  "version": "2.9.30",
   "description": "Forensically-defensible CPM engine — AACE-canonical, Daubert-disclosed, bit-identical JS-Python parity.",
   "main": "cpm-engine.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "test:truncation": "node tests/no-truncation.test.js",
     "crossval": "node cpm-engine.crossval.js",
     "test:all": "npm test && npm run crossval && npm run test:cites && npm run test:truncation",
+    "coverage": "c8 --reporter=text --reporter=json-summary --reporter=html --include=cpm-engine.js npm test",
     "verify": "node scripts/attestation.js",
     "attest": "node scripts/attestation.js --silent --output attestations/latest.json"
   },
@@ -48,6 +49,7 @@
     "LICENSE",
     "README.md",
     "DAUBERT.md",
+    "VERIFY_RELEASE.md",
     "METHODOLOGY.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -57,5 +59,8 @@
     "tests/",
     "scripts/",
     "attestations/README.md"
-  ]
+  ],
+  "devDependencies": {
+    "c8": "^11.0.0"
+  }
 }

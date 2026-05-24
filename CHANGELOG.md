@@ -12,6 +12,126 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.30 — 2026-05-23 — Daubert verification packaging + coverage + calendar citations
+
+Third pass on the adversarial-audit response. ChatGPT's third-pass review
+declared the engine "defensible as an open-source CPM calculation engine"
+and laid out ten level-up items beyond the in-engine fixes already in
+v2.9.27 / v2.9.28 / v2.9.29. v2.9.30 closes the four items shippable
+without external action (verification packaging, coverage, calendar
+citations, language discipline). The remaining six are tracked as
+analyst / project-management workstreams outside the engine repo.
+
+### Added — verification packaging
+
+- **`VERIFY_RELEASE.md`** — top-level forensic verification packet. Four-
+  layer integrity chain documented end to end: (1) source-code SHA-256
+  hashing, (2) Sigstore-signed witness with `gh attestation verify`
+  exact commands and expected output, (3) Rekor transparency-log lookup,
+  (4) one-command `npm run verify` reproduction with expected verdict.
+  Includes the v2.9.30 SHA manifest (engine `30c633e2...50c7ee94`,
+  Python reference `50ddea54...e80d8d7`), test/crossval/coverage counts,
+  citation template for expert reports, and an explicit "what this packet
+  does not claim" section. Designed to be cited as an exhibit in FRCP
+  26(a)(2)(B) reports alongside DAUBERT.md.
+
+### Added — coverage tooling and reporting
+
+- **`c8` devDependency + `npm run coverage` script.** Runtime remains
+  zero-dep; `c8` is a development-only tool for instrumenting the
+  unit-test suite. The coverage script emits text + json-summary + HTML
+  reports for stmt/branch/function/line coverage over `cpm-engine.js`.
+- **DAUBERT.md §2.1 Test Coverage section.** Reports the v2.9.30 baseline
+  with line/statement/branch/function percentages, names the uncovered
+  clusters (salvage-mode defensive paths, Bayesian/kinematic CI edge
+  cases, Section L Daubert-renderer fallback branches, rare-observance
+  holiday edges), and ties branch-coverage expansion to the v3.0
+  `forensic_strict` mode roadmap. **Coverage v2.9.30:** 93.15% stmts,
+  82.29% branches, 93.51% funcs, 93.15% lines.
+- **README.md coverage badge.** New shield: `coverage: 93% stmts / 82% branches`.
+
+### Added — per-jurisdiction calendar reference
+
+- **`docs/jurisdictions.md`** — full per-jurisdiction reference table for
+  the 66 default holiday rule sets. Federal jurisdictions (CA-FED,
+  US-FED) carry verified authoritative citations: *Canada Labour Code*
+  R.S.C. 1985 c. L-2 Part III, and 5 U.S.C. § 6103. Provincial Canadian
+  and US-state rule sets list framework-citation pointers (Employment
+  Standards Act / state code) with an explicit "verify against current
+  statute" caveat. Includes forensic-use guidance: state calendar source,
+  override defaults for contract calendars, verify against operative
+  statute for the analysis year, document calendar selection in the
+  manifest.
+- **Relabeling.** README §4 calendar bullet and the competitor-comparison
+  table now read "66 default holiday rule sets … framework-aligned
+  defaults, not legally certified". DAUBERT.md §2 unit-test row updated
+  to match. The overclaim "legally certified calendars" was preemptively
+  scoped — the engine repo did not previously contain that phrasing, but
+  the level of disclosure was insufficient for forensic use.
+
+### Changed — language discipline
+
+- **README.md.** "The forensically-defensible CPM engine" → "An
+  open-source CPM engine with AACE-aligned methodology and a published
+  Daubert disclosure". "competitive moat" → "what carries a forensic
+  schedule analysis is the workflow, the methodology discipline, and the
+  Daubert disclosure posture". Citation framing softened from
+  "forensically-defensible critical-path-method engine" → "open-source
+  critical-path-method engine with AACE-canonical method labels and a
+  published Daubert disclosure". `Bit-identical between JavaScript and
+  Python` headline now carries the scoping clause: `JS/Python parity
+  across 1,071 unit tests + 747 cross-validation checks on the enumerated
+  CPM comparison surface`.
+- **DAUBERT.md.** §E heading "Methodology status flags for industry-first
+  features" → "Methodology status flags for pre-publication and JS-only
+  public-API surfaces". (Matches §2 "Public-API surfaces" row already
+  introduced in v2.9.28.)
+
+### Bumped
+
+- `ENGINE_VERSION`: 2.9.29 → 2.9.30 (cpm-engine.js + package.json + 4
+  test fixtures + sample manifest examples in DAUBERT.md / README.md /
+  CHANGELOG.md / VERIFY_RELEASE.md).
+
+### Tests
+
+- 1,071 / 1,071 unit tests passing
+- 747 / 747 crossval across 43 fixtures bit-identical
+- Citation regression PASS
+- `npm run verify` PASS, witness regenerated
+- **`npm run coverage`** new: 93.15% stmts / 82.29% branches / 93.51% funcs
+
+### Engine math
+
+Byte-identical to v2.9.27 / v2.9.28 / v2.9.29 by design. This is a
+verification-packaging + tooling + docs release.
+
+### Not yet closed (tracked, requires external action)
+
+These ChatGPT third-pass items are not shippable from inside the engine
+repo and are tracked in the v3.0 / Daubert-roadmap workstream:
+
+- **Independent third-party reproduction memo** — biggest single
+  credibility step beyond Layers 1-3 of `VERIFY_RELEASE.md`. Requires
+  outreach to a non-CPP scheduler / programmer / academic for a signed
+  Layer 4 attestation.
+- **Oracle P6 comparison evidence matrix.** Requires P6 access to capture
+  native dates/float on a representative case suite (FS/SS/FF/SF/lags/
+  constraints/multi-calendar/OoS/in-progress/negative-float). Roadmap-
+  tagged for the v3.0 release wave.
+- **Anonymized XER corpus (10-20).** Requires source-XER decisions
+  (synthetic generation vs. real-XER sanitization with anonymization).
+- **Strict forensic-run mode (`opts.forensic_strict: true`).** Real
+  engine API surface. Deliberate v3.0 / v2.10.0 release; not a docs-
+  patch item. Tracked at DAUBERT.md §10.
+- **Skills-suite per-skill manifest / audit trail.** Separate workstream
+  from the engine repo — applies to claim-workbench, forensic-delay-
+  analysis, claims-preparation, etc.
+- **Expert SOP.** Analyst process document (intake → hash capture →
+  strict-mode run → signoff). Not engine code.
+
+---
+
 ## v2.9.29 — 2026-05-23 — Adversarial-audit second-pass residual cleanup
 
 Same-day follow-on to v2.9.28. The v2.9.28 sweep closed the headline

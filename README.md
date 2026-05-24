@@ -1,15 +1,16 @@
 # cpm-engine
 
-[![npm version](https://img.shields.io/badge/npm-v2.9.29-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
+[![npm version](https://img.shields.io/badge/npm-v2.9.30-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![tests: 1071 passing](https://img.shields.io/badge/tests-1071%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: 747/747](https://img.shields.io/badge/JS%E2%86%94Python-747%2F747-brightgreen.svg)](cpm-engine.crossval.js)
+[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
-The forensically-defensible CPM engine.
-**AACE-canonical. Daubert-disclosed. Bit-identical between JavaScript and Python.**
+An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
+**Open source. AACE-aligned. Daubert-disclosed. JS/Python parity across 1,071 unit tests + 747 cross-validation checks on the enumerated CPM comparison surface (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
 
 Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a forensic-scheduling consultancy.
 
@@ -42,7 +43,7 @@ const result = E.computeCPM(
 
 console.log('Project finish:', result.projectFinish);     // 2026-01-21
 console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
-console.log('Engine version:', result.manifest.engine_version); // 2.9.29
+console.log('Engine version:', result.manifest.engine_version); // 2.9.30
 ```
 
 That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
@@ -60,10 +61,10 @@ That's it. Forward pass, backward pass, total float, free float, calendar arithm
 | Topology fingerprint hash (SHA-256, copy-detection)    | yes | no  | no  | no  |
 | Kinematic delay dynamics (velocity / accel / jerk)     | yes | no  | no  | no  |
 | Bayesian update with hierarchical pooling              | yes | no  | no  | no  |
-| Multi-jurisdiction holiday calendars (66 jurisdictions)| yes | partial | partial | partial |
+| 66 default holiday rule sets (multi-jurisdiction; framework-aligned defaults, not legally certified — see [`docs/jurisdictions.md`](docs/jurisdictions.md))| yes | partial | partial | partial |
 | MIT licensed                                           | yes | no  | no  | no  |
 
-The engine math is a commodity. The competitive moat in forensic scheduling is the **workflow, the discipline, and the Daubert posture** — not the forward pass. Critical Path Partners open-sources the engine so any academic, any solo forensic, any contractor's internal scheduler can build on a defensible foundation.
+The engine math is a commodity. What carries a forensic schedule analysis is the **workflow, the methodology discipline, and the Daubert disclosure posture** — not the forward pass itself. Critical Path Partners open-sources the engine so any academic, any solo forensic scheduler, any contractor's internal scheduler can build on a transparent, citable foundation.
 
 ---
 
@@ -74,7 +75,7 @@ The engine math is a commodity. The competitive moat in forensic scheduling is t
 - **Daubert disclosures** — FRCP 26(a)(2)(B) reports, FRE 702/707 four-prong methodology statements
 - **Schedule risk primitives** — Bayesian posterior estimation (`computeBayesianUpdate`); per-iteration CPM (`runCPM`) suitable as an inner loop for Monte Carlo wrappers built on top of this engine. Full Monte Carlo / QRAMM scoring lives in the CPP forensic skill suite (`schedule-risk-analysis`), built atop this primitive.
 - **Schedule health** — DCMA-14 assessment, A-F auto-grade, baseline-vs-current diff
-- **Multi-jurisdiction calendars** — 66 jurisdictions (CA-FED + 13 provinces, US-FED + 50 states + DC)
+- **Multi-jurisdiction calendars** — 66 default holiday rule sets (CA-FED + 13 provinces/territories, US-FED + 50 states + DC). These are framework-aligned defaults sufficient for general-purpose date math — see [`docs/jurisdictions.md`](docs/jurisdictions.md) for the per-jurisdiction reference table and forensic-use verification guidance. They are **not** legally certified calendars; for forensic use, override with the project's contract calendar via `opts.calendar`.
 
 ---
 
@@ -100,7 +101,7 @@ Every computation emits a manifest:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.29',
+    engine_version: '2.9.30',
     method_id: 'computeCPM',
     activity_count: 3,
     relationship_count: 2,
@@ -131,7 +132,7 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 43 fixtures × 747 checks. 0 deviations as of v2.9.29.
+# 43 fixtures × 747 checks. 0 deviations as of v2.9.30.
 ```
 
 Plus a 282-activity real-XER stress test reports 0 mismatches.
@@ -184,7 +185,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: A forensically-defensible critical-path-method engine with AACE-canonical method labels and Daubert disclosure.* Critical Path Partners. Version 2.9.29. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.30. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
@@ -206,7 +207,7 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.29.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.30.
 
 ---
 
