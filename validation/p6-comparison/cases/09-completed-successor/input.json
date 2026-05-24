@@ -1,0 +1,26 @@
+{
+  "activities": [
+    {
+      "code": "B",
+      "duration_days": 11,
+      "actual_start": "2025-12-15",
+      "actual_finish": "2025-12-30"
+    },
+    {
+      "code": "A",
+      "duration_days": 5
+    }
+  ],
+  "relationships": [
+    {
+      "from_code": "A",
+      "to_code": "B",
+      "type": "FS",
+      "lag_days": 0
+    }
+  ],
+  "opts": {
+    "dataDate": "2026-01-05",
+    "projectStart": "2025-12-01"
+  }
+}

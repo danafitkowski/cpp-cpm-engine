@@ -1,0 +1,130 @@
+{
+  "nodes": {
+    "A": {
+      "code": "A",
+      "name": "",
+      "duration_days": 10,
+      "es": 2203,
+      "ef": 2213,
+      "ls": 2189,
+      "lf": 2199,
+      "tf": -14,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "",
+      "actual_finish": "",
+      "clndr_id": "",
+      "constraint": null,
+      "constraint2": null,
+      "driving_predecessor": null,
+      "es_date": "2026-01-12",
+      "ef_date": "2026-01-22",
+      "ls_date": "2025-12-29",
+      "lf_date": "2026-01-08",
+      "tf_working_days": -14,
+      "ff": -14,
+      "ff_working_days": -14
+    },
+    "B": {
+      "code": "B",
+      "name": "",
+      "duration_days": 5,
+      "remaining_duration": 3,
+      "es": 2199,
+      "ef": 2206,
+      "ls": 2199,
+      "lf": 2206,
+      "tf": 0,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "2026-01-08",
+      "actual_finish": "",
+      "clndr_id": "",
+      "constraint": null,
+      "constraint2": null,
+      "driving_predecessor": {
+        "code": "A",
+        "type": "FS",
+        "lag_days": 0
+      },
+      "es_date": "2026-01-08",
+      "ef_date": "2026-01-15",
+      "ls_date": "2026-01-08",
+      "lf_date": "2026-01-15",
+      "tf_working_days": 0,
+      "ff": 0,
+      "ff_working_days": 0
+    }
+  },
+  "projectFinishNum": 2213,
+  "projectFinish": "2026-01-22",
+  "criticalCodes": {},
+  "criticalCodesArray": [
+    "A",
+    "B"
+  ],
+  "topoOrder": [
+    "A",
+    "B"
+  ],
+  "topo_order": [
+    "A",
+    "B"
+  ],
+  "alerts": [
+    {
+      "severity": "ALERT",
+      "context": "forward A.EF",
+      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "FS lag A->B",
+      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "forward B.EF (retained-logic rem=3)",
+      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "init-LS A",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "init-LS B",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward B.LS",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward FS lag A->B",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward A.LS",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "out-of-sequence",
+      "message": "Activity B is in progress but 1 predecessor(s) have no actual_start (retained-logic anomaly): A"
+    }
+  ],
+  "manifest": {
+    "engine_version": "2.9.31",
+    "method_id": "computeCPM",
+    "activity_count": 2,
+    "relationship_count": 1,
+    "data_date": "2026-01-12",
+    "calendar_count": 0,
+    "computed_at": "2026-05-24T03:34:37.956Z"
+  }
+}

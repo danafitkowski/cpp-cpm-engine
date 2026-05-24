@@ -1,0 +1,42 @@
+{
+  "activities": [
+    {
+      "code": "A",
+      "duration_days": 10,
+      "calendar": "MONFRI"
+    },
+    {
+      "code": "B",
+      "duration_days": 10,
+      "calendar": "SIXDAY"
+    }
+  ],
+  "relationships": [],
+  "opts": {
+    "dataDate": "2026-01-05",
+    "projectStart": "2026-01-05",
+    "cal_map": {
+      "MONFRI": {
+        "work_days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "holidays": []
+      },
+      "SIXDAY": {
+        "work_days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "holidays": []
+      }
+    }
+  }
+}

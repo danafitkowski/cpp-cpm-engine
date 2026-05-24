@@ -1,0 +1,28 @@
+{
+  "activities": [
+    {
+      "code": "A",
+      "duration_days": 5,
+      "constraint_type": "CS_MSOB",
+      "constraint_date": "2026-01-20"
+    },
+    {
+      "code": "B",
+      "duration_days": 5,
+      "constraint_type": "CS_MEOB",
+      "constraint_date": "2026-02-13"
+    }
+  ],
+  "relationships": [
+    {
+      "from_code": "A",
+      "to_code": "B",
+      "type": "FS",
+      "lag_days": 0
+    }
+  ],
+  "opts": {
+    "dataDate": "2026-01-05",
+    "projectStart": "2026-01-05"
+  }
+}

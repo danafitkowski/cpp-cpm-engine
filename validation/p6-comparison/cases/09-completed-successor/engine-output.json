@@ -1,0 +1,108 @@
+{
+  "nodes": {
+    "B": {
+      "code": "B",
+      "name": "",
+      "duration_days": 11,
+      "es": 2175,
+      "ef": 2190,
+      "ls": 2175,
+      "lf": 2190,
+      "tf": 0,
+      "is_complete": true,
+      "is_fragnet": false,
+      "actual_start": "2025-12-15",
+      "actual_finish": "2025-12-30",
+      "clndr_id": "",
+      "constraint": null,
+      "constraint2": null,
+      "es_date": "2025-12-15",
+      "ef_date": "2025-12-30",
+      "ls_date": "2025-12-15",
+      "lf_date": "2025-12-30",
+      "tf_working_days": 0,
+      "ff": 0,
+      "ff_working_days": 0
+    },
+    "A": {
+      "code": "A",
+      "name": "",
+      "duration_days": 5,
+      "es": 2196,
+      "ef": 2201,
+      "ls": 2196,
+      "lf": 2201,
+      "tf": 0,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "",
+      "actual_finish": "",
+      "clndr_id": "",
+      "constraint": null,
+      "constraint2": null,
+      "driving_predecessor": null,
+      "es_date": "2026-01-05",
+      "ef_date": "2026-01-10",
+      "ls_date": "2026-01-05",
+      "lf_date": "2026-01-10",
+      "tf_working_days": 0,
+      "ff": -26,
+      "ff_working_days": -26
+    }
+  },
+  "projectFinishNum": 2201,
+  "projectFinish": "2026-01-10",
+  "criticalCodes": {},
+  "criticalCodesArray": [
+    "A"
+  ],
+  "topoOrder": [
+    "A",
+    "B"
+  ],
+  "topo_order": [
+    "A",
+    "B"
+  ],
+  "alerts": [
+    {
+      "severity": "ALERT",
+      "context": "forward A.EF",
+      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "init-LS A",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "init-LS B",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "INFO",
+      "context": "completed-succ-skipped-in-backward",
+      "message": "A: 1 completed successor(s) skipped in backward propagation (retained-logic semantics; completed activities do not pull predecessor LF backward through historical dates)."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward A.LS",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "out-of-sequence",
+      "message": "Activity B is in progress but 1 predecessor(s) have no actual_start (retained-logic anomaly): A"
+    }
+  ],
+  "manifest": {
+    "engine_version": "2.9.31",
+    "method_id": "computeCPM",
+    "activity_count": 2,
+    "relationship_count": 1,
+    "data_date": "2026-01-05",
+    "calendar_count": 0,
+    "computed_at": "2026-05-24T03:34:37.953Z"
+  }
+}

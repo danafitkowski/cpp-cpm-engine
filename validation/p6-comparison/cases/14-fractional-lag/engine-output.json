@@ -1,0 +1,134 @@
+{
+  "nodes": {
+    "A": {
+      "code": "A",
+      "name": "",
+      "duration_days": 5,
+      "es": 2196,
+      "ef": 2201,
+      "ls": 2196,
+      "lf": 2201,
+      "tf": 0,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "",
+      "actual_finish": "",
+      "clndr_id": "",
+      "constraint": null,
+      "constraint2": null,
+      "driving_predecessor": null,
+      "es_date": "2026-01-05",
+      "ef_date": "2026-01-10",
+      "ls_date": "2026-01-05",
+      "lf_date": "2026-01-10",
+      "tf_working_days": 0,
+      "ff": 0,
+      "ff_working_days": 0
+    },
+    "B": {
+      "code": "B",
+      "name": "",
+      "duration_days": 3,
+      "es": 2202,
+      "ef": 2205,
+      "ls": 2202,
+      "lf": 2205,
+      "tf": 0,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "",
+      "actual_finish": "",
+      "clndr_id": "",
+      "constraint": null,
+      "constraint2": null,
+      "driving_predecessor": {
+        "code": "A",
+        "type": "FS",
+        "lag_days": 0.5
+      },
+      "es_date": "2026-01-11",
+      "ef_date": "2026-01-14",
+      "ls_date": "2026-01-11",
+      "lf_date": "2026-01-14",
+      "tf_working_days": 0,
+      "ff": 0,
+      "ff_working_days": 0
+    }
+  },
+  "projectFinishNum": 2205,
+  "projectFinish": "2026-01-14",
+  "criticalCodes": {},
+  "criticalCodesArray": [
+    "A",
+    "B"
+  ],
+  "topoOrder": [
+    "A",
+    "B"
+  ],
+  "topo_order": [
+    "A",
+    "B"
+  ],
+  "alerts": [
+    {
+      "severity": "ALERT",
+      "context": "forward A.EF",
+      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "FS lag A->B",
+      "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 0.5 is fractional; engine rounds to 1 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+    },
+    {
+      "severity": "ALERT",
+      "context": "FS lag A->B",
+      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "forward B.EF",
+      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "init-LS A",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "init-LS B",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward B.LS",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward FS lag A->B",
+      "message": "SUB_DAY_LAG_ROUNDED: lag/duration value 0.5 is fractional; engine rounds to 1 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward FS lag A->B",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "backward A.LS",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    }
+  ],
+  "manifest": {
+    "engine_version": "2.9.31",
+    "method_id": "computeCPM",
+    "activity_count": 2,
+    "relationship_count": 1,
+    "data_date": "2026-01-05",
+    "calendar_count": 0,
+    "computed_at": "2026-05-24T03:34:37.967Z"
+  }
+}
