@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/badge/npm-v2.9.31-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 1071 passing](https://img.shields.io/badge/tests-1071%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![tests: 1104 passing](https://img.shields.io/badge/tests-1104%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: 747/747](https://img.shields.io/badge/JS%E2%86%94Python-747%2F747-brightgreen.svg)](cpm-engine.crossval.js)
 [![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
@@ -10,7 +10,9 @@
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
-**Open source. AACE-aligned. Daubert-disclosed. JS/Python parity across 1,071 unit tests + 747 cross-validation checks on the enumerated CPM comparison surface (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+**Open source. AACE-aligned. Daubert-disclosed. JS/Python parity across 1,104 unit tests + 747 cross-validation checks on the enumerated CPM comparison surface (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+
+Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
 Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a forensic-scheduling consultancy.
 
@@ -213,7 +215,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.31.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,071 unit tests and 747/747 cross-validation checks across 43 fixtures. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,104 unit tests and 747/747 cross-validation checks across 43 fixtures. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

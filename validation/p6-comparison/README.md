@@ -112,4 +112,4 @@ If `generate-cases.js` is run with the engine in a state that produces different
 - It does not claim "P6 is the ground truth." P6 has its own quirks (e.g., progress override default, calendar-rollover behavior, undisclosed sub-day lag handling). The matrix documents agreement and disagreement; it does not adjudicate.
 - It does not extend to the engine's pre-publication public-API surfaces (Bayesian, kinematic, topology-hash). Those are JS-only and not part of the P6 comparison surface; see [DAUBERT.md §11](../../DAUBERT.md).
 
-For the engine's full Daubert posture, see [`../../DAUBERT.md`](../../DAUBERT.md). For the forensic-use SOP, see [`../../FORENSIC_USE_SOP.md`](../../FORENSIC_USE_SOP.md) (forthcoming).
+For the engine's full Daubert posture, see [`../../DAUBERT.md`](../../DAUBERT.md). For the analyst-application discipline (14-step SOP plus checklist) the engine pairs with in court use, see [`../../FORENSIC_USE_SOP.md`](../../FORENSIC_USE_SOP.md).

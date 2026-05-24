@@ -31,7 +31,7 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 | Python reference | `python_reference/cpm.py` |
 | Python reference SHA-256 | `50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7` — also pinned in [`python_reference/cpm.py.sha256`](python_reference/cpm.py.sha256) |
 | Witness JSON (release asset) | `attestations/latest.json` on [the v2.9.30 release page](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.30) |
-| Unit tests | 1,104 / 1,104 passing |
+| Unit tests | 1,071 / 1,071 passing |
 | Cross-validation | 747 / 747 across 43 fixtures, bit-identical on the enumerated CPM comparison surface (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)) |
 | Branch coverage | 82.29% (1,711 / 2,079 branches); see [DAUBERT.md §2.1](DAUBERT.md#21-test-coverage-v2930-baseline) |
 | Statement coverage | 93.15% (7,771 / 8,342 statements) |
@@ -160,7 +160,7 @@ Verdict: PASS
 Witness written to: attestations/latest.json
 ```
 
-**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,104 / 747 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
+**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,071 / 747 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
 
 **Drift documents itself.** Any mismatch — different SHA, different pass count, different verdict — is itself usable evidence. The verifier can publish a witness from their own machine showing the drift; it is the same JSON shape as the proponent's witness.
 

@@ -50,6 +50,7 @@
     "README.md",
     "DAUBERT.md",
     "VERIFY_RELEASE.md",
+    "FORENSIC_USE_SOP.md",
     "METHODOLOGY.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -58,6 +59,8 @@
     "python_reference/",
     "tests/",
     "scripts/",
+    "validation/",
+    "release-evidence/",
     "attestations/README.md"
   ],
   "devDependencies": {
