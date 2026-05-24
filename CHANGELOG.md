@@ -12,6 +12,129 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.31 — 2026-05-23 — Forensic Strict Mode (court-grade run gate)
+
+Closes ChatGPT third-pass directive item #3: "Add a strict forensic run
+mode. Do not let 'court mode' limp through with warnings. For triage,
+warnings are fine. For an expert report, hard stop."
+
+This is the first ChatGPT-list item that adds a public-API surface
+rather than docs / tooling. New: forensic strict mode shipped as a
+court-grade run gate over the existing computeCPM (Section C) engine.
+
+### Added — Section Q: Forensic Strict Mode
+
+New public-API surface in cpm-engine.js:
+
+- `computeCPM(activities, relationships, { forensic_strict: true })` —
+  flag on the existing primary function.
+- `computeCPMForensicStrict(activities, relationships, opts)` —
+  convenience wrapper that forces forensic_strict: true.
+- `StrictForensicViolation` — labeled Error class with `name`,
+  `code: 'STRICT_FORENSIC_VIOLATION'`, `.context`, `.alert`.
+- `FATAL_STRICT_CONTEXTS` — Set of 36 fatal alert contexts grouped by
+  hazard class (calendar/progress-mode, logic integrity, schema/input,
+  constraints, topology hash, progress/actuals, ALAP, hammocks,
+  degenerate).
+- `FATAL_STRICT_MESSAGE_PATTERNS` — message-prefix patterns for alerts
+  with dynamic context fields (e.g. SUB_DAY_LAG_ROUNDED).
+
+### Semantics
+
+When forensic_strict === true, the engine walks `result.alerts` and
+throws StrictForensicViolation on any alert whose context (real or
+virtual via message-pattern) is in the fatal set — UNLESS the analyst
+has provided a written override in `opts.forensic_strict_overrides`:
+
+```js
+const result = E.computeCPMForensicStrict(acts, rels, {
+    dataDate: '2026-01-05',
+    forensic_strict_overrides: {
+        'invalid-calendar-falling-back':
+            'Project uses shop-floor 5x10 calendar declared in Schedule H ' +
+            'cover memo. Engine Mon-Fri fallback matches contract calendar ' +
+            'by construction. Verified by analyst, 2026-05-23.',
+    },
+});
+```
+
+Override discipline:
+- Each override key must match a fatal context (real or virtual).
+  Unrelated keys are ignored.
+- Rationale must be a non-empty string after trimming. Whitespace-only
+  rationales throw. Non-string rationales throw.
+- Override applications are recorded in
+  `result.manifest.forensic_strict_overrides_applied[]` with the full
+  alert and the analyst's rationale.
+
+Strict equality on the flag: only literal `true` enables strict mode
+(string 'true', number 1, truthy objects are all rejected).
+
+### Section D / runCPM is blocked in strict mode
+
+runCPM (Section D, the lightweight 5-day Mon-Fri Monte Carlo engine)
+is intentionally not calendar-aware. Calling it with
+opts.forensic_strict === true throws StrictForensicViolation
+immediately with context 'section-d-ordinal-only'. Section D is not
+appropriate for forensic opinion regardless of input — strict mode
+makes that posture mechanical.
+
+### Tests — 33 new (1,071 -> 1,104 total)
+
+`cpm-engine.test.js` SECTION R-v2.9.31 covers:
+- API surface (8 tests): exports, FATAL_STRICT_CONTEXTS membership,
+  FATAL_STRICT_MESSAGE_PATTERNS shape.
+- Clean input pass-through: manifest.forensic_strict === true,
+  empty overrides_applied array.
+- Convenience wrapper computeCPMForensicStrict.
+- Duplicate-activity-code throws + error.context shape (3 tests).
+- Override with valid rationale: result + manifest + alerts preserved (4).
+- Override with empty string: throws + error message specifies issue (2).
+- Override with whitespace-only: throws.
+- Override with non-string (number): throws.
+- Unrelated override key: ignored, original fatal alert still throws.
+- runCPM strict-mode refusal: throws with section-d-ordinal-only (3).
+- Default off: alert recorded, no throw, manifest unset (2).
+- Truthy-not-true ('true' string): does NOT enable strict mode.
+
+### DAUBERT.md
+
+New `§9 Forensic Strict Mode (shipped v2.9.31)` with full design
+documentation: rationale, API examples, fatal-context taxonomy,
+override discipline, Section D refusal, what strict mode does and
+does not do. §2.1 coverage line updated to reflect strict mode as
+shipped rather than roadmap.
+
+### Bumped — ENGINE_VERSION 2.9.30 -> 2.9.31
+
+cpm-engine.js, package.json, 4 test fixtures, sample manifest
+examples in DAUBERT.md / README.md / VERIFY_RELEASE.md.
+
+### Verification
+
+- 1,104 / 1,104 unit tests
+- 747 / 747 crossval across 43 fixtures
+- Citation regression PASS
+- npm run verify PASS, witness regenerated for v2.9.31
+
+### Engine math
+
+- computeCPM (Section C) byte-identical to v2.9.27 / v2.9.28 / v2.9.29
+  / v2.9.30 by design on the non-strict path. Strict mode is an
+  additive validation gate; existing callers see no behavior change.
+- runCPM (Section D) is unchanged on the non-strict path. Strict
+  mode is a refusal.
+
+### Engine SHA-256 (v2.9.31)
+
+cpm-engine.js: a6b9e8d93f156b4af487082c15e4141236a93f20e9bfa90b57a95521309ac7fe
+python_reference/cpm.py: 50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7
+  (Python reference unchanged — strict mode is JS-side validation;
+   the Python reference engine continues to mirror the non-strict
+   Section C math.)
+
+---
+
 ## v2.9.30 — 2026-05-23 — Daubert verification packaging + coverage + calendar citations
 
 Third pass on the adversarial-audit response. ChatGPT's third-pass review

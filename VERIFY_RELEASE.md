@@ -141,12 +141,12 @@ npm run verify
 
 ```
 === cpm-engine verification ===
-package version:  2.9.30
+package version:  2.9.31
 engine.sha256:    <engine_sha from manifest>
 python_ref.sha256: <python_sha from manifest>
 
 [1/3] unit tests
-  1071 passed, 0 failed
+  1104 passed, 0 failed
 
 [2/3] cross-validation
   Fixtures: 43 passed, 0 failed

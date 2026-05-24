@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.30';
+const ENGINE_VERSION = '2.9.31';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2527,7 +2527,7 @@ function computeCPM(activities, relationships, opts) {
         calendar_count: Object.keys(calMap).length,
         computed_at: new Date().toISOString(),
     };
-    return {
+    const result = {
         nodes,
         projectFinishNum: maxEF,
         projectFinish: numToDate(maxEF),
@@ -2538,6 +2538,13 @@ function computeCPM(activities, relationships, opts) {
         alerts,
         manifest,
     };
+
+    // Section Q — Forensic Strict Mode (court-grade run gate). When
+    // opts.forensic_strict === true, walk the alerts array and throw on
+    // any fatal-context alert that the analyst has not explicitly
+    // overridden with a written rationale. See SECTION Q for the
+    // fatal-context taxonomy.
+    return _applyForensicStrictValidation(result, opts);
 }
 
 // ============================================================================
@@ -3098,6 +3105,25 @@ function _mcTopologicalSort() {
  *   path. Backward-compat: runCPM(true) accepted as logOutput=true.
  */
 function runCPM(opts) {
+    // Section Q — Forensic Strict Mode. runCPM is the lightweight 5-day
+    // Mon-Fri Section D engine designed for Monte Carlo inner loops; it is
+    // intentionally NOT calendar-aware. It is not appropriate for forensic
+    // opinion regardless of input. Throw immediately if a caller asks for
+    // strict-mode treatment via Section D.
+    if (opts && typeof opts === 'object' && opts.forensic_strict === true) {
+        throw new StrictForensicViolation(
+            {
+                severity: 'ALERT',
+                context: 'section-d-ordinal-only',
+                message:
+                    'runCPM (Section D) is the lightweight 5-day Mon-Fri ' +
+                    'engine for Monte Carlo inner loops. It is intentionally ' +
+                    'NOT calendar-aware. Use computeCPM (Section C) — or its ' +
+                    'sugar computeCPMForensicStrict — for forensic opinion.',
+            },
+            'section-d-ordinal-only'
+        );
+    }
     let logOutput = false;
     let projectStart = '';
     let dataDate = '';
@@ -8275,12 +8301,250 @@ function getJurisdictionCalendar(jurisdiction, opts) {
 }
 
 // ============================================================================
+// SECTION Q — Forensic Strict Mode (court-grade run gate)
+// ============================================================================
+//
+// Forensic strict mode is the official "court mode" for the engine. It is
+// intended for contested use — expert witness testimony, FRCP 26(a)(2)(B)
+// reports, EOT entitlement defense — where any silent-fallback path that
+// could change the opinion must surface as a hard failure rather than as
+// a recorded warning.
+//
+// Usage:
+//
+//   const result = E.computeCPM(activities, relationships, {
+//       forensic_strict: true,
+//   });
+//
+// Or via the named convenience wrapper:
+//
+//   const result = E.computeCPMForensicStrict(activities, relationships, opts);
+//
+// In strict mode, any alert whose context is in FATAL_STRICT_CONTEXTS, or
+// whose message begins with one of FATAL_STRICT_MESSAGE_PATTERNS, will
+// throw `StrictForensicViolation` unless the analyst has provided an
+// explicit override:
+//
+//   const result = E.computeCPM(activities, relationships, {
+//       forensic_strict: true,
+//       forensic_strict_overrides: {
+//           'invalid-calendar-falling-back':
+//               'Project uses shop-floor 5x10 calendar declared in Schedule H ' +
+//               'cover memo; intentional engine fallback. Reviewed by analyst.',
+//       },
+//   });
+//
+// Every override requires a non-empty rationale string. Whitespace-only
+// rationales are rejected at validation time. Override applications are
+// recorded in `result.manifest.forensic_strict_overrides_applied[]` so
+// the audit trail is preserved in the result itself.
+//
+// Section D / runCPM is intentionally not calendar-aware (5-day Mon-Fri,
+// hour-based, designed for Monte Carlo inner loops). Calling runCPM with
+// `opts.forensic_strict === true` throws immediately — Section D is not
+// appropriate for forensic opinion regardless of input.
+//
+// computeCPMSalvaging is the inverse posture of strict mode (best-effort
+// triage of corrupt input) and refuses strict mode by design.
+//
+// This section is referenced from DAUBERT.md S10 and from VERIFY_RELEASE.md.
+
+/**
+ * Contexts that are FATAL in forensic strict mode unless explicitly
+ * overridden by the analyst with a written rationale.
+ *
+ * Sourced from the adversarial-audit punch list. Each entry maps to a
+ * disclosed engine behavior that could materially change an opinion if
+ * left as a warning.
+ */
+const FATAL_STRICT_CONTEXTS = new Set([
+    // Calendar / progress-mode hazards
+    'progress-override-not-supported', // P6 progress override is JS retained-logic only; opinion impact possible
+    'invalid-calendar-falling-back',    // calendar empty/invalid → Mon-Fri / ordinal fallback
+    'lag-hours-per-day-fallback',       // hours_per_day missing → 8h fallback for calendar-aware lag conversion
+    // Logic-integrity hazards
+    'dangling-rel',                     // predecessor/successor not in activities array → relationship silently dropped
+    'relationship-dropped',             // relationship dropped after validation
+    'self-loop',                        // activity references itself as predecessor
+    'invalid-rel-type',                 // unrecognized FS/SS/FF/SF token → coerced to FS
+    'cycle-excluded',                   // Tarjan-detected cycle nodes excluded from forward pass
+    // Schema / input hazards
+    'duplicate-activity-code',          // two activities with same code → ambiguous identity
+    'unrecognized-task-type',           // unsupported task_type value
+    'task-dropped',                     // TT_LOE / TT_WBS / completed-zero-remaining dropped from CPM
+    'activity-null',                    // null activity object in input
+    'activity-missing-code',            // activity without code
+    'lag-non-finite',                   // lag_days is NaN/Infinity → coerced
+    'target-drtn-missing',              // target_drtn_hr_cnt missing for in-progress
+    'invalid-date-coerced',             // date string fails parse → coerced or zero
+    'invalid-actual-duration',          // actual_duration_days non-finite
+    // Constraint hazards
+    'constraint-unrecognized',          // unknown CS_* token
+    'constraint-incomplete',            // constraint missing required date
+    'constraint-invalid-date',          // constraint date fails parse
+    'constraint-skipped',               // constraint not applied due to missing projectStart
+    // Hash / topology hazards
+    'COERCED_FIELD_IN_HASH',            // numeric/string code coercion in topology hash inputs
+    // Progress / actuals hazards
+    'actual-start-not-anchored',        // actual_start present but projectStart missing
+    'inverted-actuals',                 // actual_finish before actual_start
+    'completion-data-incomplete',       // remaining_duration without actual_start
+    'remaining-exceeds-duration',       // remaining > original duration
+    'future-actual-finish',             // actual_finish AFTER data_date
+    'post-data-date-actual',            // predecessor actual_start AFTER data_date (retroactive-edit signature)
+    'out-of-sequence',                  // successor started before predecessor (retained-logic anomaly)
+    // ALAP / topology hazards
+    'alap-slide-violates-succ',         // ALAP slide creates stale successor dates
+    // Hammock hazards
+    'hammock-cycle',
+    'hammock-orphan',
+    'hammock-negative-span',
+    'hammocks-skipped-in-section-c',
+    // Empty / degenerate
+    'empty-schedule',                   // no valid activities after filtering
+    'section-d-ordinal-only',           // Section D used where calendar-aware Section C required
+]);
+
+/**
+ * Message-prefix patterns that map to a virtual context for strict-mode
+ * fatal detection. Used where the alert's `context` field is dynamic
+ * (e.g. SUB_DAY_LAG_ROUNDED carries the call-site context like 'forward'
+ * but the message-level type matters for strict mode).
+ */
+const FATAL_STRICT_MESSAGE_PATTERNS = [
+    { prefix: 'SUB_DAY_LAG_ROUNDED:', virtual_context: 'SUB_DAY_LAG_ROUNDED' },
+];
+
+/**
+ * StrictForensicViolation — thrown when a forensic strict-mode run
+ * encounters a fatal alert without a valid override.
+ */
+class StrictForensicViolation extends Error {
+    constructor(alert, virtual_context) {
+        const ctx = virtual_context || (alert && alert.context) || 'unknown';
+        const msg = (alert && alert.message) || '(no message)';
+        super(
+            'Forensic strict mode: fatal alert "' + ctx + '" not overridden. ' +
+            'Either fix the underlying input (preferred) or add an explicit ' +
+            'override to opts.forensic_strict_overrides["' + ctx + '"] with a ' +
+            'written analyst rationale (non-empty string). Alert message: ' + msg
+        );
+        this.name = 'StrictForensicViolation';
+        this.code = 'STRICT_FORENSIC_VIOLATION';
+        this.context = ctx;
+        this.alert = alert;
+    }
+}
+
+/**
+ * Match an alert against the fatal-strict set. Returns the matched
+ * context string (real context or virtual message-pattern context),
+ * or null if the alert is not fatal.
+ */
+function _matchFatalStrictAlert(alert) {
+    if (!alert || typeof alert !== 'object') return null;
+    if (alert.context && FATAL_STRICT_CONTEXTS.has(alert.context)) {
+        return alert.context;
+    }
+    if (typeof alert.message === 'string') {
+        for (let i = 0; i < FATAL_STRICT_MESSAGE_PATTERNS.length; i++) {
+            const p = FATAL_STRICT_MESSAGE_PATTERNS[i];
+            if (alert.message.indexOf(p.prefix) === 0) {
+                return p.virtual_context;
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * _applyForensicStrictValidation(result, opts)
+ *
+ * Walks `result.alerts`. For any alert that matches a fatal-strict
+ * context (real or virtual), either:
+ *   (a) record the analyst's override in result.manifest, OR
+ *   (b) throw StrictForensicViolation.
+ *
+ * Empty / whitespace-only rationales are rejected. The strict-mode
+ * audit trail is added to result.manifest.forensic_strict_overrides_applied.
+ *
+ * Returns the result object (with mutated manifest) on success; throws
+ * on first unoverridden fatal alert.
+ */
+function _applyForensicStrictValidation(result, opts) {
+    if (!opts || opts.forensic_strict !== true) return result;
+    const overrides = (opts && opts.forensic_strict_overrides) || {};
+    const alerts = (result && Array.isArray(result.alerts)) ? result.alerts : [];
+    const applied = [];
+
+    for (let i = 0; i < alerts.length; i++) {
+        const alert = alerts[i];
+        // Defensive guard — alerts array can contain non-alert sentinel
+        // entries (e.g. _sub_day_lag_seen dedup-key map). Skip non-objects
+        // and known dedup-key entries.
+        if (!alert || typeof alert !== 'object') continue;
+        const matched = _matchFatalStrictAlert(alert);
+        if (!matched) continue;
+
+        const override = overrides[matched];
+        // Override must be a non-empty trimmed string
+        if (typeof override === 'string' && override.trim().length > 0) {
+            applied.push({
+                context: matched,
+                rationale: override,
+                alert: alert,
+            });
+            continue;
+        }
+        // Override present but invalid (empty / null / non-string)
+        if (override !== undefined && override !== null) {
+            const err = new StrictForensicViolation(alert, matched);
+            err.message = err.message + ' [Override for "' + matched +
+                '" was provided but is empty or non-string; rationales must ' +
+                'be non-empty strings.]';
+            throw err;
+        }
+        // No override → throw
+        throw new StrictForensicViolation(alert, matched);
+    }
+
+    // All fatal alerts overridden — annotate manifest
+    if (result && typeof result === 'object') {
+        if (!result.manifest || typeof result.manifest !== 'object') {
+            result.manifest = {};
+        }
+        result.manifest.forensic_strict = true;
+        result.manifest.forensic_strict_overrides_applied = applied;
+    }
+    return result;
+}
+
+/**
+ * computeCPMForensicStrict(activities, relationships, opts)
+ *
+ * Convenience wrapper around computeCPM that forces forensic_strict: true.
+ * Throws StrictForensicViolation on any unoverridden fatal alert.
+ *
+ * Use this in court-facing pipelines. Use computeCPM directly for
+ * triage, planning, and lookahead workflows.
+ */
+function computeCPMForensicStrict(activities, relationships, opts) {
+    const strictOpts = Object.assign({}, opts || {}, { forensic_strict: true });
+    return computeCPM(activities, relationships, strictOpts);
+}
+
+// ============================================================================
 // SECTION E — exports (CommonJS, ES modules, and browser globals)
 // ============================================================================
 
 const _api = {
     // Engine version
     ENGINE_VERSION,
+    // Section Q — Forensic Strict Mode (court-grade run gate)
+    computeCPMForensicStrict,
+    StrictForensicViolation,
+    FATAL_STRICT_CONTEXTS,
+    FATAL_STRICT_MESSAGE_PATTERNS,
     // Section A
     EPOCH_YEAR, EPOCH_MONTH, EPOCH_DAY, VALID_REL_TYPES,
     dateToNum, numToDate, addWorkDays, subtractWorkDays,

@@ -1313,8 +1313,8 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
         { dataDate: '2026-01-05' }
     );
     check('manifest present', r.manifest !== undefined);
-    check('manifest.engine_version === 2.9.30',
-        r.manifest.engine_version === '2.9.30');
+    check('manifest.engine_version === 2.9.31',
+        r.manifest.engine_version === '2.9.31');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1350,7 +1350,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.30');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.31');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1603,7 +1603,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.30');
+    check('D3: engine_version present', h.engine_version === '2.9.31');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2062,7 +2062,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.1');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.30');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.31');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2082,7 +2082,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.30');
+        dCaught && dCaught.engine_version === '2.9.31');
 }
 
 // ============================================================================
@@ -8486,6 +8486,257 @@ console.log('\n=== v2.9.15 Bug F4-rest — LPM via driving_predecessor backwalk 
     check('T-FIX-F4-A-tie: LPM tie-break selects A via FS+0 over B via SS+5',
         lpm && lpm.codes.indexOf('A') >= 0 && lpm.codes.indexOf('B') === -1,
         'codes=' + JSON.stringify(lpm && lpm.codes));
+}
+
+// ============================================================================
+// SECTION R-v2.9.31 — Forensic Strict Mode (court-grade run gate) tests
+// ============================================================================
+
+console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
+
+// API surface
+{
+    check('strict mode: computeCPMForensicStrict exported',
+        typeof E.computeCPMForensicStrict === 'function');
+    check('strict mode: StrictForensicViolation exported',
+        typeof E.StrictForensicViolation === 'function');
+    check('strict mode: FATAL_STRICT_CONTEXTS is a non-empty Set',
+        E.FATAL_STRICT_CONTEXTS instanceof Set && E.FATAL_STRICT_CONTEXTS.size > 20);
+    check('strict mode: FATAL_STRICT_CONTEXTS includes progress-override-not-supported',
+        E.FATAL_STRICT_CONTEXTS.has('progress-override-not-supported'));
+    check('strict mode: FATAL_STRICT_CONTEXTS includes invalid-calendar-falling-back',
+        E.FATAL_STRICT_CONTEXTS.has('invalid-calendar-falling-back'));
+    check('strict mode: FATAL_STRICT_CONTEXTS includes duplicate-activity-code',
+        E.FATAL_STRICT_CONTEXTS.has('duplicate-activity-code'));
+    check('strict mode: FATAL_STRICT_CONTEXTS includes unrecognized-task-type',
+        E.FATAL_STRICT_CONTEXTS.has('unrecognized-task-type'));
+    check('strict mode: FATAL_STRICT_MESSAGE_PATTERNS exposed',
+        Array.isArray(E.FATAL_STRICT_MESSAGE_PATTERNS) && E.FATAL_STRICT_MESSAGE_PATTERNS.length > 0);
+    check('strict mode: SUB_DAY_LAG_ROUNDED in message patterns',
+        E.FATAL_STRICT_MESSAGE_PATTERNS.some(p => p.virtual_context === 'SUB_DAY_LAG_ROUNDED'));
+}
+
+// Clean input passes through strict mode unchanged
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3 },
+        { code: 'C', duration_days: 2 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: true });
+    check('strict mode clean: result returned',
+        r && r.projectFinish !== undefined);
+    check('strict mode clean: manifest.forensic_strict === true',
+        r.manifest.forensic_strict === true);
+    check('strict mode clean: overrides_applied is empty array',
+        Array.isArray(r.manifest.forensic_strict_overrides_applied)
+        && r.manifest.forensic_strict_overrides_applied.length === 0);
+}
+
+// Convenience wrapper computeCPMForensicStrict
+{
+    const acts = [
+        { code: 'A', duration_days: 3, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPMForensicStrict(acts, rels, { dataDate: '2026-01-05' });
+    check('strict mode wrapper: produces result',
+        r && r.projectFinish !== undefined);
+    check('strict mode wrapper: forces forensic_strict true',
+        r.manifest.forensic_strict === true);
+}
+
+// Duplicate activity codes throw in strict mode
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },  // duplicate
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    // Normal mode: alert recorded, returns
+    const rNormal = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('strict mode duplicate-code: normal mode records alert + returns',
+        rNormal && rNormal.alerts && rNormal.alerts.some(a => a.context === 'duplicate-activity-code'));
+    // Strict mode: throws
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: true });
+    } catch (e) {
+        caught = e;
+    }
+    check('strict mode duplicate-code: strict mode throws StrictForensicViolation',
+        caught && caught.name === 'StrictForensicViolation');
+    check('strict mode duplicate-code: error.context === duplicate-activity-code',
+        caught && caught.context === 'duplicate-activity-code');
+    check('strict mode duplicate-code: error.code === STRICT_FORENSIC_VIOLATION',
+        caught && caught.code === 'STRICT_FORENSIC_VIOLATION');
+}
+
+// Override with valid rationale: alert recorded, result returns
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const rationale = 'Verified: source XER has data-entry typo on A; both rows refer to the same activity (confirmed against original Schedule H). Override applied with analyst signoff.';
+    const r = E.computeCPM(acts, rels, {
+        dataDate: '2026-01-05',
+        forensic_strict: true,
+        forensic_strict_overrides: {
+            'duplicate-activity-code': rationale,
+        },
+    });
+    check('strict mode override valid: result returned',
+        r && r.projectFinish !== undefined);
+    check('strict mode override valid: manifest.forensic_strict === true',
+        r.manifest.forensic_strict === true);
+    check('strict mode override valid: overrides_applied has the entry',
+        Array.isArray(r.manifest.forensic_strict_overrides_applied)
+        && r.manifest.forensic_strict_overrides_applied.length === 1
+        && r.manifest.forensic_strict_overrides_applied[0].context === 'duplicate-activity-code'
+        && r.manifest.forensic_strict_overrides_applied[0].rationale === rationale);
+    check('strict mode override valid: original alert still present in result.alerts',
+        r.alerts.some(a => a.context === 'duplicate-activity-code'));
+}
+
+// Override with empty rationale: throws
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+            forensic_strict_overrides: { 'duplicate-activity-code': '' },
+        });
+    } catch (e) { caught = e; }
+    check('strict mode override empty string: throws',
+        caught && caught.name === 'StrictForensicViolation');
+    check('strict mode override empty string: error mentions empty/non-string',
+        caught && /empty or non-string/.test(caught.message));
+}
+
+// Override with whitespace-only rationale: throws
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+            forensic_strict_overrides: { 'duplicate-activity-code': '   \t  ' },
+        });
+    } catch (e) { caught = e; }
+    check('strict mode override whitespace-only: throws',
+        caught && caught.name === 'StrictForensicViolation');
+}
+
+// Override with non-string rationale (number / null): throws
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+            forensic_strict_overrides: { 'duplicate-activity-code': 42 },
+        });
+    } catch (e) { caught = e; }
+    check('strict mode override non-string: throws',
+        caught && caught.name === 'StrictForensicViolation');
+}
+
+// Override key that is NOT a fatal context: ignored, alert still throws on its own
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    let caught = null;
+    try {
+        E.computeCPM(acts, rels, {
+            dataDate: '2026-01-05',
+            forensic_strict: true,
+            forensic_strict_overrides: {
+                'not-a-real-context': 'Some rationale',
+                // duplicate-activity-code NOT overridden — should still throw
+            },
+        });
+    } catch (e) { caught = e; }
+    check('strict mode unrelated override key ignored: throws on unrelated fatal alert',
+        caught && caught.name === 'StrictForensicViolation'
+        && caught.context === 'duplicate-activity-code');
+}
+
+// runCPM (Section D) refuses strict mode immediately
+{
+    let caught = null;
+    try {
+        E.runCPM({ forensic_strict: true, logOutput: false });
+    } catch (e) { caught = e; }
+    check('strict mode runCPM: throws StrictForensicViolation',
+        caught && caught.name === 'StrictForensicViolation');
+    check('strict mode runCPM: error.context === section-d-ordinal-only',
+        caught && caught.context === 'section-d-ordinal-only');
+    check('strict mode runCPM: error message names Section D',
+        caught && /Section D/.test(caught.message));
+}
+
+// forensic_strict: false is the default → does NOT enable strict mode
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },  // duplicate
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('strict mode default off: alert recorded, no throw',
+        r && r.alerts.some(a => a.context === 'duplicate-activity-code'));
+    check('strict mode default off: manifest.forensic_strict not set',
+        r.manifest.forensic_strict === undefined);
+}
+
+// forensic_strict: 'true' (string, not bool) does NOT enable strict mode
+// (strict-equality guard means only literal true enables it)
+{
+    const acts = [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3 },
+        { code: 'B', duration_days: 2 },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
+    let threw = false;
+    try {
+        E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: 'true' });
+    } catch (e) { threw = true; }
+    check('strict mode truthy-not-true: does NOT enable strict (string "true" rejected)',
+        !threw);
 }
 
 console.log('\n========================================');

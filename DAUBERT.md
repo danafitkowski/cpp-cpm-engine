@@ -61,7 +61,7 @@ Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js`
 - Section L Daubert-renderer fallback branches for malformed `disclosure` input (intentional defensive code)
 - Holiday-rule edge cases for jurisdictions with rare observance variants (e.g., DST-cross-boundary holidays); the rule-set is correct, the edge-case branches are rarely hit
 
-The 17.71% uncovered branch slice is the most legitimate cross-exam target. The v3.0 roadmap includes a coverage-expansion wave alongside the `forensic_strict` mode (DAUBERT.md §10) to raise branch coverage above 90% before any litigation-critical release.
+The 17.71% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
 
 **Reproduce locally:**
 
@@ -136,7 +136,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 **Cross-validation reports 747 / 747 = 0% observed deviation across 43 fixtures on the enumerated CPM comparison surface (forward/backward pass dates, Kahn topo order, Tarjan SCC, FF/SF working-day arithmetic, TF, FF, FF working days, alert counts and severity). Bayesian and kinematic surfaces are JS-only and excluded — see §11.**
 **Real-XER stress reports 282 / 282 = 0% deviation.**
 
-This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.30. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
+This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.31. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
 
 Performance characteristics:
 
@@ -176,7 +176,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.30',                   // Synchronized with package.json (bump per release)
+    engine_version: '2.9.31',                   // Synchronized with package.json (bump per release)
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -243,8 +243,8 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.30`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-23, refreshed for v2.9.30 Daubert verification packaging + coverage + calendar citations — disclosure hygiene + docs sweep. FRE 702 (Dec 1, 2023 amendment) leads as the operative rule; FRE 707 demoted to forward-compatibility note. `bit-identical` claim explicitly field-scoped to the enumerated CPM comparison surface. Topology-hash language scoped from a schedule-equivalence claim to a hashed-field-set canonicalized-topology signal. "Industry-first features" row removed from §2. Engine math byte-identical to v2.9.27 by design — this is a docs + disclosure-defaults release. Prior milestones preserved: v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; secondary-constraint surface; Section D MC-constraint enforcement; ALAP backward-pass tightening; Python reference constraint backport; Round 6 hardening; Round 7 full hammock semantics with four axis-specific transitive walkers; Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
+`engine_version: 2.9.31`
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-23, refreshed for v2.9.31 forensic strict-mode (court-grade run gate) — disclosure hygiene + docs sweep. FRE 702 (Dec 1, 2023 amendment) leads as the operative rule; FRE 707 demoted to forward-compatibility note. `bit-identical` claim explicitly field-scoped to the enumerated CPM comparison surface. Topology-hash language scoped from a schedule-equivalence claim to a hashed-field-set canonicalized-topology signal. "Industry-first features" row removed from §2. Engine math byte-identical to v2.9.27 by design — this is a docs + disclosure-defaults release. Prior milestones preserved: v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; secondary-constraint surface; Section D MC-constraint enforcement; ALAP backward-pass tightening; Python reference constraint backport; Round 6 hardening; Round 7 full hammock semantics with four axis-specific transitive walkers; Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
 
 ---
 
@@ -314,7 +314,7 @@ The engine honors the following Primavera P6 constraint types declared on activi
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Hammock-cycle topology emits `{severity:'ALERT', context:'hammock-cycle'}`. Hammock negative-span emits `{severity:'ALERT', context:'hammock-negative-span'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.30'` to confirm the constraint module version.
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.31'` to confirm the constraint module version.
 
 **v2.9.12 — Round 9 engine math fix wave.** The audit memo identified ~30 substantive math defects across constraint handling, calendar arithmetic, in-progress + actuals, and JS/Python parity. T1.1 added MS_Start hard-pin on backward LF clamp (was JS+Python silent gap). T1.2-T1.3 emit `constraint-noop` WARN and suppress ES-side constraint clamps when an `actual_start` is present (AACE 29R-03 §4.3 immutability — both engines). T1.4 added Section D actual_start pinning with one-time `actual-start-not-anchored` WARN when `projectStart` is missing. T1.5 surfaces TT_LOE/TT_WBS/completed/zero-remaining drops + dangling-relationship drops + non-finite-lag rejections as INFO/ALERT alerts. T1.6 emits `constraint-unrecognized` / `constraint-incomplete` WARN on unknown tokens / missing dates. T1.7 added `CS_MANSTART` / `CS_MANFINISH` aliases. T1.8-T1.10 added Section D SNLT/FNLT/MS_Start violated+applied alerts symmetric with Section C. T2.11 rewrote Free Float on the binding-link's calendar so coincident lag-walked-forward pairs produce 0 slack. T2.12 made `_countWorkDaysBetween` signed (preserves negative-float forensic signal). T2.13 removed the `Math.max(0, ...)` FF clamp. T2.14 added `dateToNum` rollover guard (Feb 30 → 0 instead of silent rewrite to Mar 2). T2.15 rejects non-finite `lag_hr_cnt` from parseXER. T2.16 emits `invalid-calendar-falling-back` WARN when work_days is empty/invalid. T2.17 updated SUB_DAY_LAG_ROUNDED message to disclose V8 Math.round direction-bias. T3.18 added `remaining_duration` for P6 retained-logic EF anchoring. T3.19 pins LS=ES on backward pass when actual_start is present (in-progress, both engines). T3.20 guards `EF >= ES` in Section C EF-side helpers. T3.21 enumerates every unstarted predecessor + catches premature-start OoS. T3.22 emits `hammock-orphan` ALERT when no anchors resolve. T3.23 adds `duration_working_days` to hammocks. T3.24 emits `unrecognized-task-type` WARN. T4.25-T4.26 backport R8A-1 (MISSING_ACTUAL_START ES derivation) and ALAP-secondary-slot guard to the Python reference, rotating the SHA-256 pin. T4.27 was already in place on the JS side from T1.3.
 
@@ -339,6 +339,110 @@ Three engine features are first-publication or pre-publication in construction s
 - **P6 `progress_override` schedule mode not implemented.** The engine implements P6 retained-logic mode only (the P6 default, AACE 29R-03 §4 recommended for forensic analysis). Callers passing `opts.scheduleMode = 'progress_override'` get a `progress-override-not-supported` ALERT and the computation proceeds under retained-logic. progress_override changes how in-progress activities with completed-predecessor logic resolve (treats the completed pred as removed from the network); this matters for a narrow class of schedules and is rarely the correct forensic mode. v3.0 candidate. Audit HIGH R8 documented limitation.
 
 - **Bayesian and kinematic surfaces are JS-only (no Python cross-validation).** `computeBayesianUpdate` (Bayesian posterior duration) and `computeKinematicDelay` (slip velocity / acceleration / jerk) are not implemented in `python_reference/cpm.py`. The crossval harness therefore covers zero of the Bayesian + kinematic code paths. Bit-identical JS↔Python parity claims in §3.1 apply ONLY to the core CPM math (forward/backward pass, Kahn topo, Tarjan SCC, FF/SF calendar arithmetic). Bayesian and kinematic outputs are validated by the JS unit-test suite + the structural cross-checks in `cpm-engine.crossval.js`; no second-implementation comparison exists. Audit LOW R22 documented limitation.
+
+---
+
+## §9 Forensic Strict Mode (shipped v2.9.31)
+
+Forensic strict mode is the official **court-grade run gate** for the engine. It is intended for contested use — expert witness testimony, FRCP 26(a)(2)(B) reports, EOT entitlement defense, claim packages — where any silent-fallback path that could change the opinion must surface as a **hard failure** rather than as a recorded warning.
+
+### Why this exists
+
+The default `computeCPM` posture is forgiving: degraded inputs (invalid calendars, duplicate codes, non-finite lags, unsupported task types, etc.) emit alerts and the engine continues. That is correct for triage, planning, lookahead, and monthly progress reporting — analysts should see warnings but the run should not refuse to produce a number.
+
+For forensic use that posture inverts. If an analyst is testifying that the project finish is `2028-03-22`, that number must not be the product of a silent calendar fallback or a coerced relationship type. Strict mode makes those paths fatal unless the analyst explicitly overrides them with a written rationale.
+
+### How to enable
+
+```js
+const E = require('cpm-engine');
+
+// Either via the convenience wrapper
+const result = E.computeCPMForensicStrict(activities, relationships, opts);
+
+// Or via the flag on the existing computeCPM
+const result = E.computeCPM(activities, relationships, {
+    forensic_strict: true,
+    dataDate: '2026-01-05',
+});
+```
+
+In strict mode, if any alert whose `context` is in `FATAL_STRICT_CONTEXTS` (or whose message begins with a pattern in `FATAL_STRICT_MESSAGE_PATTERNS`) is emitted, the engine throws `StrictForensicViolation` — a labeled exception with `name: 'StrictForensicViolation'`, `code: 'STRICT_FORENSIC_VIOLATION'`, and `.context` / `.alert` properties for programmatic handling.
+
+### The fatal-context taxonomy
+
+36 alert contexts are fatal in strict mode. The full list is exported as `E.FATAL_STRICT_CONTEXTS` and grouped by hazard class in the engine source. Highlights:
+
+| Hazard class | Example contexts |
+|---|---|
+| Calendar / progress-mode | `invalid-calendar-falling-back`, `lag-hours-per-day-fallback`, `progress-override-not-supported` |
+| Logic integrity | `dangling-rel`, `relationship-dropped`, `self-loop`, `invalid-rel-type`, `cycle-excluded` |
+| Schema / input | `duplicate-activity-code`, `unrecognized-task-type`, `task-dropped`, `lag-non-finite`, `invalid-date-coerced` |
+| Constraints | `constraint-unrecognized`, `constraint-incomplete`, `constraint-invalid-date`, `constraint-skipped` |
+| Topology hash | `COERCED_FIELD_IN_HASH` |
+| Progress / actuals | `actual-start-not-anchored`, `inverted-actuals`, `out-of-sequence`, `post-data-date-actual` (retroactive-edit signature) |
+| ALAP | `alap-slide-violates-succ` (stale successor dates) |
+| Hammocks | `hammock-cycle`, `hammock-orphan`, `hammock-negative-span` |
+| Degenerate | `empty-schedule`, `section-d-ordinal-only` |
+
+In addition, the message-pattern set catches alerts whose `context` field is dynamic but whose message identifies the type — currently `SUB_DAY_LAG_ROUNDED:` (sub-day-precision rounding, forensically material on schedules with hour-based lags).
+
+### Section D / runCPM is blocked
+
+`runCPM` is the lightweight 5-day Mon-Fri Section D engine designed for Monte Carlo inner loops. It is intentionally **not** calendar-aware and is not appropriate for forensic opinion. Calling `runCPM({ forensic_strict: true, ... })` throws `StrictForensicViolation` immediately — no warning, no opt-in. Forensic opinion must use Section C (`computeCPM` / `computeCPMForensicStrict`).
+
+### The override mechanism
+
+Some fatal-class alerts are legitimately accepted by the analyst after review (e.g. a known shop-floor calendar that intentionally uses the engine's Mon-Fri fallback). The analyst can override specific alert contexts via `opts.forensic_strict_overrides`:
+
+```js
+const result = E.computeCPMForensicStrict(activities, relationships, {
+    dataDate: '2026-01-05',
+    forensic_strict_overrides: {
+        'invalid-calendar-falling-back':
+            'Project uses shop-floor 5x10 calendar declared in Schedule H ' +
+            'cover memo dated 2026-01-13. Engine Mon-Fri fallback matches ' +
+            'the contract calendar by construction. Verified by D. Fitkowski, ' +
+            'P.Eng., 2026-05-23.',
+    },
+});
+```
+
+**Override discipline:**
+
+- Each override key must match a fatal context (real or virtual). Unrelated keys are ignored silently and do not whitelist other alerts.
+- Each override rationale must be a **non-empty string** after trimming. Whitespace-only rationales throw. Non-string rationales (numbers, null, undefined, objects) throw. The engine refuses to record an override without a written reason.
+- Override applications are recorded in `result.manifest.forensic_strict_overrides_applied[]` with the full alert + the analyst's rationale. The audit trail lives **inside the result object** — opposing counsel cannot claim the override was added after the fact without leaving a trace.
+
+### Result-side artifacts
+
+A successful strict-mode run mutates the manifest:
+
+```js
+result.manifest.forensic_strict = true;
+result.manifest.forensic_strict_overrides_applied = [
+    {
+        context: 'invalid-calendar-falling-back',
+        rationale: 'Project uses shop-floor 5x10 calendar ...',
+        alert: { severity: 'WARN', context: 'invalid-calendar-falling-back', message: '...' },
+    },
+];
+```
+
+The original `result.alerts` array is **not** mutated — every alert remains visible. Strict mode adds the override audit trail; it does not suppress the underlying alerts.
+
+### What strict mode does NOT do
+
+- It does not validate that the analyst's overrides are *correct*. It enforces that the analyst documented the override in writing. Whether the rationale is defensible is the analyst's burden under Daubert / FRE 702.
+- It does not guarantee P6 equivalence on the strict-mode-passing path. P6 comparison evidence is on the [`§10 Roadmap`](#10-roadmap--forward-looking-daubert-hardening).
+- It does not extend to the `computeCPMSalvaging` path. Salvage mode is the inverse posture (best-effort triage of corrupt input) and refuses strict mode by design.
+- It is not retroactive. If you ran `computeCPM` without `forensic_strict: true` and want to validate after the fact, re-run with the flag set.
+
+### Test coverage
+
+Strict mode ships with 33 dedicated unit tests covering: API surface (8 tests); clean input pass-through; convenience wrapper; throw on each fatal context family; override with valid rationale; override with empty / whitespace / non-string rationale (each throws); unrelated override key (ignored); runCPM strict-mode refusal; default-off behavior; truthy-not-true non-activation. See `cpm-engine.test.js` SECTION R-v2.9.31.
+
+The 33 tests are part of the 1,104-test v2.9.31 unit-test count.
 
 ---
 
