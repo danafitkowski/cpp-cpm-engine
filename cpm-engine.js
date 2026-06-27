@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.34';
+const ENGINE_VERSION = '2.9.37';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -4913,6 +4913,7 @@ function computeTIA(activities, relationships, fragnets, opts) {
     opts = opts || {};
     const mode = opts.mode || 'isolated';
     const salvage_log = [];
+    const alerts = [];
 
     // Baseline run.
     const baseline = _runCPMHelper(activities, relationships, opts);
@@ -4995,6 +4996,41 @@ function computeTIA(activities, relationships, fragnets, opts) {
         const postFinish = post.project_finish || post.projectFinish;
         const cmpFinishNum = (mode === 'cumulative-additive') ? prevFinishNum : baselineFinishNum;
         const cmpFinish = (mode === 'cumulative-additive') ? prevFinish : baselineFinish;
+        // v2.9.36 — unresolved-finish guard (finding #1). If the baseline or
+        // post-impact run did not resolve a valid project finish (an unparseable
+        // actual date coerces the string to empty and the offset to epoch 0, or
+        // a degenerate/empty network produces no finish), impact_days would be
+        // computed from a coerced offset — a fabricated value, often thousands
+        // of days — and impact_working_days would default to 0, yet the fragnet
+        // was reported as status 'ok'. Suppress the fabricated numbers: mark the
+        // fragnet 'error' and surface a forensic alert rather than present a
+        // coerced epoch-fallback impact as a valid result.
+        const _finishValid = (s, n) =>
+            typeof s === 'string' && /^\d{4}-\d{2}-\d{2}/.test(s) && Number.isFinite(n);
+        if (!_finishValid(cmpFinish, cmpFinishNum) || !_finishValid(postFinish, postFinishNum)) {
+            per_fragnet.push({
+                fragnet_id: f.fragnet_id,
+                name: f.name,
+                liability: f.liability || 'Unattributed',
+                status: 'error',
+                error: 'Project finish did not resolve to a valid date (baseline=' +
+                    JSON.stringify(cmpFinish) + '/' + cmpFinishNum + ', post=' +
+                    JSON.stringify(postFinish) + '/' + postFinishNum + '); impact not ' +
+                    'computed (would have been a coerced epoch-fallback value).',
+                completion_before: cmpFinish,
+                completion_after: postFinish,
+            });
+            alerts.push({
+                severity: 'ALERT',
+                context: 'tia-unresolved-finish',
+                message: 'Fragnet ' + f.fragnet_id + ': baseline or post-impact project ' +
+                    'finish did not resolve to a valid date; impact_days / ' +
+                    'impact_working_days suppressed (status=error) rather than reported ' +
+                    'from a coerced epoch-fallback value. Check the schedule for ' +
+                    'unparseable actual/finish dates or a degenerate network.',
+            });
+            continue;
+        }
         const impact_days = postFinishNum - cmpFinishNum;
         per_fragnet.push({
             fragnet_id: f.fragnet_id,
@@ -5035,12 +5071,41 @@ function computeTIA(activities, relationships, fragnets, opts) {
         by_liability[k] = (by_liability[k] || 0) + e.impact_days;
     }
 
+    // ── v2.9.35 — Working-day basis alerts (silent-fallback hardening) ───
+    // _impactWorkingDays silently returns CALENDAR days when no usable
+    // calendar is available, and silently uses the first calendar when the
+    // requested projectCalendar is absent. For a forensic TIA the analyst
+    // must be told the working-day basis degraded — never present
+    // calendar-days as working-days without a flag.
+    const _calKeys = Object.keys(opts.calMap || {});
+    const _anyOkFragnet = per_fragnet.some((e) => e.status === 'ok');
+    if (_anyOkFragnet && _calKeys.length === 0) {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'tia-working-days-fallback',
+            message: 'TIA impact_working_days reported as CALENDAR days: no project ' +
+                'calendar supplied (opts.calMap absent or empty). Working-day impact ' +
+                'figures are NOT calendar-adjusted.',
+        });
+    } else if (_anyOkFragnet && opts.projectCalendar &&
+               !(opts.calMap && opts.calMap[opts.projectCalendar])) {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'tia-calendar-mismatch',
+            message: 'Requested projectCalendar "' + opts.projectCalendar + '" not found ' +
+                'in calMap; TIA working-day impact used the first available calendar ("' +
+                _calKeys[0] + '") instead. Working-day figures reflect that calendar, not ' +
+                'the one requested.',
+        });
+    }
+
     const out = {
         baseline,
         per_fragnet,
         cumulative_days,
         cumulative_working_days,
         by_liability,
+        alerts,
         manifest: {
             engine_version: ENGINE_VERSION,
             method_id: 'computeTIA',

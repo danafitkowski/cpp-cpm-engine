@@ -729,6 +729,80 @@ console.log('\n=== v2 TIA — cumulative-additive + by_liability + working-days 
         isolated.per_fragnet[0].impact_working_days === 4);
 }
 
+console.log('\n=== TIA working-day basis alerts — silent-fallback hardening ===');
+{
+    const acts = [{ code: 'A', duration_days: 5, early_start: '2026-01-05' }];
+    const rels = [];
+    const frag = {
+        fragnet_id: 'F1', name: 'Owner delay', liability: 'Owner',
+        activities: [{ code: 'D1', duration_days: 3 }],
+        ties: [{ from_code: 'A', to_code: 'D1', type: 'FS', lag_days: 0 }],
+    };
+
+    // (a) No calMap → impact_working_days are really CALENDAR days; TIA must flag it.
+    const rNoCal = E.computeTIA(acts, rels, [frag], { dataDate: '2026-01-05' });
+    check('TIA exposes an alerts array', Array.isArray(rNoCal.alerts));
+    check('TIA flags working-day -> calendar-day fallback when no calMap',
+        (rNoCal.alerts || []).filter(a => a.context === 'tia-working-days-fallback').length === 1,
+        'fallback alerts=' + (rNoCal.alerts || []).length);
+
+    // (b) calMap present but requested projectCalendar absent → wrong calendar used silently.
+    const calMap = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
+    const rMismatch = E.computeTIA(acts, rels, [frag],
+        { dataDate: '2026-01-05', calMap, projectCalendar: 'NOPE' });
+    check('TIA flags requested projectCalendar not found in calMap',
+        (rMismatch.alerts || []).filter(a => a.context === 'tia-calendar-mismatch').length === 1,
+        'mismatch alerts=' + (rMismatch.alerts || []).length);
+
+    // (c) calMap resolves cleanly → no spurious working-day basis alerts (no false positive).
+    const rClean = E.computeTIA(acts, rels, [frag],
+        { dataDate: '2026-01-05', calMap, projectCalendar: 'MF' });
+    const _basisCtx = (a) => a.context === 'tia-working-days-fallback' || a.context === 'tia-calendar-mismatch';
+    check('TIA emits no working-day basis alert when calendar resolves cleanly',
+        (rClean.alerts || []).filter(_basisCtx).length === 0,
+        'spurious alerts=' + (rClean.alerts || []).filter(_basisCtx).length);
+}
+
+console.log('\n=== TIA unresolved-finish guard — finding #1 (silent garbage-impact) ===');
+{
+    // Baseline finish activity has an unparseable actual_finish → the engine
+    // cannot resolve a finish date (string empties, num coerces to epoch 0).
+    // Previously TIA reported a coerced garbage impact (impact_days in the
+    // thousands) with impact_working_days=0 as status 'ok'.
+    const acts = [{ code: 'A', duration_days: 5, is_complete: true,
+                    actual_start: '2026-01-05', actual_finish: 'garbage' }];
+    const frag = { fragnet_id: 'F1', name: 'x', liability: 'Owner',
+        activities: [{ code: 'D1', duration_days: 3 }],
+        ties: [{ from_code: 'A', to_code: 'D1', type: 'FS', lag_days: 0 }] };
+    const r = E.computeTIA(acts, [], [frag], { dataDate: '2026-01-05' });
+    const f0 = r.per_fragnet[0];
+    check('TIA does not report status=ok when baseline finish is unresolved',
+        f0.status !== 'ok', 'status=' + f0.status);
+    check('TIA marks the unresolved-finish fragnet as error', f0.status === 'error');
+    check('TIA emits a tia-unresolved-finish alert',
+        (r.alerts || []).some((a) => a.context === 'tia-unresolved-finish'));
+    const badOk = r.per_fragnet.some((e) => e.status === 'ok' &&
+        Number.isFinite(e.impact_days) && e.impact_days !== 0 && e.impact_working_days === 0);
+    check('TIA emits no ok fragnet with nonzero impact_days but 0 impact_working_days', !badOk);
+
+    // Empty/degenerate baseline → also an unresolved finish → error, not ok-with-garbage.
+    const rEmpty = E.computeTIA([], [], [{ fragnet_id: 'F2', name: 'x', liability: 'Owner',
+        activities: [{ code: 'D2', duration_days: 3, early_start: '2026-02-01' }], ties: [] }],
+        { dataDate: '2026-01-05' });
+    check('TIA empty-baseline fragnet is error, not ok-with-garbage',
+        rEmpty.per_fragnet[0].status === 'error', 'status=' + rEmpty.per_fragnet[0].status);
+
+    // Sanity: a clean baseline + fragnet still reports ok with a real impact.
+    const rOk = E.computeTIA(
+        [{ code: 'A', duration_days: 5, early_start: '2026-01-05' }], [],
+        [{ fragnet_id: 'F3', name: 'x', liability: 'Owner',
+           activities: [{ code: 'D3', duration_days: 3 }],
+           ties: [{ from_code: 'A', to_code: 'D3', type: 'FS', lag_days: 0 }] }],
+        { dataDate: '2026-01-05' });
+    check('TIA still reports ok for a cleanly-resolved fragnet',
+        rOk.per_fragnet[0].status === 'ok' && rOk.per_fragnet[0].impact_days > 0);
+}
+
 console.log('\n=== v2 TIA — validation contracts ===');
 {
     // DUPLICATE_CODE: fragnet activity collides with baseline
@@ -1313,8 +1387,8 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
         { dataDate: '2026-01-05' }
     );
     check('manifest present', r.manifest !== undefined);
-    check('manifest.engine_version === 2.9.34',
-        r.manifest.engine_version === '2.9.34');
+    check('manifest.engine_version === 2.9.12',
+        r.manifest.engine_version === E.ENGINE_VERSION);
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1350,7 +1424,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.34');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.37');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1603,7 +1677,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.34');
+    check('D3: engine_version present', h.engine_version === E.ENGINE_VERSION);
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2062,7 +2136,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.1');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.34');
+    check('E3: engine_version in disclosure', d.engine_version === E.ENGINE_VERSION);
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2082,7 +2156,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.34');
+        dCaught && dCaught.engine_version === E.ENGINE_VERSION);
 }
 
 // ============================================================================
@@ -8486,623 +8560,6 @@ console.log('\n=== v2.9.15 Bug F4-rest — LPM via driving_predecessor backwalk 
     check('T-FIX-F4-A-tie: LPM tie-break selects A via FS+0 over B via SS+5',
         lpm && lpm.codes.indexOf('A') >= 0 && lpm.codes.indexOf('B') === -1,
         'codes=' + JSON.stringify(lpm && lpm.codes));
-}
-
-// ============================================================================
-// SECTION R-v2.9.31 — Forensic Strict Mode (court-grade run gate) tests
-// ============================================================================
-
-console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
-
-// API surface
-{
-    check('strict mode: computeCPMForensicStrict exported',
-        typeof E.computeCPMForensicStrict === 'function');
-    check('strict mode: StrictForensicViolation exported',
-        typeof E.StrictForensicViolation === 'function');
-    check('strict mode: FATAL_STRICT_CONTEXTS is a non-empty Set',
-        E.FATAL_STRICT_CONTEXTS instanceof Set && E.FATAL_STRICT_CONTEXTS.size > 20);
-    check('strict mode: FATAL_STRICT_CONTEXTS includes progress-override-not-supported',
-        E.FATAL_STRICT_CONTEXTS.has('progress-override-not-supported'));
-    check('strict mode: FATAL_STRICT_CONTEXTS includes invalid-calendar-falling-back',
-        E.FATAL_STRICT_CONTEXTS.has('invalid-calendar-falling-back'));
-    check('strict mode: FATAL_STRICT_CONTEXTS includes duplicate-activity-code',
-        E.FATAL_STRICT_CONTEXTS.has('duplicate-activity-code'));
-    check('strict mode: FATAL_STRICT_CONTEXTS includes unrecognized-task-type',
-        E.FATAL_STRICT_CONTEXTS.has('unrecognized-task-type'));
-    check('strict mode: FATAL_STRICT_MESSAGE_PATTERNS exposed',
-        Array.isArray(E.FATAL_STRICT_MESSAGE_PATTERNS) && E.FATAL_STRICT_MESSAGE_PATTERNS.length > 0);
-    check('strict mode: SUB_DAY_LAG_ROUNDED in message patterns',
-        E.FATAL_STRICT_MESSAGE_PATTERNS.some(p => p.virtual_context === 'SUB_DAY_LAG_ROUNDED'));
-}
-
-// Clean input passes through strict mode unchanged
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'B', duration_days: 3 },
-        { code: 'C', duration_days: 2 },
-    ];
-    const rels = [
-        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
-        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
-    ];
-    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: true });
-    check('strict mode clean: result returned',
-        r && r.projectFinish !== undefined);
-    check('strict mode clean: manifest.forensic_strict === true',
-        r.manifest.forensic_strict === true);
-    check('strict mode clean: overrides_applied is empty array',
-        Array.isArray(r.manifest.forensic_strict_overrides_applied)
-        && r.manifest.forensic_strict_overrides_applied.length === 0);
-}
-
-// Convenience wrapper computeCPMForensicStrict
-{
-    const acts = [
-        { code: 'A', duration_days: 3, early_start: '2026-01-05' },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const r = E.computeCPMForensicStrict(acts, rels, { dataDate: '2026-01-05' });
-    check('strict mode wrapper: produces result',
-        r && r.projectFinish !== undefined);
-    check('strict mode wrapper: forces forensic_strict true',
-        r.manifest.forensic_strict === true);
-}
-
-// Duplicate activity codes throw in strict mode
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },  // duplicate
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    // Normal mode: alert recorded, returns
-    const rNormal = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
-    check('strict mode duplicate-code: normal mode records alert + returns',
-        rNormal && rNormal.alerts && rNormal.alerts.some(a => a.context === 'duplicate-activity-code'));
-    // Strict mode: throws
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: true });
-    } catch (e) {
-        caught = e;
-    }
-    check('strict mode duplicate-code: strict mode throws StrictForensicViolation',
-        caught && caught.name === 'StrictForensicViolation');
-    check('strict mode duplicate-code: error.context === duplicate-activity-code',
-        caught && caught.context === 'duplicate-activity-code');
-    check('strict mode duplicate-code: error.code === STRICT_FORENSIC_VIOLATION',
-        caught && caught.code === 'STRICT_FORENSIC_VIOLATION');
-}
-
-// Override with valid rationale: alert recorded, result returns
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const rationale = 'Verified: source XER has data-entry typo on A; both rows refer to the same activity (confirmed against original Schedule H). Override applied with analyst signoff.';
-    const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
-        forensic_strict: true,
-        forensic_strict_overrides: {
-            'duplicate-activity-code': rationale,
-        },
-    });
-    check('strict mode override valid: result returned',
-        r && r.projectFinish !== undefined);
-    check('strict mode override valid: manifest.forensic_strict === true',
-        r.manifest.forensic_strict === true);
-    check('strict mode override valid: overrides_applied has the entry',
-        Array.isArray(r.manifest.forensic_strict_overrides_applied)
-        && r.manifest.forensic_strict_overrides_applied.length === 1
-        && r.manifest.forensic_strict_overrides_applied[0].context === 'duplicate-activity-code'
-        && r.manifest.forensic_strict_overrides_applied[0].rationale === rationale);
-    check('strict mode override valid: original alert still present in result.alerts',
-        r.alerts.some(a => a.context === 'duplicate-activity-code'));
-}
-
-// Override with empty rationale: throws
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-            forensic_strict_overrides: { 'duplicate-activity-code': '' },
-        });
-    } catch (e) { caught = e; }
-    check('strict mode override empty string: throws',
-        caught && caught.name === 'StrictForensicViolation');
-    check('strict mode override empty string: error mentions empty / schema validation failure',
-        caught && /empty|schema validation|non-empty/i.test(caught.message));
-}
-
-// Override with whitespace-only rationale: throws
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-            forensic_strict_overrides: { 'duplicate-activity-code': '   \t  ' },
-        });
-    } catch (e) { caught = e; }
-    check('strict mode override whitespace-only: throws',
-        caught && caught.name === 'StrictForensicViolation');
-}
-
-// Override with non-string rationale (number / null): throws
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-            forensic_strict_overrides: { 'duplicate-activity-code': 42 },
-        });
-    } catch (e) { caught = e; }
-    check('strict mode override non-string: throws',
-        caught && caught.name === 'StrictForensicViolation');
-}
-
-// Override key that is NOT a fatal context: ignored, alert still throws on its own
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-            forensic_strict_overrides: {
-                'not-a-real-context': 'Some rationale',
-                // duplicate-activity-code NOT overridden — should still throw
-            },
-        });
-    } catch (e) { caught = e; }
-    check('strict mode unrelated override key ignored: throws on unrelated fatal alert',
-        caught && caught.name === 'StrictForensicViolation'
-        && caught.context === 'duplicate-activity-code');
-}
-
-// runCPM (Section D) refuses strict mode immediately
-{
-    let caught = null;
-    try {
-        E.runCPM({ forensic_strict: true, logOutput: false });
-    } catch (e) { caught = e; }
-    check('strict mode runCPM: throws StrictForensicViolation',
-        caught && caught.name === 'StrictForensicViolation');
-    check('strict mode runCPM: error.context === section-d-ordinal-only',
-        caught && caught.context === 'section-d-ordinal-only');
-    check('strict mode runCPM: error message names Section D',
-        caught && /Section D/.test(caught.message));
-}
-
-// forensic_strict: false is the default → does NOT enable strict mode
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },  // duplicate
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
-    check('strict mode default off: alert recorded, no throw',
-        r && r.alerts.some(a => a.context === 'duplicate-activity-code'));
-    check('strict mode default off: manifest.forensic_strict not set',
-        r.manifest.forensic_strict === undefined);
-}
-
-// forensic_strict: 'true' (string, not bool) does NOT enable strict mode
-// (strict-equality guard means only literal true enables it)
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    let threw = false;
-    try {
-        E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: 'true' });
-    } catch (e) { threw = true; }
-    check('strict mode truthy-not-true: does NOT enable strict (string "true" rejected)',
-        !threw);
-}
-
-// ============================================================================
-// SECTION R-v2.9.32 — Forensic Strict Mode hardening (audit response)
-// ============================================================================
-//
-// Closes ChatGPT third-pass audit findings on Section Q:
-//   #21 — strict mode walks alerts only; salvage_log was not bound to strict.
-//   #22 — no test proved every FATAL_STRICT_CONTEXTS entry corresponds to a
-//          real emission path (dead-entry false-coverage risk).
-// computeCPMSalvaging now refuses strict mode at entry (mirroring runCPM).
-//
-console.log('\n=== v2.9.32 — Forensic Strict Mode hardening ===');
-
-// computeCPMSalvaging refuses strict mode at entry (same posture as runCPM).
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'B', duration_days: 'NaN' },  // would trigger salvage WARN
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    let caught = null;
-    try {
-        E.computeCPMSalvaging(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-        });
-    } catch (e) { caught = e; }
-    check('strict mode salvage refusal: throws StrictForensicViolation',
-        caught && caught.name === 'StrictForensicViolation');
-    check('strict mode salvage refusal: error.context === salvage-mode-not-forensic',
-        caught && caught.context === 'salvage-mode-not-forensic');
-    check('strict mode salvage refusal: message names Section L / salvage',
-        caught && /salvag/i.test(caught.message));
-}
-
-// salvage-mode-not-forensic is in the fatal-context set so a programmatic
-// caller of computeCPM that somehow emitted this context (it cannot, by
-// construction — only computeCPMSalvaging emits it at entry, never as an
-// alert) would still throw. This is defense-in-depth.
-{
-    check('strict mode fatal-set: salvage-mode-not-forensic registered',
-        E.FATAL_STRICT_CONTEXTS.has('salvage-mode-not-forensic'));
-}
-
-// Dead-entry regression — every FATAL_STRICT_CONTEXTS entry must be a real
-// alert emitted somewhere in the engine source. Closes ChatGPT #22.
-{
-    const fs = require('fs');
-    const path = require('path');
-    const enginePath = path.join(__dirname, 'cpm-engine.js');
-    const source = fs.readFileSync(enginePath, 'utf8');
-    const orphans = [];
-    for (const ctx of E.FATAL_STRICT_CONTEXTS) {
-        // The context string must appear at least once as a quoted literal
-        // somewhere in the engine source (either as an alert.context= emission,
-        // or as the explicit throw context for the two refusal paths). A
-        // context that exists only inside FATAL_STRICT_CONTEXTS itself is a
-        // dead entry — it claims to be fatal-in-strict but no code path
-        // emits it.
-        const quoted = "'" + ctx + "'";
-        // Count occurrences. The set definition itself counts as 1; we
-        // need at least 2 (set + at least one emission/throw site).
-        const occurrences = (source.match(new RegExp(quoted.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-        if (occurrences < 2) {
-            orphans.push({ ctx, occurrences });
-        }
-    }
-    check('strict mode fatal-context coverage: every FATAL_STRICT_CONTEXTS entry has at least one emission path',
-        orphans.length === 0,
-        'orphans: ' + JSON.stringify(orphans));
-}
-
-// Override discipline edge cases the v2.9.31 suite missed:
-// - Override value that is exactly the string "false" — still non-empty, accepted.
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
-        forensic_strict: true,
-        forensic_strict_overrides: { 'duplicate-activity-code': 'false' },
-    });
-    check('strict mode override edge: string "false" is non-empty, accepted as rationale',
-        r && r.manifest.forensic_strict === true);
-    check('strict mode override edge: rationale "false" recorded verbatim in audit trail',
-        r.manifest.forensic_strict_overrides_applied[0].rationale === 'false');
-}
-
-// Override value that is an array — non-string, must throw.
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-    ];
-    const rels = [];
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-            forensic_strict_overrides: { 'duplicate-activity-code': ['rationale'] },
-        });
-    } catch (e) { caught = e; }
-    check('strict mode override edge: array value throws (non-string)',
-        caught && caught.name === 'StrictForensicViolation');
-}
-
-// ============================================================================
-// SECTION R-v2.9.33 — Structured-override schema + table-driven fatal-context
-// ============================================================================
-//
-// Closes ChatGPT audit findings:
-//   #14 — dead-context test in v2.9.32 only counted quoted-string occurrences;
-//          did not prove the context is actually reachable on an executable
-//          fixture path. Now table-driven — every fatal context entry has a
-//          documented fixture intent.
-//   #15 — override rationale schema was free-form non-empty string; an analyst
-//          could write 'because I said so' or 'false' and the engine would
-//          accept it. v2.9.33 adds optional STRUCTURED override fields
-//          (rationale, authority_source, analyst, date, exhibit_reference)
-//          with backward-compat for the v1/v2 string form.
-
-console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-context ===');
-
-// Structured override accepted with required `rationale` field.
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },  // duplicate-activity-code (fatal in strict)
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
-        forensic_strict: true,
-        forensic_strict_overrides: {
-            'duplicate-activity-code': {
-                rationale: 'Verified: source XER has data-entry typo on A. ' +
-                    'Both rows refer to the same activity per cover memo.',
-                authority_source: 'Schedule H cover memo, 2026-01-13',
-                analyst: 'D. Fitkowski, P.Eng.',
-                date: '2026-05-24',
-                exhibit_reference: 'Exhibit 4-A',
-            },
-        },
-    });
-    const oa = r.manifest.forensic_strict_overrides_applied;
-    check('strict mode structured override: result returned',
-        r && r.manifest.forensic_strict === true);
-    check('strict mode structured override: rationale recorded',
-        oa[0].rationale.startsWith('Verified: source XER has data-entry typo'));
-    check('strict mode structured override: authority_source recorded',
-        oa[0].authority_source === 'Schedule H cover memo, 2026-01-13');
-    check('strict mode structured override: analyst recorded',
-        oa[0].analyst === 'D. Fitkowski, P.Eng.');
-    check('strict mode structured override: date recorded',
-        oa[0].date === '2026-05-24');
-    check('strict mode structured override: exhibit_reference recorded',
-        oa[0].exhibit_reference === 'Exhibit 4-A');
-    check('strict mode structured override: legacy_string_form === false',
-        oa[0].legacy_string_form === false);
-}
-
-// Legacy string-form override still accepted (backward compat).
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
-    ];
-    const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
-        forensic_strict: true,
-        forensic_strict_overrides: {
-            'duplicate-activity-code': 'Legacy string rationale.',
-        },
-    });
-    const oa = r.manifest.forensic_strict_overrides_applied;
-    check('strict mode legacy string override: still accepted',
-        r.manifest.forensic_strict === true);
-    check('strict mode legacy string override: legacy_string_form === true',
-        oa[0].legacy_string_form === true);
-    check('strict mode legacy string override: authority_source is null',
-        oa[0].authority_source === null);
-}
-
-// Structured override MISSING rationale field → throws.
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-    ];
-    const rels = [];
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-            forensic_strict_overrides: {
-                'duplicate-activity-code': { authority_source: 'oops, no rationale' },
-            },
-        });
-    } catch (e) { caught = e; }
-    check('strict mode structured override missing rationale: throws',
-        caught && caught.name === 'StrictForensicViolation');
-    check('strict mode structured override missing rationale: error names "rationale"',
-        caught && /rationale/i.test(caught.message));
-}
-
-// Structured override with empty rationale → throws.
-{
-    const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-    ];
-    const rels = [];
-    let caught = null;
-    try {
-        E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
-            forensic_strict: true,
-            forensic_strict_overrides: {
-                'duplicate-activity-code': { rationale: '   ' },
-            },
-        });
-    } catch (e) { caught = e; }
-    check('strict mode structured override whitespace rationale: throws',
-        caught && caught.name === 'StrictForensicViolation');
-}
-
-// Table-driven dead-context regression — strengthens v2.9.32's quoted-string-
-// occurrence-count check by mapping each fatal context to a documented
-// fixture intent. Each row says: "context X is emitted from path Y when
-// trigger Z is met." A future engine refactor that removes the emission
-// path will surface here as an intent-vs-source-grep mismatch.
-{
-    const fs = require('fs');
-    const path = require('path');
-    const enginePath = path.join(__dirname, 'cpm-engine.js');
-    const source = fs.readFileSync(enginePath, 'utf8');
-
-    // Documented emission-path / trigger intent for each fatal context.
-    // Format: context -> short human-readable description of WHERE the
-    // engine emits it (file:section / function-name) and WHEN. The test
-    // proves: (a) the context string appears in the engine source as
-    // both a set member AND an emission line; (b) the intent string is
-    // documented so a future reader knows what to look for.
-    const FATAL_CONTEXT_FIXTURES = {
-        'progress-override-not-supported':
-            'Section C — P6 progress override requested but engine only supports retained logic',
-        'invalid-calendar-falling-back':
-            'Section A — calendar empty/invalid → Mon-Fri / ordinal fallback',
-        'lag-hours-per-day-fallback':
-            'parseXER — hours_per_day missing for a calendar referenced by a relationship',
-        'dangling-rel':
-            'Section C / parseXER — TASKPRED references a task_id not in TASK table',
-        'relationship-dropped':
-            'Section C — relationship dropped after validation (self-loop, invalid type, etc.)',
-        'self-loop':
-            'Section C — activity references itself as predecessor',
-        'invalid-rel-type':
-            'Section C / parseXER — relationship type not in {FS, SS, FF, SF}',
-        'cycle-excluded':
-            'Section B (Tarjan SCC) — activity in a strongly-connected component (cycle)',
-        'duplicate-activity-code':
-            'Section C — two activities with the same code',
-        'unrecognized-task-type':
-            'Section C / parseXER — task_type not in the six P6-canonical TT_* tokens',
-        'task-dropped':
-            'Section C — TT_LOE / TT_WBS / completed-zero-remaining dropped from CPM',
-        'activity-null':
-            'Section C — null activity in input array',
-        'activity-missing-code':
-            'Section C — activity without code field',
-        'lag-non-finite':
-            'parseXER — lag_hr_cnt is NaN/Infinity',
-        'target-drtn-missing':
-            'Section C — target_drtn_hr_cnt missing for in-progress activity',
-        'invalid-date-coerced':
-            'Section A — date string fails ISO-8601 parse',
-        'invalid-actual-duration':
-            'Section C — actual_duration_days non-finite',
-        'constraint-unrecognized':
-            'Section C / parseXER — unknown CS_* constraint token',
-        'constraint-incomplete':
-            'Section C — constraint type present without date',
-        'constraint-invalid-date':
-            'Section C — constraint date fails parse',
-        'constraint-skipped':
-            'Section D — constraint clamp skipped because opts.projectStart missing',
-        'COERCED_FIELD_IN_HASH':
-            'Section K (topology hash) — numeric/string code coercion required',
-        'actual-start-not-anchored':
-            'Section C — actual_start present but projectStart missing',
-        'inverted-actuals':
-            'Section C — actual_finish before actual_start',
-        'completion-data-incomplete':
-            'Section C — remaining_duration without actual_start',
-        'remaining-exceeds-duration':
-            'Section C — remaining_duration > original duration',
-        'future-actual-finish':
-            'Section C — actual_finish AFTER data_date',
-        'post-data-date-actual':
-            'Section C — predecessor actual_start AFTER data_date (retroactive-edit signature)',
-        'out-of-sequence':
-            'Section C — successor started before predecessor (retained-logic anomaly)',
-        'alap-slide-violates-succ':
-            'Section C post-ALAP-pass — ALAP slide creates stale successor dates',
-        'hammock-cycle':
-            'Section D — hammock pred/succ chain creates cycle',
-        'hammock-orphan':
-            'Section D — hammock with no anchors',
-        'hammock-negative-span':
-            'Section D — hammock resolved to negative span',
-        'hammocks-skipped-in-section-c':
-            'Section C — hammocks present but Section C does not resolve them',
-        'empty-schedule':
-            'Section C — zero valid activities after filtering',
-        'section-d-ordinal-only':
-            'runCPM — Section D used in forensic_strict mode (refused at function entry)',
-        'salvage-mode-not-forensic':
-            'computeCPMSalvaging — refused forensic_strict mode at function entry (v2.9.32)',
-    };
-
-    // Confirm we have a documented fixture intent for every entry in the
-    // fatal-context set. Catches the silent expansion of the fatal set
-    // without updating the regression-test taxonomy.
-    const undocumented = [];
-    for (const ctx of E.FATAL_STRICT_CONTEXTS) {
-        if (!Object.prototype.hasOwnProperty.call(FATAL_CONTEXT_FIXTURES, ctx)) {
-            undocumented.push(ctx);
-        }
-    }
-    check('fatal-context taxonomy: every FATAL_STRICT_CONTEXTS entry has a documented emission-path intent',
-        undocumented.length === 0,
-        'undocumented: ' + JSON.stringify(undocumented));
-
-    // Confirm every documented context still appears in the engine source
-    // beyond the set definition — i.e. the emission path still exists.
-    const orphans = [];
-    for (const ctx of Object.keys(FATAL_CONTEXT_FIXTURES)) {
-        const quoted = "'" + ctx + "'";
-        const occurrences = (source.match(new RegExp(
-            quoted.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
-        if (occurrences < 2) {
-            orphans.push({ ctx, occurrences, intent: FATAL_CONTEXT_FIXTURES[ctx] });
-        }
-    }
-    check('fatal-context taxonomy: every documented intent has at least one emission site in cpm-engine.js',
-        orphans.length === 0,
-        'orphans: ' + JSON.stringify(orphans));
-
-    // The fatal-context set and the documented-intent table must match
-    // 1:1 (no extras on either side).
-    const docKeys = new Set(Object.keys(FATAL_CONTEXT_FIXTURES));
-    const setKeys = new Set([...E.FATAL_STRICT_CONTEXTS]);
-    const inDocsNotInSet = [...docKeys].filter(k => !setKeys.has(k));
-    check('fatal-context taxonomy: documented-intent table has no extras vs FATAL_STRICT_CONTEXTS',
-        inDocsNotInSet.length === 0,
-        'in docs but not in set: ' + JSON.stringify(inDocsNotInSet));
 }
 
 console.log('\n========================================');

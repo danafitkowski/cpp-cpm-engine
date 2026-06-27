@@ -10,7 +10,7 @@ Closes ChatGPT third-pass directive item #6 — *"Build an anonymized XER test c
 
 ## Cases at a glance
 
-| # | Case ID | Acts | Rels | Cals | Engine PF (v2.9.34) | Alerts | Strict Mode |
+| # | Case ID | Acts | Rels | Cals | Engine PF (v2.9.37) | Alerts | Strict Mode |
 |---|---|---:|---:|---:|---|---:|---|
 | 01 | `01-small-clean-baseline` | 5 | 4 | 1 | 2026-02-17 | 23 | PASS |
 | 02 | `02-large-1000-activities` | 1,000 | 999 | 1 | 2031-06-28 | 4,998 | PASS |
@@ -36,7 +36,7 @@ Each `cases/<NN-name>/` folder contains:
 ```
 case.xer              — synthetic XER input (valid Primavera format,
                         consumable by any XER-aware tool)
-engine-output.json    — full computeCPM result captured at v2.9.34
+engine-output.json    — full computeCPM result captured at v2.9.37
 README.md             — case description, expected behavior, alert
                         summary, strict-mode pass/fail expectation
 ```

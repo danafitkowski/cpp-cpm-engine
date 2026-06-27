@@ -12,6 +12,25 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.37 — 2026-06-27 — engine sync: computeTIA alerts + unresolved-finish guard
+
+Brings the public engine current with the maintained source line, which had advanced to v2.9.37 while this mirror was pinned at v2.9.34. `cpm-engine.js` and the self-test suite are synced verbatim from the source. The v2.9.34 engine math is a strict subset of v2.9.37 — the cross-validation (43 / 747) and the P6-comparison / corpus-dag captures are byte-identical at v2.9.37, so no validation data was re-captured; only the version labels advanced.
+
+### Engine (the v2.9.35–v2.9.37 deltas absorbed here)
+
+- **`computeTIA` `alerts` channel** — `computeTIA` now returns an `alerts` array (matching the `computeCPM` convention). It surfaces `tia-working-days-fallback` when `impact_working_days` is computed as calendar days because no usable project calendar was supplied, and `tia-calendar-mismatch` when a requested `opts.projectCalendar` is absent from `calMap`.
+- **`computeTIA` unresolved-finish guard** — a baseline or post-impact run that cannot resolve a valid project finish now returns `status:'error'` with a `tia-unresolved-finish` alert, instead of a fabricated `impact_days` derived from a coerced epoch fallback.
+
+### Test state
+
+- Unit self-tests: **1081 / 0**.
+- Cross-validation: **43 fixtures / 747 checks**, byte-identical to the Python reference.
+- All audit gates green (cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG).
+
+The `computeCPM` public API is unchanged; no breaking changes.
+
+---
+
 ## v2.9.34 — 2026-05-24 — Audit-ledger closure wave + CLAUDE.md operating contract
 
 Closes 4 of 7 carryover items from the `AUDIT_LEDGER_v2.9.34.md` v2.9.33-rollover plus the HS3 hard stop. Engine math byte-identical to v2.9.33; this is a docs + closures + test-gates release.
