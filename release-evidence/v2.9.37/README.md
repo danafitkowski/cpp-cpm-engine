@@ -10,7 +10,7 @@ Engine-sync release — brings the public engine current with the maintained sou
 
 Engine SHA-256: `f2f767110087b4f0969738f6d7a971fcf0c3ed2f43b10a02242dc8fc5fc9d8ed`
 Python ref SHA-256: `fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68`
-Sigstore Rekor logIndex: `1979959741`
-GitHub Actions run: <https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/28287289406>
+Sigstore Rekor logIndex: `1980313187`
+GitHub Actions run: <https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/28288005478>
 
 Pair with [`../../DAUBERT.md`](../../DAUBERT.md), [`../../FORENSIC_USE_SOP.md`](../../FORENSIC_USE_SOP.md), [`../../CLAUDE.md`](../../CLAUDE.md), and [`../../ROADMAP_OPEN.md`](../../ROADMAP_OPEN.md).

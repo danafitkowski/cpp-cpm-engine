@@ -13,7 +13,7 @@ v2.9.37 is an **engine-sync release**: it brings the public mirror current with 
 | `VERIFY_RELEASE.md` | Citation-ready expert-report packet (per-release snapshot) |
 | `witness-v2.9.37.json` | Local-attestation witness (Sigstore-signed copy generated post-tag) |
 | `sigstore-attestation-output.txt` | Full `gh attestation verify` JSON output (Sigstore bundle + Rekor inclusion proof) |
-| `rekor-entry.txt` | Rekor transparency-log entry pointer (logIndex 1979959741) |
+| `rekor-entry.txt` | Rekor transparency-log entry pointer (logIndex 1980313187) |
 | `github-actions-run-url.txt` | CI matrix run URL + per-leg outcomes |
 | `cpm-engine.js.sha256` | Engine source SHA pin |
 | `python_reference-cpm.py.sha256` | Python reference SHA pin |

@@ -1,7 +1,7 @@
 {
   "$schema": "cpp-cpm-engine-attestation/v1",
   "generated_by": "scripts/attestation.js",
-  "generated_at_utc": "2026-06-27T11:04:03.518Z",
+  "generated_at_utc": "2026-06-27T11:36:18.013Z",
   "package": {
     "name": "cpp-cpm-engine",
     "version": "2.9.37"
@@ -18,9 +18,9 @@
     "bytes": 70281
   },
   "git": {
-    "commit_sha": "d9cfc1f79e317580c5069d4848fee96071568542",
+    "commit_sha": "10187bce30dac4699d6db6f10e7220ed696bade4",
     "ref": "refs/tags/v2.9.37",
-    "workflow_run_url": "https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/28287289406"
+    "workflow_run_url": "https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/28288005478"
   },
   "environment": {
     "node_version": "v20.20.2",

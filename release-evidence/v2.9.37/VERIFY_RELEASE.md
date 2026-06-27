@@ -7,16 +7,16 @@ This is the per-release snapshot of the verification packet. The top-level [`../
 | Item | Value |
 |---|---|
 | Tag | `v2.9.37` |
-| Commit SHA | `d9cfc1f79e317580c5069d4848fee96071568542` |
+| Commit SHA | `10187bce30dac4699d6db6f10e7220ed696bade4` |
 | Release date | 2026-06-27 |
 | Engine SHA-256 | `f2f767110087b4f0969738f6d7a971fcf0c3ed2f43b10a02242dc8fc5fc9d8ed` |
 | Python reference SHA-256 | `fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68` |
 | Unit tests | 1,128 / 1,128 passing |
 | Cross-validation | 747 / 747 across 43 fixtures |
 | `npm run verify` verdict | PASS |
-| Sigstore Rekor logIndex | `1979959741` |
+| Sigstore Rekor logIndex | `1980313187` |
 
-`witness-v2.9.37.json` in this folder is the CI-generated canonical witness (Sigstore-signed via GitHub OIDC; Rekor logIndex `1979959741`; verifiable with `gh attestation verify release-evidence/v2.9.37/witness-v2.9.37.json --repo danafitkowski/cpp-cpm-engine`).
+`witness-v2.9.37.json` in this folder is the CI-generated canonical witness (Sigstore-signed via GitHub OIDC; Rekor logIndex `1980313187`; verifiable with `gh attestation verify release-evidence/v2.9.37/witness-v2.9.37.json --repo danafitkowski/cpp-cpm-engine`).
 
 ## What changed since the prior pinned release
 
@@ -49,11 +49,11 @@ Compare the resulting engine and python-reference SHA-256 values to the SHAs abo
 ```
 Verification chain for cpm-engine v2.9.37:
   Tag:                v2.9.37
-  Commit SHA:         d9cfc1f79e317580c5069d4848fee96071568542
+  Commit SHA:         10187bce30dac4699d6db6f10e7220ed696bade4
   Engine SHA-256:     f2f767110087b4f0969738f6d7a971fcf0c3ed2f43b10a02242dc8fc5fc9d8ed
   Python ref SHA-256: fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68
   Witness:            release-evidence/v2.9.37/witness-v2.9.37.json
-                      (Sigstore-signed; Rekor logIndex 1979959741)
+                      (Sigstore-signed; Rekor logIndex 1980313187)
   Verification:       npm run verify PASS; 1,128 / 1,128 unit tests;
                       747 / 747 crossval checks across 43 fixtures
   Disclosure:         cpp-cpm-engine/DAUBERT.md
