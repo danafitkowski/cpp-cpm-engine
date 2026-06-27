@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-v2.9.37 is an **engine-sync release**: it brings the public mirror current with the maintained source line (was pinned at v2.9.34), absorbing the v2.9.35 `computeTIA` `alerts` channel and the v2.9.36 unresolved-finish guard. No audit-ledger items are opened or closed by this release. The v2.9.34 engine math is a strict subset of v2.9.37 — the cross-validation (43 / 747) and the P6-comparison / corpus-DAG captures are byte-identical at v2.9.37, so only version labels advanced; no validation data was re-captured. The repo's own self-test suite (including the `forensic_strict` / `STRICT_FORENSIC_VIOLATION` strict-mode coverage) is preserved at 1128 / 0.
+v2.9.37 is an **engine-sync release**: it brings the public mirror current with the maintained source line, absorbing the `computeTIA` `alerts` channel and the unresolved-finish guard. No audit-ledger items are opened or closed by this release. The prior engine math is a strict subset of v2.9.37 — the cross-validation (43 / 747) and the P6-comparison / corpus-DAG captures are byte-identical at v2.9.37, so only version labels advanced; no validation data was re-captured. The repo's own self-test suite (including the `forensic_strict` / `STRICT_FORENSIC_VIOLATION` strict-mode coverage) is preserved at 1128 / 0.
 
 ## What is in this folder
 

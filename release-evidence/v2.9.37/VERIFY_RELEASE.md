@@ -18,16 +18,16 @@ This is the per-release snapshot of the verification packet. The top-level [`../
 
 `witness-v2.9.37.json` in this folder is the CI-generated canonical witness (Sigstore-signed via GitHub OIDC; Rekor logIndex `1979959741`; verifiable with `gh attestation verify release-evidence/v2.9.37/witness-v2.9.37.json --repo danafitkowski/cpp-cpm-engine`).
 
-## What changed between v2.9.34 → v2.9.37
+## What changed since the prior pinned release
 
-Engine math: the v2.9.34 engine is a **strict subset** of v2.9.37. The synced engine adds the v2.9.35 `computeTIA` `alerts` channel and the v2.9.36 unresolved-finish guard (both additive — `computeCPM` is unchanged). Cross-validation remains 747 / 747 bit-identical against the Python reference, and the P6-comparison + corpus-DAG captures are byte-identical at v2.9.37, so no validation data was re-captured — only version labels advanced.
+Engine math: the prior engine is a **strict subset** of v2.9.37. The synced engine adds the `computeTIA` `alerts` channel and the unresolved-finish guard (both additive — `computeCPM` is unchanged). Cross-validation remains 747 / 747 bit-identical against the Python reference, and the P6-comparison + corpus-DAG captures are byte-identical at v2.9.37, so no validation data was re-captured — only version labels advanced.
 
 - **`computeTIA` `alerts` channel** — `computeTIA` returns an `alerts` array surfacing `tia-working-days-fallback` (calendar-day basis when no usable calendar was supplied) and `tia-calendar-mismatch` (a requested `opts.projectCalendar` absent from `calMap`).
 - **`computeTIA` unresolved-finish guard** — a baseline or post-impact run that cannot resolve a valid project finish returns `status:'error'` with a `tia-unresolved-finish` alert, not a fabricated epoch-fallback impact.
 
 Modified:
 
-- `cpm-engine.js` — synced to v2.9.37 (the v2.9.35–v2.9.37 engine deltas + `ENGINE_VERSION`).
+- `cpm-engine.js` — synced to v2.9.37 (the maintained-line engine deltas + `ENGINE_VERSION`).
 - `cpm-engine.test.js` — version-bumped to 2.9.37; the repo's `forensic_strict` strict-mode suite is preserved (1128 / 0).
 - `package.json` — version bumped.
 - README, DAUBERT, VERIFY_RELEASE, FORENSIC_USE_SOP, docs/jurisdictions, docs/api, validation/p6-comparison, validation/xer-corpus — version-header sweep `v2.9.34 → v2.9.37`.
