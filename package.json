@@ -13,10 +13,11 @@
     "test:p6-comparison": "node tests/p6-comparison-validator.test.js",
     "test:corpus-dag": "node tests/corpus-dag-fixture.test.js",
     "crossval": "node cpm-engine.crossval.js",
-    "test:all": "npm test && npm run crossval && npm run test:cites && npm run test:truncation && npm run test:version-refs && npm run test:sop && npm run test:crypto && npm run test:p6-comparison && npm run test:corpus-dag",
+    "test:all": "npm test && npm run crossval && npm run test:cites && npm run test:no-client-names && npm run test:truncation && npm run test:version-refs && npm run test:sop && npm run test:crypto && npm run test:p6-comparison && npm run test:corpus-dag",
     "coverage": "c8 --reporter=text --reporter=json-summary --reporter=html --include=cpm-engine.js npm test",
     "verify": "node scripts/attestation.js",
-    "attest": "node scripts/attestation.js --silent --output attestations/latest.json"
+    "attest": "node scripts/attestation.js --silent --output attestations/latest.json",
+    "test:no-client-names": "node tests/no-client-names.test.js"
   },
   "keywords": [
     "cpm",
