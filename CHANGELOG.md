@@ -23,7 +23,7 @@ Brings the public engine current with the maintained source line, which had adva
 
 ### Test state
 
-- Unit self-tests: **1081 / 0**.
+- Unit self-tests: **1128 / 0**.
 - Cross-validation: **43 fixtures / 747 checks**, byte-identical to the Python reference.
 - All audit gates green (cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG).
 
