@@ -1,0 +1,9 @@
+CI matrix run for v2.9.37 — Sigstore-signed Layer 2 evidence.
+
+Workflow:       verify
+Trigger:        push (annotated tag v2.9.37)
+Commit SHA:     d9cfc1f79e317580c5069d4848fee96071568542
+Run URL:        https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/28287289406
+
+Matrix: 9 legs (Node 18/20/22 x ubuntu/windows/macos), all PASS.
+Witness signed via Sigstore (GitHub OIDC) — see sigstore-attestation-output.txt + rekor-entry.txt.

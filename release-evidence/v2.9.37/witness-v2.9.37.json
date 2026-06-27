@@ -1,0 +1,67 @@
+{
+  "$schema": "cpp-cpm-engine-attestation/v1",
+  "generated_by": "scripts/attestation.js",
+  "generated_at_utc": "2026-06-27T11:04:03.518Z",
+  "package": {
+    "name": "cpp-cpm-engine",
+    "version": "2.9.37"
+  },
+  "engine": {
+    "version": "2.9.37",
+    "file": "cpm-engine.js",
+    "sha256": "f2f767110087b4f0969738f6d7a971fcf0c3ed2f43b10a02242dc8fc5fc9d8ed",
+    "bytes": 439861
+  },
+  "python_reference": {
+    "file": "python_reference/cpm.py",
+    "sha256": "fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68",
+    "bytes": 70281
+  },
+  "git": {
+    "commit_sha": "d9cfc1f79e317580c5069d4848fee96071568542",
+    "ref": "refs/tags/v2.9.37",
+    "workflow_run_url": "https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/28287289406"
+  },
+  "environment": {
+    "node_version": "v20.20.2",
+    "platform": "linux",
+    "arch": "x64",
+    "runner": "Linux"
+  },
+  "results": {
+    "unit_tests": {
+      "command": "node cpm-engine.test.js",
+      "passed": 1128,
+      "failed": 0,
+      "ok": true
+    },
+    "crossval": {
+      "command": "node cpm-engine.crossval.js",
+      "fixtures_passed": 43,
+      "fixtures_failed": 0,
+      "checks_passed": 747,
+      "checks_total": 747,
+      "ok": true
+    },
+    "citation_regression": {
+      "command": "node tests/no-fabricated-citations.test.js",
+      "ok": true
+    },
+    "truncation_regression": {
+      "command": "node tests/no-truncation.test.js",
+      "ok": true
+    },
+    "version_drift_regression": {
+      "command": "node tests/no-stale-version-refs.test.js",
+      "ok": true
+    }
+  },
+  "verdict": "PASS",
+  "reproducibility_notes": [
+    "To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,",
+    "(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,",
+    "(4) run `npm run verify` on your own machine,",
+    "(5) compare your engine.sha256, python_reference.sha256, and results to the values above.",
+    "Bit-identical SHA-256s + matching pass counts = reproduced; any drift documents the delta."
+  ]
+}

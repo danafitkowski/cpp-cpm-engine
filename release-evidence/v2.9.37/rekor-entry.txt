@@ -1,0 +1,9 @@
+Rekor transparency-log entry - v2.9.37 witness
+
+logIndex:       1979959741
+logID:          {'keyId': 'wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0='}
+integratedTime: 1782558245 (2026-06-27T11:04:05Z)
+kindVersion:    {'kind': 'dsse', 'version': '0.0.1'}
+Signed payload subject: latest.json
+
+Public lookup: https://search.sigstore.dev/?logIndex=1979959741
