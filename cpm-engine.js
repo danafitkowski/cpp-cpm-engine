@@ -6080,7 +6080,7 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '43 cross-validation fixtures × 444 checks bit-identical (including ' +
+                '43 cross-validation fixtures × 747 checks bit-identical (including ' +
                 'severity-level alert parity). Real XER (282 activities) 0 mismatches. ' +
                 testCountStr +
                 ' unit tests passing in CI. ' +
