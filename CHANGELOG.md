@@ -12,6 +12,33 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.38 — 2026-07-04 — attestation SHA chain fix + count reconciliation + DAUBERT §E accuracy
+
+Supersedes v2.9.37 (v2.9.37 → v2.9.38). No engine math changed — `computeCPM`, `computeTIA`, and the Section-D hot loop are byte-identical to v2.9.37, and cross-validation stays 43 / 747 byte-identical against the Python reference. This is a release-integrity and disclosure-accuracy release.
+
+### Attestation and provenance
+
+- **Attestation SHA chain corrected.** The prior attestation chain pinned a stale engine SHA-256 that no longer matched the shipped `cpm-engine.js` bytes. The engine hash is recomputed so `shasum -c` succeeds against the committed source, and the v2.9.38 release-evidence packet (`release-evidence/v2.9.38/`) is built with the correct pin. CI-only fields (commit SHA, Sigstore bundle, Rekor entry, GitHub Actions run URL) carry `PENDING-CI` placeholders in the local packet; they are populated by `verify.yml` on tag push.
+
+### Documentation accuracy
+
+- **Unit-test counts reconciled to 1,129.** Every current-state unit-test count across DAUBERT.md, README.md, VERIFY_RELEASE.md, FORENSIC_USE_SOP.md, METHODOLOGY.md, and CONTRIBUTING.md is reconciled to the live `node cpm-engine.test.js` result of 1,129 (prior docs carried stale 1,128 / 1,104 / 1,071 / 1,112 values).
+- **DAUBERT §E corrected.** §E previously described a `methodology_status` field and a `woet_classifier` surface that the engine does not emit. §E now documents the fields the engine actually carries: a `method_caveat` string on `computeKinematicDelay` and a `methodology` descriptor on `computeBayesianUpdate`. The stray `woet_classifier` reference is removed and the §E heading is retitled accordingly.
+- **Real-XER claim caveated.** The 282-activity real-XER stress claim in §2 / §4 is marked as resting on a single non-public reference XER that is not committed and not independently reproducible from this repo.
+- **Non-public Python-suite peer-review line reworded.** The §3 peer-review bullet now states plainly that the parallel Python implementation is an internal, non-public codebase whose test suite is not distributed in this repository and is therefore not independently reproducible from this artifact.
+- **Derived counts corrected.** Engine line count 6,137 → 8,764, strict-mode fatal-context count 36 → 37 (matching `FATAL_STRICT_CONTEXTS.size`), and the "verifications" derived total 1,875 → 1,876 (1,129 + 747).
+- **Stale coverage anchors fixed.** The `#21-test-coverage-v2932-baseline` links in README.md and VERIFY_RELEASE.md now point at `#21-test-coverage-v2933-baseline`.
+
+### Test state
+
+- Unit self-tests: **1129 / 0**.
+- Cross-validation: **43 fixtures / 747 checks**, byte-identical to the Python reference.
+- All audit gates green (cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG).
+
+The `computeCPM` public API is unchanged; no breaking changes.
+
+---
+
 ## v2.9.37 — 2026-06-27 — engine sync: computeTIA alerts + unresolved-finish guard
 
 Brings the public engine current with the maintained source line, which had advanced to v2.9.37 while this mirror was pinned at v2.9.34. `cpm-engine.js` and the self-test suite are synced verbatim from the source. The v2.9.34 engine math is a strict subset of v2.9.37 — the cross-validation (43 / 747) and the P6-comparison / corpus-dag captures are byte-identical at v2.9.37, so no validation data was re-captured; only the version labels advanced.

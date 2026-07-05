@@ -1313,8 +1313,8 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
         { dataDate: '2026-01-05' }
     );
     check('manifest present', r.manifest !== undefined);
-    check('manifest.engine_version === 2.9.37',
-        r.manifest.engine_version === '2.9.37');
+    check('manifest.engine_version === 2.9.38',
+        r.manifest.engine_version === '2.9.38');
     check('manifest.method_id === computeCPM',
         r.manifest.method_id === 'computeCPM');
     check('manifest.activity_count === 2', r.manifest.activity_count === 2);
@@ -1350,7 +1350,7 @@ console.log('\n=== v2.1 Wave B4 — manifest field ===');
     check('TIA.manifest.method_id === computeTIA',
         tR.manifest && tR.manifest.method_id === 'computeTIA');
     check('TIA.manifest.fragnet_count === 0', tR.manifest.fragnet_count === 0);
-    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.37');
+    check('E.ENGINE_VERSION exported', E.ENGINE_VERSION === '2.9.38');
 }
 
 console.log('\n=== v2.1 Wave B5 — methodology field in TIA output ===');
@@ -1603,7 +1603,7 @@ console.log('\n=== Section I — computeScheduleHealth (D3) ===');
     check('D3: clean 2-act network → score 90 (100% CP ratio, small network)', h.score === 90);
     check('D3: clean 2-act network → letter A (score>=90)', h.letter === 'A');
     check('D3: result has 7 checks', h.checks.length === 7);
-    check('D3: engine_version present', h.engine_version === '2.9.37');
+    check('D3: engine_version present', h.engine_version === '2.9.38');
     check('D3: method_id correct', h.method_id === 'computeScheduleHealth');
 }
 {
@@ -2062,7 +2062,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
         roundTrip && roundTrip.rule.includes('Daubert'));
     check('E3: round-trip preserves disclosure_format_version',
         roundTrip && roundTrip.disclosure_format_version === '1.1');
-    check('E3: engine_version in disclosure', d.engine_version === '2.9.37');
+    check('E3: engine_version in disclosure', d.engine_version === '2.9.38');
 }
 {
     // Standalone use (null result) → graceful, no crash.
@@ -2082,7 +2082,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
     check('E3: null result → method_id = unknown',
         dCaught && dCaught.methodology && dCaught.methodology.method_id === 'unknown');
     check('E3: null result → engine_version present',
-        dCaught && dCaught.engine_version === '2.9.37');
+        dCaught && dCaught.engine_version === '2.9.38');
 }
 
 // ============================================================================

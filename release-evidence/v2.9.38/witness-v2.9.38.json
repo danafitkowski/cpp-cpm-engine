@@ -1,0 +1,70 @@
+{
+  "$schema": "cpp-cpm-engine-attestation/v1",
+  "generated_by": "scripts/attestation.js",
+  "generated_at_utc": "PENDING-CI",
+  "package": {
+    "name": "cpp-cpm-engine",
+    "version": "2.9.38"
+  },
+  "engine": {
+    "version": "2.9.38",
+    "file": "cpm-engine.js",
+    "sha256": "6bf24fb038657945478cf40c92273d8dc0bec7312e79eab8c8129667c356d045",
+    "bytes": 439861
+  },
+  "python_reference": {
+    "file": "python_reference/cpm.py",
+    "sha256": "fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68",
+    "bytes": 70281
+  },
+  "git": {
+    "commit_sha": "PENDING-CI",
+    "ref": "refs/tags/v2.9.38",
+    "workflow_run_url": "PENDING-CI"
+  },
+  "environment": {
+    "node_version": "PENDING-CI",
+    "platform": "PENDING-CI",
+    "arch": "PENDING-CI",
+    "runner": "PENDING-CI"
+  },
+  "results": {
+    "unit_tests": {
+      "command": "node cpm-engine.test.js",
+      "passed": 1129,
+      "failed": 0,
+      "ok": true
+    },
+    "crossval": {
+      "command": "node cpm-engine.crossval.js",
+      "fixtures_passed": 43,
+      "fixtures_failed": 0,
+      "checks_passed": 747,
+      "checks_total": 747,
+      "ok": true
+    },
+    "citation_regression": {
+      "command": "node tests/no-fabricated-citations.test.js",
+      "ok": true
+    },
+    "truncation_regression": {
+      "command": "node tests/no-truncation.test.js",
+      "ok": true
+    },
+    "version_drift_regression": {
+      "command": "node tests/no-stale-version-refs.test.js",
+      "ok": true
+    }
+  },
+  "verdict": "PASS",
+  "sigstore": "PENDING-CI",
+  "rekor": "PENDING-CI",
+  "reproducibility_notes": [
+    "To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,",
+    "(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,",
+    "(4) run `npm run verify` on your own machine,",
+    "(5) compare your engine.sha256, python_reference.sha256, and results to the values above.",
+    "Bit-identical SHA-256s + matching pass counts = reproduced; any drift documents the delta.",
+    "CI-only fields (commit_sha, workflow_run_url, environment, sigstore, rekor, generated_at_utc) are populated by the verify.yml workflow on tag push; this local packet witness carries PENDING-CI placeholders for them."
+  ]
+}

@@ -158,4 +158,4 @@ For non-forensic CPM (planning, lookahead, monthly progress reporting), the defa
 
 ---
 
-*Document version: aligned to `cpm-engine` v2.9.37. Framework citations verified at top-level (Canada Labour Code, 5 U.S.C. § 6103); provincial / state framework names are reference-level pointers and should be reconciled to current statute by the analyst per the [Forensic-use guidance](#forensic-use-guidance) above.*
+*Document version: aligned to `cpm-engine` v2.9.38. Framework citations verified at top-level (Canada Labour Code, 5 U.S.C. § 6103); provincial / state framework names are reference-level pointers and should be reconciled to current statute by the analyst per the [Forensic-use guidance](#forensic-use-guidance) above.*

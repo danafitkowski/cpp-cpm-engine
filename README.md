@@ -1,16 +1,16 @@
 # cpm-engine
 
-[![npm version](https://img.shields.io/badge/npm-v2.9.37-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
+[![npm version](https://img.shields.io/badge/npm-v2.9.38-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 1128 passing](https://img.shields.io/badge/tests-1128%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![tests: 1129 passing](https://img.shields.io/badge/tests-1129%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: 747/747](https://img.shields.io/badge/JS%E2%86%94Python-747%2F747-brightgreen.svg)](cpm-engine.crossval.js)
-[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2932-baseline)
+[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2933-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
-**Open source. AACE-aligned. Daubert-disclosed. JS/Python parity across 1,128 unit tests + 747 cross-validation checks on the enumerated CPM comparison surface (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+**Open source. AACE-aligned. Daubert-disclosed. JS/Python parity across 1,129 unit tests + 747 cross-validation checks on the enumerated CPM comparison surface (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
 
 Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
@@ -45,7 +45,7 @@ const result = E.computeCPM(
 
 console.log('Project finish:', result.projectFinish);     // 2026-01-21
 console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
-console.log('Engine version:', result.manifest.engine_version); // 2.9.37
+console.log('Engine version:', result.manifest.engine_version); // 2.9.38
 ```
 
 That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
@@ -105,7 +105,7 @@ Every computation emits a manifest:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.37',
+    engine_version: '2.9.38',
     method_id: 'computeCPM',
     activity_count: 3,
     relationship_count: 2,
@@ -189,7 +189,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.37. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.38. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
@@ -211,13 +211,13 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.37.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.38.
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,128 unit tests and 747/747 cross-validation checks across 43 fixtures, plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,129 unit tests and 747/747 cross-validation checks across 43 fixtures, plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

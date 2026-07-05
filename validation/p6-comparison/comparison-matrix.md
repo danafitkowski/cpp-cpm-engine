@@ -1,6 +1,6 @@
 # P6 Comparison Matrix — Master Roll-up
 
-**Engine version:** `cpm-engine` v2.9.37
+**Engine version:** `cpm-engine` v2.9.38
 **Generated:** 2026-05-23 — refreshed 2026-05-24 (v2.9.34 audit cycle; closes stale 14/15 row references after their move to `engine-limitations/`).
 **Status:** Engine outputs captured for all 13 P6-capturable cases; **P6-native values pending analyst capture**. Two known-by-construction-divergent cases (formerly numbered 14 and 15) live under `validation/engine-limitations/cases/` — see below.
 
@@ -14,7 +14,7 @@ For per-case details, expected behavior, and P6 setup notes, see `cases/<case-id
 
 ## Case index — engine outputs and pending verdict
 
-| # | Case ID | Engine Project Finish (v2.9.37) | Engine Alert Count | P6 Capture Verdict | Notes |
+| # | Case ID | Engine Project Finish (v2.9.38) | Engine Alert Count | P6 Capture Verdict | Notes |
 |---|---|---|---|---|---|
 | 01 | `01-fs-chain` | 2026-01-15 | 13 | ⏳ pending | Baseline FS chain. Should match P6 exactly. |
 | 02 | `02-ss-with-lag` | 2026-01-15 | 9 | ⏳ pending | SS+5 with parallel-finish behavior |
@@ -96,7 +96,7 @@ P6 comparison matrix for cpm-engine v2.9.33:
   P6-capturable: 13 cases
   Engine-only:   2 cases (sub-day lag, referential-integrity corruption)
   Pass rate:     <to be filled after capture>
-  Reproduction:  https://github.com/danafitkowski/cpp-cpm-engine/tree/v2.9.37/validation/p6-comparison
+  Reproduction:  https://github.com/danafitkowski/cpp-cpm-engine/tree/v2.9.38/validation/p6-comparison
 ```
 
 This sits alongside [`DAUBERT.md`](../../DAUBERT.md), [`VERIFY_RELEASE.md`](../../VERIFY_RELEASE.md), and the per-release [`release-evidence/`](../../release-evidence/) folders as the engine's complete validation surface.

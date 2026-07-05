@@ -6,7 +6,7 @@ Thank you for considering a contribution. The engine is the core of an active fo
 
 ## Quick rules
 
-1. **Every commit must pass 1,128 unit tests, 0 fail.**
+1. **Every commit must pass 1,129 unit tests, 0 fail.**
 
    ```bash
    npm test
