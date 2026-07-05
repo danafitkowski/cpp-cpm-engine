@@ -11,10 +11,10 @@ v2.9.38 is an **attestation-and-accuracy release** that supersedes the prior one
 | `README.md` | Folder orientation |
 | `validation-summary.md` | This file |
 | `VERIFY_RELEASE.md` | Citation-ready expert-report packet (per-release snapshot) |
-| `witness-v2.9.38.json` | Local packet witness (CI-only fields carry PENDING-CI; canonical Sigstore-signed witness generated post-tag) |
-| `sigstore-attestation-output.txt` | Sigstore `gh attestation verify` output — PENDING-CI (generated on tag push) |
-| `rekor-entry.txt` | Rekor transparency-log entry pointer — PENDING-CI (generated on tag push) |
-| `github-actions-run-url.txt` | CI matrix run URL — PENDING-CI (generated on tag push) |
+| `witness-v2.9.38.json` | Canonical Sigstore-signed witness (CI run 28724785215; all fields populated) |
+| `sigstore-attestation-output.txt` | Sigstore `gh attestation verify` output (verified, exit 0) |
+| `rekor-entry.txt` | Rekor transparency-log entry pointer (logIndex 2073912299) |
+| `github-actions-run-url.txt` | CI matrix run URL (run 28724785215) |
 | `cpm-engine.js.sha256` | Engine source SHA pin |
 | `python_reference-cpm.py.sha256` | Python reference SHA pin |
 | `npm-run-verify-output.txt` | Local `npm run verify` reproduction output |
@@ -24,8 +24,8 @@ v2.9.38 is an **attestation-and-accuracy release** that supersedes the prior one
 | Layer | Verified by | Artifact |
 |---|---|---|
 | 1. Source integrity | SHA-256 pins | `cpm-engine.js.sha256`, `python_reference-cpm.py.sha256` |
-| 2. Independent CI run | 9 OS × Node matrix on GitHub Actions | `github-actions-run-url.txt`, `witness-v2.9.38.json` (PENDING-CI until tag push) |
-| 3. Cryptographic attestation | Sigstore + Rekor | `sigstore-attestation-output.txt`, `rekor-entry.txt` (PENDING-CI until tag push) |
+| 2. Independent CI run | 9 OS × Node matrix on GitHub Actions | `github-actions-run-url.txt`, `witness-v2.9.38.json` |
+| 3. Cryptographic attestation | Sigstore + Rekor | `sigstore-attestation-output.txt`, `rekor-entry.txt` |
 | 4. Local reproduction | `npm run verify` (gates) | `npm-run-verify-output.txt` |
 
 ## What changed since the prior pinned release

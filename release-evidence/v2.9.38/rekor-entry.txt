@@ -1,1 +1,12 @@
-PENDING-CI (generated on tag push; not reproducible locally)
+Rekor transparency-log entry ? v2.9.38 canonical witness (attestations/latest.json)
+
+Log:            https://rekor.sigstore.dev
+logIndex:       2073912299
+integratedTime: 2026-07-05T00:48:13Z (unix 1783212493)
+Subject:        latest.json  sha256 7320f796d417f0f11813936841aa7083b331c7218a0be5a2149ff8b967b9e92c
+Build commit:   9ce67737f09d6b03216594632cc3fddf4c3ad472  (refs/tags/v2.9.38)
+Signer:         .github/workflows/verify.yml @ refs/tags/v2.9.38 (github-hosted, OIDC)
+CI run:         https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/28724785215
+
+Verify:         gh attestation verify <artifact> --owner danafitkowski
+Full Sigstore bundle + inclusion proof: see sigstore-attestation-output.txt

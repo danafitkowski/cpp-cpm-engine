@@ -7,16 +7,16 @@ This is the per-release snapshot of the verification packet. The top-level [`../
 | Item | Value |
 |---|---|
 | Tag | `v2.9.38` |
-| Commit SHA | PENDING-CI (generated on tag push) |
+| Commit SHA | 9ce67737f09d6b03216594632cc3fddf4c3ad472 |
 | Release date | 2026-07-04 |
 | Engine SHA-256 | `6bf24fb038657945478cf40c92273d8dc0bec7312e79eab8c8129667c356d045` |
 | Python reference SHA-256 | `fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68` |
 | Unit tests | 1,129 / 1,129 passing |
 | Cross-validation | 747 / 747 across 43 fixtures |
 | `npm run verify` verdict | PASS |
-| Sigstore Rekor logIndex | PENDING-CI (generated on tag push) |
+| Sigstore Rekor logIndex | 2073912299 (rekor.sigstore.dev) |
 
-`witness-v2.9.38.json` in this folder is the local packet witness; its CI-only fields (commit SHA, Sigstore bundle, Rekor logIndex, workflow run URL, environment, timestamp) carry `PENDING-CI` placeholders. The canonical Sigstore-signed witness is produced by the `verify.yml` workflow on tag push and attached as the release asset; verify it with `gh attestation verify release-evidence/v2.9.38/witness-v2.9.38.json --repo danafitkowski/cpp-cpm-engine` once CI has published it.
+`witness-v2.9.38.json` in this folder is the canonical Sigstore-signed witness produced by the `verify.yml` workflow on the v2.9.38 tag push (CI run 28724785215); all fields (commit SHA, workflow run URL, environment, timestamp) are populated. Verify it with `gh attestation verify release-evidence/v2.9.38/witness-v2.9.38.json --owner danafitkowski` (Rekor logIndex 2073912299).
 
 ## What changed since the prior pinned release
 
@@ -52,11 +52,11 @@ Compare the resulting engine and python-reference SHA-256 values to the SHAs abo
 ```
 Verification chain for cpm-engine v2.9.38:
   Tag:                v2.9.38
-  Commit SHA:         PENDING-CI (generated on tag push)
+  Commit SHA:         9ce67737f09d6b03216594632cc3fddf4c3ad472
   Engine SHA-256:     6bf24fb038657945478cf40c92273d8dc0bec7312e79eab8c8129667c356d045
   Python ref SHA-256: fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68
   Witness:            release-evidence/v2.9.38/witness-v2.9.38.json
-                      (Sigstore-signed witness generated on tag push; PENDING-CI locally)
+                      (Sigstore-signed; Rekor logIndex 2073912299 on rekor.sigstore.dev)
   Verification:       npm run verify PASS; 1,129 / 1,129 unit tests;
                       747 / 747 crossval checks across 43 fixtures
   Disclosure:         cpp-cpm-engine/DAUBERT.md
