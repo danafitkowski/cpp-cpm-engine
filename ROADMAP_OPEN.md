@@ -73,4 +73,4 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.34. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.38. Update on every release that closes or opens an audit item.
