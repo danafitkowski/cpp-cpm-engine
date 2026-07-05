@@ -8887,7 +8887,7 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
                 rationale: 'Verified: source XER has data-entry typo on A. ' +
                     'Both rows refer to the same activity per cover memo.',
                 authority_source: 'Schedule H cover memo, 2026-01-13',
-                analyst: 'D. Fitkowski, P.Eng.',
+                analyst: 'D. Fitkowski',
                 date: '2026-05-24',
                 exhibit_reference: 'Exhibit 4-A',
             },
@@ -8901,7 +8901,7 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
     check('strict mode structured override: authority_source recorded',
         oa[0].authority_source === 'Schedule H cover memo, 2026-01-13');
     check('strict mode structured override: analyst recorded',
-        oa[0].analyst === 'D. Fitkowski, P.Eng.');
+        oa[0].analyst === 'D. Fitkowski');
     check('strict mode structured override: date recorded',
         oa[0].date === '2026-05-24');
     check('strict mode structured override: exhibit_reference recorded',

@@ -8,7 +8,7 @@ This is a formal disclosure for the engine itself, modeled on the structured out
 
 ## §1 Qualifications
 
-The engine was developed and is maintained by **Dana Fitkowski** (P.Eng., 25-year construction scheduler, 20 years in nuclear/energy, Primavera P6 expert) at **Critical Path Partners**.
+The engine was developed and is maintained by **Dana Fitkowski** (25-year construction scheduler, 20 years in nuclear/energy, Primavera P6 expert) at **Critical Path Partners**.
 
 The CPM math is derived from peer-reviewed publications:
 
@@ -423,7 +423,7 @@ const result = E.computeCPMForensicStrict(activities, relationships, {
             'Project uses shop-floor 5x10 calendar declared in Schedule H ' +
             'cover memo dated 2026-01-13. Engine Mon-Fri fallback matches ' +
             'the contract calendar by construction. Verified by D. Fitkowski, ' +
-            'P.Eng., 2026-05-23.',
+            '2026-05-23.',
     },
 });
 ```
