@@ -1,6 +1,6 @@
 # cpm-engine
 
-[![npm version](https://img.shields.io/badge/npm-v2.9.38-blue.svg)](https://www.npmjs.com/package/@critical-path-partners/cpm-engine)
+[![npm version](https://img.shields.io/npm/v/cpp-cpm-engine.svg)](https://www.npmjs.com/package/cpp-cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![tests: 1129 passing](https://img.shields.io/badge/tests-1129%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: 747/747](https://img.shields.io/badge/JS%E2%86%94Python-747%2F747-brightgreen.svg)](cpm-engine.crossval.js)
@@ -21,11 +21,11 @@ Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a fo
 ## Quick start
 
 ```bash
-npm install @critical-path-partners/cpm-engine
+npm install cpp-cpm-engine
 ```
 
 ```js
-const E = require('@critical-path-partners/cpm-engine');
+const E = require('cpp-cpm-engine');
 
 const result = E.computeCPM(
     [
