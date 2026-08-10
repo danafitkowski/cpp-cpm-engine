@@ -3,12 +3,12 @@
     {
       "code": "A",
       "duration_days": 10,
-      "calendar": "MONFRI"
+      "clndr_id": "MONFRI"
     },
     {
       "code": "B",
       "duration_days": 10,
-      "calendar": "SIXDAY"
+      "clndr_id": "SIXDAY"
     }
   ],
   "relationships": [],

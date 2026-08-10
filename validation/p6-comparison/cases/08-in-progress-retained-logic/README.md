@@ -17,22 +17,13 @@ A original duration 10 wd, started Tue Jan 6 2026 (1 wd late). remaining_duratio
 5. Schedule under RETAINED LOGIC mode (NOT progress override).
 6. Capture B's projected ES/EF.
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.38)
 
-Project finish: `2026-01-24`
+Project finish: `2026-01-28`
 
 Critical activities: `["A","B"]`
 
-### Alerts emitted
-
-- **ALERT** `forward A.EF (retained-logic rem=7)` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `FS lag A->B` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `forward B.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward B.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward FS lag A->B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+_No alerts emitted._
 
 
 ## How to populate the P6 column of `comparison.csv`

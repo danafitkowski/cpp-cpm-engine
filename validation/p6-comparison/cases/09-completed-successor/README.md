@@ -16,19 +16,15 @@ B has actual_start 2025-12-15, actual_finish 2025-12-30 (in the past). A is plan
 4. Verify A.LF does NOT pull back through B.actual_finish.
 5. Engine emits "completed-succ-skipped-in-backward" INFO.
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.38)
 
-Project finish: `2026-01-10`
+Project finish: `2026-01-12`
 
 Critical activities: `["A"]`
 
 ### Alerts emitted
 
-- **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **INFO** `completed-succ-skipped-in-backward` — A: 1 completed successor(s) skipped in backward propagation (retained-logic semantics; completed activities do not pull predecessor LF backward through historical dates).
-- **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `out-of-sequence` — Activity B is in progress but 1 predecessor(s) have no actual_start (retained-logic anomaly): A
 
 

@@ -556,6 +556,29 @@ function compareCsvRow(code, node, p6Cols) {
     return row.join(',');
 }
 
+// ---------------------------------------------------------------------------
+// Calendar binding pass (2026-08-10). The engine reads an activity's calendar
+// from `clndr_id` (cpm-engine.js: `a.clndr_id && calMap`); the original case
+// definitions used a `calendar` key on cases 06/07 and no key at all on the
+// other cases, so NO case ever bound a calendar and every engine output
+// silently fell back to 7-day ordinal arithmetic — contradicting each case's
+// own expected_behavior prose and README setup notes, which all describe
+// Mon-Fri working-day arithmetic (e.g. case 08 prose says A.EF = Jan 12 +
+// 7 wd = Wed Jan 21; the unbound run pinned Jan 19). This pass binds every
+// activity explicitly, so input.json records exactly what the engine
+// computed with and the P6 setup notes become reproducible as written.
+const MONFRI_CAL = { work_days: [1, 2, 3, 4, 5], holidays: [] };
+for (const c of CASES) {
+    let usesMonFri = false;
+    for (const a of c.activities) {
+        if (a.calendar) { a.clndr_id = a.calendar; delete a.calendar; }
+        if (!a.clndr_id) { a.clndr_id = 'MONFRI'; }
+        if (a.clndr_id === 'MONFRI') usesMonFri = true;
+    }
+    c.opts.cal_map = c.opts.cal_map || {};
+    if (usesMonFri && !c.opts.cal_map.MONFRI) c.opts.cal_map.MONFRI = MONFRI_CAL;
+}
+
 function generate() {
     ensureDir(CASES_DIR);
     const summary = [];
@@ -630,7 +653,7 @@ function generate() {
             '',
             c.p6_setup_notes,
             '',
-            '## Engine output (v2.9.31)',
+            '## Engine output (v' + E.ENGINE_VERSION + ')',
             '',
             'Project finish: `' + (engineOutput.projectFinish || 'N/A') + '`',
             '',

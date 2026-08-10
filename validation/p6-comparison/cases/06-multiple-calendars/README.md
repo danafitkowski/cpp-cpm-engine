@@ -16,20 +16,13 @@ A.ES = Mon Jan 5, 10 wd Mon-Fri → A.EF = Fri Jan 16. B.ES = Mon Jan 5, 10 wd M
 4. Both start on 2026-01-05.
 5. F9 — verify B finishes earlier than A by 2 calendar days (1 wd on the 6-day cal).
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.38)
 
-Project finish: `2026-01-15`
+Project finish: `2026-01-19`
 
-Critical activities: `["A","B"]`
+Critical activities: `["A"]`
 
-### Alerts emitted
-
-- **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `forward B.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward B.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+_No alerts emitted._
 
 
 ## How to populate the P6 column of `comparison.csv`

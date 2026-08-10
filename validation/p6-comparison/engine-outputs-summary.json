@@ -1,96 +1,96 @@
 {
-  "generated_at": "2026-05-24T16:16:01.035Z",
-  "engine_version": "2.9.34",
+  "generated_at": "2026-08-10T22:01:51.640Z",
+  "engine_version": "2.9.38",
   "cases": [
     {
       "id": "01-fs-chain",
       "title": "FS chain — A → B → C with zero-lag finish-to-start",
-      "engine_project_finish": "2026-01-15",
-      "engine_alerts": 13,
+      "engine_project_finish": "2026-01-19",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "02-ss-with-lag",
       "title": "SS with lag — A SS+5 B",
-      "engine_project_finish": "2026-01-15",
-      "engine_alerts": 9,
+      "engine_project_finish": "2026-01-19",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "03-ff-with-lag",
       "title": "FF with lag — A FF+3 B",
-      "engine_project_finish": "2026-01-13",
-      "engine_alerts": 9,
+      "engine_project_finish": "2026-01-15",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "04-sf-edge-case",
       "title": "SF edge case — A SF+0 B",
-      "engine_project_finish": "2026-01-10",
-      "engine_alerts": 10,
+      "engine_project_finish": "2026-01-12",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "05-negative-float",
       "title": "Negative float — Finish On / Before constraint earlier than CP",
-      "engine_project_finish": "2026-01-17",
-      "engine_alerts": 8,
+      "engine_project_finish": "2026-01-21",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "06-multiple-calendars",
       "title": "Multiple calendars — A uses MonFri, B uses 6-day shifted",
-      "engine_project_finish": "2026-01-15",
-      "engine_alerts": 6,
+      "engine_project_finish": "2026-01-19",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "07-ontario-holidays",
       "title": "CA-ON holidays — Family Day, Good Friday, Victoria Day",
-      "engine_project_finish": "2026-04-05",
-      "engine_alerts": 3,
+      "engine_project_finish": "2026-05-13",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "08-in-progress-retained-logic",
       "title": "In-progress retained logic — A is in-progress, B downstream",
-      "engine_project_finish": "2026-01-24",
-      "engine_alerts": 8,
+      "engine_project_finish": "2026-01-28",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "09-completed-successor",
       "title": "Completed successor — backward pass must NOT pull A.LF backward",
-      "engine_project_finish": "2026-01-10",
-      "engine_alerts": 6,
+      "engine_project_finish": "2026-01-12",
+      "engine_alerts": 2,
       "engine_errored": false
     },
     {
       "id": "10-out-of-sequence-progress",
       "title": "Out-of-sequence progress — successor started before predecessor",
-      "engine_project_finish": "2026-01-22",
-      "engine_alerts": 9,
+      "engine_project_finish": "2026-01-26",
+      "engine_alerts": 1,
       "engine_errored": false
     },
     {
       "id": "11-mandatory-start-finish",
       "title": "Mandatory Start (MS_Start) and Mandatory Finish (MS_Finish)",
-      "engine_project_finish": "2026-01-14",
-      "engine_alerts": 8,
+      "engine_project_finish": "2026-01-16",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "12-snet-fnlt",
       "title": "Start No Earlier Than (SNET) + Finish No Later Than (FNLT)",
-      "engine_project_finish": "2026-01-15",
-      "engine_alerts": 8,
+      "engine_project_finish": "2026-01-19",
+      "engine_alerts": 0,
       "engine_errored": false
     },
     {
       "id": "13-alap",
       "title": "ALAP — secondary constraint pushing activity as late as possible",
-      "engine_project_finish": "2026-01-18",
-      "engine_alerts": 13,
+      "engine_project_finish": "2026-01-22",
+      "engine_alerts": 0,
       "engine_errored": false
     }
   ]

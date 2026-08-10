@@ -4,11 +4,13 @@
       "code": "B",
       "duration_days": 11,
       "actual_start": "2025-12-15",
-      "actual_finish": "2025-12-30"
+      "actual_finish": "2025-12-30",
+      "clndr_id": "MONFRI"
     },
     {
       "code": "A",
-      "duration_days": 5
+      "duration_days": 5,
+      "clndr_id": "MONFRI"
     }
   ],
   "relationships": [
@@ -21,6 +23,18 @@
   ],
   "opts": {
     "dataDate": "2026-01-05",
-    "projectStart": "2025-12-01"
+    "projectStart": "2025-12-01",
+    "cal_map": {
+      "MONFRI": {
+        "work_days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "holidays": []
+      }
+    }
   }
 }

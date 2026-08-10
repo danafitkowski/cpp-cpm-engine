@@ -4,13 +4,15 @@
       "code": "A",
       "duration_days": 5,
       "constraint_type": "CS_MSO",
-      "constraint_date": "2026-01-12"
+      "constraint_date": "2026-01-12",
+      "clndr_id": "MONFRI"
     },
     {
       "code": "B",
       "duration_days": 4,
       "constraint_type": "CS_MEO",
-      "constraint_date": "2026-01-30"
+      "constraint_date": "2026-01-30",
+      "clndr_id": "MONFRI"
     }
   ],
   "relationships": [
@@ -23,6 +25,18 @@
   ],
   "opts": {
     "dataDate": "2026-01-05",
-    "projectStart": "2026-01-05"
+    "projectStart": "2026-01-05",
+    "cal_map": {
+      "MONFRI": {
+        "work_days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "holidays": []
+      }
+    }
   }
 }

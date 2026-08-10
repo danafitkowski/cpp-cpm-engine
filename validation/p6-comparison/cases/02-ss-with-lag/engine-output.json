@@ -5,22 +5,22 @@
       "name": "",
       "duration_days": 10,
       "es": 2196,
-      "ef": 2206,
+      "ef": 2210,
       "ls": 2197,
-      "lf": 2207,
+      "lf": 2211,
       "tf": 1,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
-      "clndr_id": "",
+      "clndr_id": "MONFRI",
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": null,
       "es_date": "2026-01-05",
-      "ef_date": "2026-01-15",
+      "ef_date": "2026-01-19",
       "ls_date": "2026-01-06",
-      "lf_date": "2026-01-16",
+      "lf_date": "2026-01-20",
       "tf_working_days": 1,
       "ff": 0,
       "ff_working_days": 0
@@ -29,16 +29,16 @@
       "code": "B",
       "name": "",
       "duration_days": 4,
-      "es": 2201,
-      "ef": 2205,
-      "ls": 2202,
-      "lf": 2206,
-      "tf": 1,
+      "es": 2203,
+      "ef": 2207,
+      "ls": 2204,
+      "lf": 2210,
+      "tf": 3,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
-      "clndr_id": "",
+      "clndr_id": "MONFRI",
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": {
@@ -46,17 +46,17 @@
         "type": "SS",
         "lag_days": 5
       },
-      "es_date": "2026-01-10",
-      "ef_date": "2026-01-14",
-      "ls_date": "2026-01-11",
-      "lf_date": "2026-01-15",
+      "es_date": "2026-01-12",
+      "ef_date": "2026-01-16",
+      "ls_date": "2026-01-13",
+      "lf_date": "2026-01-19",
       "tf_working_days": 1,
-      "ff": 1,
+      "ff": 3,
       "ff_working_days": 1
     }
   },
-  "projectFinishNum": 2206,
-  "projectFinish": "2026-01-15",
+  "projectFinishNum": 2210,
+  "projectFinish": "2026-01-19",
   "criticalCodes": {},
   "criticalCodesArray": [],
   "topoOrder": [
@@ -67,60 +67,14 @@
     "A",
     "B"
   ],
-  "alerts": [
-    {
-      "severity": "ALERT",
-      "context": "forward A.EF",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "SS lag A->B",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "forward B.EF",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "init-LS A",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "init-LS B",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward B.LS",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward SS lag A->B",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward SS dur A",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward A.LS",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    }
-  ],
+  "alerts": [],
   "manifest": {
-    "engine_version": "2.9.34",
+    "engine_version": "2.9.38",
     "method_id": "computeCPM",
     "activity_count": 2,
     "relationship_count": 1,
     "data_date": "2026-01-05",
-    "calendar_count": 0,
-    "computed_at": "2026-05-24T16:16:01.012Z"
+    "calendar_count": 1,
+    "computed_at": "2026-08-10T22:01:51.614Z"
   }
 }

@@ -5,22 +5,22 @@
       "name": "",
       "duration_days": 5,
       "es": 2196,
-      "ef": 2201,
+      "ef": 2203,
       "ls": 2196,
-      "lf": 2201,
+      "lf": 2203,
       "tf": 0,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
-      "clndr_id": "",
+      "clndr_id": "MONFRI",
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": null,
       "es_date": "2026-01-05",
-      "ef_date": "2026-01-10",
+      "ef_date": "2026-01-12",
       "ls_date": "2026-01-05",
-      "lf_date": "2026-01-10",
+      "lf_date": "2026-01-12",
       "tf_working_days": 0,
       "ff": 0,
       "ff_working_days": 0
@@ -30,15 +30,15 @@
       "name": "",
       "duration_days": 4,
       "es": 2200,
-      "ef": 2204,
+      "ef": 2206,
       "ls": 2200,
-      "lf": 2204,
+      "lf": 2206,
       "tf": 0,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
-      "clndr_id": "",
+      "clndr_id": "MONFRI",
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": {
@@ -47,16 +47,16 @@
         "lag_days": 3
       },
       "es_date": "2026-01-09",
-      "ef_date": "2026-01-13",
+      "ef_date": "2026-01-15",
       "ls_date": "2026-01-09",
-      "lf_date": "2026-01-13",
+      "lf_date": "2026-01-15",
       "tf_working_days": 0,
       "ff": 0,
       "ff_working_days": 0
     }
   },
-  "projectFinishNum": 2204,
-  "projectFinish": "2026-01-13",
+  "projectFinishNum": 2206,
+  "projectFinish": "2026-01-15",
   "criticalCodes": {},
   "criticalCodesArray": [
     "A",
@@ -70,60 +70,14 @@
     "A",
     "B"
   ],
-  "alerts": [
-    {
-      "severity": "ALERT",
-      "context": "forward A.EF",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "FF lag A->B",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "FF duration B",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "forward B.ES (FF/SF anchor)",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "init-LS A",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "init-LS B",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward B.LS",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward FF lag A->B",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward A.LS",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    }
-  ],
+  "alerts": [],
   "manifest": {
-    "engine_version": "2.9.34",
+    "engine_version": "2.9.38",
     "method_id": "computeCPM",
     "activity_count": 2,
     "relationship_count": 1,
     "data_date": "2026-01-05",
-    "calendar_count": 0,
-    "computed_at": "2026-05-24T16:16:01.014Z"
+    "calendar_count": 1,
+    "computed_at": "2026-08-10T22:01:51.617Z"
   }
 }

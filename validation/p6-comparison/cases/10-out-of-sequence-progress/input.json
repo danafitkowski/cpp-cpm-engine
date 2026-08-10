@@ -2,13 +2,15 @@
   "activities": [
     {
       "code": "A",
-      "duration_days": 10
+      "duration_days": 10,
+      "clndr_id": "MONFRI"
     },
     {
       "code": "B",
       "duration_days": 5,
       "actual_start": "2026-01-08",
-      "remaining_duration": 3
+      "remaining_duration": 3,
+      "clndr_id": "MONFRI"
     }
   ],
   "relationships": [
@@ -21,6 +23,18 @@
   ],
   "opts": {
     "dataDate": "2026-01-12",
-    "projectStart": "2026-01-05"
+    "projectStart": "2026-01-05",
+    "cal_map": {
+      "MONFRI": {
+        "work_days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "holidays": []
+      }
+    }
   }
 }

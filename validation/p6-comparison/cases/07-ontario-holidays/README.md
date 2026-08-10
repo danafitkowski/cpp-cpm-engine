@@ -24,17 +24,13 @@ A starts Mon Jan 5 2026, 90 wd Mon-Fri on CA-ON calendar. Crosses Family Day (3r
 3. F9.
 4. Verify A.EF matches the engine output within +/- 0 wd.
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.38)
 
-Project finish: `2026-04-05`
+Project finish: `2026-05-13`
 
 Critical activities: `["A"]`
 
-### Alerts emitted
-
-- **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+_No alerts emitted._
 
 
 ## How to populate the P6 column of `comparison.csv`

@@ -2,18 +2,21 @@
   "activities": [
     {
       "code": "A",
-      "duration_days": 5
+      "duration_days": 5,
+      "clndr_id": "MONFRI"
     },
     {
       "code": "B",
       "duration_days": 5,
-      "constraint_type_secondary": "CS_ALAP"
+      "constraint_type_secondary": "CS_ALAP",
+      "clndr_id": "MONFRI"
     },
     {
       "code": "C",
       "duration_days": 3,
       "constraint_type": "CS_MEOB",
-      "constraint_date": "2026-02-28"
+      "constraint_date": "2026-02-28",
+      "clndr_id": "MONFRI"
     }
   ],
   "relationships": [
@@ -32,6 +35,18 @@
   ],
   "opts": {
     "dataDate": "2026-01-05",
-    "projectStart": "2026-01-05"
+    "projectStart": "2026-01-05",
+    "cal_map": {
+      "MONFRI": {
+        "work_days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "holidays": []
+      }
+    }
   }
 }

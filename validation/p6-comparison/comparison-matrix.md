@@ -1,7 +1,7 @@
 # P6 Comparison Matrix — Master Roll-up
 
 **Engine version:** `cpm-engine` v2.9.38
-**Generated:** 2026-05-23 — refreshed 2026-05-24 (v2.9.34 audit cycle; closes stale 14/15 row references after their move to `engine-limitations/`).
+**Generated:** 2026-05-23 — refreshed 2026-05-24 (v2.9.34 audit cycle; closes stale 14/15 row references after their move to `engine-limitations/`) — refreshed 2026-08-10 (calendar binding fix: the generator now binds every activity to its calendar via `clndr_id`, so engine outputs use working-day arithmetic as the case READMEs always described; previously every case silently fell back to 7-day ordinal arithmetic and no P6 build following the setup notes could have matched).
 **Status:** Engine outputs captured for all 13 P6-capturable cases; **P6-native values pending analyst capture**. Two known-by-construction-divergent cases (formerly numbered 14 and 15) live under `validation/engine-limitations/cases/` — see below.
 
 This document is the per-case verdict roll-up across the 13-case P6 comparison matrix. Once the analyst populates the `*_p6` columns of each case's `comparison.csv` and marks the `verdict_pass_fail` column, this file gets updated with the per-case verdict (PASS / FAIL / PARTIAL).
@@ -16,21 +16,21 @@ For per-case details, expected behavior, and P6 setup notes, see `cases/<case-id
 
 | # | Case ID | Engine Project Finish (v2.9.38) | Engine Alert Count | P6 Capture Verdict | Notes |
 |---|---|---|---|---|---|
-| 01 | `01-fs-chain` | 2026-01-15 | 13 | ⏳ pending | Baseline FS chain. Should match P6 exactly. |
-| 02 | `02-ss-with-lag` | 2026-01-15 | 9 | ⏳ pending | SS+5 with parallel-finish behavior |
-| 03 | `03-ff-with-lag` | 2026-01-13 | 9 | ⏳ pending | FF+3 forces B finish behind A finish |
-| 04 | `04-sf-edge-case` | 2026-01-10 | 10 | ⏳ pending | Least-common rel type; SF behavior varies with P6 progress-override setting |
-| 05 | `05-negative-float` | 2026-01-17 | 8 | ⏳ pending | FNLT constraint produces negative TF |
-| 06 | `06-multiple-calendars` | 2026-01-15 | 6 | ⏳ pending | Activity-specific calendars (5-day vs 6-day) |
-| 07 | `07-ontario-holidays` | 2026-04-05 | 3 | ⏳ pending | Long activity across CA-ON statutory holidays |
-| 08 | `08-in-progress-retained-logic` | 2026-01-24 | 8 | ⏳ pending | Predecessor in-progress; successor anchored to projected EF |
-| 09 | `09-completed-successor` | 2026-01-10 | 6 | ⏳ pending | Backward-pass skip; no pull-back through historical finish |
-| 10 | `10-out-of-sequence-progress` | 2026-01-22 | 9 | ⏳ pending | Out-of-sequence ALERT path |
-| 11 | `11-mandatory-start-finish` | 2026-01-14 | 8 | ⏳ pending | MS_Start + MS_Finish hard pins |
-| 12 | `12-snet-fnlt` | 2026-01-15 | 8 | ⏳ pending | SNET + FNLT (most common P6 constraints) |
-| 13 | `13-alap` | 2026-01-18 | 13 | ⏳ pending | ALAP secondary constraint |
+| 01 | `01-fs-chain` | 2026-01-19 | 0 | ⏳ pending | Baseline FS chain. Should match P6 exactly. |
+| 02 | `02-ss-with-lag` | 2026-01-19 | 0 | ⏳ pending | SS+5 with parallel-finish behavior |
+| 03 | `03-ff-with-lag` | 2026-01-15 | 0 | ⏳ pending | FF+3 forces B finish behind A finish |
+| 04 | `04-sf-edge-case` | 2026-01-12 | 0 | ⏳ pending | Least-common rel type; SF behavior varies with P6 progress-override setting |
+| 05 | `05-negative-float` | 2026-01-21 | 0 | ⏳ pending | FNLT constraint produces negative TF |
+| 06 | `06-multiple-calendars` | 2026-01-19 | 0 | ⏳ pending | Activity-specific calendars (5-day vs 6-day) |
+| 07 | `07-ontario-holidays` | 2026-05-13 | 0 | ⏳ pending | Long activity across CA-ON statutory holidays |
+| 08 | `08-in-progress-retained-logic` | 2026-01-28 | 0 | ⏳ pending | Predecessor in-progress; successor anchored to projected EF |
+| 09 | `09-completed-successor` | 2026-01-12 | 2 | ⏳ pending | Backward-pass skip; no pull-back through historical finish |
+| 10 | `10-out-of-sequence-progress` | 2026-01-26 | 1 | ⏳ pending | Out-of-sequence ALERT path |
+| 11 | `11-mandatory-start-finish` | 2026-01-16 | 0 | ⏳ pending | MS_Start + MS_Finish hard pins |
+| 12 | `12-snet-fnlt` | 2026-01-19 | 0 | ⏳ pending | SNET + FNLT (most common P6 constraints) |
+| 13 | `13-alap` | 2026-01-22 | 0 | ⏳ pending | ALAP secondary constraint |
 
-Alert counts include informational alerts; not all are critical-of-opinion. See per-case `engine-output.json` for the alert detail.
+Alert counts include informational alerts; not all are critical-of-opinion. After the 2026-08-10 calendar binding fix the calendar-fallback alerts are gone; the remaining alerts are the by-design ones (case 09 completed-successor skip, case 10 out-of-sequence progress). See per-case `engine-output.json` for the alert detail.
 
 **Note on cases formerly numbered 14 and 15:** In v2.9.33 the two known-by-construction-divergent cases (`14-fractional-lag` and `15-dangling-relationship`) were moved to `validation/engine-limitations/cases/` and renamed to `01-fractional-lag-engine-rounds` and `02-dangling-rel-corrupt-xer`. They are NOT P6-comparable by construction and never expected to carry a P6 verdict. See `validation/engine-limitations/` for their per-case READMEs and engine outputs. The v2.9.34 audit closes the stale row references that previously appeared in this matrix.
 
