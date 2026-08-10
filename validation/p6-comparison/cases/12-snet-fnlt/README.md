@@ -18,11 +18,13 @@ A has SNET = 2026-01-20. A.ES is pinned forward to Jan 20. A duration 5 wd → A
 
 ## Engine output (v2.9.38)
 
-Project finish: `2026-01-19`
+Project finish: `2026-02-03`
 
 Critical activities: `["A","B"]`
 
-_No alerts emitted._
+### Alerts emitted
+
+- **WARN** `constraint-applied` — SNET on A pushes ES from 2026-01-05 to 2026-01-20
 
 
 ## How to populate the P6 column of `comparison.csv`

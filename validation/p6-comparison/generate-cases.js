@@ -444,7 +444,9 @@ const CASES = [
             {
                 code: 'A',
                 duration_days: 5,
-                constraint_type: 'CS_MSOB',  // Start On or After (SNET)
+                constraint_type: 'CS_MSOA',  // Start On or After (SNET) — was
+                // miscoded CS_MSOB (Start On or BEFORE / SNLT) until 2026-08-10;
+                // the engine's CONSTRAINT_TYPE_MAP pins the A/B suffix semantics.
                 constraint_date: '2026-01-20',
             },
             {
@@ -574,6 +576,24 @@ for (const c of CASES) {
         if (a.calendar) { a.clndr_id = a.calendar; delete a.calendar; }
         if (!a.clndr_id) { a.clndr_id = 'MONFRI'; }
         if (a.clndr_id === 'MONFRI') usesMonFri = true;
+        // Constraint binding (same 2026-08-10 fix, second family): the engine
+        // reads constraints from `a.constraint` / `a.constraint2` objects
+        // ({ type, date }), not from the flat constraint_type / constraint_date
+        // keys the original definitions used — so cases 05 / 11 / 12 / 13
+        // never bound their constraints either (case 05 is titled
+        // "negative-float" yet pinned TF = 0 everywhere; case 11's mandatory
+        // pins pinned nothing).
+        if (a.constraint_type) {
+            a.constraint = { type: a.constraint_type, date: a.constraint_date };
+            delete a.constraint_type;
+            delete a.constraint_date;
+        }
+        if (a.constraint_type_secondary) {
+            a.constraint2 = { type: a.constraint_type_secondary,
+                              date: a.constraint_date_secondary };
+            delete a.constraint_type_secondary;
+            delete a.constraint_date_secondary;
+        }
     }
     c.opts.cal_map = c.opts.cal_map || {};
     if (usesMonFri && !c.opts.cal_map.MONFRI) c.opts.cal_map.MONFRI = MONFRI_CAL;

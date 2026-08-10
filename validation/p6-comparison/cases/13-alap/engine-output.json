@@ -40,7 +40,10 @@
       "actual_finish": "",
       "clndr_id": "MONFRI",
       "constraint": null,
-      "constraint2": null,
+      "constraint2": {
+        "type": "ALAP",
+        "date": ""
+      },
       "driving_predecessor": {
         "code": "A",
         "type": "FS",
@@ -68,7 +71,10 @@
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
-      "constraint": null,
+      "constraint": {
+        "type": "FNLT",
+        "date": "2026-02-28"
+      },
       "constraint2": null,
       "driving_predecessor": {
         "code": "B",
@@ -110,6 +116,6 @@
     "relationship_count": 2,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-10T22:01:51.639Z"
+    "computed_at": "2026-08-10T22:08:27.717Z"
   }
 }

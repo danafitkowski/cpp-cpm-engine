@@ -18,11 +18,14 @@ A.ES = MS_Start = 2026-01-12 (pinned, ignoring dataDate floor). A.LS = MS_Start 
 
 ## Engine output (v2.9.38)
 
-Project finish: `2026-01-16`
+Project finish: `2026-01-30`
 
 Critical activities: `["A","B"]`
 
-_No alerts emitted._
+### Alerts emitted
+
+- **WARN** `constraint-applied` — Mandatory Start on A pins ES to 2026-01-12
+- **WARN** `constraint-applied` — Mandatory Finish on B pins EF to 2026-01-30
 
 
 ## How to populate the P6 column of `comparison.csv`

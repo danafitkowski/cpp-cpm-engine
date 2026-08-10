@@ -20,17 +20,17 @@ For per-case details, expected behavior, and P6 setup notes, see `cases/<case-id
 | 02 | `02-ss-with-lag` | 2026-01-19 | 0 | ⏳ pending | SS+5 with parallel-finish behavior |
 | 03 | `03-ff-with-lag` | 2026-01-15 | 0 | ⏳ pending | FF+3 forces B finish behind A finish |
 | 04 | `04-sf-edge-case` | 2026-01-12 | 0 | ⏳ pending | Least-common rel type; SF behavior varies with P6 progress-override setting |
-| 05 | `05-negative-float` | 2026-01-21 | 0 | ⏳ pending | FNLT constraint produces negative TF |
+| 05 | `05-negative-float` | 2026-01-21 | 1 | ⏳ pending | FNLT constraint produces negative TF |
 | 06 | `06-multiple-calendars` | 2026-01-19 | 0 | ⏳ pending | Activity-specific calendars (5-day vs 6-day) |
 | 07 | `07-ontario-holidays` | 2026-05-13 | 0 | ⏳ pending | Long activity across CA-ON statutory holidays |
 | 08 | `08-in-progress-retained-logic` | 2026-01-28 | 0 | ⏳ pending | Predecessor in-progress; successor anchored to projected EF |
 | 09 | `09-completed-successor` | 2026-01-12 | 2 | ⏳ pending | Backward-pass skip; no pull-back through historical finish |
 | 10 | `10-out-of-sequence-progress` | 2026-01-26 | 1 | ⏳ pending | Out-of-sequence ALERT path |
-| 11 | `11-mandatory-start-finish` | 2026-01-16 | 0 | ⏳ pending | MS_Start + MS_Finish hard pins |
-| 12 | `12-snet-fnlt` | 2026-01-19 | 0 | ⏳ pending | SNET + FNLT (most common P6 constraints) |
+| 11 | `11-mandatory-start-finish` | 2026-01-30 | 2 | ⏳ pending | MS_Start + MS_Finish hard pins |
+| 12 | `12-snet-fnlt` | 2026-02-03 | 1 | ⏳ pending | SNET + FNLT (most common P6 constraints) |
 | 13 | `13-alap` | 2026-01-22 | 0 | ⏳ pending | ALAP secondary constraint |
 
-Alert counts include informational alerts; not all are critical-of-opinion. After the 2026-08-10 calendar binding fix the calendar-fallback alerts are gone; the remaining alerts are the by-design ones (case 09 completed-successor skip, case 10 out-of-sequence progress). See per-case `engine-output.json` for the alert detail.
+Alert counts include informational alerts; not all are critical-of-opinion. After the 2026-08-10 calendar binding fix the calendar-fallback alerts are gone; the remaining alerts are the by-design ones (case 09 completed-successor skip, case 10 out-of-sequence progress, and the constraint-application alerts on cases 05/11/12 after the same-day constraint binding fix). See per-case `engine-output.json` for the alert detail.
 
 **Note on cases formerly numbered 14 and 15:** In v2.9.33 the two known-by-construction-divergent cases (`14-fractional-lag` and `15-dangling-relationship`) were moved to `validation/engine-limitations/cases/` and renamed to `01-fractional-lag-engine-rounds` and `02-dangling-rel-corrupt-xer`. They are NOT P6-comparable by construction and never expected to carry a P6 verdict. See `validation/engine-limitations/` for their per-case READMEs and engine outputs. The v2.9.34 audit closes the stale row references that previously appeared in this matrix.
 

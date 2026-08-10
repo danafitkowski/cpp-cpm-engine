@@ -3,16 +3,20 @@
     {
       "code": "A",
       "duration_days": 5,
-      "constraint_type": "CS_MSO",
-      "constraint_date": "2026-01-12",
-      "clndr_id": "MONFRI"
+      "clndr_id": "MONFRI",
+      "constraint": {
+        "type": "CS_MSO",
+        "date": "2026-01-12"
+      }
     },
     {
       "code": "B",
       "duration_days": 4,
-      "constraint_type": "CS_MEO",
-      "constraint_date": "2026-01-30",
-      "clndr_id": "MONFRI"
+      "clndr_id": "MONFRI",
+      "constraint": {
+        "type": "CS_MEO",
+        "date": "2026-01-30"
+      }
     }
   ],
   "relationships": [

@@ -6,9 +6,9 @@
       "duration_days": 8,
       "es": 2196,
       "ef": 2206,
-      "ls": 2196,
-      "lf": 2206,
-      "tf": 0,
+      "ls": 2185,
+      "lf": 2197,
+      "tf": -9,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
@@ -19,9 +19,9 @@
       "driving_predecessor": null,
       "es_date": "2026-01-05",
       "ef_date": "2026-01-15",
-      "ls_date": "2026-01-05",
-      "lf_date": "2026-01-15",
-      "tf_working_days": 0,
+      "ls_date": "2025-12-25",
+      "lf_date": "2026-01-06",
+      "tf_working_days": -7,
       "ff": 0,
       "ff_working_days": 0
     },
@@ -31,15 +31,18 @@
       "duration_days": 4,
       "es": 2206,
       "ef": 2212,
-      "ls": 2206,
-      "lf": 2212,
-      "tf": 0,
+      "ls": 2197,
+      "lf": 2203,
+      "tf": -9,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
-      "constraint": null,
+      "constraint": {
+        "type": "FNLT",
+        "date": "2026-01-12"
+      },
       "constraint2": null,
       "driving_predecessor": {
         "code": "A",
@@ -48,11 +51,11 @@
       },
       "es_date": "2026-01-15",
       "ef_date": "2026-01-21",
-      "ls_date": "2026-01-15",
-      "lf_date": "2026-01-21",
-      "tf_working_days": 0,
-      "ff": 0,
-      "ff_working_days": 0
+      "ls_date": "2026-01-06",
+      "lf_date": "2026-01-12",
+      "tf_working_days": -7,
+      "ff": -9,
+      "ff_working_days": -7
     }
   },
   "projectFinishNum": 2212,
@@ -70,7 +73,13 @@
     "A",
     "B"
   ],
-  "alerts": [],
+  "alerts": [
+    {
+      "severity": "ALERT",
+      "context": "constraint-violated",
+      "message": "FNLT on B violated: EF=2026-01-21 is after constraint date 2026-01-12"
+    }
+  ],
   "manifest": {
     "engine_version": "2.9.38",
     "method_id": "computeCPM",
@@ -78,6 +87,6 @@
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-10T22:01:51.621Z"
+    "computed_at": "2026-08-10T22:08:27.701Z"
   }
 }

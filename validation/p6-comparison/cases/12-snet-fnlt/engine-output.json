@@ -4,23 +4,30 @@
       "code": "A",
       "name": "",
       "duration_days": 5,
-      "es": 2196,
-      "ef": 2203,
-      "ls": 2196,
-      "lf": 2203,
+      "es": 2211,
+      "ef": 2218,
+      "ls": 2211,
+      "lf": 2218,
       "tf": 0,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
-      "constraint": null,
+      "constraint": {
+        "type": "SNET",
+        "date": "2026-01-20"
+      },
       "constraint2": null,
-      "driving_predecessor": null,
-      "es_date": "2026-01-05",
-      "ef_date": "2026-01-12",
-      "ls_date": "2026-01-05",
-      "lf_date": "2026-01-12",
+      "driving_predecessor": {
+        "type": "CONSTRAINT",
+        "constraint_type": "SNET",
+        "date": "2026-01-20"
+      },
+      "es_date": "2026-01-20",
+      "ef_date": "2026-01-27",
+      "ls_date": "2026-01-20",
+      "lf_date": "2026-01-27",
       "tf_working_days": 0,
       "ff": 0,
       "ff_working_days": 0
@@ -29,34 +36,37 @@
       "code": "B",
       "name": "",
       "duration_days": 5,
-      "es": 2203,
-      "ef": 2210,
-      "ls": 2203,
-      "lf": 2210,
+      "es": 2218,
+      "ef": 2225,
+      "ls": 2218,
+      "lf": 2225,
       "tf": 0,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
-      "constraint": null,
+      "constraint": {
+        "type": "FNLT",
+        "date": "2026-02-13"
+      },
       "constraint2": null,
       "driving_predecessor": {
         "code": "A",
         "type": "FS",
         "lag_days": 0
       },
-      "es_date": "2026-01-12",
-      "ef_date": "2026-01-19",
-      "ls_date": "2026-01-12",
-      "lf_date": "2026-01-19",
+      "es_date": "2026-01-27",
+      "ef_date": "2026-02-03",
+      "ls_date": "2026-01-27",
+      "lf_date": "2026-02-03",
       "tf_working_days": 0,
       "ff": 0,
       "ff_working_days": 0
     }
   },
-  "projectFinishNum": 2210,
-  "projectFinish": "2026-01-19",
+  "projectFinishNum": 2225,
+  "projectFinish": "2026-02-03",
   "criticalCodes": {},
   "criticalCodesArray": [
     "A",
@@ -70,7 +80,13 @@
     "A",
     "B"
   ],
-  "alerts": [],
+  "alerts": [
+    {
+      "severity": "WARN",
+      "context": "constraint-applied",
+      "message": "SNET on A pushes ES from 2026-01-05 to 2026-01-20"
+    }
+  ],
   "manifest": {
     "engine_version": "2.9.38",
     "method_id": "computeCPM",
@@ -78,6 +94,6 @@
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-10T22:01:51.636Z"
+    "computed_at": "2026-08-10T22:08:27.715Z"
   }
 }

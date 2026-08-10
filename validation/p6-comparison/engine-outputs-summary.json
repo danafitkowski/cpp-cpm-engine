@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T22:01:51.640Z",
+  "generated_at": "2026-08-10T22:08:27.719Z",
   "engine_version": "2.9.38",
   "cases": [
     {
@@ -34,7 +34,7 @@
       "id": "05-negative-float",
       "title": "Negative float — Finish On / Before constraint earlier than CP",
       "engine_project_finish": "2026-01-21",
-      "engine_alerts": 0,
+      "engine_alerts": 1,
       "engine_errored": false
     },
     {
@@ -75,15 +75,15 @@
     {
       "id": "11-mandatory-start-finish",
       "title": "Mandatory Start (MS_Start) and Mandatory Finish (MS_Finish)",
-      "engine_project_finish": "2026-01-16",
-      "engine_alerts": 0,
+      "engine_project_finish": "2026-01-30",
+      "engine_alerts": 2,
       "engine_errored": false
     },
     {
       "id": "12-snet-fnlt",
       "title": "Start No Earlier Than (SNET) + Finish No Later Than (FNLT)",
-      "engine_project_finish": "2026-01-19",
-      "engine_alerts": 0,
+      "engine_project_finish": "2026-02-03",
+      "engine_alerts": 1,
       "engine_errored": false
     },
     {

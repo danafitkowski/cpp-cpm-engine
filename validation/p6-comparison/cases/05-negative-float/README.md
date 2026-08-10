@@ -22,7 +22,9 @@ Project finish: `2026-01-21`
 
 Critical activities: `["A","B"]`
 
-_No alerts emitted._
+### Alerts emitted
+
+- **ALERT** `constraint-violated` — FNLT on B violated: EF=2026-01-21 is after constraint date 2026-01-12
 
 
 ## How to populate the P6 column of `comparison.csv`
