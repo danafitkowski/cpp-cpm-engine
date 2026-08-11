@@ -298,6 +298,15 @@ The engine honors the following Primavera P6 constraint types declared on activi
 | `MS_Finish` / `MFO` | `CS_MEO` (Mandatory Finish) | `EF = date` (forced); if pred logic > date → ALERT | `LF = date` |
 | `ALAP` | `CS_ALAP` | (no forward action — pinned in post-backward sweep) | Post-pass slides ES/EF to LS/LF if `LS > ES`; WARN `constraint-applied` |
 
+**Constraint date boundary (P6-validated 2026-08-11, comparison case 05):**
+constraint dates are day-start instants. A date-only `FNLT D` therefore forbids
+work on `D` itself: the last permissible finish is the close of the previous
+workday on the activity's own calendar (P6 stores the constraint as `D 08:00`
+and computes `LATE_END` = previous workday 17:00). The comparison surface for
+float is `tf_working_days` / `ff_working_days` (working days on the activity's
+own calendar), which is what P6's float columns mean; the raw calendar-day
+`tf` / `ff` fields remain available but are not P6-comparable.
+
 **v2.9.5 — XER reachability closed.** v2.9.3 added the Section C constraint clamps above but `parseXER()` did not read `cstr_type` / `cstr_date2` from XER rows, so the constraint code was unreachable from real XER files. v2.9.5 wires the parser end-to-end: every TASK row now exposes `task.constraint` populated from `cstr_type` + `cstr_date2` (with `cstr_date` as fallback). The `A` / `B` suffix on long-form tokens (CS_MSOA, CS_MEOB) was also corrected per Oracle P6 Database Reference — `A = After` (SNET/FNET), `B = Before` (SNLT/FNLT). v2.9.3 had `CS_MEOA / CS_MSOA` mapped as mandatory variants, which silently produced wrong answers.
 
 **v2.9.5 — Actual-start pin order corrected (AACE 29R-03 §4.3).** When an activity has `actual_start`, that historical fact is immutable. v2.9.3 applied the data_date floor before checking actual_start, so any schedule updated after work began (the common case) pinned ES to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins immutably over both the data_date floor and predecessor-driven ES. The post-pass OoS detector still flags the predecessor anomaly; `driving_predecessor` is still surfaced for forensic traceability.

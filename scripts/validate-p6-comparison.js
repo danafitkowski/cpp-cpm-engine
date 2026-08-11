@@ -47,8 +47,13 @@ const FIELD_TO_NODE_KEY = {
     EF_engine: 'ef_date',
     LS_engine: 'ls_date',
     LF_engine: 'lf_date',
-    TF_engine: 'tf',
-    FF_engine: 'ff',
+    // P6 alignment wave B1 (2026-08-11): the comparison surface is WORKING
+    // DAYS on the activity's own calendar, matching what P6's float columns
+    // mean. node.tf/node.ff stay the raw calendar-day fields internally; the
+    // *_working_days twins are the P6-parity fields. Case 05 proved the
+    // distinction: engine tf=-9 (calendar) vs tf_working_days=-7 = P6.
+    TF_engine: 'tf_working_days',
+    FF_engine: 'ff_working_days',
 };
 
 const P6_COLS = ['ES_p6', 'EF_p6', 'LS_p6', 'LF_p6', 'TF_p6', 'FF_p6'];
@@ -148,27 +153,40 @@ function validateCase(caseDir) {
             }
         }
 
-        // P6 columns: all filled or all blank
+        // P6 columns: all filled or all blank. One principled exception
+        // (B1, 2026-08-11): a COMPLETED activity legitimately carries blank
+        // TF/FF because P6 stores NULL float on TK_Complete rows by design.
+        // Completion is recognizable from the capture itself: the finish
+        // columns carry P6's " A" actual suffix. Dates must still be filled.
         const p6Vals = P6_COLS.map(c => row[idx[c]]);
         const filled = p6Vals.filter(v => v && v.length > 0).length;
+        const dateColsFilled = ['ES_p6', 'EF_p6', 'LS_p6', 'LF_p6']
+            .every(c => row[idx[c]] && row[idx[c]].length > 0);
+        const floatColsBlank = ['TF_p6', 'FF_p6']
+            .every(c => !row[idx[c]] || row[idx[c]].length === 0);
+        const completedRow = dateColsFilled && floatColsBlank &&
+            / A$/.test(row[idx.EF_p6]) && / A$/.test(row[idx.LF_p6]);
         if (filled === 0) {
             p6EmptyRows++;
-        } else if (filled === P6_COLS.length) {
+        } else if (filled === P6_COLS.length || completedRow) {
             p6FilledRows++;
-            // verdict required
+            // verdict required. Accepted forms are exactly what
+            // apply-p6-capture.py emits: PASS, PASS (notes), or
+            // FAIL - <delta> (hyphen; em-dash also tolerated for older rows).
             const verdict = row[idx.verdict_pass_fail];
             if (!verdict || verdict.trim().length === 0) {
                 errors.push(caseDir + ': row ' + r + ' (' + code +
                     ') has all P6 columns filled but verdict_pass_fail is empty');
-            } else if (!/^(PASS|FAIL\s*—\s*.+)$/.test(verdict)) {
+            } else if (!/^(PASS( \(.+\))?|FAIL\s*[—-]\s*.+)$/.test(verdict)) {
                 errors.push(caseDir + ': row ' + r + ' (' + code +
                     ') verdict_pass_fail "' + verdict +
-                    '" does not match /^PASS$/ or /^FAIL — <delta>$/');
+                    '" does not match PASS, PASS (notes), or FAIL - <delta>');
             }
         } else {
             errors.push(caseDir + ': row ' + r + ' (' + code +
                 ') has partial P6 population (' + filled + '/' + P6_COLS.length +
-                ' filled) — must be all-filled or all-empty');
+                ' filled) — must be all-filled or all-empty (completed rows: '
+                + 'dates filled with " A" finishes, float blank)');
         }
     }
 

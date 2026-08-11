@@ -540,8 +540,12 @@ function compareCsvRow(code, node, p6Cols) {
         EF: node && node.ef ? E.numToDate(node.ef) : '',
         LS: node && node.ls !== undefined ? E.numToDate(node.ls) : '',
         LF: node && node.lf !== undefined ? E.numToDate(node.lf) : '',
-        TF: node && node.tf !== undefined ? String(node.tf) : '',
-        FF: node && node.ff !== undefined ? String(node.ff) : '',
+        // B1 (2026-08-11): compare float in WORKING DAYS on the activity's
+        // own calendar. That is what P6's TF/FF columns mean. The raw
+        // calendar-day tf/ff stay internal; case 05 proved the difference
+        // (tf=-9 calendar vs tf_working_days=-7 = P6's answer).
+        TF: node && node.tf_working_days !== undefined ? String(node.tf_working_days) : '',
+        FF: node && node.ff_working_days !== undefined ? String(node.ff_working_days) : '',
     };
     const p6 = p6Cols || { ES: '', EF: '', LS: '', LF: '', TF: '', FF: '' };
     const row = [

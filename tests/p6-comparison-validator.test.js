@@ -76,10 +76,14 @@ function makeFixture(name, csv, engineOutput) {
 
 const ENGINE_OUT = {
     nodes: {
+        // B1 (2026-08-11): the validator binds TF/FF to the *_working_days
+        // twins (the P6-parity fields); raw tf/ff stay for context.
         A: { es_date: '2026-01-05', ef_date: '2026-01-10',
-             ls_date: '2026-01-05', lf_date: '2026-01-10', tf: 0, ff: 0 },
+             ls_date: '2026-01-05', lf_date: '2026-01-10',
+             tf: 0, ff: 0, tf_working_days: 0, ff_working_days: 0 },
         B: { es_date: '2026-01-10', ef_date: '2026-01-13',
-             ls_date: '2026-01-10', lf_date: '2026-01-13', tf: 0, ff: 0 },
+             ls_date: '2026-01-10', lf_date: '2026-01-13',
+             tf: 0, ff: 0, tf_working_days: 0, ff_working_days: 0 },
     },
 };
 
