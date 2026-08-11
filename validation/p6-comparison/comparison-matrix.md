@@ -1,6 +1,6 @@
 # P6 Comparison Matrix — Master Roll-up
 
-**Engine version:** `cpm-engine` v2.9.38
+**Engine version:** `cpm-engine` v2.9.39
 **Generated:** 2026-05-23 — refreshed 2026-05-24 (v2.9.34 audit cycle; closes stale 14/15 row references after their move to `engine-limitations/`) — refreshed 2026-08-10 (calendar binding fix: the generator now binds every activity to its calendar via `clndr_id`, so engine outputs use working-day arithmetic as the case READMEs always described; previously every case silently fell back to 7-day ordinal arithmetic and no P6 build following the setup notes could have matched).
 **Status:** P6-native capture applied 2026-08-11 (automated harness, commit 9b748cc; comparator switched to working-day floats in the alignment wave). Current per-case verdicts below; alignment wave in progress toward 13/13. Two known-by-construction-divergent cases (formerly numbered 14 and 15) live under `validation/engine-limitations/cases/` — see below.
 
@@ -14,7 +14,7 @@ For per-case details, expected behavior, and P6 setup notes, see `cases/<case-id
 
 ## Case index — engine outputs and pending verdict
 
-| # | Case ID | Engine Project Finish (v2.9.38) | Engine Alert Count | P6 Capture Verdict | Notes |
+| # | Case ID | Engine Project Finish (v2.9.39) | Engine Alert Count | P6 Capture Verdict | Notes |
 |---|---|---|---|---|---|
 | 01 | `01-fs-chain` | 2026-01-19 | 0 | ✅ PASS | Baseline FS chain. Should match P6 exactly. |
 | 02 | `02-ss-with-lag` | 2026-01-19 | 0 | ❌ FAIL (see comparison.csv) | SS+5 with parallel-finish behavior |
@@ -96,7 +96,7 @@ P6 comparison matrix for cpm-engine v2.9.33:
   P6-capturable: 13 cases
   Engine-only:   2 cases (sub-day lag, referential-integrity corruption)
   Pass rate:     <to be filled after capture>
-  Reproduction:  https://github.com/danafitkowski/cpp-cpm-engine/tree/v2.9.38/validation/p6-comparison
+  Reproduction:  https://github.com/danafitkowski/cpp-cpm-engine/tree/v2.9.39/validation/p6-comparison
 ```
 
 This sits alongside [`DAUBERT.md`](../../DAUBERT.md), [`VERIFY_RELEASE.md`](../../VERIFY_RELEASE.md), and the per-release [`release-evidence/`](../../release-evidence/) folders as the engine's complete validation surface.
