@@ -94,7 +94,11 @@ def load_case(case_id):
         cal = cal_map.get(a.get('clndr_id') or '', {})
         act_cal[a['code']] = (cal.get('work_days') or [1, 2, 3, 4, 5],
                               cal.get('holidays') or [])
-    return case_dir, act_cal
+    # Codes with an actual finish in the case spec: P6 stores NULL float on
+    # completed activities by design, so a blank TF/FF capture is expected
+    # there (see the guarded acceptance in main()).
+    completed = {a['code'] for a in inp['activities'] if a.get('actual_finish')}
+    return case_dir, act_cal, completed
 
 
 def main(sheet_path):
@@ -105,7 +109,7 @@ def main(sheet_path):
 
     problems, verdict_summary = [], {}
     for case_id, captures in sorted(by_case.items()):
-        case_dir, act_cal = load_case(case_id)
+        case_dir, act_cal, completed_codes = load_case(case_id)
         cmp_path = case_dir / 'comparison.csv'
         cmp_rows = list(csv.DictReader(open(cmp_path, encoding='utf-8')))
         fieldnames = list(cmp_rows[0].keys())
@@ -141,6 +145,21 @@ def main(sheet_path):
                 raw = (cap.get(f'{field}_p6') or '').strip()
                 cr[f'{field}_p6'] = raw
                 eng = cr[f'{field}_engine']
+                # Guarded acceptance: P6 stores NULL float on TK_Complete
+                # activities BY DESIGN (verified against live 23.12 data), so
+                # a blank capture on an activity the case spec itself marks
+                # completed is P6 behaving correctly, not a missing value.
+                # Accepted ONLY when the engine's answer is 0; anything else
+                # still fails loudly.
+                if raw == '' and code in completed_codes:
+                    try:
+                        eng_is_zero = float(eng) == 0.0
+                    except ValueError:
+                        eng_is_zero = False
+                    if eng_is_zero:
+                        notes.append(f'{field} blank: P6 stores no float on '
+                                     'completed activities (engine 0)')
+                        continue
                 try:
                     ok = float(raw) == float(eng)
                 except ValueError:
