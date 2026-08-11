@@ -1,0 +1,61 @@
+# Validation Summary — `cpm-engine` v2.9.39
+
+## TL;DR
+
+v2.9.39 is an **attestation-and-accuracy release** that supersedes the prior one (v2.9.37 → v2.9.39). No engine math changed: `computeCPM`, `computeTIA`, and the Section-D hot loop are byte-identical to v2.9.37, the cross-validation stays 43 / 747 byte-identical against the Python reference, and the P6-comparison / corpus-DAG captures did not move. What changed is the release-integrity and disclosure record: the attestation chain now pins the engine SHA-256 of the actually-shipped bytes, every current-state unit-test count is reconciled to the live 1,134, and the DAUBERT §E methodology disclosure now describes the fields the engine really emits. The repo self-test suite (including the `forensic_strict` / `STRICT_FORENSIC_VIOLATION` strict-mode coverage) is preserved at 1134 / 0.
+
+## What is in this folder
+
+| File | Purpose |
+|---|---|
+| `README.md` | Folder orientation |
+| `validation-summary.md` | This file |
+| `VERIFY_RELEASE.md` | Citation-ready expert-report packet (per-release snapshot) |
+| `witness-v2.9.39.json` | Canonical Sigstore-signed witness (CI run 28724785215; all fields populated) |
+| `sigstore-attestation-output.txt` | Sigstore `gh attestation verify` output (verified, exit 0) |
+| `rekor-entry.txt` | Rekor transparency-log entry pointer (logIndex 2073912299) |
+| `github-actions-run-url.txt` | CI matrix run URL (run 28724785215) |
+| `cpm-engine.js.sha256` | Engine source SHA pin |
+| `python_reference-cpm.py.sha256` | Python reference SHA pin |
+| `npm-run-verify-output.txt` | Local `npm run verify` reproduction output |
+
+## Verification chain
+
+| Layer | Verified by | Artifact |
+|---|---|---|
+| 1. Source integrity | SHA-256 pins | `cpm-engine.js.sha256`, `python_reference-cpm.py.sha256` |
+| 2. Independent CI run | 9 OS × Node matrix on GitHub Actions | `github-actions-run-url.txt`, `witness-v2.9.39.json` |
+| 3. Cryptographic attestation | Sigstore + Rekor | `sigstore-attestation-output.txt`, `rekor-entry.txt` |
+| 4. Local reproduction | `npm run verify` (gates) | `npm-run-verify-output.txt` |
+
+## What changed since the prior pinned release
+
+- **Attestation SHA chain corrected.** The engine SHA-256 pinned below is recomputed from the shipped `cpm-engine.js` bytes, so `shasum -c cpm-engine.js.sha256` now succeeds. The prior chain pinned a stale engine hash.
+- **Unit-test counts reconciled to 1,134.** Prior docs carried stale 1,128 / 1,104 / 1,071 / 1,112 values; every current-state count now matches `node cpm-engine.test.js`.
+- **DAUBERT §E corrected.** The `methodology_status` field and the `woet_classifier` surface named in the prior §E are not emitted by the engine; §E now documents the real fields (`method_caveat` on `computeKinematicDelay`, `methodology` descriptor on `computeBayesianUpdate`).
+- **Real-XER claim caveated** as a single non-public, non-committed reference XER that is not independently reproducible from this repo.
+- **Derived counts corrected:** engine line count 6,137 → 8,764, strict-context count 36 → 37, verifications total 1,875 → 1,876.
+
+## Test state
+
+- Unit self-tests: **1134 / 0** (forensic_strict strict-mode suite preserved).
+- Cross-validation: **45 fixtures / 925 checks**, byte-identical to the Python reference.
+- All gates green: cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG.
+
+## Key SHAs
+
+- Engine: `6bf24fb038657945478cf40c92273d8dc0bec7312e79eab8c8129667c356d045`
+- Python reference: `fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68`
+
+
+## v2.9.39 - P6 23.12 alignment wave
+
+This release adds a second, stronger validation layer: a 13-case comparison
+matrix captured from Primavera P6 Professional 23.12 standalone on 2026-08-11
+via an automated import + single-F9 round trip (validation/p6-comparison/).
+First capture scored 6/13; five divergence families (working-day float units,
+open-end late-date seeding, mandatory-finish semantics, retained logic on
+out-of-sequence progress, free-float conventions) were fixed against P6's
+pinned answers in commits 23ffeca, 264de84, bf442d5, 05dc8b4. The matrix now
+stands 13/13 fully PASS. Crossval grew to 45 fixtures / 925 checks including
+ff_signed fields and both scheduling modes.
