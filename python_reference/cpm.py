@@ -1189,6 +1189,30 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts, node['es'])
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts, node['es'])
 
+        # B3 (P6 alignment wave 2026-08-11, capture 9b748cc, case 11) —
+        # Mandatory Finish pins BOTH ends: P6 anchors EF at the mandatory
+        # date and back-computes ES = EF - duration on the activity's own
+        # calendar, overriding predecessor logic (feasible side only, never
+        # on started work, floored at the data date). JS paired site:
+        # cpm-engine.js B3 block after _checkFinalEFDeadline.
+        if not has_actual_start:
+            _mfc = None
+            if cstr and cstr.get('type') in ('MS_Finish', 'MFO'):
+                _mfc = cstr
+            elif cstr2 and cstr2.get('type') in ('MS_Finish', 'MFO'):
+                _mfc = cstr2
+            if _mfc and _mfc.get('date'):
+                _mf_num = date_to_num(_mfc['date'])
+                if _mf_num > 0 and node['ef'] == _mf_num:
+                    _bes = _retreat_workdays(
+                        node['ef'], node['duration_days'], node_cal,
+                        alerts=alerts, ctx=f'MEO back-compute ES {code}')
+                    if dd_num > 0 and _bes < dd_num:
+                        _bes = dd_num
+                    if _bes != node['es']:
+                        node['es'] = _bes
+                        driving_pred = {'type': 'CONSTRAINT', 'date': _mfc['date']}
+
         # v2.9.15 P2 (F14-4) backport — DATA_DATE-driven driver. When no pred
         # and no constraint won, but max_es == dd_num AND the activity has preds,
         # set driving_predecessor to a {type:'DATA_DATE', date} sentinel.

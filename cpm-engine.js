@@ -2000,6 +2000,33 @@ function computeCPM(activities, relationships, opts) {
         _checkFinalEFDeadline(cstr, 'primary');
         _checkFinalEFDeadline(cstr2, 'secondary');
 
+        // B3 (P6 alignment wave 2026-08-11, capture 9b748cc, case 11) —
+        // Mandatory Finish pins BOTH ends. P6 anchors EF at the mandatory
+        // date and BACK-COMPUTES ES = EF - duration on the activity's own
+        // calendar, overriding predecessor logic in the early pass (case 11
+        // B: FS from A said ES 01-19; P6 shows ES 01-26 backed off the
+        // MEO pin). Applied only when the pin actually holds EF (feasible
+        // side), never on started work, and never below the data date.
+        // The infeasible side (pred logic pushes EF past the pin) keeps the
+        // existing ALERT behavior; P6's conduct there is uncaptured.
+        if (!hasActualStart) {
+            const _mfc = (cstr && (cstr.type === 'MS_Finish' || cstr.type === 'MFO')) ? cstr
+                       : (cstr2 && (cstr2.type === 'MS_Finish' || cstr2.type === 'MFO')) ? cstr2
+                       : null;
+            if (_mfc && _mfc.date) {
+                const _mfNum = dateToNum(_mfc.date);
+                if (_mfNum > 0 && node.ef === _mfNum) {
+                    let _bes = _retreatWithAlerts(node.ef, node.duration_days,
+                        nodeCal, alerts, 'MEO back-compute ES ' + code);
+                    if (ddNum > 0 && _bes < ddNum) _bes = ddNum;
+                    if (_bes !== node.es) {
+                        node.es = _bes;
+                        drivingPred = { type: 'CONSTRAINT', date: _mfc.date };
+                    }
+                }
+            }
+        }
+
         // v2.9.15 P2 (F14-4) — DATA_DATE-driven driver. When no pred and no
         // constraint won, but maxES === ddNum AND the activity has predecessors
         // (i.e. ddNum genuinely floored ES past where the preds would have put

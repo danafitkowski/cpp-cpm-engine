@@ -295,7 +295,7 @@ The engine honors the following Primavera P6 constraint types declared on activi
 | `FNET` | `CS_MEOA` (Finish On or After) | `EF = max(EF, date)`; WARN | – |
 | `FNLT` | `CS_MEOB` (Finish On or Before) | If `EF > date` → ALERT | `LF = min(LF, date)` |
 | `MS_Start` / `SO` | `CS_MSO` (Mandatory Start) | `ES = date` (forced); if pred logic > date → ALERT | – |
-| `MS_Finish` / `MFO` | `CS_MEO` (Mandatory Finish) | `EF = date` (forced); if pred logic > date → ALERT | `LF = date` |
+| `MS_Finish` / `MFO` | `CS_MEO` (Mandatory Finish) | `EF = date` (forced); `ES = EF - duration` back-computed on own calendar, overriding predecessor logic (P6-validated 2026-08-11, case 11; feasible side, unstarted work, floored at data date); infeasible side keeps ALERT | `LF = date`; `LS = LF - duration` |
 | `ALAP` | `CS_ALAP` | (no forward action — pinned in post-backward sweep) | Post-pass slides ES/EF to LS/LF if `LS > ES`; WARN `constraint-applied` |
 
 **Constraint date boundary (P6-validated 2026-08-11, comparison case 05):**

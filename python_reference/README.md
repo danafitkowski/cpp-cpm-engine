@@ -23,9 +23,11 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  3005a433dc9b0148c3775f36a7412106ec4cb15e17169bd49731c053f48484d5
+cpm.py  SHA-256:  0e95eb67b32d85a10fcac833051fb3047db09a0a8b03518f17d5c215b53a4db4
 
-(P6 alignment wave B2 2026-08-11 - bumped from 50ddea54...: per-calendar
+(P6 alignment wave B3 2026-08-11 - bumped from 3005a433...: Mandatory
+Finish pins both ends, ES back-computed from the EF pin, P6-validated
+against capture 9b748cc case 11. Prior: B2 2026-08-11 from 50ddea54...: per-calendar
 project-finish LF seed + SS/SF backward drives target LS, P6-validated
 against capture 9b748cc cases 02/04/06.)
 ```
