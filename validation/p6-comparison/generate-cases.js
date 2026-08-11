@@ -355,11 +355,12 @@ const CASES = [
             'B has an actual_start before A finished. Engine emits ' +
             '"out-of-sequence" ALERT and continues under retained logic.',
         expected_behavior:
-            'A planned, duration 10 wd, no actuals. ' +
-            'B is FS-after-A but has actual_start 2026-01-08 (4 wd into A). ' +
-            'Engine emits out-of-sequence ALERT enumerating A as the violating ' +
-            'predecessor. In retained logic, B.ES = max(B.actual_start, A.EF) ' +
-            'so B is pulled to A.EF if A finishes after B started.',
+            'P6-validated 2026-08-11 (capture 9b748cc): RETAINED LOGIC holds the ' +
+            'remaining work of the out-of-sequence starter behind its predecessor. ' +
+            'B (AS Jan 8, 3 wd remaining) restarts behind A EF disp Jan 23: restart ' +
+            'Jan 26, EF disp Jan 28. A: ES Jan 12, TF 0 (drives B remaining). ' +
+            'B TF 0; display LS = actual start Jan 8; REM_LATE_START Jan 26. ' +
+            'Continuing B from the data date is progress-override behavior.',
         activities: [
             { code: 'A', duration_days: 10 },
             {
@@ -536,10 +537,13 @@ function writeFile(p, content) {
 
 function compareCsvRow(code, node, p6Cols) {
     const eng = {
-        ES: node && node.es ? E.numToDate(node.es) : '',
-        EF: node && node.ef ? E.numToDate(node.ef) : '',
-        LS: node && node.ls !== undefined ? E.numToDate(node.ls) : '',
-        LF: node && node.lf !== undefined ? E.numToDate(node.lf) : '',
+        // B4: use the engine's DISPLAY date fields, which carry the P6 grid
+        // semantics (in-progress LS displays the actual start; the
+        // remaining-late calculus lives in remaining_late_start_date).
+        ES: node && node.es_date ? node.es_date : (node && node.es ? E.numToDate(node.es) : ''),
+        EF: node && node.ef_date ? node.ef_date : (node && node.ef ? E.numToDate(node.ef) : ''),
+        LS: node && node.ls_date ? node.ls_date : (node && node.ls !== undefined ? E.numToDate(node.ls) : ''),
+        LF: node && node.lf_date ? node.lf_date : (node && node.lf !== undefined ? E.numToDate(node.lf) : ''),
         // B1 (2026-08-11): compare float in WORKING DAYS on the activity's
         // own calendar. That is what P6's TF/FF columns mean. The raw
         // calendar-day tf/ff stay internal; case 05 proved the difference

@@ -795,7 +795,7 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
 # =============================================================================
 
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
-                project_calendar=''):
+                project_calendar='', schedule_mode='retained_logic'):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -820,6 +820,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     dd_num = date_to_num(data_date) if data_date else 0
     cal_map = cal_map or {}
     alerts = []
+    # B4 (P6 alignment wave 2026-08-11): both P6 scheduling modes
+    # implemented. retained_logic (default; capture 9b748cc case 10):
+    # remaining work restarts at max(data date, driving pred logic).
+    # progress_override: restarts at the data date. Unknown values ALERT
+    # and fall back to retained_logic. JS paired site: _scheduleMode block.
+    if schedule_mode not in ('retained_logic', 'progress_override'):
+        alerts.append({
+            'severity': 'ALERT',
+            'context': 'unknown-schedule-mode',
+            'message': 'schedule_mode=%r is not a P6 scheduling mode '
+                       '(retained_logic | progress_override). Computation '
+                       'proceeded under retained_logic.' % (schedule_mode,),
+        })
+        schedule_mode = 'retained_logic'
 
     # v2.9.12 T2.16 — emit WARN when a calendar's work_days is empty or
     # invalid (all entries outside 0..6). Mirror JS _preResolveCalendars.
@@ -1026,6 +1040,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # When pred logic pushes max_es later, we record which pred drove it.
         # Out: dict {code, type, lag_days} or None.
         driving_pred = None
+        _restart_max_drive = 0
         for p in preds:
             pnode = nodes.get(p['from_code'])
             if not pnode:
@@ -1074,6 +1089,18 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         'type': t,
                         'lag_days': lag,
                     }
+                # B4 - restart drive (retained logic): FS/SS drives are
+                # already in restart form; FF/SF re-derive from the anchor
+                # with REMAINING duration (INFERRED; case 10 is FS).
+                _r_drive = drive
+                _rd = node.get('remaining_duration')
+                if (t in ('FF', 'SF') and this_anchor_ef is not None
+                        and _rd is not None and math.isfinite(_rd) and _rd >= 0):
+                    _r_drive = _retreat_workdays(
+                        this_anchor_ef, _rd, node_cal,
+                        alerts=alerts, ctx=f'restart {t} rem {code}')
+                if _r_drive > _restart_max_drive:
+                    _restart_max_drive = _r_drive
                 continue
             if drive > max_es:
                 max_es = drive
@@ -1164,12 +1191,18 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         _rem_provided = (_rem_dur is not None and math.isfinite(_rem_dur) and _rem_dur >= 0)
         _use_finish_anchor = (finish_anchor_ef is not None) and (not has_actual_start)
         if has_actual_start and not node['is_complete'] and _rem_provided:
+            # B4 (capture 9b748cc case 10) - restart honors the mode:
+            # retained_logic: max(data date, pred drives); progress_override:
+            # max(data date, actual start). JS paired site: efAnchor block.
             _ef_anchor = max(act_start_num, dd_num) if dd_num > 0 else act_start_num
             if max_es > _ef_anchor:
                 _ef_anchor = max_es
+            if schedule_mode == 'retained_logic' and _restart_max_drive > _ef_anchor:
+                _ef_anchor = _restart_max_drive
+            node['restart'] = _ef_anchor
             node['ef'] = _advance_workdays(
                 _ef_anchor, _rem_dur, node_cal,
-                alerts=alerts, ctx=f'forward {code}.EF (retained-logic rem={_rem_dur})')
+                alerts=alerts, ctx=f'forward {code}.EF ({schedule_mode} rem={_rem_dur})')
         elif _use_finish_anchor:
             # v2.9.14 F2.2 backport — FF/SF identity path: stamp EF from the
             # captured anchor, then retreat to derive ES (matches max_es; the
@@ -1381,11 +1414,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # critical activities, dropping them OFF the critical path. Pinning
         # LF = EF directly preserves the retained-logic EF anchor and forces
         # TF = 0. Mirrors JS Section C fix.
+        # B4 (capture 9b748cc case 10) - the T3.19 in-progress pin is
+        # DELETED: P6 does not zero the float of started work. Late fields
+        # carry the REMAINING-work late dates; display LS = actual start is
+        # handled at stringify. JS paired site: B4 backward block.
         if node.get('actual_start') and not node['is_complete']:
-            a_s_num = date_to_num(node['actual_start'])
-            if a_s_num > 0 and node['ls'] > node['es']:
-                node['ls'] = node['es']
-                node['lf'] = node['ef']
+            _rd = node.get('remaining_duration')
+            if _rd is not None and math.isfinite(_rd) and _rd >= 0:
+                node['remaining_late_start'] = _retreat_workdays(
+                    node['lf'], _rd, node_cal,
+                    alerts=alerts, ctx=f'rem-late-start {code}')
+            else:
+                node['remaining_late_start'] = node['ls']
+            node['ls'] = node['remaining_late_start']
         node['tf'] = _round_half_up_to(node['lf'] - node['ef'], 3)
 
     # v2.9.7 — ALAP post-pass. Per AACE 29R-03 §4 (Technical Considerations) and Oracle P6 docs, ALAP
@@ -1417,7 +1458,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     for n in nodes.values():
         n['es_date'] = num_to_date(n['es'])
         n['ef_date'] = num_to_date(n['ef'])
-        n['ls_date'] = num_to_date(n['ls'])
+        if n.get('actual_start') and not n['is_complete']:
+            # B4 - display LS is the actual start; remaining-late calculus
+            # exposed separately (mirrors the P6 grid and the JS emitter).
+            n['ls_date'] = n['actual_start']
+            if n.get('remaining_late_start') is not None:
+                n['remaining_late_start_date'] = num_to_date(n['remaining_late_start'])
+        else:
+            n['ls_date'] = num_to_date(n['ls'])
+        if n.get('restart') is not None:
+            n['restart_date'] = num_to_date(n['restart'])
         n['lf_date'] = num_to_date(n['lf'])
         # v2.9.27 — audit R9 LOW PAIRED FIX. tf_working_days companion to
         # tf (calendar days). P6 reports float in working days on the
@@ -1442,10 +1492,14 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             continue
         successors = succ_map.get(c, [])
         if not successors:
-            n['ff'] = n['tf']
+            # B5 (capture 9b748cc case 05) - published FF floors at zero;
+            # the signed value is preserved in ff_signed as forensic signal.
             n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
-            n['ff_working_days'] = _count_work_days_between(
+            n['ff_signed'] = n['tf']
+            n['ff_signed_working_days'] = _count_work_days_between(
                 n['ef'], n['lf'], n_cal)
+            n['ff'] = max(0, n['tf'])
+            n['ff_working_days'] = max(0, n['ff_signed_working_days'])
             continue
         min_slack = float('inf')
         binding_succ_code = ''
@@ -1454,20 +1508,30 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             sn = nodes.get(s['to_code'])
             if not sn:
                 continue
+            # B5 (capture 9b748cc case 09) - completed successors are
+            # EXCLUDED from free float, mirroring backward propagation.
+            if sn.get('is_complete'):
+                continue
             succ_cal = (cal_map.get(sn.get('clndr_id', ''))
                         if sn.get('clndr_id') else None)
             lag = s.get('lag_days', 0) or 0
             # Suppress duplicate alerts — forward pass already fired them.
             _slack_sink = []
             stype = s['type']
+            # B4 (capture 9b748cc case 10) - slack against an in-progress
+            # successor measures to its RESTART, not its historical actual.
+            _sn_start_anchor = (sn['restart']
+                                if (sn.get('actual_start') and not sn['is_complete']
+                                    and sn.get('restart') is not None)
+                                else sn['es'])
             if stype == 'FS':
                 pred_anchor = _advance_workdays(n['ef'], lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack FS')
-                succ_anchor = sn['es']
+                succ_anchor = _sn_start_anchor
             elif stype == 'SS':
                 pred_anchor = _advance_workdays(n['es'], lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack SS')
-                succ_anchor = sn['es']
+                succ_anchor = _sn_start_anchor
             elif stype == 'FF':
                 pred_anchor = _advance_workdays(n['ef'], lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack FF')
@@ -1487,11 +1551,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 binding_succ_type = stype
         # Free Float is SIGNED — no Math.max(0, …) clamp. Over-constrained
         # networks (FNLT, FS-leads) report negative FF as forensic signal.
+        # B5 (P6 alignment wave) - published FF floors at ZERO (P6
+        # semantics, capture cases 05/09); the signed value is preserved
+        # in ff_signed so the forensic negative-FF signal survives.
         if min_slack == float('inf'):
-            ff = n['tf']
+            ff_signed = n['tf']
         else:
-            ff = _round_half_up_to(min_slack, 3)
-        n['ff'] = ff
+            ff_signed = _round_half_up_to(min_slack, 3)
+        n['ff_signed'] = ff_signed
+        n['ff'] = max(0, ff_signed)
+        ff = n['ff']
         # FF/SF use binding successor's calendar; FS/SS use own.
         if binding_succ_type in ('FF', 'SF') and binding_succ_code:
             sn = nodes.get(binding_succ_code)
@@ -1504,6 +1573,79 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             n['ef'], n['ef'] + ff, ff_cal)
 
     critical = {c for c, n in nodes.items() if n['tf'] <= 0.0 and not n['is_complete']}
+
+
+    # B4 parity (2026-08-11, surfaced by crossval F48) — out-of-sequence
+    # progress detection, ported from the JS engine (v2.9.3/T3.21/R8 line).
+    # Emits the same three signals with identical severities so the alert
+    # surface stays in lockstep: 'out-of-sequence' ALERT for completed or
+    # in-progress activities with unstarted predecessors, 'out-of-sequence'
+    # ALERT for successors that started before a predecessor did, and
+    # 'post-data-date-actual' WARN for predecessor actuals after the
+    # data date (retroactive-edit signature).
+    _act_by_code = {}
+    _act_start_num_by_code = {}
+    for _aa in activities:
+        if _aa and _aa.get('code'):
+            _act_by_code[_aa['code']] = _aa
+            if _aa.get('actual_start'):
+                _act_start_num_by_code[_aa['code']] = date_to_num(_aa['actual_start'])
+    for a in activities:
+        if not a or not a.get('code'):
+            continue
+        if not a.get('actual_start') and not a.get('is_complete'):
+            continue
+        preds = pred_map.get(a['code'], [])
+        _unstarted = []
+        _premature = []
+        _post_dd = []
+        _a_start_num = _act_start_num_by_code.get(a['code'], 0) if a.get('actual_start') else 0
+        for p in preds:
+            pred_node = nodes.get(p['from_code'])
+            if not pred_node:
+                continue
+            pred_act = _act_by_code.get(p['from_code'])
+            if not pred_act:
+                continue
+            if not pred_act.get('actual_start') and not pred_act.get('is_complete'):
+                _unstarted.append(p['from_code'])
+                continue
+            if _a_start_num > 0 and pred_act.get('actual_start'):
+                _p_start_num = _act_start_num_by_code.get(
+                    p['from_code'], date_to_num(pred_act['actual_start']))
+                if _p_start_num > 0 and _p_start_num > _a_start_num:
+                    _premature.append((p['from_code'], pred_act['actual_start']))
+                if dd_num > 0 and _p_start_num > 0 and _p_start_num > dd_num:
+                    _post_dd.append((p['from_code'], pred_act['actual_start']))
+        if _unstarted:
+            _label = 'is complete' if a.get('is_complete') else 'is in progress'
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'out-of-sequence',
+                'message': 'Activity %s %s but %d predecessor(s) have no '
+                           'actual_start (retained-logic anomaly): %s'
+                           % (a['code'], _label, len(_unstarted), ', '.join(_unstarted)),
+            })
+        if _premature:
+            _prem_list = ', '.join('%s (started %s)' % x for x in _premature)
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'out-of-sequence',
+                'message': 'Activity %s started %s but %d predecessor(s) '
+                           'started AFTER it (retained-logic anomaly): %s'
+                           % (a['code'], a.get('actual_start'), len(_premature), _prem_list),
+            })
+        if _post_dd:
+            _dd_list = ', '.join('%s (started %s)' % x for x in _post_dd)
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'post-data-date-actual',
+                'message': 'Activity %s has %d predecessor(s) with '
+                           'actual_start AFTER the data_date (%s). Actuals '
+                           'after the schedule update window are a '
+                           'retroactive-edit signature: %s'
+                           % (a['code'], len(_post_dd), data_date, _dd_list),
+            })
 
     return {
         'nodes': nodes,

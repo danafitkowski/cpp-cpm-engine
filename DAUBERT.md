@@ -31,21 +31,21 @@ The engine's correctness has been tested in four independent ways:
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
-| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes (TFM/LPM/MFP with divergence), kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction default holiday rule sets (66 jurisdiction codes, framework-aligned per [`docs/jurisdictions.md`](docs/jurisdictions.md); analysts must verify currency against the operative statute for forensic use), P6 primary + secondary constraints, TT_Hammock two-pass with full SS/FF/SF semantics, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, dateToNum 2-digit guard, Round 6 strong-assertion strengthening, Round 7 full hammock SS/FF/SF semantics, Round 8 R8A engine math fix wave, Round 9 v2.9.12 engine math fix wave, v2.9.22 audit HIGH wave (10 items: rel-trim, strict parse, typed input, getHolidays year-clamp, etc.), v2.9.23 small-batch wave (16 items: dedup, codepoint cmp, target_drtn WARN, etc.), v2.9.26 provenance + citation polish, v2.9.27 paired JS+Python fixes (R6 completed-succ skip, R12 data_date snap, R21 Python MonFri fast path, R9 tf_working_days backport, F24 ff/ff_working_days backport, A12 hash hardenings, R10 project_calendar fallback, R6 MS_Start widen WARN). | **1,129 / 1,129 passing** |
-| Cross-validation suite     | `cpm-engine.crossval.js` — 43 fixtures × 747 checks, JS engine vs Python `compute_cpm` reference. Severity-level alert parity asserted on the enumerated comparison surface (forward/backward pass dates ES/EF/LS/LF, Kahn topo order, Tarjan SCC, critical-path codes, alert counts and severity, FF/SF working-day arithmetic, TF, FF, FF working days). v2.9.27 expanded crossval coverage by backporting tf_working_days, ff, and ff_working_days fields to Python (previously documented JS-only gaps in F24). Bayesian and kinematic surfaces are JS-only and **explicitly excluded** from the bit-identical claim — see §8. | **747 / 747 bit-identical across enumerated CPM comparison fields** |
+| Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes (TFM/LPM/MFP with divergence), kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction default holiday rule sets (66 jurisdiction codes, framework-aligned per [`docs/jurisdictions.md`](docs/jurisdictions.md); analysts must verify currency against the operative statute for forensic use), P6 primary + secondary constraints, TT_Hammock two-pass with full SS/FF/SF semantics, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, dateToNum 2-digit guard, Round 6 strong-assertion strengthening, Round 7 full hammock SS/FF/SF semantics, Round 8 R8A engine math fix wave, Round 9 v2.9.12 engine math fix wave, v2.9.22 audit HIGH wave (10 items: rel-trim, strict parse, typed input, getHolidays year-clamp, etc.), v2.9.23 small-batch wave (16 items: dedup, codepoint cmp, target_drtn WARN, etc.), v2.9.26 provenance + citation polish, v2.9.27 paired JS+Python fixes (R6 completed-succ skip, R12 data_date snap, R21 Python MonFri fast path, R9 tf_working_days backport, F24 ff/ff_working_days backport, A12 hash hardenings, R10 project_calendar fallback, R6 MS_Start widen WARN). | **1,134 / 1,134 passing** |
+| Cross-validation suite     | `cpm-engine.crossval.js` — 45 fixtures × 925 checks, JS engine vs Python `compute_cpm` reference. Severity-level alert parity asserted on the enumerated comparison surface (forward/backward pass dates ES/EF/LS/LF, Kahn topo order, Tarjan SCC, critical-path codes, alert counts and severity, FF/SF working-day arithmetic, TF, FF, FF working days). v2.9.27 expanded crossval coverage by backporting tf_working_days, ff, and ff_working_days fields to Python (previously documented JS-only gaps in F24). Bayesian and kinematic surfaces are JS-only and **explicitly excluded** from the bit-identical claim — see §8. | **925 / 925 bit-identical across enumerated CPM comparison fields** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python (single non-public reference XER; kept locally, not committed — not independently reproducible from this repo)                                               | **0 / 282 mismatches** |
-| Branch + statement coverage | `c8` instrumentation over `cpm-engine.js` exercised by the 1,129-test unit suite. Reported as statement / branch / function / line coverage on every release; see §2.1 for the v2.9.30 baseline and the disclosed uncovered-line cluster. | **93.15% stmts / 82.29% branches / 93.51% funcs / 93.15% lines** |
+| Branch + statement coverage | `c8` instrumentation over `cpm-engine.js` exercised by the 1,134-test unit suite. Reported as statement / branch / function / line coverage on every release; see §2.1 for the v2.9.30 baseline and the disclosed uncovered-line cluster. | **93.15% stmts / 82.29% branches / 93.51% funcs / 93.15% lines** |
 | Public-API surfaces        | Kinematic delay dynamics (velocity / acceleration / jerk; pre-publication, JS-only), topology fingerprint hash (canonicalized topology under hashed-field set; not a forensic-equivalence statement — see §6), Daubert / FRE 702 disclosure wrapper, Bayesian update with hierarchical pooling (pre-publication, JS-only). | All exposed via public API + tests |
 
 Performance benchmarks (Node 18, M1 Mac):
 
-- 1,129 unit tests
+- 1,134 unit tests
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
 ### §2.1 Test Coverage (v2.9.33 baseline)
 
-Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js` exercised by the 1,129-test unit suite, captured on every release via `npm run coverage`. Reported numbers are not editorial — they are emitted by the test runner.
+Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js` exercised by the 1,134-test unit suite, captured on every release via `npm run coverage`. Reported numbers are not editorial — they are emitted by the test runner.
 
 | Coverage Surface | Count | Pct |
 |---|---|---|
@@ -140,7 +140,7 @@ This is the engine's **observed** error rate on the disclosed validation suite a
 
 Performance characteristics:
 
-- 1,129 unit tests run on Node 18.
+- 1,134 unit tests run on Node 18.
 - 5,000-node linear chain Tarjan SCC in **~8 ms**.
 - A 25,000-activity Mon-Fri schedule (full forward + backward pass) runs in **~1.6 s** after the v2.1-C1 / v2.1-C2 optimizations.
 
@@ -345,7 +345,7 @@ Two engine features are first-publication or pre-publication in construction sch
 
 - **Engine epoch = 2020-01-01.** The engine's day-offset arithmetic uses 2020-01-01 as offset 0. Activities with `actual_start = '2020-01-01'` collide with the "no actual_start" sentinel (offset 0) — the immutability gate `actStartNum > 0` treats them as not-started. Narrow real-world exposure (only affects schedules with actuals literally on Jan 1, 2020); fix requires moving the epoch back, v3.0 candidate. Audit HIGH R12 documented limitation.
 
-- **P6 `progress_override` schedule mode not implemented.** The engine implements P6 retained-logic mode only (the P6 default, AACE 29R-03 §4 recommended for forensic analysis). Callers passing `opts.scheduleMode = 'progress_override'` get a `progress-override-not-supported` ALERT and the computation proceeds under retained-logic. progress_override changes how in-progress activities with completed-predecessor logic resolve (treats the completed pred as removed from the network); this matters for a narrow class of schedules and is rarely the correct forensic mode. v3.0 candidate. Audit HIGH R8 documented limitation.
+- **Both P6 scheduling modes implemented (P6 alignment wave 2026-08-11).** `retained_logic` (default): the remaining work of an in-progress activity restarts at max(data date, driving predecessor logic) — P6-validated against capture 9b748cc case 10 (the pre-wave engine continued remaining work from the data date regardless of mode, which is progress-override behavior, and additionally zeroed in-progress float via the deleted T3.19 pin; both divergences are fixed). `progress_override`: remaining work restarts at the data date; implemented as engine self-consistency (crossval F49) and NOT asserted as P6-validated until an override-mode capture exists. Unknown `opts.scheduleMode` values emit `unknown-schedule-mode` ALERT and fall back to retained_logic. Published free float now floors at zero (P6 semantics, cases 05/09) with the signed forensic value preserved in `ff_signed` / `ff_signed_working_days`.
 
 - **Bayesian and kinematic surfaces are JS-only (no Python cross-validation).** `computeBayesianUpdate` (Bayesian posterior duration) and `computeKinematicDelay` (slip velocity / acceleration / jerk) are not implemented in `python_reference/cpm.py`. The crossval harness therefore covers zero of the Bayesian + kinematic code paths. Bit-identical JS↔Python parity claims in §3.1 apply ONLY to the core CPM math (forward/backward pass, Kahn topo, Tarjan SCC, FF/SF calendar arithmetic). Bayesian and kinematic outputs are validated by the JS unit-test suite + the structural cross-checks in `cpm-engine.crossval.js`; no second-implementation comparison exists. Audit LOW R22 documented limitation.
 
@@ -404,7 +404,7 @@ In strict mode, if any alert whose `context` is in `FATAL_STRICT_CONTEXTS` (or w
 
 | Hazard class | Example contexts |
 |---|---|
-| Calendar / progress-mode | `invalid-calendar-falling-back`, `lag-hours-per-day-fallback`, `progress-override-not-supported` |
+| Calendar / progress-mode | `invalid-calendar-falling-back`, `lag-hours-per-day-fallback`, `unknown-schedule-mode` |
 | Logic integrity | `dangling-rel`, `relationship-dropped`, `self-loop`, `invalid-rel-type`, `cycle-excluded` |
 | Schema / input | `duplicate-activity-code`, `unrecognized-task-type`, `task-dropped`, `lag-non-finite`, `invalid-date-coerced` |
 | Constraints | `constraint-unrecognized`, `constraint-incomplete`, `constraint-invalid-date`, `constraint-skipped` |

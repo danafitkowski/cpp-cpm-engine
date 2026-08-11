@@ -95,6 +95,7 @@ try:
         payload['relationships'],
         data_date=payload.get('data_date', ''),
         cal_map=payload.get('cal_map') or None,
+        schedule_mode=payload.get('schedule_mode', 'retained_logic'),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -133,6 +134,8 @@ result_json = {
             # v2.9.27 — audit F24 PAIRED FIX. Free Float backported.
             'ff': n.get('ff'),
             'ff_working_days': n.get('ff_working_days'),
+            'ff_signed': n.get('ff_signed'),
+            'ff_signed_working_days': n.get('ff_signed_working_days'),
         }
         for c, n in result['nodes'].items()
     }
@@ -161,7 +164,8 @@ function runJS(payload) {
         r = E.computeCPM(
             payload.activities,
             payload.relationships,
-            { dataDate: payload.data_date || '', calMap: payload.cal_map || {} }
+            { dataDate: payload.data_date || '', calMap: payload.cal_map || {},
+              scheduleMode: payload.schedule_mode || 'retained_logic' }
         );
     } catch (e) {
         return {
@@ -183,6 +187,8 @@ function runJS(payload) {
             // v2.9.27 — audit F24 PAIRED FIX. Free Float backported.
             ff: n.ff,
             ff_working_days: n.ff_working_days,
+            ff_signed: n.ff_signed,
+            ff_signed_working_days: n.ff_signed_working_days,
         };
     }
     // Severity-level alert breakdown for crossval parity (Round 6).
@@ -310,6 +316,17 @@ function compareFixture(name, payload, opts) {
             a.ff_working_days !== null && b.ff_working_days !== null) {
             eq('node ' + code + '.ff_working_days',
                 a.ff_working_days, b.ff_working_days);
+        }
+        // B5 (P6 alignment wave) — the published ff floors at 0; the signed
+        // forensic value moved to ff_signed. Both compared in lockstep.
+        if (a.ff_signed !== undefined && b.ff_signed !== undefined &&
+            a.ff_signed !== null && b.ff_signed !== null) {
+            eq('node ' + code + '.ff_signed', a.ff_signed, b.ff_signed);
+        }
+        if (a.ff_signed_working_days !== undefined && b.ff_signed_working_days !== undefined &&
+            a.ff_signed_working_days !== null && b.ff_signed_working_days !== null) {
+            eq('node ' + code + '.ff_signed_working_days',
+                a.ff_signed_working_days, b.ff_signed_working_days);
         }
     }
     if (fails === 0) fixturesPassed += 1; else fixturesFailed += 1;
@@ -1182,6 +1199,39 @@ compareFixture('F47 — stored early_start NOT a SNET floor (F1-Bug5)', {
 });
 
 console.log('\n=========================================');
+// F48 - B4 P6 alignment (capture 9b748cc case 10 topology, retained logic).
+// B started OUT OF SEQUENCE (AS 01-08 before pred A finished). P6-validated:
+// B's remaining 3 wd restart behind A's EF (restart 01-26, EF disp 01-28);
+// A drives B, both TF 0; A's FF measures to B's RESTART, not the actual.
+compareFixture('F48 - out-of-sequence retained logic: remaining restarts behind pred (case 10)', {
+    activities: [
+        { code: 'A', duration_days: 10, clndr_id: 'MF' },
+        { code: 'B', duration_days: 5, actual_start: '2026-01-08',
+          remaining_duration: 3, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F49 - B4: same topology under progress_override; remaining work continues
+// from the data date. Engine self-consistency only (no override capture yet).
+compareFixture('F49 - out-of-sequence progress_override: remaining continues from data date', {
+    activities: [
+        { code: 'A', duration_days: 10, clndr_id: 'MF' },
+        { code: 'B', duration_days: 5, actual_start: '2026-01-08',
+          remaining_duration: 3, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    schedule_mode: 'progress_override',
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks);
 console.log('=========================================\n');

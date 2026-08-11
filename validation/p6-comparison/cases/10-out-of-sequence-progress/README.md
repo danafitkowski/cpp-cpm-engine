@@ -6,7 +6,7 @@ B has an actual_start before A finished. Engine emits "out-of-sequence" ALERT an
 
 ## Expected behavior
 
-A planned, duration 10 wd, no actuals. B is FS-after-A but has actual_start 2026-01-08 (4 wd into A). Engine emits out-of-sequence ALERT enumerating A as the violating predecessor. In retained logic, B.ES = max(B.actual_start, A.EF) so B is pulled to A.EF if A finishes after B started.
+P6-validated 2026-08-11 (capture 9b748cc): RETAINED LOGIC holds the remaining work of the out-of-sequence starter behind its predecessor. B (AS Jan 8, 3 wd remaining) restarts behind A EF disp Jan 23: restart Jan 26, EF disp Jan 28. A: ES Jan 12, TF 0 (drives B remaining). B TF 0; display LS = actual start Jan 8; REM_LATE_START Jan 26. Continuing B from the data date is progress-override behavior.
 
 ## How to reproduce in Primavera P6
 
@@ -19,7 +19,7 @@ A planned, duration 10 wd, no actuals. B is FS-after-A but has actual_start 2026
 
 ## Engine output (v2.9.38)
 
-Project finish: `2026-01-26`
+Project finish: `2026-01-29`
 
 Critical activities: `["A","B"]`
 

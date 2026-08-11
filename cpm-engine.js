@@ -1273,17 +1273,24 @@ function computeCPM(activities, relationships, opts) {
     // Callers passing scheduleMode='progress_override' previously got
     // silent retained-logic; now they get a loud ALERT so analysts can't
     // accidentally produce a report under the wrong P6 setting.
-    const _scheduleMode = opts.scheduleMode || opts.schedule_mode || 'retained_logic';
-    if (_scheduleMode !== 'retained_logic') {
+    // B4 (P6 alignment wave 2026-08-11): both P6 scheduling modes are now
+    // implemented. retained_logic (default, P6 default, validated against
+    // capture 9b748cc case 10): the remaining work of an in-progress
+    // activity restarts at max(data date, driving predecessor logic).
+    // progress_override: restarts at the data date, ignoring predecessor
+    // logic. Unknown values ALERT and fall back to retained_logic.
+    // progress_override output is engine self-consistency only, never
+    // asserted as P6 truth, until an override-mode capture exists.
+    let _scheduleMode = opts.scheduleMode || opts.schedule_mode || 'retained_logic';
+    if (_scheduleMode !== 'retained_logic' && _scheduleMode !== 'progress_override') {
         alerts.push({
             severity: 'ALERT',
-            context: 'progress-override-not-supported',
+            context: 'unknown-schedule-mode',
             message: 'opts.scheduleMode=' + JSON.stringify(_scheduleMode) +
-                ' is not supported by this engine (only "retained_logic" implemented). ' +
-                'Computation proceeded under retained_logic. P6 retained-logic-vs-progress-override ' +
-                'distinction matters for in-progress activities with completed-predecessor logic. ' +
-                'See DAUBERT.md §8 known limitations.',
+                ' is not a P6 scheduling mode (retained_logic | progress_override). ' +
+                'Computation proceeded under retained_logic.',
         });
+        _scheduleMode = 'retained_logic';
     }
     // v2.9.15 P3 (F6-B) — hammocks-skipped-in-section-c alert. Section C
     // (computeCPM) does not resolve TT_Hammock activities — hammock semantics
@@ -1735,6 +1742,14 @@ function computeCPM(activities, relationships, opts) {
         // Initialize to maxES so any drive > maxES wins; subsequent drives
         // must exceed the current shadow-max to win.
         let _shadowMaxDrive = maxES;
+        // B4 (P6 alignment wave, capture 9b748cc case 10) — restart-drive
+        // accumulator for in-progress activities under retained logic. The
+        // REMAINING work of a started activity restarts at
+        // max(data date, driving predecessor logic); the drives here are the
+        // restart form: FS/SS as computed below; FF/SF retreat by REMAINING
+        // duration rather than full duration (INFERRED — no P6 capture of
+        // an FF/SF-into-in-progress combination exists yet; case 10 is FS).
+        let _restartMaxDrive = 0;
         // v2.9.12 F2.2 — FF/SF finish-anchor identity. Round-tripping
         // retreat→advance through duration drifts off the anchor whenever
         // the anchor lies on a non-workday under nodeCal. Capture the
@@ -1791,6 +1806,16 @@ function computeCPM(activities, relationships, opts) {
                         lag_days: lag,
                     };
                 }
+                // B4 — restart drive (retained logic). FS/SS drives are
+                // already in restart form; FF/SF re-derive from the anchor
+                // with REMAINING duration (INFERRED, see accumulator note).
+                let _rDrive = drive;
+                if ((p.type === 'FF' || p.type === 'SF') && thisAnchorEF !== null &&
+                    Number.isFinite(node.remaining_duration) && node.remaining_duration >= 0) {
+                    _rDrive = _retreatWithAlerts(thisAnchorEF, node.remaining_duration,
+                        nodeCal, alerts, 'restart ' + p.type + ' rem ' + code);
+                }
+                if (_rDrive > _restartMaxDrive) _restartMaxDrive = _rDrive;
                 continue;
             }
             if (drive > maxES) {
@@ -1945,11 +1970,22 @@ function computeCPM(activities, relationships, opts) {
         const _remRaw = node.remaining_duration;
         const _hasRem = Number.isFinite(_remRaw) && _remRaw >= 0;
         if (hasActualStart && !node.is_complete && _hasRem) {
-            // Retained-logic mode: EF = max(actual_start, data_date) + rem.
-            // ES has already been pinned to actual_start above (line ~1114).
-            const efAnchor = (ddNum > 0 && ddNum > maxES) ? ddNum : maxES;
+            // B4 (P6 alignment wave, capture 9b748cc case 10) — the restart
+            // of remaining work honors the scheduling mode:
+            //   retained_logic:    restart = max(data date, pred drives)
+            //   progress_override: restart = max(data date, actual start)
+            // Case 10 (out-of-sequence B started before pred A finished):
+            // P6 retained logic holds B's remaining 3 days behind A's early
+            // finish (restart 01-26, EF disp 01-28); continuing from the
+            // data date is progress-override behavior, which the engine
+            // previously produced regardless of mode.
+            let efAnchor = (ddNum > 0 && ddNum > maxES) ? ddNum : maxES;
+            if (_scheduleMode === 'retained_logic' && _restartMaxDrive > efAnchor) {
+                efAnchor = _restartMaxDrive;
+            }
+            node.restart = efAnchor;
             node.ef = _advanceWithAlerts(efAnchor, _remRaw, nodeCal, alerts,
-                'forward ' + code + '.EF (retained-logic rem=' + _remRaw + ')');
+                'forward ' + code + '.EF (' + _scheduleMode + ' rem=' + _remRaw + ')');
         } else if (_useFinishAnchor) {
             // v2.9.12 F2.2 — FF/SF identity path: stamp EF from the
             // captured anchor, then retreat to derive ES (matches maxES;
@@ -2305,12 +2341,29 @@ function computeCPM(activities, relationships, opts) {
         // critical activities, dropping them OFF the critical path. Pinning
         // LF = EF directly preserves the retained-logic EF anchor and forces
         // TF = 0 as required for an immutable in-progress activity.
+        // B4 (P6 alignment wave, capture 9b748cc case 10) — the v2.9.12
+        // T3.19 pin (LS=ES, LF=EF for every in-progress activity) is
+        // DELETED. P6 does not zero the float of started work: a started,
+        // non-driving activity legitimately carries positive float, and its
+        // late fields are the REMAINING-work late dates (REM_LATE_START /
+        // REM_LATE_END; the P6 grid shows LATE_START = REM_LATE_START for
+        // TK_Active rows). The display LS remains the actual start (AACE
+        // 29R-03 4.3 immutability applies to what HAPPENED, not to the
+        // remaining-work float calculus); the stringify block emits
+        // ls_date = actual_start for in-progress and carries the late
+        // calculus in remaining_late_start.
         if (node.actual_start && !node.is_complete) {
-            const _aSNum = dateToNum(node.actual_start);
-            if (_aSNum > 0 && node.ls > node.es) {
-                node.ls = node.es;
-                node.lf = node.ef;
+            if (Number.isFinite(node.remaining_duration) && node.remaining_duration >= 0) {
+                node.remaining_late_start = _retreatWithAlerts(node.lf,
+                    node.remaining_duration, nodeCal, alerts,
+                    'rem-late-start ' + code);
+            } else {
+                node.remaining_late_start = node.ls;
             }
+            // Internal LS carries the remaining-late-start so predecessor
+            // backward drives read the P6-true value (case 10 A: LF bound
+            // by B's remaining late start 01-26 -> A LF disp 01-23, TF 0).
+            node.ls = node.remaining_late_start;
         }
         node.tf = _roundHalfUpTo(node.lf - node.ef, 3);
     }
@@ -2376,7 +2429,22 @@ function computeCPM(activities, relationships, opts) {
         const n = nodes[c];
         n.es_date = numToDate(n.es);
         n.ef_date = numToDate(n.ef);
-        n.ls_date = numToDate(n.ls);
+        // B4 — for in-progress activities the DISPLAY late start is the
+        // actual start (what happened is immutable); the remaining-work
+        // late calculus is exposed separately, mirroring P6's grid
+        // (LATE_START column shows REM_LATE_START on TK_Active rows, and
+        // the capture path sources LS from the actual with an ' A' suffix).
+        if (n.actual_start && !n.is_complete) {
+            n.ls_date = n.actual_start;
+            if (n.remaining_late_start !== undefined) {
+                n.remaining_late_start_date = numToDate(n.remaining_late_start);
+            }
+        } else {
+            n.ls_date = numToDate(n.ls);
+        }
+        if (n.restart !== undefined) {
+            n.restart_date = numToDate(n.restart);
+        }
         n.lf_date = numToDate(n.lf);
         const nCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
         n.tf_working_days = n.is_complete
@@ -2407,9 +2475,17 @@ function computeCPM(activities, relationships, opts) {
         }
         const successors = succMap[c] || [];
         if (successors.length === 0) {
-            n.ff = n.tf;
+            // B5 (P6 alignment wave, capture 9b748cc cases 05/09) — P6
+            // publishes free float floored at ZERO (case 05 B: TF -7 with
+            // FF 0 on the constrained terminal activity). The signed value
+            // is a real forensic signal (how far past the constraint the
+            // finish sits), so it is preserved in ff_signed rather than
+            // destroyed.
             const nCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
-            n.ff_working_days = _countWorkDaysBetween(n.ef, n.lf, nCal);
+            n.ff_signed = n.tf;
+            n.ff_signed_working_days = _countWorkDaysBetween(n.ef, n.lf, nCal);
+            n.ff = Math.max(0, n.tf);
+            n.ff_working_days = Math.max(0, n.ff_signed_working_days);
             continue;
         }
         let minSlack = Infinity;
@@ -2418,6 +2494,14 @@ function computeCPM(activities, relationships, opts) {
         for (const s of successors) {
             const sn = nodes[s.to_code];
             if (!sn) continue;
+            // B5 (P6 alignment wave, capture 9b748cc case 09) — completed
+            // successors are EXCLUDED from free float, mirroring their
+            // exclusion from backward propagation (v2.9.27): a relationship
+            // into finished work exerts no pull and measures nothing about
+            // the remaining network. Case 09 A: only successor complete,
+            // P6 FF 0 via the no-live-successor fallback, not via a clamp
+            // of the -28 slack to history.
+            if (sn.is_complete) continue;
             // v2.9.18 A11-HIGH — calendar-aware slack. The previous formula
             // `sn.es - n.ef - lag_days` mixed units: (sn.es - n.ef) is a
             // calendar-day delta while lag_days is in working days on the
@@ -2436,13 +2520,21 @@ function computeCPM(activities, relationships, opts) {
             // alerts here. (Cross-val parity: Python's slack derivation
             // emits no alerts; matching that count.)
             const _slackAlertSink = [];
+            // B4 (P6 alignment wave, capture 9b748cc case 10) — slack
+            // against an IN-PROGRESS successor measures to the successor's
+            // RESTART (where its remaining work can begin), not to its
+            // historical actual start. Case 10 A: B started 01-08 out of
+            // sequence, but its remaining work restarts behind A at 01-26;
+            // A's free float is 0, not negative-to-the-actual.
+            const _snStartAnchor = (sn.actual_start && !sn.is_complete &&
+                sn.restart !== undefined) ? sn.restart : sn.es;
             let predAnchor, succAnchor;
             if (s.type === 'FS') {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FS');
-                succAnchor = sn.es;
+                succAnchor = _snStartAnchor;
             } else if (s.type === 'SS') {
                 predAnchor = _advanceWithAlerts(n.es, lag, succCal, _slackAlertSink, 'FF-slack SS');
-                succAnchor = sn.es;
+                succAnchor = _snStartAnchor;
             } else if (s.type === 'FF') {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FF');
                 succAnchor = sn.ef;
@@ -2466,8 +2558,13 @@ function computeCPM(activities, relationships, opts) {
         // violations, FS-lead pulls, SS/FF leads). Drop the clamp so an
         // over-constrained activity reports negative FF — same forensic
         // disclosure rule we use for TF / tf_working_days.
-        const ff = (minSlack === Infinity) ? n.tf : _roundHalfUpTo(minSlack, 3);
-        n.ff = ff;
+        // B5 — all-complete successor sets fall through to the terminal
+        // fallback (minSlack stays Infinity -> n.tf); the published ff is
+        // floored at zero with the signed value preserved (see the
+        // terminal-branch comment).
+        const ffSigned = (minSlack === Infinity) ? n.tf : _roundHalfUpTo(minSlack, 3);
+        n.ff_signed = ffSigned;
+        n.ff = Math.max(0, ffSigned);
         // v2.9.11 R8A-3 — Use binding successor's calendar for FF / SF.
         let ffCal;
         if ((bindingSuccType === 'FF' || bindingSuccType === 'SF') && bindingSuccCode) {
@@ -2476,7 +2573,8 @@ function computeCPM(activities, relationships, opts) {
         } else {
             ffCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
         }
-        n.ff_working_days = _countWorkDaysBetween(n.ef, n.ef + ff, ffCal);
+        n.ff_signed_working_days = _countWorkDaysBetween(n.ef, n.ef + ffSigned, ffCal);
+        n.ff_working_days = Math.max(0, _countWorkDaysBetween(n.ef, n.ef + n.ff, ffCal));
     }
 
     const criticalCodes = new Set();
@@ -6173,7 +6271,7 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '43 cross-validation fixtures × 747 checks bit-identical (including ' +
+                '45 cross-validation fixtures × 925 checks bit-identical (including ' +
                 'severity-level alert parity). Real XER (282 activities) 0 mismatches. ' +
                 testCountStr +
                 ' unit tests passing in CI. ' +
@@ -8538,7 +8636,7 @@ function getJurisdictionCalendar(jurisdiction, opts) {
  */
 const FATAL_STRICT_CONTEXTS = new Set([
     // Calendar / progress-mode hazards
-    'progress-override-not-supported', // P6 progress override is JS retained-logic only; opinion impact possible
+    'unknown-schedule-mode',            // scheduleMode not a P6 mode (retained_logic | progress_override); computed under retained_logic
     'invalid-calendar-falling-back',    // calendar empty/invalid → Mon-Fri / ordinal fallback
     'lag-hours-per-day-fallback',       // hours_per_day missing → 8h fallback for calendar-aware lag conversion
     // Logic-integrity hazards

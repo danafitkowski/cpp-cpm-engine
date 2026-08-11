@@ -5834,8 +5834,10 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
     const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
     check('R-v298-B10: Daubert disclosure references 43 fixtures (current count)',
         src.indexOf('43 fixtures + 282-activity') >= 0);
-    check('R-v298-B10: Daubert disclosure references 43 × 747 checks (current)',
-        src.indexOf('43 cross-validation fixtures × 747 checks') >= 0);
+    check('R-v298-B10: Daubert disclosure references 45 × 925 checks (current)',
+        src.indexOf('45 cross-validation fixtures × 925 checks') >= 0);
+    check('R-v298-B10: no remaining "× 747 checks" reference (stale pre-alignment-wave)',
+        src.indexOf('× 747 checks') < 0);
     check('R-v298-B10: no remaining "13 fixtures" reference in source',
         src.indexOf('13 fixtures') === -1);
     check('R-v298-B10: no remaining "16 fixtures" reference in source',
@@ -7219,18 +7221,38 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         err ? 'code=' + err.code : 'no throw');
 }
 
-// v2.9.17 A17-CRIT-4: progress_override mode emits explicit ALERT (engine
-// only implements retained_logic; previously the option was silently
-// ignored, so a caller could ship a report under the wrong P6 setting).
+// B4 (P6 alignment wave): progress_override is now IMPLEMENTED, not
+// alerted. In-progress remaining work restarts at the data date under
+// override, at max(data date, pred drives) under retained logic. Unknown
+// mode values still alert loudly and fall back to retained logic.
 {
     const r = E.computeCPM(
         [{ code: 'A', duration_days: 5 }],
         [],
         { dataDate: '2026-01-05', scheduleMode: 'progress_override' }
     );
-    check('T-FIX-A17-4: progress_override emits ALERT',
-        r.alerts.some(a => a.context === 'progress-override-not-supported'),
-        'alerts=' + r.alerts.length);
+    check('T-FIX-A17-4: progress_override computes without a mode alert',
+        !r.alerts.some(a => a.context === 'progress-override-not-supported' ||
+                            a.context === 'unknown-schedule-mode'),
+        'alerts=' + JSON.stringify(r.alerts.map(a => a.context)));
+    const r2 = E.computeCPM(
+        [{ code: 'A', duration_days: 10, actual_start: '2026-01-06',
+           remaining_duration: 7, clndr_id: 'MF' },
+         { code: 'P', duration_days: 10, clndr_id: 'MF' }],
+        [{ from_code: 'P', to_code: 'A', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-12', scheduleMode: 'progress_override',
+          cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
+    );
+    check('T-FIX-A17-4b: override restarts remaining work at the data date',
+        r2.nodes.A.restart_date === '2026-01-12',
+        'restart=' + r2.nodes.A.restart_date);
+    const r3 = E.computeCPM(
+        [{ code: 'A', duration_days: 5 }], [],
+        { dataDate: '2026-01-05', scheduleMode: 'half-step' }
+    );
+    check('T-FIX-A17-4c: unknown mode alerts and falls back',
+        r3.alerts.some(a => a.context === 'unknown-schedule-mode'),
+        'alerts=' + JSON.stringify(r3.alerts.map(a => a.context)));
 }
 // v2.9.17 A10-HIGH — dateToNum rejects trailing garbage in date components.
 // parseInt('2026.5', 10) returned 2026 silently — the regex check now
@@ -7377,13 +7399,14 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('\n=== v2.9.13 Bug F1 — In-progress retained-logic correctness ===');
 
-// T-FIX-F1-1 — Retained-logic LF must pin to EF, not to ES + duration_days.
-// A is in-progress (duration_days=10, remaining=3, AS=2026-01-08). B is a
-// parallel critical chain (duration=20) so A has float-rich successor logic
-// that would otherwise let A.LS drift later than A.ES, triggering the
-// in-progress pin. Pre-fix the pin set LF = ES + duration_days, producing
-// bogus TF = duration_days - remaining_duration = 7 wd and dropping A off
-// the critical path.
+// T-FIX-F1-1 — REWRITTEN in the B4 P6 alignment wave (capture 9b748cc).
+// P6 does NOT zero the float of started work: a started, non-driving
+// activity carries positive float measured on its REMAINING work (crossval
+// F45 demonstrates the same shift). The old pins (TF 0, LF=EF, LS=ES,
+// A critical) encoded the deleted v2.9.12 T3.19 pin, which was the
+// engine's largest single divergence from P6. A's remaining 3 days float
+// inside B's 20-day parallel chain: TF = 25 calendar / 17 working days,
+// A is NOT critical, display LS remains the actual start.
 {
     const r = E.computeCPM(
         [{ code: 'A', duration_days: 10, early_start: '2026-01-05',
@@ -7396,18 +7419,21 @@ console.log('\n=== v2.9.13 Bug F1 — In-progress retained-logic correctness ===
           cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
     );
     const A = r.nodes.A;
-    check('T-FIX-F1-1: A.tf === 0 (in-progress immutability — was 7 pre-fix)',
-        A.tf === 0,
+    check('T-FIX-F1-1: A.tf === 25 (P6-validated positive float on started work)',
+        A.tf === 25,
         'tf=' + A.tf);
-    check('T-FIX-F1-1: A.lf === A.ef (mirror of completed branch)',
-        A.lf === A.ef,
-        'lf=' + A.lf + ' ef=' + A.ef);
-    check('T-FIX-F1-1: A.ls === A.es (LS pinned to AS)',
-        A.ls === A.es,
-        'ls=' + A.ls + ' es=' + A.es);
-    check('T-FIX-F1-1: A on critical path (in-progress critical activity)',
-        r.criticalCodes && r.criticalCodes.has('A'),
+    check('T-FIX-F1-1: A.tf_working_days === 17',
+        A.tf_working_days === 17,
+        'tfw=' + A.tf_working_days);
+    check('T-FIX-F1-1: A NOT critical (started non-driving work floats)',
+        !(r.criticalCodes && r.criticalCodes.has('A')),
         'criticalCodesArray=' + JSON.stringify(r.criticalCodesArray));
+    check('T-FIX-F1-1: display LS stays the actual start',
+        A.ls_date === '2026-01-08',
+        'ls_date=' + A.ls_date);
+    check('T-FIX-F1-1: remaining_late_start_date is emitted',
+        typeof A.remaining_late_start_date === 'string',
+        'rls=' + A.remaining_late_start_date);
 }
 
 // T-FIX-F1-2 — Python T3.18 backport coverage (JS side). The retained-logic
@@ -8519,8 +8545,8 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
         typeof E.StrictForensicViolation === 'function');
     check('strict mode: FATAL_STRICT_CONTEXTS is a non-empty Set',
         E.FATAL_STRICT_CONTEXTS instanceof Set && E.FATAL_STRICT_CONTEXTS.size > 20);
-    check('strict mode: FATAL_STRICT_CONTEXTS includes progress-override-not-supported',
-        E.FATAL_STRICT_CONTEXTS.has('progress-override-not-supported'));
+    check('strict mode: FATAL_STRICT_CONTEXTS includes unknown-schedule-mode',
+        E.FATAL_STRICT_CONTEXTS.has('unknown-schedule-mode'));
     check('strict mode: FATAL_STRICT_CONTEXTS includes invalid-calendar-falling-back',
         E.FATAL_STRICT_CONTEXTS.has('invalid-calendar-falling-back'));
     check('strict mode: FATAL_STRICT_CONTEXTS includes duplicate-activity-code',
@@ -9008,8 +9034,8 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
     // both a set member AND an emission line; (b) the intent string is
     // documented so a future reader knows what to look for.
     const FATAL_CONTEXT_FIXTURES = {
-        'progress-override-not-supported':
-            'Section C — P6 progress override requested but engine only supports retained logic',
+        'unknown-schedule-mode':
+            'Section C — scheduleMode not a P6 mode (retained_logic | progress_override); retained_logic fallback',
         'invalid-calendar-falling-back':
             'Section A — calendar empty/invalid → Mon-Fri / ordinal fallback',
         'lag-hours-per-day-fallback':

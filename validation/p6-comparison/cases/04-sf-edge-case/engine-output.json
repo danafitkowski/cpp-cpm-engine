@@ -23,7 +23,9 @@
       "ls_date": "2026-01-05",
       "lf_date": "2026-01-12",
       "tf_working_days": 0,
+      "ff_signed": 3,
       "ff": 3,
+      "ff_signed_working_days": 3,
       "ff_working_days": 3
     },
     "B": {
@@ -52,6 +54,8 @@
       "ls_date": "2026-01-07",
       "lf_date": "2026-01-12",
       "tf_working_days": 2,
+      "ff_signed": 4,
+      "ff_signed_working_days": 2,
       "ff": 4,
       "ff_working_days": 2
     }
@@ -78,6 +82,6 @@
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-11T17:56:45.524Z"
+    "computed_at": "2026-08-11T18:13:30.427Z"
   }
 }
