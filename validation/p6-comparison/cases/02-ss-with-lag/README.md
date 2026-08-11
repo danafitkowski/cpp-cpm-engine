@@ -6,7 +6,7 @@ Start-to-Start relationship with 5 working-day lag. B can start no earlier than 
 
 ## Expected behavior
 
-A starts dataDate (Mon Jan 5), duration 10 wd → EF Mon Jan 19. B is anchored by SS+5: B.ES = A.ES + 5 wd = Mon Jan 12. B duration 4 wd → B.EF = Fri Jan 16. Project finishes at max(A.EF, B.EF) = A.EF = Jan 19. A is on the critical path; B has TF = 1 wd (Jan 19 - Jan 16).
+P6-validated 2026-08-11 (capture 9b748cc): the SS successor constrains the START of A only; the finish of A floats to project end (use-project-end-date-for-float). A: ES Jan 5, EF disp Jan 16, LS Jan 5, LF disp Jan 16, TF 0. B: ES Jan 12, EF disp Jan 15, LS Jan 13, LF disp Jan 16, TF 1 wd, FF 1 wd.
 
 ## How to reproduce in Primavera P6
 
@@ -20,7 +20,7 @@ A starts dataDate (Mon Jan 5), duration 10 wd → EF Mon Jan 19. B is anchored b
 
 Project finish: `2026-01-19`
 
-Critical activities: `[]`
+Critical activities: `["A"]`
 
 _No alerts emitted._
 

@@ -6,16 +6,7 @@ A two-activity chain with a Finish-On-or-Before (FNLT) constraint on the termina
 
 ## Expected behavior
 
-A→B chain, natural durations 8 wd + 4 wd from Mon Jan 5. B has FNLT = 2026-01-12.
-
-P6-validated 2026-08-11 (capture commit 9b748cc): constraint dates are day-start
-instants, so FNLT 2026-01-12 08:00 means no work may land on the 12th; the last
-permissible finish is the previous workday close, **B LATE_END = 2026-01-09 17:00**.
-Backward on MonFri: B.LS = 2026-01-06, A.LF = 2026-01-05 17:00, A.LS = 2025-12-25.
-B.EF (natural) = 2026-01-20 17:00, so **TF = -7 working days on both activities**
-(engine `tf_working_days` = -7; the raw calendar-day `tf` field is -9 and is not
-the comparison surface). P6 shows FF = 0 on B (free float floored at zero on the
-constrained terminal activity; the engine's signed value is preserved separately).
+P6-validated 2026-08-11 (capture 9b748cc): constraint dates are day-start instants, so FNLT 2026-01-12 08:00 forbids work on the 12th; last permissible finish is Fri Jan 9 17:00. B LATE_END Jan 9, B LS Jan 6, A LF Jan 5 close, A LS Dec 25. TF = -7 working days on both (engine tf_working_days; the raw calendar-day tf -9 is not the comparison surface). P6 shows FF 0 on B (free float floored at zero at the constrained terminal activity).
 
 ## How to reproduce in Primavera P6
 

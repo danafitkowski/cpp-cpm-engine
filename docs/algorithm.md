@@ -54,18 +54,30 @@ The driving predecessor is the one whose contribution determined the ES. The eng
 
 ## 4. Backward pass
 
-Run after the forward pass. For each activity in **reverse** topological order:
+Run after the forward pass. For each activity in **reverse** topological order.
+P6-aligned semantics (alignment wave 2026-08-11, validated against the pinned
+Primavera P6 23.12 capture, comparison cases 02/04/06):
 
 ```text
-LF = min over successors S of:
-    S.LS - lag      if rel.type === 'FS'
-    S.LS - lag      if rel.type === 'SS'   (note: not LF; SS targets LS)
-    S.LF - lag      if rel.type === 'FF'
-    S.LF - lag      if rel.type === 'SF'
+seedLF(n) = the project-finish instant expressed on n's OWN calendar:
+            the boundary after the last workable day <= the project's
+            last worked day. Single-calendar networks: seedLF == maxEF.
+            (P6: sched_use_project_end_date_for_float = Y.)
 
-If activity has no successors: LF = projectFinish
-LS = LF - duration                   # Calendar-aware: subtractWorkDays
+LF = min( seedLF(n),
+          over FS successors S:  S.LS - lag,
+          over FF successors S:  S.LF - lag )
+
+LS = LF - duration                   # calendar-aware: subtractWorkDays
+LS = min( LS,
+          over SS successors S:  S.LS - lag,
+          over SF successors S:  S.LF - lag )
 ```
+
+SS and SF successors constrain the predecessor's **start**, never its finish;
+an activity whose finish has no FS/FF successor keeps its finish float to the
+project end rather than dangling past it. Total float remains `LF - EF`
+(finish float, P6 `sched_float_type = FT_FF`).
 
 ---
 

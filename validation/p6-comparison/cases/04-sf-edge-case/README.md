@@ -6,7 +6,7 @@ Start-to-Finish relationship: B finishes no earlier than A starts (uncommon, use
 
 ## Expected behavior
 
-A starts dataDate = Mon Jan 5. B.EF >= A.ES + 0 = Mon Jan 5. B duration 3 wd → B.ES = Wed Dec 31 (prior year). With projectStart anchor Mon Jan 5, B.ES is pinned to Mon Jan 5 and B.EF becomes Wed Jan 7. Verify the engine and P6 handle the projectStart anchor identically.
+P6-validated 2026-08-11 (capture 9b748cc): the SF successor constrains the START of A only, never its finish. A: ES Jan 5, EF disp Jan 9, LS Jan 5, LF disp Jan 9 (project finish), TF 0. B: ES Jan 5, EF disp Jan 7, LS Jan 7, LF disp Jan 9, TF 2 wd, FF 2 wd.
 
 ## How to reproduce in Primavera P6
 
@@ -20,7 +20,7 @@ A starts dataDate = Mon Jan 5. B.EF >= A.ES + 0 = Mon Jan 5. B duration 3 wd →
 
 Project finish: `2026-01-12`
 
-Critical activities: `[]`
+Critical activities: `["A"]`
 
 _No alerts emitted._
 

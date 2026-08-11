@@ -24,6 +24,7 @@
         "constraint_type": "SNET",
         "date": "2026-01-20"
       },
+      "_seedLF": 2225,
       "es_date": "2026-01-20",
       "ef_date": "2026-01-27",
       "ls_date": "2026-01-20",
@@ -56,6 +57,7 @@
         "type": "FS",
         "lag_days": 0
       },
+      "_seedLF": 2225,
       "es_date": "2026-01-27",
       "ef_date": "2026-02-03",
       "ls_date": "2026-01-27",
@@ -94,6 +96,6 @@
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-11T17:38:02.282Z"
+    "computed_at": "2026-08-11T17:53:35.433Z"
   }
 }

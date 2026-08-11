@@ -23,7 +23,11 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7
+cpm.py  SHA-256:  3005a433dc9b0148c3775f36a7412106ec4cb15e17169bd49731c053f48484d5
+
+(P6 alignment wave B2 2026-08-11 - bumped from 50ddea54...: per-calendar
+project-finish LF seed + SS/SF backward drives target LS, P6-validated
+against capture 9b748cc cases 02/04/06.)
 ```
 
 The hash is regenerated on every `npm run attest` and written to

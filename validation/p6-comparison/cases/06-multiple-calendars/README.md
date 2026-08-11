@@ -6,7 +6,7 @@ Two activities with different calendars. A on Mon-Fri (5-day), B on Mon-Sat (6-d
 
 ## Expected behavior
 
-A.ES = Mon Jan 5, 10 wd Mon-Fri → A.EF = Fri Jan 16. B.ES = Mon Jan 5, 10 wd Mon-Sat → B.EF = Fri Jan 16 (10 work days on a 6-day calendar covers Mon-Sat: Jan 5,6,7,8,9,10,12,13,14,15 = Thu Jan 15). Verify engine + P6 honor per-activity calendar assignments.
+P6-validated 2026-08-11 (capture 9b748cc): no relationships; each the LF of each activity seeds from the PROJECT FINISH instant on its OWN calendar. A (MonFri): ES Jan 5, EF disp Fri Jan 16, TF 0. B (Mon-Sat): ES Jan 5, EF disp Thu Jan 15, LF disp Fri Jan 16, LS Tue Jan 6, TF 1 six-day working day, FF 1.
 
 ## How to reproduce in Primavera P6
 

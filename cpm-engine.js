@@ -2067,12 +2067,62 @@ function computeCPM(activities, relationships, opts) {
         }
     }
 
+    // B2 (P6 alignment wave, 2026-08-11, capture 9b748cc) — per-calendar
+    // project-finish seed. P6 with sched_use_project_end_date_for_float=Y
+    // seeds every open activity's LF from the PROJECT FINISH instant,
+    // expressed on the activity's OWN calendar: the boundary after the last
+    // workable day <= the project's last worked day. On a single-calendar
+    // network this is exactly maxEF (invariant: comparison case 01/03/07),
+    // so the change is observable only on multi-calendar networks (case 06:
+    // Mon-Sat activity gets LF Fri 16th close, one six-day workday of float,
+    // where the scalar maxEF seed handed it the Mon 19th boundary).
+    // A user-supplied projectFinish deadline keeps the scalar behavior
+    // (deadline IS the seed instant for every node, unchanged semantics).
+    // opts.useProjectEndDateForFloat=false is DISCLOSED but not implemented:
+    // P6's behavior with the option off was not captured, and the engine
+    // does not guess silently.
+    const _useProjEnd = (opts.useProjectEndDateForFloat !== undefined)
+        ? !!opts.useProjectEndDateForFloat
+        : (opts.use_project_end_date_for_float !== undefined)
+            ? !!opts.use_project_end_date_for_float
+            : true;
+    if (!_useProjEnd) {
+        alerts.push({
+            severity: 'WARN',
+            context: 'use-project-end-date-for-float-off-not-implemented',
+            message: 'useProjectEndDateForFloat=false requested; P6\'s ' +
+                'off-behavior is uncaptured, so the engine computes with the ' +
+                'documented default (true) semantics. Disclosed, not guessed.',
+        });
+    }
+    let _dLast = 0;
+    if (!_projectDeadlineNum) {
+        for (let __i = 0; __i < _orderLen; __i++) {
+            const n = nodes[_order[__i]];
+            const lw = _retreatWithAlerts(n.ef, 1, calFor(n), alerts,
+                'seed last-worked ' + n.code);
+            if (lw > _dLast) _dLast = lw;
+        }
+    }
+    function _seedLFFor(n) {
+        if (_projectDeadlineNum) return maxEF;      // deadline is the instant
+        const cal = calFor(n);
+        if (!cal) return maxEF;                     // ordinal fallback nodes
+        const rc = _resolveCalendar(cal);
+        if (!rc || !rc.workDays) return maxEF;
+        const lastWorkable = _roundBackwardToWorkday(_dLast, rc.workDays,
+            rc.holidaysSet);
+        return _advanceWithAlerts(lastWorkable, 1, cal, alerts,
+            'seed-LF ' + n.code);
+    }
+
     // Backward pass — initialize.
     for (let __i = 0; __i < _orderLen; __i++) {
         const n = nodes[_order[__i]];
         const nCal = calFor(n);
-        n.lf = maxEF;
-        n.ls = _retreatWithAlerts(maxEF, n.duration_days, nCal, alerts,
+        n._seedLF = _seedLFFor(n);
+        n.lf = n._seedLF;
+        n.ls = _retreatWithAlerts(n.lf, n.duration_days, nCal, alerts,
             'init-LS ' + n.code);
     }
 
@@ -2097,6 +2147,15 @@ function computeCPM(activities, relationships, opts) {
         // Paired with python_reference/cpm.py:1006 same skip; F47/F1-Bug5
         // crossval fixture updated to assert the post-skip TF=0 semantic.
         let _skippedCompletedSucc = 0;
+        // B2 (P6 alignment wave) — SS/SF successors constrain the
+        // predecessor's START, not its finish. The old code converted an
+        // SS/SF drive into an LF bound by re-adding the duration, which let
+        // a start-only successor drag the finish and manufactured the
+        // dangling-finish divergence (cases 02 SS, 04 SF: P6 gives the
+        // predecessor's finish float to project end; only FS/FF drives and
+        // the seed bound LF). SS/SF bounds are collected on LS instead and
+        // applied after LS is derived from LF.
+        let _minLSBound = null;
         if (succs.length) {
             minLF = null;
             for (const s of succs) {
@@ -2104,31 +2163,31 @@ function computeCPM(activities, relationships, opts) {
                 if (!snode) continue;
                 if (snode.is_complete) { _skippedCompletedSucc += 1; continue; }
                 const sCal = calFor(snode);
-                let drive;
+                let drive = null;
+                let lsBound = null;
                 const lag = s.lag_days;
                 if (s.type === 'FS') {
                     drive = _retreatWithAlerts(snode.ls, lag, sCal, alerts,
                         'backward FS lag ' + code + '->' + snode.code);
                 } else if (s.type === 'SS') {
-                    const anchor = _retreatWithAlerts(snode.ls, lag, sCal, alerts,
+                    lsBound = _retreatWithAlerts(snode.ls, lag, sCal, alerts,
                         'backward SS lag ' + code + '->' + snode.code);
-                    drive = _advanceWithAlerts(anchor, node.duration_days, nodeCal, alerts,
-                        'backward SS dur ' + code);
                 } else if (s.type === 'FF') {
                     drive = _retreatWithAlerts(snode.lf, lag, sCal, alerts,
                         'backward FF lag ' + code + '->' + snode.code);
                 } else if (s.type === 'SF') {
-                    const anchor = _retreatWithAlerts(snode.lf, lag, sCal, alerts,
+                    lsBound = _retreatWithAlerts(snode.lf, lag, sCal, alerts,
                         'backward SF lag ' + code + '->' + snode.code);
-                    drive = _advanceWithAlerts(anchor, node.duration_days, nodeCal, alerts,
-                        'backward SF dur ' + code);
                 } else {
                     drive = _retreatWithAlerts(snode.ls, lag, sCal, alerts,
                         'backward default ' + code + '->' + snode.code);
                 }
-                if (minLF === null || drive < minLF) minLF = drive;
+                if (drive !== null && (minLF === null || drive < minLF)) minLF = drive;
+                if (lsBound !== null && (_minLSBound === null || lsBound < _minLSBound)) {
+                    _minLSBound = lsBound;
+                }
             }
-            if (minLF === null) minLF = maxEF;
+            if (minLF === null) minLF = node._seedLF;
             // v2.9.27 — emit a one-time INFO per code when completed
             // successors were skipped (so a forensic reviewer sees the
             // omission and can confirm retained-logic was intended).
@@ -2195,6 +2254,13 @@ function computeCPM(activities, relationships, opts) {
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
             'backward ' + code + '.LS');
+        // B2 — apply the SS/SF start bounds collected above. Tightens LS
+        // only; LF stays seed/FS/FF-driven (P6 semantics). Predecessors
+        // processed later in this reverse-topological loop read the
+        // tightened LS through their own FS/SS drives.
+        if (_minLSBound !== null && _minLSBound < node.ls) {
+            node.ls = _minLSBound;
+        }
         // v2.9.12 T3.19 — AACE 29R-03 §4.3 immutability on backward pass.
         // When the activity has an actual_start (in-progress, not yet
         // complete), LS cannot drift later than ES — that would imply the

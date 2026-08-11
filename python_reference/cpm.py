@@ -1209,12 +1209,45 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if n['ef'] > max_ef:
             max_ef = n['ef']
 
+    # B2 (P6 alignment wave 2026-08-11, capture 9b748cc) — per-calendar
+    # project-finish seed. P6 (sched_use_project_end_date_for_float=Y) seeds
+    # every open activity's LF from the PROJECT FINISH instant expressed on
+    # the activity's OWN calendar: the boundary after the last workable day
+    # <= the project's last worked day. Single-calendar invariant: the seed
+    # equals max_ef exactly. JS paired site: cpm-engine.js _seedLFFor.
+    d_last = 0
+    for n in nodes.values():
+        n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+        lw = _retreat_workdays(n['ef'], 1, n_cal,
+                               alerts=alerts, ctx=f'seed last-worked {n["code"]}')
+        if lw > d_last:
+            d_last = lw
+
+    def _seed_lf_for(n):
+        n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+        if not n_cal:
+            return max_ef                       # ordinal fallback nodes
+        work_days = n_cal.get('work_days') or [1, 2, 3, 4, 5]
+        holidays = set(n_cal.get('holidays') or [])
+        d = _date_from_num(d_last)
+        if d is None:
+            return max_ef
+        guard = 0
+        while not _is_work_day(d, work_days, holidays):
+            d -= timedelta(days=1)
+            guard += 1
+            if guard > 366:
+                return max_ef
+        return _advance_workdays(_num_from_date(d), 1, n_cal,
+                                 alerts=alerts, ctx=f'seed-LF {n["code"]}')
+
     # Backward Pass
     for n in nodes.values():
         n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
-        n['lf'] = max_ef
+        n['_seed_lf'] = _seed_lf_for(n)
+        n['lf'] = n['_seed_lf']
         n['ls'] = _retreat_workdays(
-            max_ef, n['duration_days'], n_cal,
+            n['lf'], n['duration_days'], n_cal,
             alerts=alerts, ctx=f'init-LS {n["code"]}')
 
     for code in reversed(order):
@@ -1234,6 +1267,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # cpm-engine.js:2073. INFO alert emitted on JS side; Python
         # tracks the count for diagnostic parity.
         skipped_completed_succ = 0
+        # B2 (P6 alignment wave) — SS/SF successors constrain the
+        # predecessor's START, not its finish. Bounds are collected on LS
+        # and applied after LS derives from LF. JS paired site: the SS/SF
+        # lsBound branches in cpm-engine.js's backward loop.
+        min_ls_bound = None
         if succs:
             min_lf = None
             for s in succs:
@@ -1246,36 +1284,34 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 s_cal = cal_map.get(snode.get('clndr_id', '')) if snode.get('clndr_id') else None
                 t = s['type']
                 lag = s['lag_days']
+                drive = None
+                ls_bound = None
                 if t == 'FS':
                     drive = _retreat_workdays(
                         snode['ls'], lag, s_cal,
                         alerts=alerts, ctx=f'backward FS lag {code}->{snode["code"]}')
                 elif t == 'SS':
-                    anchor = _retreat_workdays(
+                    ls_bound = _retreat_workdays(
                         snode['ls'], lag, s_cal,
                         alerts=alerts, ctx=f'backward SS lag {code}->{snode["code"]}')
-                    drive = _advance_workdays(
-                        anchor, node['duration_days'], node_cal,
-                        alerts=alerts, ctx=f'backward SS dur {code}')
                 elif t == 'FF':
                     drive = _retreat_workdays(
                         snode['lf'], lag, s_cal,
                         alerts=alerts, ctx=f'backward FF lag {code}->{snode["code"]}')
                 elif t == 'SF':
-                    anchor = _retreat_workdays(
+                    ls_bound = _retreat_workdays(
                         snode['lf'], lag, s_cal,
                         alerts=alerts, ctx=f'backward SF lag {code}->{snode["code"]}')
-                    drive = _advance_workdays(
-                        anchor, node['duration_days'], node_cal,
-                        alerts=alerts, ctx=f'backward SF dur {code}')
                 else:
                     drive = _retreat_workdays(
                         snode['ls'], lag, s_cal,
                         alerts=alerts, ctx=f'backward default {code}->{snode["code"]}')
-                if min_lf is None or drive < min_lf:
+                if drive is not None and (min_lf is None or drive < min_lf):
                     min_lf = drive
+                if ls_bound is not None and (min_ls_bound is None or ls_bound < min_ls_bound):
+                    min_ls_bound = ls_bound
             if min_lf is None:
-                min_lf = max_ef
+                min_lf = node['_seed_lf']
             # v2.9.27 — INFO alert when completed successors were skipped
             # (matches JS cpm-engine.js:2110).
             if skipped_completed_succ > 0:
@@ -1303,6 +1339,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         node['ls'] = _retreat_workdays(
             node['lf'], node['duration_days'], node_cal,
             alerts=alerts, ctx=f'backward {code}.LS')
+        # B2 — apply SS/SF start bounds. LS only; LF stays seed/FS/FF-driven.
+        if min_ls_bound is not None and min_ls_bound < node['ls']:
+            node['ls'] = min_ls_bound
         # v2.9.12 T3.19 — AACE 29R-03 §4.3 immutability on backward pass.
         # An activity with actual_start cannot have LS later than ES (it
         # already started — drifting LS through float-rich successor logic

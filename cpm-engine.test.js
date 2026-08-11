@@ -5477,11 +5477,18 @@ function _rRel(relType, lag) {
 //     A.LS = retreat(A.LF, 5wd) = 2026-01-05. A.TF = LF-EF = 0.
 //     B.TF = 2 days (B finishes 2 wd before A).
 {
+    // B2 P6 alignment (2026-08-11, comparison case 04): an SF successor
+    // constrains the predecessor's START, never its finish. A's LF goes to
+    // project finish; the pre-wave assertions pinned the dangle (A.LF
+    // 01-15 > project finish) that P6 does not produce. The block comment
+    // above always described this rule; the assertions now match it.
     const r = _rRel('SF', 0);
-    check('Q3-SF0 backward: A.LS === 2026-01-10',
-        r.nodes.A.ls_date === '2026-01-10', 'A.LS=' + r.nodes.A.ls_date);
-    check('Q3-SF0 backward: A.LF === 2026-01-15',
-        r.nodes.A.lf_date === '2026-01-15', 'A.LF=' + r.nodes.A.lf_date);
+    check('Q3-SF0 backward: A.LS === 2026-01-05',
+        r.nodes.A.ls_date === '2026-01-05', 'A.LS=' + r.nodes.A.ls_date);
+    check('Q3-SF0 backward: A.LF === projectFinish 2026-01-10',
+        r.nodes.A.lf_date === '2026-01-10', 'A.LF=' + r.nodes.A.lf_date);
+    check('Q3-SF0 backward: A.TF === 0 (P6 rule)',
+        r.nodes.A.tf === 0, 'A.TF=' + r.nodes.A.tf);
     check('Q3-SF0 backward: B.LS === 2026-01-07',
         r.nodes.B.ls_date === '2026-01-07', 'B.LS=' + r.nodes.B.ls_date);
     check('Q3-SF0 backward: B.LF === 2026-01-10',
@@ -5500,15 +5507,20 @@ function _rRel(relType, lag) {
 //     Actually the engine clamps A.LF to projectFinish in init then tightens
 //     via successors. A.LS = retreat(A.LF, 5wd) = 2026-01-08.
 {
+    // B2 P6 alignment: the SF lag-2 bound targets A's LS only
+    // (retreat(B.lf 01-10, 2) = 01-08), and A's LS from its own LF-retreat
+    // (retreat(01-10, 5) = 01-05) is already tighter, so the bound does not
+    // bind. A.LF = project finish, A.TF = 0. The old pins (A.LF 01-13,
+    // TF 3) encoded the duration re-add dangle.
     const r = _rRel('SF', 2);
-    check('Q3-SF2 backward: A.LS === 2026-01-08',
-        r.nodes.A.ls_date === '2026-01-08', 'A.LS=' + r.nodes.A.ls_date);
-    check('Q3-SF2 backward: A.LF === 2026-01-13',
-        r.nodes.A.lf_date === '2026-01-13', 'A.LF=' + r.nodes.A.lf_date);
+    check('Q3-SF2 backward: A.LS === 2026-01-05',
+        r.nodes.A.ls_date === '2026-01-05', 'A.LS=' + r.nodes.A.ls_date);
+    check('Q3-SF2 backward: A.LF === projectFinish 2026-01-10',
+        r.nodes.A.lf_date === '2026-01-10', 'A.LF=' + r.nodes.A.lf_date);
     check('Q3-SF2 backward: B.LS === 2026-01-07',
         r.nodes.B.ls_date === '2026-01-07', 'B.LS=' + r.nodes.B.ls_date);
-    check('Q3-SF2 backward: A.TF === 3',
-        r.nodes.A.tf === 3, 'A.TF=' + r.nodes.A.tf);
+    check('Q3-SF2 backward: A.TF === 0 (P6 rule)',
+        r.nodes.A.tf === 0, 'A.TF=' + r.nodes.A.tf);
     check('Q3-SF2 backward: B.TF === 2',
         r.nodes.B.tf === 2, 'B.TF=' + r.nodes.B.tf);
 }

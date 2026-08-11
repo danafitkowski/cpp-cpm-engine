@@ -66,11 +66,10 @@ const CASES = [
             'Start-to-Start relationship with 5 working-day lag. B can start ' +
             'no earlier than 5 wd after A starts.',
         expected_behavior:
-            'A starts dataDate (Mon Jan 5), duration 10 wd → EF Mon Jan 19. ' +
-            'B is anchored by SS+5: B.ES = A.ES + 5 wd = Mon Jan 12. ' +
-            'B duration 4 wd → B.EF = Fri Jan 16. ' +
-            'Project finishes at max(A.EF, B.EF) = A.EF = Jan 19. ' +
-            'A is on the critical path; B has TF = 1 wd (Jan 19 - Jan 16).',
+            'P6-validated 2026-08-11 (capture 9b748cc): the SS successor constrains ' +
+            'the START of A only; the finish of A floats to project end (use-project-' +
+            'end-date-for-float). A: ES Jan 5, EF disp Jan 16, LS Jan 5, LF disp Jan 16, TF 0. ' +
+            'B: ES Jan 12, EF disp Jan 15, LS Jan 13, LF disp Jan 16, TF 1 wd, FF 1 wd.',
         activities: [
             { code: 'A', duration_days: 10 },
             { code: 'B', duration_days: 4 },
@@ -128,11 +127,10 @@ const CASES = [
             'Start-to-Finish relationship: B finishes no earlier than A starts ' +
             '(uncommon, used for things like "B must continue until A starts").',
         expected_behavior:
-            'A starts dataDate = Mon Jan 5. B.EF >= A.ES + 0 = Mon Jan 5. ' +
-            'B duration 3 wd → B.ES = Wed Dec 31 (prior year). With ' +
-            'projectStart anchor Mon Jan 5, B.ES is pinned to Mon Jan 5 and ' +
-            'B.EF becomes Wed Jan 7. Verify the engine and P6 handle the ' +
-            'projectStart anchor identically.',
+            'P6-validated 2026-08-11 (capture 9b748cc): the SF successor constrains ' +
+            'the START of A only, never its finish. A: ES Jan 5, EF disp Jan 9, LS Jan 5, ' +
+            'LF disp Jan 9 (project finish), TF 0. B: ES Jan 5, EF disp Jan 7, ' +
+            'LS Jan 7, LF disp Jan 9, TF 2 wd, FF 2 wd.',
         activities: [
             { code: 'A', duration_days: 5 },
             { code: 'B', duration_days: 3 },
@@ -161,11 +159,13 @@ const CASES = [
             'on the terminal activity that is earlier than the natural finish. ' +
             'Should produce NEGATIVE total float, surfacing the impossibility.',
         expected_behavior:
-            'A→B chain, total natural duration 12 wd from Mon Jan 5 → Wed Jan 21. ' +
-            'B has FNLT = Mon Jan 12. B.LF = Jan 12, B.LS = Jan 7 (after 4 wd back), ' +
-            'A.LF = Jan 7, A.LS = Jan 2 (Friday, before dataDate). ' +
-            'Total float = LS - ES = Jan 2 - Jan 5 = -1 wd (or more, depending ' +
-            'on calendar weekend handling).',
+            'P6-validated 2026-08-11 (capture 9b748cc): constraint dates are day-start ' +
+            'instants, so FNLT 2026-01-12 08:00 forbids work on the 12th; last ' +
+            'permissible finish is Fri Jan 9 17:00. B LATE_END Jan 9, B LS Jan 6, ' +
+            'A LF Jan 5 close, A LS Dec 25. TF = -7 working days on both (engine ' +
+            'tf_working_days; the raw calendar-day tf -9 is not the comparison ' +
+            'surface). P6 shows FF 0 on B (free float floored at zero at the ' +
+            'constrained terminal activity).',
         activities: [
             { code: 'A', duration_days: 8 },
             {
@@ -196,11 +196,11 @@ const CASES = [
             'Two activities with different calendars. A on Mon-Fri (5-day), ' +
             'B on Mon-Sat (6-day) including Saturdays as working days.',
         expected_behavior:
-            'A.ES = Mon Jan 5, 10 wd Mon-Fri → A.EF = Fri Jan 16. ' +
-            'B.ES = Mon Jan 5, 10 wd Mon-Sat → B.EF = Fri Jan 16 ' +
-            '(10 work days on a 6-day calendar covers Mon-Sat: ' +
-            'Jan 5,6,7,8,9,10,12,13,14,15 = Thu Jan 15). ' +
-            'Verify engine + P6 honor per-activity calendar assignments.',
+            'P6-validated 2026-08-11 (capture 9b748cc): no relationships; each ' +
+            'the LF of each activity seeds from the PROJECT FINISH instant on its OWN calendar. ' +
+            'A (MonFri): ES Jan 5, EF disp Fri Jan 16, TF 0. B (Mon-Sat): ES Jan 5, ' +
+            'EF disp Thu Jan 15, LF disp Fri Jan 16, LS Tue Jan 6, TF 1 six-day ' +
+            'working day, FF 1.',
         activities: [
             { code: 'A', duration_days: 10, calendar: 'MONFRI' },
             { code: 'B', duration_days: 10, calendar: 'SIXDAY' },

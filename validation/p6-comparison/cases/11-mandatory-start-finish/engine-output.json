@@ -24,6 +24,7 @@
         "constraint_type": "MS_Start",
         "date": "2026-01-12"
       },
+      "_seedLF": 2221,
       "es_date": "2026-01-12",
       "ef_date": "2026-01-19",
       "ls_date": "2026-01-12",
@@ -56,6 +57,7 @@
         "type": "FS",
         "lag_days": 0
       },
+      "_seedLF": 2221,
       "es_date": "2026-01-19",
       "ef_date": "2026-01-30",
       "ls_date": "2026-01-26",
@@ -99,6 +101,6 @@
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-11T17:38:02.280Z"
+    "computed_at": "2026-08-11T17:53:35.431Z"
   }
 }

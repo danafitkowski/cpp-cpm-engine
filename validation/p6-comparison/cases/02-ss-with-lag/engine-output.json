@@ -6,9 +6,9 @@
       "duration_days": 10,
       "es": 2196,
       "ef": 2210,
-      "ls": 2197,
-      "lf": 2211,
-      "tf": 1,
+      "ls": 2196,
+      "lf": 2210,
+      "tf": 0,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
@@ -17,11 +17,12 @@
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": null,
+      "_seedLF": 2210,
       "es_date": "2026-01-05",
       "ef_date": "2026-01-19",
-      "ls_date": "2026-01-06",
-      "lf_date": "2026-01-20",
-      "tf_working_days": 1,
+      "ls_date": "2026-01-05",
+      "lf_date": "2026-01-19",
+      "tf_working_days": 0,
       "ff": 0,
       "ff_working_days": 0
     },
@@ -46,6 +47,7 @@
         "type": "SS",
         "lag_days": 5
       },
+      "_seedLF": 2210,
       "es_date": "2026-01-12",
       "ef_date": "2026-01-16",
       "ls_date": "2026-01-13",
@@ -58,7 +60,9 @@
   "projectFinishNum": 2210,
   "projectFinish": "2026-01-19",
   "criticalCodes": {},
-  "criticalCodesArray": [],
+  "criticalCodesArray": [
+    "A"
+  ],
   "topoOrder": [
     "A",
     "B"
@@ -75,6 +79,6 @@
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-11T17:38:02.261Z"
+    "computed_at": "2026-08-11T17:53:35.411Z"
   }
 }

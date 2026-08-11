@@ -17,6 +17,7 @@
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": null,
+      "_seedLF": 2213,
       "es_date": "2026-01-05",
       "ef_date": "2026-01-12",
       "ls_date": "2026-01-05",
@@ -49,6 +50,7 @@
         "type": "FS",
         "lag_days": 0
       },
+      "_seedLF": 2213,
       "es_date": "2026-01-12",
       "ef_date": "2026-01-19",
       "ls_date": "2026-01-12",
@@ -81,6 +83,7 @@
         "type": "FS",
         "lag_days": 0
       },
+      "_seedLF": 2213,
       "es_date": "2026-01-19",
       "ef_date": "2026-01-22",
       "ls_date": "2026-01-19",
@@ -116,6 +119,6 @@
     "relationship_count": 2,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-11T17:38:02.284Z"
+    "computed_at": "2026-08-11T17:53:35.434Z"
   }
 }
