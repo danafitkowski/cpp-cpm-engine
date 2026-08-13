@@ -147,7 +147,7 @@ For non-forensic CPM (planning, lookahead, monthly progress reporting), the defa
 ## What the engine guarantees
 
 - **Implementation:** 66 default holiday rule sets are encoded in `cpm-engine.js` and exposed via `E.LISTED_JURISDICTIONS` and `E.getHolidays()`.
-- **JS/Python parity:** The Python reference (`python_reference/cpm.py`) implements the same 66 rule sets; the crossval suite verifies them on every release.
+- **JS/Python parity (scope):** The 66 rule sets are JS-only. `python_reference/cpm.py` consumes a caller-supplied `holidays` list on each calendar and does not implement the jurisdiction rule sets. The crossval suite does not compare them either: it exercises `computeCPM` against hand-written calendar maps whose holiday entries are literal dates. Parity of the jurisdiction tables is outside the crossval surface, so an analyst relying on a jurisdiction default should resolve the holiday list, pass it explicitly, and record it per the [Forensic-use guidance](#forensic-use-guidance) above.
 - **Public API:** `E.getHolidays(jurisdiction, startYear, endYear)` returns a sorted array of ISO-8601 date strings (e.g. `["2026-01-01", "2026-04-03", ...]`). For the full calendar map shape consumed by `computeCPM`, use `E.getJurisdictionCalendar(jurisdiction, opts)` which returns `{ work_days, holidays, jurisdiction, year_range }`.
 
 ## What the engine does not guarantee

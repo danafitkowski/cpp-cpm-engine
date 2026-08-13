@@ -6271,14 +6271,28 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '45 cross-validation fixtures × 925 checks bit-identical (including ' +
-                'severity-level alert parity). Real XER (282 activities) 0 mismatches. ' +
+                '45 cross-validation fixtures. The harness defines 989 node-field ' +
+                'comparisons; 64 of them are never executed because the Python ' +
+                'reference returns null for the field (61 ff_signed_working_days, ' +
+                '3 ff_signed) and the harness guards skip rather than fail, so its ' +
+                'reported "Checks: 925 / 925" counts executed comparisons only and ' +
+                'is not a coverage figure. In 58 of those 64 the engine returns a ' +
+                'real value where the reference returns null, which is an unverified ' +
+                'parity gap on that field; in the remaining 6 neither implementation ' +
+                'emits a value. 34 of the 45 fixtures contain at least one skipped ' +
+                'comparison. The 925 comparisons that did run are bit-identical ' +
+                '(including ' +
+                'severity-level alert parity). Real XER (282 activities) 0 mismatches ' +
+                '(single non-public reference XER, kept locally, not committed and not ' +
+                'independently reproducible from this repository). ' +
                 testCountStr +
                 ' unit tests passing in CI. ' +
                 'Public CI runs verification on every push (GitHub Actions verify.yml across ' +
                 '9 OS × Node combinations). Witness JSON cryptographically signed via Sigstore ' +
                 'and recorded on the public Rekor transparency log. One-command third-party ' +
-                'reproduction via `npm run verify` (zero npm dependencies). ' +
+                'reproduction via `npm run verify` (zero npm dependencies; requires ' +
+                'Node 18+ and Python 3.10+ available as `python` on PATH, or named ' +
+                'by $CPP_PYTHON_BIN, for the JS/Python cross-validation step). ' +
                 'Test suite hash and source available on the public repository.',
         },
         prong_2_peer_review: {
@@ -6303,11 +6317,35 @@ function buildDaubertDisclosure(result, opts) {
                 'SCL Protocol 2nd Edition (2017) Society of Construction Law.',
         },
         prong_3_error_rate: {
-            answer: 'Computational error rate: zero on the validation suite. Epistemic ' +
+            answer: 'Computational error rate: zero on every comparison the validation ' +
+                'suite actually executes. Coverage limit: the cross-validation harness ' +
+                'compares ff_signed and ff_signed_working_days only when both engines ' +
+                'emit the field, so 64 checks are skipped rather than compared, counted, ' +
+                'or reported as failures (61 ff_signed_working_days, 3 ff_signed). The ' +
+                'printed 925 / 925 therefore sits on a nominal surface of 989 checks, and ' +
+                'those two fields go uncompared somewhere in 34 of the 45 fixtures. In ' +
+                'all 64 cases the Python reference emits nothing for the field, so those ' +
+                'two fields are unverified against the reference rather than shown to ' +
+                'diverge: 58 skips hide a value the JS engine did emit, 6 are nodes where ' +
+                'neither engine emits one. Every ES/EF/LS/LF/TF and date comparison is ' +
+                'executed (105 of 105 activity groups). Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '43 fixtures + 282-activity real XER (0 mismatches). Edge-case torture audit ' +
+                '45 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                'single non-public reference file, not committed to this repository ' +
+                'and not independently reproducible from it). The harness executed ' +
+                '925 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 925 / 925 tally cannot express ' +
+                'the following gaps. Not executed: 64 node comparisons on the signed ' +
+                'free-float variants (ff_signed_working_days on activities with ' +
+                'successors; ff_signed and ff_signed_working_days on completed ' +
+                'activities), which the Python reference does not emit; alert parity ' +
+                'on 3 fixtures where the alert is JS-only by design; and node output ' +
+                'on the 2 fixtures where both engines are required to throw. All ' +
+                'ES/EF/LS/LF/TF, calendar-date, total-float-working-day, free-float ' +
+                'and free-float-working-day comparisons executed on all 105 activity ' +
+                'comparison groups. Edge-case torture audit ' +
                 'identified pre-flight conditions (NEGATIVE_DURATION, OUT_OF_SEQUENCE, ' +
                 'DISCONNECTED) where strict mode now throws; salvage mode logs and continues. ' +
                 'No silent wrong-answer paths after v2.1.0. Adversarial inputs (corrupt XER, ' +

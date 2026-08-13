@@ -1,6 +1,19 @@
 // Cross-validation: JS computeCPM vs Python compute_cpm on identical fixtures.
 // Run with: node cpm-engine.crossval.js
-// The Python side is invoked via child_process; output is compared node-by-node.
+// The Python side is invoked via child_process; output is compared node-by-node,
+// but NOT field-by-field: five per-node float fields (tf_working_days, ff,
+// ff_working_days, ff_signed, ff_signed_working_days) are compared only when
+// both engines emit the field, and the four ff_* guards treat a null as absent.
+// A skipped field is neither compared nor counted, so the denominator in the
+// printed "Checks: N / N" line is the executed count — a skip shrinks both
+// sides of the ratio and never surfaces as a shortfall.
+// On the current 45 fixtures (105 node comparison groups) 64 of the 989
+// possible comparisons are skipped: 61 ff_signed_working_days and 3 ff_signed.
+// 58 of the 64 are substantive — the Python reference never assigns
+// ff_signed_working_days on the has-successors path, so it emits null where JS
+// emits a real number; the other 6 fall on activities where neither engine
+// assigns the field. Agreement over the full comparison surface is therefore
+// 925 of 989, not 925 of 925.
 
 'use strict';
 
@@ -318,7 +331,15 @@ function compareFixture(name, payload, opts) {
                 a.ff_working_days, b.ff_working_days);
         }
         // B5 (P6 alignment wave) — the published ff floors at 0; the signed
-        // forensic value moved to ff_signed. Both compared in lockstep.
+        // forensic value moved to ff_signed. NOT in lockstep: on the current
+        // fixtures ff_signed is compared on 102 of the 105 node groups but
+        // ff_signed_working_days on only 44. The Python reference assigns
+        // ff_signed_working_days only in the no-successors branch, so it is
+        // absent on 58 nodes where the JS engine emits a real number; on a
+        // further 3 nodes (completed activities) neither side emits either
+        // field. The two guards below silently skip those 64 comparisons:
+        // they are not failed, and they are not counted in the Checks total
+        // printed at the end of the run.
         if (a.ff_signed !== undefined && b.ff_signed !== undefined &&
             a.ff_signed !== null && b.ff_signed !== null) {
             eq('node ' + code + '.ff_signed', a.ff_signed, b.ff_signed);
@@ -1200,7 +1221,12 @@ compareFixture('F47 — stored early_start NOT a SNET floor (F1-Bug5)', {
 
 console.log('\n=========================================');
 // F48 - B4 P6 alignment (capture 9b748cc case 10 topology, retained logic).
-// B started OUT OF SEQUENCE (AS 01-08 before pred A finished). P6-validated:
+// B started OUT OF SEQUENCE (AS 01-08 before pred A finished). The values below
+// are P6's own output for capture 9b748cc case 10, which the engine FAILED before
+// the B4 change (pre-fix: B EF 01-15, A TF -18), so they are the answer the engine
+// was fitted to, not an independent check. This fixture asserts only JS/Python
+// parity on the topology; P6 agreement is recorded in validation/p6-comparison,
+// not here:
 // B's remaining 3 wd restart behind A's EF (restart 01-26, EF disp 01-28);
 // A drives B, both TF 0; A's FF measures to B's RESTART, not the actual.
 compareFixture('F48 - out-of-sequence retained logic: remaining restarts behind pred (case 10)', {
@@ -1233,7 +1259,11 @@ compareFixture('F49 - out-of-sequence progress_override: remaining continues fro
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
-console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks);
+console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
+    ' comparisons executed (the denominator is checks run, not the full field surface:' +
+    ' a guarded field is skipped and not counted when either engine does not emit it,' +
+    ' and the free-float guards on ff, ff_working_days, ff_signed and' +
+    ' ff_signed_working_days also skip when either side is null)');
 console.log('=========================================\n');
 // v2.9.23 — exit 1 if EITHER fixture-level OR per-check counter is non-zero
 // (audit LOW R21). Currently they're always in lockstep (any per-check

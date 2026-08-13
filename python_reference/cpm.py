@@ -5,8 +5,17 @@
 # Frozen Python reference implementation of compute_cpm — used only by the
 # cross-validation harness in cpm-engine.crossval.js. The production engine
 # is the JavaScript module cpm-engine.js at the repo root; this Python file
-# exists so external auditors (and CI) can reproduce the "416 / 416
-# bit-identical" headline reported in DAUBERT.md §3.
+# exists so external auditors (and CI) can reproduce the "925 / 925
+# bit-identical" headline reported in DAUBERT.md §2 (Methodology Tested).
+# Read that denominator narrowly: 925 is the number of comparisons the
+# harness EXECUTES, not the size of the comparison surface. The field guards
+# in cpm-engine.crossval.js skip rather than fail when either side omits a
+# field, so 64 of 989 comparisons are never counted — 61 on
+# ff_signed_working_days and 3 on ff_signed. 58 of the 64 are substantive:
+# this file leaves ff_signed_working_days unset on the has-successors path of
+# the free-float pass, where the JS engine emits a real number. The other 6
+# are null-vs-undefined artifacts on completed activities that NEITHER engine
+# populates. Agreement over the full surface is therefore 925 of 989.
 #
 # Source provenance: derived from the CPP suite's canonical Python CPM
 # engine (_cpp_common/scripts/cpm.py @ ENGINE_VERSION 2.8.0). Two changes
@@ -29,9 +38,14 @@ Public surface (consumed by cpm-engine.crossval.js):
     compute_cpm(activities, relationships, data_date='', cal_map=None)
     date_to_num(d)
 
-The math mirrors cpm-engine.js's computeCPM byte-for-byte on the 16
-fixtures in cpm-engine.crossval.js (13 unconstrained + 3 constrained as of
-v2.9.7). See DAUBERT.md §3 for verification methodology.
+The math mirrors cpm-engine.js's computeCPM byte-for-byte on the 925
+comparisons the harness executes across the 45 fixtures in
+cpm-engine.crossval.js (as of v2.9.39). A further 64 field comparisons are
+skipped rather than compared by the harness field guards (61 on
+ff_signed_working_days, 3 on ff_signed), because this reference does not emit
+those fields on every branch. The full comparison surface is therefore 989, of
+which the 925 executed all agree. See DAUBERT.md §3 for verification
+methodology.
 """
 import math
 from collections import defaultdict, deque
@@ -84,10 +98,18 @@ def _round_half_up_to(x, decimals=0):
 #   T4.25 — derive ES via subtract_work_days(EF, duration) when actual_finish
 #          is set but actual_start is missing; emit MISSING_ACTUAL_START WARN.
 #   T4.26 — ALAP honored on EITHER primary or secondary constraint slot.
-# All JS-only paths (free-float math, Section D Monte Carlo, OoS enumeration,
-# hammock orphan / duration_working_days, dateToNum rollover guard,
-# SUB_DAY_LAG_ROUNDED disclosure update) intentionally remain JS-only —
-# Python reference doesn't implement those surfaces.
+# Remaining JS-only paths (Section D Monte Carlo, hammock orphan /
+# duration_working_days, dateToNum rollover guard, SUB_DAY_LAG_ROUNDED
+# disclosure update) are not implemented here. Two surfaces formerly on this
+# list have since been ported and ARE cross-validated: free-float math (see
+# the v2.9.27 audit F24 paired fix below) and out-of-sequence enumeration
+# (the B4 parity port below, surfaced by crossval F48; compared at
+# alert_count / alert_severity_counts level). Free float is only PARTLY
+# ported: ff_signed_working_days is assigned solely on the no-successors
+# branch, and the completed-activity branch emits neither ff_signed nor
+# ff_signed_working_days. The crossval guards on those two fields are
+# skip-not-fail, so where Python emits nothing the field is silently not
+# compared and not counted rather than reported as a divergence.
 ENGINE_VERSION = '2.9.39'
 
 
@@ -280,8 +302,22 @@ def _num_from_date(d):
 #
 # Upstream source: _cpp_common/../xer-parser/scripts/xer_parser.py @ 2.8.0
 # Lines 696-827 (add_work_days, subtract_work_days, _is_work_day).
-# Behavior is byte-equivalent to the upstream helpers; only the import path
-# changes (these are now local).
+# These helpers began as the upstream implementations, but they are no longer
+# behavior-equivalent: later JS-parity fixes changed both the code and, on some
+# inputs, the answers. Two differences change results:
+#   * v2.9.14 F3 rounds n_workdays half-up (_round_half_up) where upstream uses
+#     Python's banker's int(round(...)), so odd-half lags diverge: a 2.5-workday
+#     input consumes 3 workdays here and 2 upstream.
+#   * v2.9.16 F11 gives n == 0 a snap contract when the anchor falls on a
+#     non-workday, forward in add_work_days and backward in subtract_work_days,
+#     where upstream returns the anchor unchanged.
+# Two differences are structural only:
+#   * The v2.9.27 R21 MonFri fast path (_is_clean_monfri, _walk_from_mon,
+#     _walk_from_first_fw, _BW_MIRROR) has no upstream counterpart, but it is
+#     output-identical to the day-by-day walker on clean Mon-Fri calendars.
+#   * The inlined _is_work_day drops upstream's special_workdays parameter,
+#     which appears nowhere in this file, so forced-ON exception dates such as
+#     a worked Saturday are treated as non-working here.
 
 def _is_work_day(dt, work_days, holidays):
     """True if dt is a working day on the given calendar.
@@ -1482,8 +1518,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
 
     # v2.9.27 — audit F24 PAIRED FIX. Free Float computation backported.
     # JS computed ff + ff_working_days; Python emitted neither — F24 was
-    # documented as an intentional JS-only gap. Closing the gap so an
-    # opposing expert can rely on the Python reference for FF too.
+    # documented as an intentional JS-only gap. That gap IS closed: ff and
+    # ff_working_days are set on every branch below and cross-validate with
+    # zero skips. The later ff_signed family (B5 P6-alignment wave, added
+    # after this note) is NOT fully closed — the has-successors branch sets
+    # ff_signed but never ff_signed_working_days, which the JS mirror does
+    # set. The crossval guards skip rather than fail when either side lacks
+    # a field, so 58 comparisons are silently not compared: JS emits a real
+    # number, this reference emits nothing. A further 6 skips (3 ff_signed +
+    # 3 ff_signed_working_days on the completed-activity branch) are engine
+    # parity, neither side emitting. 64 skips total, so the harness line
+    # "925 / 925" is executed/executed, not 925 of 989. An opposing expert
+    # can rely on this file for ff, ff_working_days and ff_signed, NOT for
+    # ff_signed_working_days.
     # Mirrors JS cpm-engine.js:2289-2367.
     for c, n in nodes.items():
         if n['is_complete']:

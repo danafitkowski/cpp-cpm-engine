@@ -3,14 +3,14 @@
 [![npm version](https://img.shields.io/npm/v/cpp-cpm-engine.svg)](https://www.npmjs.com/package/cpp-cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![tests: 1134 passing](https://img.shields.io/badge/tests-1134%20passing-brightgreen.svg)](cpm-engine.test.js)
-[![crossval: 747/747](https://img.shields.io/badge/JS%E2%86%94Python-747%2F747-brightgreen.svg)](cpm-engine.crossval.js)
-[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2933-baseline)
+[![crossval: 925/925](https://img.shields.io/badge/JS%E2%86%94Python-925%2F925-brightgreen.svg)](cpm-engine.crossval.js)
+[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2939-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
-**Open source. AACE-aligned. Daubert-disclosed. JS/Python parity across 1,129 unit tests + 747 cross-validation checks on the enumerated CPM comparison surface (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+**Open source. AACE-aligned. Daubert-disclosed. 1,134 JS unit tests, plus JS/Python parity on 925 of 989 enumerated cross-validation comparisons; the remaining 64 are not compared because the Python reference does not emit the field (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
 
 Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
@@ -136,10 +136,11 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 43 fixtures × 747 checks. 0 deviations as of v2.9.34.
+# 45 fixtures × 925 checks executed, 0 deviations as of v2.9.39.
+# A further 64 comparisons on the enumerated surface (989 total) are skipped rather than failed by the harness field guards, all on ff_signed / ff_signed_working_days, which the Python reference does not always emit.
 ```
 
-Plus a 282-activity real-XER stress test reports 0 mismatches.
+Plus a 282-activity real-XER stress test reports 0 mismatches. That XER is a single non-public reference file, is not committed, and the run is not independently reproducible from this repo (see [DAUBERT.md §2](DAUBERT.md#2-methodology-tested)).
 
 This means a forensic analysis run in JavaScript (browser, Node) produces the same numbers as one run in Python (claims-preparation skill, MCP server, batch pipeline). Every CPP deliverable carries the same manifest regardless of which surface produced it.
 
@@ -217,7 +218,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.39.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,129 unit tests and 747/747 cross-validation checks across 43 fixtures, plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,134 unit tests and 925/925 cross-validation checks across 45 fixtures, plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

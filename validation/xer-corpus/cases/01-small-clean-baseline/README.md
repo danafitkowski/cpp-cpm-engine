@@ -19,9 +19,9 @@ _None — clean case._
 
 ## Expected alerts
 
-minimal (parsing INFOs only)
+calendar-fallback ALERTs at every arithmetic site, one root cause, two message variants (the corpus harness does not pass a cal_map into computeCPM); see ALERT_TRIAGE.md
 
-## Engine output (v2.9.31)
+## Engine output (as of v2.9.34 capture)
 
 Project finish: `2026-02-17`
 

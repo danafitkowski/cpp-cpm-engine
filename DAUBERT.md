@@ -8,7 +8,7 @@ This is a formal disclosure for the engine itself, modeled on the structured out
 
 ## §1 Qualifications
 
-The engine was developed and is maintained by **Dana Fitkowski** (25-year construction scheduler, 20 years in nuclear/energy, Primavera P6 expert) at **Critical Path Partners**.
+The engine was developed and is maintained by **Dana Fitkowski** (construction scheduler since August 2002, 24 years in project controls, 20 of them in nuclear/energy, Primavera P6 expert) at **Critical Path Partners**.
 
 The CPM math is derived from peer-reviewed publications:
 
@@ -27,14 +27,14 @@ The forensic-method labels emitted by the engine are AACE-canonical:
 
 ## §2 Methodology Tested
 
-The engine's correctness has been tested in four independent ways:
+The engine's correctness is exercised on six surfaces. Five are tabulated below; the sixth is the engine-vs-P6 comparison matrix described in §8.5 and shipped at [`validation/p6-comparison/`](validation/p6-comparison/), a 15-case matrix in which 13 cases are scored against a single Primavera P6 23.12 capture and read 13 / 13 PASS, the remaining 2 being by-construction divergences P6 cannot represent (excluded and documented in `validation/engine-limitations/`). That matrix is disclosed as fitted rather than held out: the first capture scored 6 of 13, five divergence families were then corrected in the engine against P6's pinned answers, and the matrix was regenerated, so no post-fix independent capture exists and the capture sheet itself is not committed to this repository. The five tabulated surfaces are not mutually independent either: branch and statement coverage is `c8` instrumentation over the same 1,134-test unit suite rather than a separate test of the math, and the cross-validation, coverage and public-API rows all exercise code authored by the proponent. §3.1 addresses what proponent authorship does and does not close.
 
 | Surface                    | Coverage                                                                                          | Result          |
 |----------------------------|---------------------------------------------------------------------------------------------------|-----------------|
 | Unit tests                 | `cpm-engine.test.js` — date helpers, calendar arithmetic, topo sort, Tarjan SCC, forward/backward pass, salvage mode, all strategy modes (TFM/LPM/MFP with divergence), kinematic delay dynamics, topology hash, Daubert disclosure, Bayesian update, multi-jurisdiction default holiday rule sets (66 jurisdiction codes, framework-aligned per [`docs/jurisdictions.md`](docs/jurisdictions.md); analysts must verify currency against the operative statute for forensic use), P6 primary + secondary constraints, TT_Hammock two-pass with full SS/FF/SF semantics, FF/SF relationship coverage, ALAP backward-pass tightening, Section D MC-constraint enforcement, hammock visited-set memoization, dateToNum 2-digit guard, Round 6 strong-assertion strengthening, Round 7 full hammock SS/FF/SF semantics, Round 8 R8A engine math fix wave, Round 9 v2.9.12 engine math fix wave, v2.9.22 audit HIGH wave (10 items: rel-trim, strict parse, typed input, getHolidays year-clamp, etc.), v2.9.23 small-batch wave (16 items: dedup, codepoint cmp, target_drtn WARN, etc.), v2.9.26 provenance + citation polish, v2.9.27 paired JS+Python fixes (R6 completed-succ skip, R12 data_date snap, R21 Python MonFri fast path, R9 tf_working_days backport, F24 ff/ff_working_days backport, A12 hash hardenings, R10 project_calendar fallback, R6 MS_Start widen WARN). | **1,134 / 1,134 passing** |
-| Cross-validation suite     | `cpm-engine.crossval.js` — 45 fixtures × 925 checks, JS engine vs Python `compute_cpm` reference. Severity-level alert parity asserted on the enumerated comparison surface (forward/backward pass dates ES/EF/LS/LF, Kahn topo order, Tarjan SCC, critical-path codes, alert counts and severity, FF/SF working-day arithmetic, TF, FF, FF working days). v2.9.27 expanded crossval coverage by backporting tf_working_days, ff, and ff_working_days fields to Python (previously documented JS-only gaps in F24). Bayesian and kinematic surfaces are JS-only and **explicitly excluded** from the bit-identical claim — see §8. | **925 / 925 bit-identical across enumerated CPM comparison fields** |
+| Cross-validation suite     | `cpm-engine.crossval.js` — 45 fixtures, 925 of 989 checks executed, JS engine vs Python `compute_cpm` reference. The 64 unexecuted checks are confined to `ff_signed` (3) and `ff_signed_working_days` (61), which the Python reference does not emit on every path; the harness skips those rather than failing them, so its `925 / 925` tally counts executed checks only. ES/EF/LS/LF, TF, `tf_working_days`, `ff` and `ff_working_days` were each compared on all 105 activity groups with no skips. Parity asserted on the enumerated comparison surface: forward/backward pass dates (ES/EF/LS/LF), Kahn topo order, critical-path codes, project finish, TF, TF working days, FF, FF working days, and signed FF, over fixtures that exercise FS/SS/FF/SF relationship types and lags; alert counts and severity are compared on 40 of the 45 fixtures. Three exclusions are disclosed rather than hidden. (1) Tarjan SCC is not part of this surface: `_tarjan_scc` was stripped from `python_reference/cpm.py` for OSS distribution (stated in that file's own header), and the Python reference detects cycles through `_topo_sort`'s `has_cycle` flag raising `ValueError`, so the two cycle fixtures (F23, F31) assert only that both engines refused and never compare an SCC decomposition. Tarjan SCC is covered by the JS unit suite instead (`cpm-engine.test.js` Section B plus the 5,000-node iterative-Tarjan overflow test), which is where the unit-test row above already claims it. (2) Alert-severity parity is skipped on F20, F21 and F27, where the out-of-sequence ALERT is a JS-only feature with no Python counterpart, and is not compared at all on F23 and F31, where both engines throw and there is no output to compare. (3) The Python reference does not emit `ff_signed_working_days` on the has-successors path, and neither engine emits `ff_signed` or `ff_signed_working_days` for completed activities, so 64 of the 989 enumerated comparisons are never executed (61 on `ff_signed_working_days` and 3 on `ff_signed`; 58 are cases where JS emits a value and Python emits none, and 6 are activities where neither engine emits the field). The harness therefore executes, and passes, 925 of the 989 enumerated comparisons. v2.9.27 expanded crossval coverage by backporting tf_working_days, ff, and ff_working_days fields to Python (previously documented JS-only gaps in F24). Bayesian and kinematic surfaces are JS-only and **explicitly excluded** from the bit-identical claim — see §8. | **925 of 989 enumerated comparisons executed and bit-identical; 64 skipped rather than failed (58 where `python_reference/cpm.py` emits no `ff_signed_working_days` on the has-successors path, 6 where neither engine emits a signed-FF value on a completed activity)** |
 | Real-XER stress test       | 282-activity real Primavera P6 export, JS vs Python (single non-public reference XER; kept locally, not committed — not independently reproducible from this repo)                                               | **0 / 282 mismatches** |
-| Branch + statement coverage | `c8` instrumentation over `cpm-engine.js` exercised by the 1,134-test unit suite. Reported as statement / branch / function / line coverage on every release; see §2.1 for the v2.9.30 baseline and the disclosed uncovered-line cluster. | **93.15% stmts / 82.29% branches / 93.51% funcs / 93.15% lines** |
+| Branch + statement coverage | `c8` instrumentation over `cpm-engine.js` exercised by the 1,134-test unit suite. Reported as statement / branch / function / line coverage on every release; see §2.1 for the coverage baseline and the disclosed uncovered-line cluster. | **93.10% stmts / 82.44% branches / 93.91% funcs / 93.10% lines** |
 | Public-API surfaces        | Kinematic delay dynamics (velocity / acceleration / jerk; pre-publication, JS-only), topology fingerprint hash (canonicalized topology under hashed-field set; not a forensic-equivalence statement — see §6), Daubert / FRE 702 disclosure wrapper, Bayesian update with hierarchical pooling (pre-publication, JS-only). | All exposed via public API + tests |
 
 Performance benchmarks (Node 18, M1 Mac):
@@ -43,25 +43,25 @@ Performance benchmarks (Node 18, M1 Mac):
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
-### §2.1 Test Coverage (v2.9.33 baseline)
+### §2.1 Test Coverage (v2.9.39 baseline)
 
 Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js` exercised by the 1,134-test unit suite, captured on every release via `npm run coverage`. Reported numbers are not editorial — they are emitted by the test runner.
 
 | Coverage Surface | Count | Pct |
 |---|---|---|
-| Statements | 8,053 / 8,628 | **93.33%** |
-| Branches | 1,764 / 2,141 | **82.39%** |
-| Functions | 105 / 112 | **93.75%** |
-| Lines | 8,053 / 8,628 | **93.33%** |
+| Statements | 8,373 / 8,993 | **93.10%** |
+| Branches | 1,836 / 2,227 | **82.44%** |
+| Functions | 108 / 115 | **93.91%** |
+| Lines | 8,373 / 8,993 | **93.10%** |
 
-**Disclosed uncovered clusters.** A defensible coverage disclosure must name what is not covered, not just what is. The current uncovered statement clusters in `cpm-engine.js` fall in these regions (line numbers as of v2.9.30):
+**Disclosed uncovered clusters.** A defensible coverage disclosure must name what is not covered, not just what is. The regions below are named in prose; the line-level list is generated rather than editorial. `npm run coverage` writes `coverage/cpm-engine.js.html`, which marks every uncovered statement in the shipped v2.9.39 bytes: 620 uncovered statements in 83 contiguous ranges, the last of which is lines 8,979-8,993. Cite that HTML report rather than the console summary, whose `Uncovered Line #s` column is width-truncated. The uncovered statement clusters fall in these regions:
 
 - Defensive guards in salvage-mode early-exit paths (rarely exercised in the canonical fixtures; expanded coverage on the v3.0 strict-mode roadmap)
 - Bayesian / kinematic public-API surfaces that are JS-only and excluded from the crossval surface per §8 (covered by unit tests but lower branch coverage on the marginal-CI math edge cases)
 - Section L Daubert-renderer fallback branches for malformed `disclosure` input (intentional defensive code)
 - Holiday-rule edge cases for jurisdictions with rare observance variants (e.g., DST-cross-boundary holidays); the rule-set is correct, the edge-case branches are rarely hit
 
-The 17.61% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; current baseline v2.9.33** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
+The 17.56% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; current baseline v2.9.39** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
 
 **Reproduce locally:**
 
@@ -72,7 +72,7 @@ npm install --no-save  # only pulls c8 devDep; runtime is still zero-dep
 npm run coverage
 ```
 
-The output should match the v2.9.33 baseline within rounding. Drift in either direction documents itself.
+The output should match the v2.9.39 coverage baseline in §2.1 within rounding: 93.10% statements (8,373 / 8,993), 82.44% branches (1,836 / 2,227), 93.91% functions (108 / 115), 93.10% lines. Drift in either direction documents itself.
 
 ---
 
@@ -83,7 +83,7 @@ The engine has not been formally peer-reviewed in a journal. It has been:
 - Subjected to an **8-lens forensic audit** on 2026-05-09 (CPM Engine v2.1 audit response).
 - Verified against a parallel Python implementation maintained for the CPP Python forensic skill suite (an internal, non-public codebase). That Python implementation is exercised by its own unit-test suite spanning the CPP forensic skills — forensic-delay-analysis, time-impact-analysis, claim-workbench, claims-preparation, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis, monthly-progress-report, schedule-health-review, and others — which is not distributed in this repository and is therefore not independently reproducible from this artifact.
 - Made publicly available at <https://github.com/danafitkowski/cpp-cpm-engine>. The source is human-readable, auditable, and the cross-validation harness is publicly runnable (`npm run crossval`).
-- **Externally reproducible cross-validation.** A Python reference implementation ships at `python_reference/cpm.py`. Its SHA-256 is regenerated on every `npm run attest` and written to `python_reference/cpm.py.sha256` (alongside `cpm-engine.js.sha256`) for mechanical `shasum -c` verification. The hash is also printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash, and confirm bytes-they're-testing match bytes-pinned. Drift from the pinned hash invalidates the "747 / 747" headline and must be reproduced from a clean checkout. v2.9.27 paired-fix wave brought the JS↔Python parity surface from 444 → 747 bit-identical checks by backporting `tf_working_days`, `ff`, `ff_working_days` (previously F24-documented JS-only gaps), plus paired-engine fixes for R6 completed-successor skip, R12 data_date calendar-aware floor, R21 Python MonFri fast path, R10 project_calendar fallback tier, R6 MS_Start widens-LF WARN, and A12 topology-hash hardenings (numeric/string code coercion, input vs hashed relationship counts, algorithm:null for empty).
+- **Externally reproducible cross-validation.** A Python reference implementation ships at `python_reference/cpm.py`. Its SHA-256 is regenerated on every `npm run attest` and written to `python_reference/cpm.py.sha256` (alongside `cpm-engine.js.sha256`) for mechanical `shasum -c` verification. The hash is also printed at the head of every `npm run crossval` run. Opposing experts can clone the repository, recompute the hash, and confirm bytes-they're-testing match bytes-pinned. Drift from the pinned hash invalidates the crossval headline published in §2 and must be reproduced from a clean checkout. v2.9.27 paired-fix wave brought the JS↔Python parity surface from 444 → 747 bit-identical checks by backporting `tf_working_days`, `ff`, `ff_working_days` (previously F24-documented JS-only gaps), plus paired-engine fixes for R6 completed-successor skip, R12 data_date calendar-aware floor, R21 Python MonFri fast path, R10 project_calendar fallback tier, R6 MS_Start widens-LF WARN, and A12 topology-hash hardenings (numeric/string code coercion, input vs hashed relationship counts, algorithm:null for empty).
 - Live-deployed at <https://mcp.criticalpathpartners.ca/try> where any party can run it against their own schedule.
 
 ### §3.1 Independent Verification
@@ -107,7 +107,15 @@ Workflow runs are publicly visible at <https://github.com/danafitkowski/cpp-cpm-
 Anyone can verify a published attestation:
 
 ```bash
-gh attestation verify attestations/latest.json --owner danafitkowski
+# attestations/latest.json is gitignored, and a witness you generate locally with
+# `npm run verify` is unsigned — verifying it returns HTTP 404 (no attestation for
+# its digest). Verify the CI-signed witness that ships in the tree instead:
+gh attestation verify release-evidence/v2.9.39/witness-v2.9.39.json --owner danafitkowski
+
+# Equivalent public route — note the release asset is named `latest.json`,
+# not `attestations-latest.json`:
+#   gh release download v2.9.39 --repo danafitkowski/cpp-cpm-engine --pattern 'latest.json'
+#   gh attestation verify latest.json --owner danafitkowski
 ```
 
 **Layer 3 — One-command local reproduction.** Any third-party expert can reproduce the verification on their own machine without trusting the proponent's CI:
@@ -133,10 +141,10 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 
 ## §4 Error Rate
 
-**Cross-validation reports 747 / 747 = 0% observed deviation across 43 fixtures on the enumerated CPM comparison surface (forward/backward pass dates, Kahn topo order, Tarjan SCC, FF/SF working-day arithmetic, TF, FF, FF working days, alert counts and severity). Bayesian and kinematic surfaces are JS-only and excluded — see §8.**
+**Cross-validation reports 925 executed comparisons with 0 deviations across 45 fixtures on the enumerated CPM comparison surface (forward/backward pass dates, Kahn topo order, critical-path codes, project finish, FF/SF working-day arithmetic, TF, TF working days, FF, FF working days, and signed FF where both engines emit it; alert counts and severity are compared on 40 of the 45 fixtures, skipped on the 2 cycle fixtures that compare refusal only and on the 3 out-of-sequence fixtures where the alert is JS-only; Tarjan SCC is JS-unit-tested only and is not on this surface, having been stripped from `python_reference/cpm.py`). The harness prints `925 / 925`, but that denominator is the executed count, not the comparison surface: the full enumerated surface is 989 comparisons, and 64 of them are skipped by the harness field guards (61 on `ff_signed_working_days`, 3 on `ff_signed`) and are neither counted nor failed. Of those 64, 58 are substantive, in that the Python reference emits no value where the JS engine emits one, and 6 are null-vs-undefined artifacts on activities where neither engine emits the field. So 0% observed deviation holds over the 925 executed comparisons, and agreement over the full 989-comparison surface is 925 of 989 by the harness's own equality semantics. Bayesian and kinematic surfaces are JS-only and excluded (see §8).**
 **Real-XER stress reports 282 / 282 = 0% deviation (single non-public reference XER; not committed, not independently reproducible).**
 
-This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.33. It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
+This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.39 (45 fixtures / 925 cross-validation checks). It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
 
 Performance characteristics:
 
@@ -149,7 +157,7 @@ Performance characteristics:
 1. **Strict mode** (`computeCPM`) — throws on degenerate input. Use this for high-stakes forensic runs where an analyst must see and correct the input before proceeding.
 2. **Salvage mode** (`computeCPMSalvaging`) — logs to `result.salvage_log` and continues with documented heuristics. Use this for triage of corrupt or hand-edited XERs.
 
-**No known silent wrong-answer paths remain on the disclosed validation surface after v2.1.0.** Every degenerate input either throws a labeled exception or appears in the salvage log. The 1,129-test unit suite, the 747-fixture JS↔Python crossval, and the 82.39% branch-coverage instrumentation are the surface on which this claim is observed; paths outside that surface are not warranted.
+**No known silent wrong-answer paths remain on the disclosed validation surface after v2.1.0.** Every degenerate input either throws a labeled exception or appears in the salvage log. The 1,134-test unit suite, the 45-fixture / 925-check JS↔Python crossval, and the 82.44% branch-coverage instrumentation are the surface on which this claim is observed; paths outside that surface are not warranted.
 
 **Caveat — input uncertainty.** The engine's observed error rate is the rate at which the engine matches its disclosed validation suite, not the rate at which the analyst's inputs reflect reality. Activity durations supplied by the analyst, calendar definitions, relationship logic — these all carry uncertainty that the engine does not (and cannot) characterize. The Daubert error-rate prong is **addressed** at the *computational* layer by this disclosure; the *epistemic* error-rate (how well the schedule represents reality) remains the analyst's responsibility, and the trier of fact decides admissibility.
 
@@ -159,7 +167,7 @@ Performance characteristics:
 
 The engine implements methods that are standard practice in forensic delay analysis:
 
-- **AACE 29R-03 / 49R-06 / 52R-06 / 122R-22 / PPG #20 (2nd Ed 2024).** All five Recommended Practices are formally peer-reviewed and adopted by AACE International, the leading professional society for cost engineering and project controls.
+- **AACE 29R-03 / 49R-06 / 52R-06 / 122R-22 / PPG #20 (2nd Ed 2024).** The four Recommended Practices (29R-03, 49R-06, 52R-06, 122R-22) are formally peer-reviewed and adopted by AACE International, the leading professional society for cost engineering and project controls. PPG #20 is an AACE International Professional Practice Guide published by the same body, cited here for general acceptance rather than as a peer-reviewed Recommended Practice.
 - **SCL Protocol 2nd Edition (2017).** The Society of Construction Law's *Delay and Disruption Protocol* is the dominant English-law-jurisdictional standard. The engine's TIA mode emits SCL-compatible method labels.
 - **FRE 702 (December 2023 amendment).** The engine's manifest emits methodology, error rate, and provenance fields that satisfy the Rule 702(c) and 702(d) reliability requirements.
 - **FRE 707 (proposed federal rule, final effective date pending).** The engine's `buildDaubertDisclosure()` function emits a four-prong package suitable for use in FRE 707 disclosures once the rule lands.
@@ -229,14 +237,14 @@ For the full citation list (including the secondary references in `buildDaubertD
 
 ## Validator independence
 
-The engine and the validation suite were developed by the same author (Dana Fitkowski / Critical Path Partners). The cross-validation harness exercises the JS engine against a Python reference implementation maintained in the shared CPP codebase — these are two independent implementations of the same specification, not the same code in two languages.
+The engine and the validation suite were developed by the same author (Dana Fitkowski / Critical Path Partners), and the two sides of the cross-validation share more than an author. `python_reference/cpm.py` is derived from the CPP suite's canonical Python engine (`_cpp_common/scripts/cpm.py` @ ENGINE_VERSION 2.8.0) with the surfaces the harness does not import stripped out, and `cpm-engine.js` was itself reconstructed on 2026-05-09 from that same Python file plus a Monte-Carlo extract (`cpm-engine-v15.md`), as recorded in the header comment at the top of `cpm-engine.js`. Fixes have since been applied to both sides in paired waves, including backports from the JS engine into the Python reference (the v2.9.27 paired-fix wave carried `tf_working_days`, `ff` and `ff_working_days` across; T4.25-T4.26 in §8, which rotated the Python SHA-256 pin). The harness therefore measures agreement between two co-maintained implementations descended from a common ancestor, not agreement with an independent third party. It is a real check on language-level divergence (rounding conventions, calendar arithmetic, null and missing-field handling) and on drift between the two runtimes, and it cannot detect an error both sides inherited from the shared source logic. A genuinely independent lane, a crossval against the established Java MPXJ library by a different author, is listed as near-term in §10.
 
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 1,129 unit tests + 747 cross-validation checks across 43 fixtures + citation regression + truncation regression + version-drift regression gate = 1,876 verifications. Or `npm run verify` for the full attestation-witness flow (which now invokes the same five gates and records each in the witness JSON).
-3. Run the engine against their own P6 schedule export and compare to the P6 native float values.
-4. Inspect the source — it is intentionally readable and well-commented (8,764 lines including narrative comments).
+2. Run `npm run test:all` to reproduce the 1,134 unit tests + 925 cross-validation checks across 45 fixtures + citation regression + truncation regression + version-drift regression gate = 2,059 verifications. Or `npm run verify` for the full attestation-witness flow (which now invokes the same five gates and records each in the witness JSON).
+3. Run the engine against their own P6 schedule export and compare `tf_working_days` / `ff_working_days` against P6's Total Float / Free Float columns. Those are working days on the activity's own calendar, which is what P6's float columns mean; the raw calendar-day `tf` / `ff` fields are not the comparison surface (see §8). Finish dates need the day-start versus day-end convention applied first: the engine reports a day-start instant, so an engine EF or LF of `D` corresponds to a P6 finish at the close of the previous **workday** on that activity's own calendar (engine EF `2026-01-12` Mon = P6 `09-Jan-26 17:00` Fri, not `11-Jan-26`). Start dates (ES / LS) and actual dates carry no shift and compare directly. See `validation/p6-comparison/apply-p6-capture.py` for the normalization actually used.
+4. Inspect the source — it is intentionally readable and well-commented (8,993 lines including narrative comments).
 
 ---
 
@@ -244,13 +252,13 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 
 `disclosure_format_version: 1.0`
 `engine_version: 2.9.39`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document is dated 2026-05-24, refreshed for v2.9.33 audit-response-pass-2. v2.9.33 fixes the fatal-tier audit findings v2.9.33 still left open (VERIFY_RELEASE.md test-count contradictions, missing release-evidence packets, SHA-sidecar wording, attestation script not wiring the new gates) plus the medium-tier residuals (jurisdictions bottom guarantee section, "no silent wrong-answer paths" absolute language, dead-context test strengthening, structured override fields with backward compat, README competitor-table removal, machine-readable SOP-checklist binding). Prior milestones preserved: v2.9.33 audit-response wave + version-drift regression gate + computeCPMSalvaging strict-mode refusal; v2.9.31 Section Q Forensic Strict Mode public API + 33 strict-mode unit tests; v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; v2.9.10 Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document was first written 2026-05-24 and last refreshed for v2.9.39 (released 2026-08-11). v2.9.39 is the P6 23.12 alignment wave: a 13-case comparison matrix captured from Primavera P6 Professional 23.12 standalone on 2026-08-11 via an automated import plus single-F9 round trip, five divergence families (working-day float units, open-end late-date seeding, mandatory-finish semantics, retained logic on out-of-sequence progress, free-float conventions) corrected against that capture, and cross-validation grown from 43 fixtures / 747 checks to 45 fixtures / 925 checks. The matrix reads 13 / 13 PASS, and disclosure requires the qualifier: the first and only capture scored 6 / 13, the engine was then changed against that capture's answers, and no held-out P6 case exists, so the matrix is a calibration record rather than an independent hold-out test. v2.9.38 (2026-07-04) corrected the attestation SHA chain to pin the shipped engine bytes and rewrote §E to the fields the engine actually emits (`method_caveat` on `computeKinematicDelay`, `methodology` on `computeBayesianUpdate`), removing the `methodology_status` and `woet_classifier` surfaces the engine never carried. v2.9.33 fixed the fatal-tier audit findings v2.9.32 left open (VERIFY_RELEASE.md test-count contradictions, missing release-evidence packets, SHA-sidecar wording, attestation script not wiring the new gates) plus the medium-tier residuals (jurisdictions bottom guarantee section, "no silent wrong-answer paths" absolute language, dead-context test strengthening, structured override fields with backward compat, README competitor-table removal, machine-readable SOP-checklist binding). Prior milestones preserved: v2.9.33 audit-response wave + version-drift regression gate + computeCPMSalvaging strict-mode refusal; v2.9.31 Section Q Forensic Strict Mode public API + 33 strict-mode unit tests; v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; v2.9.10 Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
 
 ---
 
 ## §7 Disclosed Heuristic Thresholds (v2.9.4)
 
-Every numeric threshold used in `computeScheduleHealth()` and `findCriticalPathChain()` is named, defaulted, and source-cited. The engine emits no undisclosed magic numbers in its public scoring or critical-path output.
+Every numeric threshold used in `computeScheduleHealth()` and in the near-critical detection inside `computeFloatBurndown()` is a named constant carrying an inline source citation, with one exception recorded at the end of this section. The 23 `SH_*` health constants are declared together at `cpm-engine.js` 5,343-5,367; `DEFAULT_NEAR_CRITICAL_TF_DAYS` is a function-local constant at line 7,340. The table below lists 17 of the 23. The remaining six are CPP house heuristics that set the penalty magnitudes and the gate on checks C3 (critical-path ratio) and C7 (constraint-driven false-CP), and are read from source: `SH_CP_PCT_WARN_PENALTY` (5), `SH_CP_PCT_FALSE_CP_PENALTY` (10), `SH_CP_PCT_ZERO_PENALTY` (8), `SH_CP_PCT_ZERO_MIN_ACTS` (5 activities, a gate rather than a penalty), `SH_FALSE_CP_PENALTY_PER_UNIT` (1) and `SH_FALSE_CP_PENALTY_CAP` (10). The exception: the "effectively nothing critical" floor is the bare literal `cpPct < 1` at line 5,439, repeated in the C3 pass test at line 5,447, and is not yet a named constant.
 
 ### `computeScheduleHealth` (Section I)
 
@@ -295,7 +303,7 @@ The engine honors the following Primavera P6 constraint types declared on activi
 | `FNET` | `CS_MEOA` (Finish On or After) | `EF = max(EF, date)`; WARN | – |
 | `FNLT` | `CS_MEOB` (Finish On or Before) | If `EF > date` → ALERT | `LF = min(LF, date)` |
 | `MS_Start` / `SO` | `CS_MSO` (Mandatory Start) | `ES = date` (forced); if pred logic > date → ALERT | – |
-| `MS_Finish` / `MFO` | `CS_MEO` (Mandatory Finish) | `EF = date` (forced); `ES = EF - duration` back-computed on own calendar, overriding predecessor logic (P6-validated 2026-08-11, case 11; feasible side, unstarted work, floored at data date); infeasible side keeps ALERT | `LF = date`; `LS = LF - duration` |
+| `MS_Finish` / `MFO` | `CS_MEO` (Mandatory Finish) | `EF = date` (forced); `ES = EF - duration` back-computed on own calendar, overriding predecessor logic (conformed to P6 capture 9b748cc case 11, 2026-08-11, which the pre-fix engine failed; the rule was written to that case and no held-out capture exists, so this is calibration rather than independent validation; feasible side, unstarted work, floored at data date); infeasible side keeps ALERT | `LF = date`; `LS = LF - duration` |
 | `ALAP` | `CS_ALAP` | (no forward action — pinned in post-backward sweep) | Post-pass slides ES/EF to LS/LF if `LS > ES`; WARN `constraint-applied` |
 
 **Constraint date boundary (P6-validated 2026-08-11, comparison case 05):**
@@ -345,9 +353,9 @@ Two engine features are first-publication or pre-publication in construction sch
 
 - **Engine epoch = 2020-01-01.** The engine's day-offset arithmetic uses 2020-01-01 as offset 0. Activities with `actual_start = '2020-01-01'` collide with the "no actual_start" sentinel (offset 0) — the immutability gate `actStartNum > 0` treats them as not-started. Narrow real-world exposure (only affects schedules with actuals literally on Jan 1, 2020); fix requires moving the epoch back, v3.0 candidate. Audit HIGH R12 documented limitation.
 
-- **Both P6 scheduling modes implemented (P6 alignment wave 2026-08-11).** `retained_logic` (default): the remaining work of an in-progress activity restarts at max(data date, driving predecessor logic) — P6-validated against capture 9b748cc case 10 (the pre-wave engine continued remaining work from the data date regardless of mode, which is progress-override behavior, and additionally zeroed in-progress float via the deleted T3.19 pin; both divergences are fixed). `progress_override`: remaining work restarts at the data date; implemented as engine self-consistency (crossval F49) and NOT asserted as P6-validated until an override-mode capture exists. Unknown `opts.scheduleMode` values emit `unknown-schedule-mode` ALERT and fall back to retained_logic. Published free float now floors at zero (P6 semantics, cases 05/09) with the signed forensic value preserved in `ff_signed` / `ff_signed_working_days`.
+- **Both P6 scheduling modes implemented (P6 alignment wave 2026-08-11).** `retained_logic` (default): the remaining work of an in-progress activity restarts at max(data date, driving predecessor logic) — fitted to P6 capture 9b748cc case 10, one of the seven cases of thirteen that the pre-wave engine failed in that capture (it continued remaining work from the data date regardless of mode, which is progress-override behavior, and additionally zeroed in-progress float via the deleted T3.19 pin). Both divergences were corrected against P6's pinned answer for that case and the engine now matches it; 9b748cc is the only P6 capture taken, so no independent capture has tested the corrected rule. `progress_override`: remaining work restarts at the data date; implemented as engine self-consistency (crossval F49) and NOT asserted as P6-validated until an override-mode capture exists. Unknown `opts.scheduleMode` values emit `unknown-schedule-mode` ALERT and fall back to retained_logic. Published free float now floors at zero (P6 semantics, cases 05/09) with the signed forensic value preserved in `ff_signed` / `ff_signed_working_days`.
 
-- **Bayesian and kinematic surfaces are JS-only (no Python cross-validation).** `computeBayesianUpdate` (Bayesian posterior duration) and `computeKinematicDelay` (slip velocity / acceleration / jerk) are not implemented in `python_reference/cpm.py`. The crossval harness therefore covers zero of the Bayesian + kinematic code paths. Bit-identical JS↔Python parity claims in §3.1 apply ONLY to the core CPM math (forward/backward pass, Kahn topo, Tarjan SCC, FF/SF calendar arithmetic). Bayesian and kinematic outputs are validated by the JS unit-test suite + the structural cross-checks in `cpm-engine.crossval.js`; no second-implementation comparison exists. Audit LOW R22 documented limitation.
+- **Bayesian and kinematic surfaces are JS-only (no Python cross-validation).** `computeBayesianUpdate` (Bayesian posterior duration) and `computeKinematicDelay` (slip velocity / acceleration / jerk) are not implemented in `python_reference/cpm.py`. The crossval harness therefore covers zero of the Bayesian + kinematic code paths, and contains no Bayesian or kinematic comparison of any kind, structural or numeric. Those two surfaces are validated by the JS unit-test suite alone; no second-implementation comparison exists. Bit-identical JS↔Python parity claims in §3.1 apply ONLY to the core CPM math (forward/backward pass, Kahn topo order, FF/SF calendar arithmetic, and the float fields enumerated in §2). Tarjan SCC is outside that surface as well: `_tarjan_scc` is stripped from `python_reference/cpm.py`, which detects cycles by Kahn in-degree count instead, so no SCC decomposition is compared across the two implementations. What the harness does cross-validate is cycle-refusal behavior (fixtures F23 and F31, where both engines must refuse a cyclic network); the SCC decomposition itself is exercised by the JS unit suite only. Audit LOW R22 documented limitation.
 
 ---
 
@@ -365,7 +373,7 @@ For contested deliverables, the citation triad is:
 
 Plus, where the opinion turns on engine ↔ P6 equivalence:
 
-4. **[`validation/p6-comparison/`](validation/p6-comparison/)** — 15-case engine vs P6 matrix (analyst populates the P6 columns from native capture).
+4. **[`validation/p6-comparison/`](validation/p6-comparison/)** — 13-case engine vs P6 matrix, populated from a single Primavera P6 23.12 capture and reading 13 / 13 after the engine was corrected against that same capture (no held-out case; the per-case `comparison.csv` files carry the captured P6 values, but the capture sheet itself is gitignored, so the matrix cannot be regenerated from a clean clone; two further cases are by-construction divergences documented in `validation/engine-limitations/`).
 
 `README.md` is repository marketing positioning and is **not** part of the court-citation surface.
 
@@ -463,7 +471,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 ### What strict mode does NOT do
 
 - It does not validate that the analyst's overrides are *correct*. It enforces that the analyst documented the override in writing. Whether the rationale is defensible is the analyst's burden under Daubert / FRE 702.
-- It does not guarantee P6 equivalence on the strict-mode-passing path. P6 comparison evidence is on the [`§10 Roadmap`](#10-roadmap--forward-looking-daubert-hardening).
+- It does not guarantee P6 equivalence on the strict-mode-passing path. The P6 comparison evidence that does exist ships at [`validation/p6-comparison/`](validation/p6-comparison/), where the matrix reads **13 / 13** on the in-scope cases (two further cases are excluded as out of scope and documented in [`validation/engine-limitations/`](validation/engine-limitations/)). Those cases run plain `computeCPM`, not strict mode, and the 13 / 13 is fitted rather than held out: the single native P6 capture first scored 6 / 13, the engine was then corrected against those same pinned P6 answers, and the matrix was regenerated. No post-fix independent capture exists yet. The fix sequence is recorded in [`release-evidence/v2.9.39/validation-summary.md`](release-evidence/v2.9.39/validation-summary.md).
 - It does not extend to the `computeCPMSalvaging` path. Salvage mode is the inverse posture (best-effort triage of corrupt input) and refuses strict mode by design.
 - It is not retroactive. If you ran `computeCPM` without `forensic_strict: true` and want to validate after the fact, re-run with the flag set.
 
@@ -471,7 +479,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 
 Strict mode shipped with 33 dedicated unit tests in v2.9.31, covering: API surface (8 tests); clean input pass-through; convenience wrapper; throw on each fatal context family; override with valid rationale; override with empty / whitespace / non-string rationale (each throws); unrelated override key (ignored); runCPM strict-mode refusal; default-off behavior; truthy-not-true non-activation. See `cpm-engine.test.js` SECTION R-v2.9.31 (the section anchor in the test file preserves the release that introduced these tests).
 
-Those 33 strict-mode tests are still part of the engine's unit-test suite at the current v2.9.33 baseline (1,129 total tests including strict-mode coverage).
+Those 33 strict-mode tests are still part of the engine's unit-test suite at the current v2.9.39 baseline (1,134 total tests including strict-mode coverage).
 
 ---
 
@@ -496,12 +504,24 @@ This section lists hardening items in flight for future releases.
 
 - **AACE TCM Forum / Cost Engineering journal submission.** Formal
   peer review (Daubert Prong 2).
-- **CPP house heuristic threshold sourcing.** The 8 thresholds called
-  "CPP house heuristic" in §7 — replace with values published by
-  SmartPM, AACE, DCMA, or another industry source, or remove from
-  scored output and demote to internal diagnostic.
-- **Branch-coverage tooling.** Add `c8` or `nyc` for branch-level
-  test coverage reporting (currently statement-level only).
+- **CPP house heuristic threshold sourcing.** §7 labels 7 thresholds
+  "CPP house heuristic": `SH_ALERT_PENALTY_CAP`,
+  `SH_SALVAGE_PENALTY_PER_UNIT`, `SH_SALVAGE_PENALTY_CAP`, `SH_CP_PCT_WARN`,
+  `SH_DISCONNECTED_PENALTY_PER`, `SH_DISCONNECTED_PENALTY_CAP` and
+  `SH_OOS_PENALTY_CAP`. The `computeScheduleHealth` threshold block in
+  `cpm-engine.js` carries that same comment on 13 constants: those 7 plus
+  `SH_CP_PCT_WARN_PENALTY`, `SH_CP_PCT_FALSE_CP_PENALTY`,
+  `SH_CP_PCT_ZERO_PENALTY`, `SH_CP_PCT_ZERO_MIN_ACTS`,
+  `SH_FALSE_CP_PENALTY_PER_UNIT` and `SH_FALSE_CP_PENALTY_CAP`, all six of
+  which feed the published health score but are absent from §7. All 13 are in
+  scope: list the 6 missing constants in §7, then replace each value with one
+  published by SmartPM, AACE, DCMA, or another industry source, or remove it
+  from scored output and demote it to internal diagnostic.
+- **Branch-coverage expansion.** Branch reporting already ships. `c8`
+  instruments `cpm-engine.js` on every release via `npm run coverage`,
+  and §2.1 publishes the resulting branch percentage. The open item is
+  lifting branch coverage over the uncovered clusters disclosed in
+  §2.1, not adding the tooling.
 - **DCMA-14 alignment with the 2024 PPG #20.** Audit our DCMA
   implementation against AACE PPG #20 (2nd Ed 2024) numbering.
 

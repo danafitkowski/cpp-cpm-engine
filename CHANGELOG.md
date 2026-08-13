@@ -12,6 +12,32 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.39 — 2026-08-11 — P6 23.12 alignment wave + first P6-native capture
+
+Supersedes v2.9.38 (v2.9.38 → v2.9.39). Engine math changed in this release. It is the first one whose scheduling rules were altered to match answers captured from Primavera P6 Professional 23.12. The first P6-native capture (commit `9b748cc`, 13 cases scheduled by a human operator through an automated import and a single F9 round trip) scored 6 PASS / 7 FAIL. Five divergence families were then fixed against P6's pinned answers in commits `23ffeca`, `264de84`, `bf442d5` and `05dc8b4`, and the comparison matrix was regenerated to 13 / 13. That 13 / 13 is fitted to the one capture: the engine was changed to match the cases it failed, and no held-out capture exists, so it is not an independent accuracy figure.
+
+### Engine and comparator
+
+- **B1 / comparator float units (`23ffeca`).** TF and FF are compared in working days, and the constraint day-start versus day-end boundary is documented. Comparator and docs only; no engine math.
+- **B2 / per-calendar backward seed and SS/SF bounds (`264de84`).** The backward pass seeded every open activity's LF from a scalar `maxEF`. It now seeds each one from the project-finish instant expressed on that activity's own calendar, matching P6 with `sched_use_project_end_date_for_float=Y`. Single-calendar networks are invariant; multi-calendar networks move. Separately, SS/SF successors no longer bound LF by re-adding the predecessor's duration. They bound LS only, which removes the dangling-finish divergence where a start-only successor dragged the finish past project end. New `opts.useProjectEndDateForFloat` defaults to true; `false` is disclosed by a WARN alert and still computed with true semantics, because P6's off-behavior was not captured.
+- **B3 / Mandatory Finish pins both ends (`bf442d5`).** An `MS_Finish` / `MFO` pin now anchors EF at the mandatory date and back-computes ES as EF minus duration on the activity's own calendar, overriding predecessor logic in the early pass. Applied only where the pin actually holds EF, never on started work, and never below the data date. The infeasible side, where predecessor logic pushes EF past the pin, keeps the existing alert.
+- **B4 / retained logic and schedule modes (`05dc8b4`).** Remaining work on an in-progress activity now restarts at max(data date, driving predecessor logic). It previously continued from the data date regardless of mode, which is progress-override behavior carrying a retained-logic label. The v2.9.12 T3.19 pin that forced LS = ES and LF = EF on every in-progress activity is deleted, so started work keeps real float, and `remaining_late_start(_date)` plus `restart(_date)` are emitted. `opts.scheduleMode` accepts `retained_logic` (default) and `progress_override`, both implemented; unknown values raise `unknown-schedule-mode` and fall back to retained logic. Free-float slack against an in-progress successor measures to that successor's restart. Progress-override output is engine self-consistency only, never asserted as P6 truth, until an override-mode capture exists.
+- **B5 / free-float conventions (`05dc8b4`).** Published `ff` and `ff_working_days` now floor at zero, matching P6. The signed forensic value survives as `ff_signed` and `ff_signed_working_days`. Completed successors are excluded from free float, mirroring their v2.9.27 exclusion from backward propagation.
+- **Out-of-sequence detector ported to Python.** Crossval fixture F48 exposed a pre-existing gap: the JS out-of-sequence detector had no Python counterpart. It is ported to both twins with identical severities.
+
+### Test state
+
+- Unit self-tests: **1134 / 0**.
+- Cross-validation: **45 fixtures / 925 checks executed, 0 failed** (was 43 / 747; fixtures F48 retained-logic and F49 progress-override added, and the `ff_signed` fields brought into comparison). The printed `925 / 925` is executed over executed, not agreement over the comparison surface: the harness increments its total only inside `eq()`, which the field guards can skip. 64 further comparisons on the 989-comparison surface are not executed, so agreement over the full surface is 925 of 989. Of those 64, 61 are `ff_signed_working_days` and 3 are `ff_signed`. 58 arise because the Python reference assigns `ff_signed_working_days` only on the no-successors path and emits nothing for it on the has-successors path; the remaining 6 fall on completed activities where neither engine emits the field.
+- P6 comparison: 13 / 13 cases, fitted to capture `9b748cc` as described above. The capture sheet is gitignored (`.gitignore` line 70), so the matrix cannot be regenerated from a clean clone. The per-case `comparison.csv` files are tracked and do carry the P6 columns.
+- All audit gates green (cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG).
+
+`computeCPM`'s signature is unchanged, but output values move: `ff` and `ff_working_days` are no longer signed, and in-progress activities no longer report LS = ES and LF = EF. Consumers that read a signed free float must read `ff_signed` / `ff_signed_working_days`.
+
+Supersedes the v2.9.38 figures of 43 fixtures / 747 checks / 1129 unit tests.
+
+---
+
 ## v2.9.38 — 2026-07-04 — attestation SHA chain fix + count reconciliation + DAUBERT §E accuracy
 
 Supersedes v2.9.37 (v2.9.37 → v2.9.38). No engine math changed — `computeCPM`, `computeTIA`, and the Section-D hot loop are byte-identical to v2.9.37, and cross-validation stays 43 / 747 byte-identical against the Python reference. This is a release-integrity and disclosure-accuracy release.

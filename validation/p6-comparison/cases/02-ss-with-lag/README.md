@@ -6,7 +6,7 @@ Start-to-Start relationship with 5 working-day lag. B can start no earlier than 
 
 ## Expected behavior
 
-P6-validated 2026-08-11 (capture 9b748cc): the SS successor constrains the START of A only; the finish of A floats to project end (use-project-end-date-for-float). A: ES Jan 5, EF disp Jan 16, LS Jan 5, LF disp Jan 16, TF 0. B: ES Jan 12, EF disp Jan 15, LS Jan 13, LF disp Jan 16, TF 1 wd, FF 1 wd.
+P6-captured 2026-08-11 (capture 9b748cc). This case FAILED that capture. The capture scored 6 PASS / 7 FAIL across the 13 cases, and case 02 was one of the failures (engine A LS Jan 6 vs P6 Jan 5, engine A TF 1 vs P6 0, engine B TF and FF 3 vs P6 1). The engine's SS/SF backward rule was then changed to match P6's pinned answer (commit 264de84), and no post-fix capture exists, so the values below are P6's own output that the engine was aligned to, not confirmation of a rule the engine already held. P6's captured behavior: the SS successor constrains the START of A only; the finish of A floats to project end (use-project-end-date-for-float). A: ES Jan 5, EF disp Jan 16, LS Jan 5, LF disp Jan 16, TF 0. B: ES Jan 12, EF disp Jan 15, LS Jan 13, LF disp Jan 16, TF 1 wd, FF 1 wd.
 
 ## How to reproduce in Primavera P6
 

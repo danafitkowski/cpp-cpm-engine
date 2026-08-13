@@ -74,11 +74,12 @@ const result = E.computeCPM(activities, relationships, { dataDate: '<YYYY-MM-DD>
 **Goal:** Know whether the source schedule was computed under retained logic or progress override, and whether multi-calendar or single-calendar.
 
 **Do:**
-- Identify the P6 schedule mode: retained logic vs progress override. The engine implements **retained logic only**; if the source schedule was computed under progress override, that is a disclosed-substitution path (the engine emits `progress-override-not-supported` ALERT and proceeds under retained logic).
+- Identify the P6 schedule mode: retained logic vs progress override. The engine implements **both** modes, selected by `opts.scheduleMode` (alias `opts.schedule_mode`), with `retained_logic` as the default. Under `retained_logic` the remaining work of an in-progress activity restarts at max(data date, driving predecessor logic); under `progress_override` it restarts at the data date, ignoring predecessor logic. `progress_override` output is engine self-consistency only (JS/Python crossval fixture F49) and is not asserted as P6-validated until an override-mode P6 capture exists. An unrecognized `opts.scheduleMode` value emits an `unknown-schedule-mode` ALERT and the run falls back to `retained_logic`.
 - Identify whether activities have per-activity calendar assignments (`clndr_id`) or a single project calendar.
 
 **Engine support:**
-- `result.alerts` will contain `progress-override-not-supported` if the engine detected progress-override input.
+- `result.alerts` will contain `unknown-schedule-mode` if `opts.scheduleMode` is neither `retained_logic` nor `progress_override`; the run then proceeds under `retained_logic`.
+- The engine does not detect the mode from the source file. It validates only the mode the analyst passes, and both valid modes compute without any alert, so an empty alert filter is not evidence of the source schedule's mode. Read the source mode from the XER `SCHEDOPTIONS` row (`sched_retained_logic` / `sched_progress_override`) and confirm `opts.scheduleMode` matches it. `progress_override` output is engine self-consistency only and is not P6-validated.
 - In forensic strict mode (`forensic_strict: true`), this alert is FATAL and must be addressed before producing an opinion.
 
 **Capture in manifest:** source schedule mode (retained / override / unknown), calendar count, override-vs-retained reconciliation note if applicable.
@@ -155,7 +156,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - If the opinion relies on engine output that the analyst has not personally verified against P6 (or another commercial CPM tool), run the engine against the source XER AND open the source XER in P6, capture P6's native ES/EF/LS/LF/TF/FF for the activities the opinion turns on, and document field-level agreement or divergence.
-- The engine ships a [P6 comparison matrix framework](validation/p6-comparison/) covering 15 representative scenarios. Use it as a template for case-specific comparisons.
+- The engine ships a [P6 comparison matrix framework](validation/p6-comparison/) covering 13 P6-comparable scenarios. Two further scenarios are by-construction divergences that P6 cannot represent, so they sit outside the matrix and are documented separately in `validation/engine-limitations/`. Use it as a template for case-specific comparisons.
 
 **Engine support:**
 - `result.nodes[code]` carries `{ es, ef, ls, lf, tf, ff }` per activity (engine output).
@@ -280,7 +281,7 @@ FRE 702 attacks come in two flavors:
 
 2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
-Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,129 unit tests, 747/747 crossval, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
+Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,134 unit tests, 925 of 989 enumerated crossval comparisons bit-identical, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
 
 Following this SOP does not guarantee admissibility. It documents a defensible application discipline. Whether the opinion itself is defensible remains the analyst's burden under FRE 702.
 
@@ -293,7 +294,7 @@ For each deliverable, the analyst should be able to mark every line below as ✅
 - [ ] Step 1 — Source intake recorded (filename, sender, timestamp, transmission method)
 - [ ] Step 2 — SHA-256 captured; original file read-only
 - [ ] Step 3 — Data date confirmed (file + transmittal reconciled)
-- [ ] Step 4 — Schedule mode confirmed (retained logic vs override); progress-override-not-supported alert handled if applicable
+- [ ] Step 4 — Schedule mode confirmed (retained logic vs progress override); `opts.scheduleMode` set to match the source schedule, any `unknown-schedule-mode` alert handled, and `progress_override` runs disclosed as engine self-consistency only (not P6-validated)
 - [ ] Step 5 — Calendar inventory captured; jurisdiction code + verification noted
 - [ ] Step 6 — Forensic strict validation passed (no unoverridden fatal alerts)
 - [ ] Step 7 — All non-fatal alerts reviewed; analyst notes attached

@@ -1,16 +1,16 @@
 # `validation/xer-corpus/` — Synthetic XER Test Corpus
 
-12 synthetic Primavera XER files covering the schedule conditions a forensic engine has to handle: clean baselines, scale stress, multi-calendar resolution, every P6 constraint type, in-progress mid-execution, fully-completed as-built capture, negative float, disconnected fragments, intentionally-corrupt input, out-of-sequence progress, no-logic schedules, and milestone-heavy networks.
+13 synthetic Primavera XER files covering the schedule conditions a forensic engine has to handle: clean baselines, worst-case linear scale stress, a 1,020-activity branching and merging DAG, multi-calendar resolution, every P6 constraint type, in-progress mid-execution, fully-completed as-built capture, negative float, disconnected fragments, intentionally-corrupt input, out-of-sequence progress, no-logic schedules, and milestone-heavy networks.
 
 Closes ChatGPT third-pass directive item #6 — *"Build an anonymized XER test corpus."* Synthetic-only: no real client data is used or sanitized, so there is nothing to anonymize. Every XER is hand-curated by the generator script for a specific test condition.
 
-> **Audit cite.** Hostile counsel asks: "How many of your tests are toy cases versus ugly real schedules?" Answer: the 1,071-test unit suite + 747-fixture crossval is internal. The 282-activity real-XER stress test is external evidence (see DAUBERT.md §2). This corpus is the bridge — 12 named scenarios covering the failure-mode space, each engine output captured, each XER independently consumable by any P6-compatible tool.
+> **Audit cite.** Hostile counsel asks: "How many of your tests are toy cases versus ugly real schedules?" Answer: the 1,134-test unit suite plus the 45-fixture crossval (925 checks executed, 64 field comparisons skipped where the Python reference emits no value) is internal. The 282-activity real-XER stress test is external evidence (see DAUBERT.md §2). This corpus is the bridge — 12 named scenarios covering the failure-mode space, each engine output captured, each XER independently consumable by any P6-compatible tool.
 
 ---
 
 ## Cases at a glance
 
-| # | Case ID | Acts | Rels | Cals | Engine PF (v2.9.39) | Alerts | Strict Mode |
+| # | Case ID | Acts | Rels | Cals | Engine PF (as of v2.9.34 capture) | Alerts | Strict Mode |
 |---|---|---:|---:|---:|---|---:|---|
 | 01 | `01-small-clean-baseline` | 5 | 4 | 1 | 2026-02-17 | 23 | PASS |
 | 02 | `02-large-1000-activities` | 1,000 | 999 | 1 | 2031-06-28 | 4,998 | PASS |
@@ -24,6 +24,7 @@ Closes ChatGPT third-pass directive item #6 — *"Build an anonymized XER test c
 | 10 | `10-out-of-sequence-progress` | 4 | 3 | 1 | 2026-01-18 | 19 | **THROW** (OoS is fatal in strict) |
 | 11 | `11-no-logic` | 10 | 0 | 1 | 2026-01-17 | 30 | PASS |
 | 12 | `12-milestone-heavy` | 8 | 7 | 1 | 2026-02-04 | 38 | PASS |
+| 13 | `13-large-1000-dag-branching` | 1,020 | 1,059 | 1 | 2026-07-24 | 5,178 | PASS |
 
 Alert counts include all severities (INFO + WARN + ALERT). Strict-mode-fatal contexts are a subset; see [DAUBERT.md §9](../../DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fatal-context taxonomy.
 
@@ -36,7 +37,7 @@ Each `cases/<NN-name>/` folder contains:
 ```
 case.xer              — synthetic XER input (valid Primavera format,
                         consumable by any XER-aware tool)
-engine-output.json    — full computeCPM result captured at v2.9.39
+engine-output.json    — full computeCPM result, captured as of v2.9.34
 README.md             — case description, expected behavior, alert
                         summary, strict-mode pass/fail expectation
 ```
@@ -94,7 +95,7 @@ Mixed schedule with TT_Task work activities, TT_Mile start milestones (zero dura
 
 ### As regression evidence
 
-The corpus is run on every engine release as part of the validation surface. After any engine bump:
+Nothing regenerates the corpus automatically: no script in `npm run test:all` or `npm run verify` recomputes these outputs. The one gate in `test:all` that reads this folder, `tests/corpus-dag-fixture.test.js`, live-parses case 13's `case.xer` to check its DAG topology but takes project finish and node count from the stored `engine-output.json`; `scripts/verify-alert-triage-01.js` counts alerts inside that same stored file and is a standalone script, wired into no suite and no CI workflow. Committed outputs can therefore lag the engine that produced them, so check the `engine_version` stamp in `engine-output.json` and `corpus-summary.json` before citing them. Regenerate by hand after any engine bump:
 
 ```bash
 node validation/xer-corpus/generate-corpus.js
@@ -139,7 +140,7 @@ try {
 ## Limitations of synthetic corpora
 
 - **Synthetic inputs don't reproduce real-world XER pathologies.** Vendor-specific quirks (older P6 R8 emitting tokens we don't recognize, MS Project XML round-trip artifacts, hand-edited XER weirdness in the wild) are not represented here. The 282-activity real-XER stress test in `DAUBERT.md §2` covers one real schedule; expanding the real-world side requires sanitized real XERs, which need owner / contractor consent to publish.
-- **The 1,000-activity scale case is a single FS chain.** Real-world large schedules have realistic logic networks (DAG complexity, multiple terminal nodes, hammock activities, summary-level rollups). Worst-case-CP is a useful stress for date arithmetic but doesn't test logic-resolution complexity.
+- **Scale coverage is two cases, and hammocks and summary rollups are still uncovered.** Case 02 is a single 1,000-activity FS chain (worst case for date arithmetic, every activity critical) and case 13 is a 1,020-activity branching and merging DAG, 1,059 relationships in a 10-phase diamond cascade with 5-way fan-out and 5-way fan-in at every phase boundary, exercising multi-predecessor LS and multi-successor LF resolution at scale. Neither carries hammock activities or summary-level rollups, and neither reaches the 10k range; 10k DAG expansion with parametric topology is a tracked engineering item in `ROADMAP_OPEN.md`.
 - **No resource-loaded scenarios.** This corpus is pure CPM topology. Resource loading, leveling, and rate-based scheduling are out of scope (the engine doesn't compute them either; CPP skills like `schedule-risk-analysis` consume the CPM output as their input).
 
 For real-XER coverage beyond the 282-activity stress test, see the [DAUBERT.md §10 roadmap](../../DAUBERT.md#10-roadmap--forward-looking-daubert-hardening) — "Anonymized XER corpus expansion" is a tracked workstream that requires real-XER sourcing + sanitization.
@@ -148,4 +149,4 @@ For real-XER coverage beyond the 282-activity stress test, see the [DAUBERT.md �
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.33. Engine outputs in each case's `engine-output.json` were captured at the v2.9.33 baseline; regeneration after an engine bump surfaces any output drift.
+Aligned to `cpm-engine` v2.9.39. The engine outputs in each case's `engine-output.json` were captured as of v2.9.34 and have not been regenerated since, so both the at-a-glance table above and the per-case outputs report that v2.9.34 capture rather than v2.9.39. Regenerating at the current engine surfaces real drift that is not yet committed or recorded in `CHANGELOG.md`: case 10's project finish moves from 2026-01-18 to 2026-01-25, and the alert count rises in every case except `06-fully-completed`, which is 12 of the 13 case folders now on disk (the table above reports the committed v2.9.34 figures for all 13).

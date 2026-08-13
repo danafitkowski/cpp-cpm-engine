@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **416 / 416 bit-identical** claim reported in [`DAUBERT.md`](../DAUBERT.md) §3 without depending on a private CPP-internal codebase.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **925 / 925 executed-check** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field, which happens 64 times (61 on `ff_signed_working_days`, 3 on `ff_signed`), so 925 of a possible 989 comparisons are actually made. In 58 of those 64 the Python reference emits nothing where the JS engine emits a value; the remaining 6 are null-versus-undefined artifacts on activities where neither engine emits the field.
 
 ## Provenance
 
@@ -13,8 +13,22 @@ have been applied:
 
 1. The `xer_parser` dependency for calendar arithmetic has been **inlined** —
    the helpers `add_work_days`, `subtract_work_days`, and `_is_work_day` are
-   now local. The inlined implementations are byte-equivalent to the upstream
-   helpers in `xer_parser.py` (lines 696-827 @ 2.8.0). No behavior change.
+   now local. They began as byte-equivalent copies of the upstream helpers in
+   `xer_parser.py` (lines 696-827 @ 2.8.0), but they are no longer byte-equal
+   and no longer always agree with upstream. Two later JS-parity fixes change
+   the dates these helpers return. First, the v2.9.16 zero-snap backport (the
+   JS F2.1 contract, caught by crossval F11): with a real calendar and
+   `n == 0`, a non-workday anchor snaps to the nearest working day (forward in
+   `add_work_days`, backward in `subtract_work_days`), where upstream returns
+   the anchor unchanged. Second, the v2.9.14 F3 half-up rounding helper
+   (`_round_half_up` replacing `int(round(...))`): a 2.5-workday count rounds
+   to 3, where upstream's banker's rounding gives 2. The v2.9.27 R21 MonFri
+   fast path is a third structural difference with no upstream counterpart,
+   but it is output-neutral (verified bit-identical to the day-by-day walker
+   on clean Mon-Fri calendars with no holidays). Separately, upstream has
+   since added a fourth `special_workdays` parameter to `_is_work_day` (after
+   the 2.8.0 pin); the inlined copy predates it and does not honor
+   special-workday calendar exceptions.
 2. Surfaces NOT used by the cross-validation harness have been removed:
    `compute_cpm_salvaging`, `compute_lpm`, `compute_cpm_with_strategies`,
    `compute_float_burndown`, `_tarjan_scc`, the SVG renderer. What remains
@@ -23,16 +37,27 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  89fb6f0514c97a250a4d490ee3f2e1c57fcbdffbe52539338dfadf66270623c3
+cpm.py  SHA-256:  da792b52c743b62dd71b4ea2ea1b1dcd724088fd230ab977171edd00aace4423
 
-(P6 alignment wave B4+B5 2026-08-11 - bumped from 0e95eb67...: retained-
+(v2.9.39 release 2026-08-11 - bumped from 89fb6f05...: ENGINE_VERSION sync
+2.9.34 -> 2.9.39 only, no math change. Prior: P6 alignment wave B4+B5
+2026-08-11 from 0e95eb67...: retained-
 logic restart, T3.19 pin deletion, schedule_mode, FF completed-successor
-exclusion + zero floor with ff_signed, OoS detector parity port; P6-
-validated capture 9b748cc cases 05/09/10. Prior: B3 from 3005a433...: Mandatory
-Finish pins both ends, ES back-computed from the EF pin, P6-validated
-against capture 9b748cc case 11. Prior: B2 2026-08-11 from 50ddea54...: per-calendar
-project-finish LF seed + SS/SF backward drives target LS, P6-validated
-against capture 9b748cc cases 02/04/06.)
+exclusion + zero floor with ff_signed, OoS detector parity port; fitted to
+capture 9b748cc cases 05/09/10. Prior: B3 from 3005a433...: Mandatory
+Finish pins both ends, ES back-computed from the EF pin, fitted to capture
+9b748cc case 11. Prior: B2 2026-08-11 from 50ddea54...: per-calendar
+project-finish LF seed + SS/SF backward drives target LS, fitted to capture
+9b748cc cases 02/04/06.
+
+Read "fitted", not "validated". Capture 9b748cc is the only P6 capture in
+this repo, and it scored 6 PASS / 7 FAIL of 13 cases before any of the
+rules above were written. Each rule was authored to reproduce the P6
+answers pinned in the specific cases it names - the "B4"/"B5" comments in
+cpm.py mark the sites - after which the engine changed (23ffeca, 264de84,
+bf442d5, 05dc8b4) and the comparison matrix was regenerated (f90b0cb) to
+read 13/13. No held-out post-fix capture exists, so no rule listed here
+has been checked against P6 data it was not fitted to.)
 ```
 
 The hash is regenerated on every `npm run attest` and written to
@@ -85,7 +110,7 @@ shasum -a 256 python_reference/cpm.py
 Get-FileHash python_reference/cpm.py -Algorithm SHA256
 ```
 
-If the printed hash and the on-disk hash disagree, the cross-validation result is **invalid** and should be re-run from a clean checkout.
+Compare the hash you computed against the pin recorded above. Do not compare it against the hash `npm run crossval` prints: that banner hashes whichever `cpm.py` the harness resolved, in the same run, so it tells you which file was loaded, not whether that file matches the pin. If your computed hash disagrees with the pin, the bundled file has drifted from the bytes the published result was produced on, and the cross-validation result is **invalid** until it is re-run from a clean checkout at the pinned bytes. The pin above is rotated by hand and can lag a release; the generated `python_reference/cpm.py.sha256` and `release-evidence/<version>/python_reference-cpm.py.sha256` carry the hash of the released bytes (`da792b52...` at v2.9.39).
 
 ## Usage
 
@@ -125,14 +150,16 @@ npm run crossval
 Expected output (Node 18+, Python 3.8+):
 
 ```
-Loaded python_reference/cpm.py @ SHA-256 4b65db3b...
+Python reference: <repo>/python_reference/cpm.py
+  bytes:    81338
+  sha-256:  da792b52c743b62dd71b4ea2ea1b1dcd724088fd230ab977171edd00aace4423
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 40 passed, 0 failed
-  Checks:   416 / 416
+  Fixtures: 45 passed, 0 failed
+  Checks:   925 / 925
 =========================================
 ```
 

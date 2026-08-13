@@ -24,7 +24,7 @@
 | 3 | SHA sidecar wording | CLOSED v2.9.33 | — | Reframed as "gitignored generated artifact" |
 | 4 | `npm run verify` doesn't run new gates | CLOSED v2.9.33 | — | `scripts/attestation.js` now invokes truncation + version-drift |
 | 5 | Version-refs gate silently skips missing release-evidence | CLOSED v2.9.33 | — | Now WARN-by-default + FATAL when `CHECK_RELEASE_EVIDENCE=1` |
-| 6 | P6 comparison framework has no analyst captures | **OPEN — Dana's action** | Q3 | Requires P6 access + per-case capture |
+| 6 | P6 comparison framework has no analyst captures | CLOSED v2.9.39 (fitted) | Q3 | One P6 23.12 capture covering all 13 cases landed 2026-08-11 (commit `9b748cc`) and scored 6 PASS / 7 FAIL; five divergence families were fixed against it in commits `23ffeca`, `264de84`, `bf442d5`, `05dc8b4` and the regenerated matrix now reads 13 / 13. Fitted to that one capture, no held-out case, so an independent second capture stays OPEN. |
 | 7 | Cases 14/15 in P6 matrix not P6-comparable | CLOSED v2.9.33 | Q11 | Moved to `validation/engine-limitations/` |
 | 8 | Synthetic XER corpus — no real-world XERs | **OPEN — Dana's action** | Q4, Q5 | `validation/real-xer-corpus/` placeholder created; awaits consent + sourcing |
 | 9 | Clean baseline emits 23 alerts | **ACCEPTED-LIMITATION** | Q6 | Parser logs every event (INFO/WARN/ALERT) by forensic-discipline design; case READMEs explain breakdown. **v2.9.34** — full per-alert triage at `validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md` (single root cause: corpus harness does not pass `cal_map`; 9 forward + 14 backward variants of the same fallback). |
@@ -59,7 +59,7 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 
 ## Validation surface roadmap
 
-- **P6 comparison matrix population** — Dana's action; per-case native P6 captures for cases 1-13. (#6 / Q3) Engineering scaffolding shipped in v2.9.34 — `scripts/validate-p6-comparison.js` validates populated CSVs against schema + engine-column accuracy; `docs/p6-comparison-schema.md` documents the format.
+- **P6 comparison matrix population** — Dana's action; cases 1-13 are populated from a single capture taken on 2026-08-11 against Primavera P6 Professional 23.12, and the matrix now stands 13 / 13 PASS. That result is fitted, not blind: the first capture scored 6/13 and five divergence families were then corrected against P6's pinned answers, so the remaining action is one independent held-out capture. (#6 / Q3) Engineering scaffolding shipped in v2.9.34 — `scripts/validate-p6-comparison.js` validates populated CSVs against schema + engine-column accuracy; `docs/p6-comparison-schema.md` documents the format.
 - **Real-XER corpus** — Dana's action; sanitization + consent process for 5-10 real project schedules. (#8 / Q4, Q5)
 - **1k-10k DAG fixtures** — first 1k DAG fixture shipped v2.9.34 (`13-large-1000-dag-branching`, 10-phase diamond cascade with branching + merging). Expansion toward 10k DAG with parametric topology is a future engineering item.
 - **MPXJ Java-bridge crossval** — engineering roadmap; second-implementation external verification beyond JS↔Python parity. (DAUBERT §10)
@@ -73,4 +73,4 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.38. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.39. Update on every release that closes or opens an audit item.
