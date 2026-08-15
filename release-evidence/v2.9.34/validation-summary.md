@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-v2.9.34 closes 4 of 7 carryover items from the v2.9.33 audit ledger plus the HS3 hard stop. The remaining 3 items split: 1 partially-closed DEFERRED (#6 P6 expected-value — engineering scaffolding shipped, P6 capture user-blocked), 1 ACCEPTED-LIMITATION (#8 real-XER sourcing — client consent), 1 BLOCKED (#5 third-party reproduction memo — Dana to identify reviewer). See [`../../AUDIT_LEDGER_v2.9.34.md`](../../AUDIT_LEDGER_v2.9.34.md) for the per-row tally and [`../../VERIFICATION_LOG_v2.9.34.md`](../../VERIFICATION_LOG_v2.9.34.md) for the closure-wave manifest.
+v2.9.34 closes 4 of 7 carryover items from the v2.9.33 audit ledger plus the HS3 hard stop. The remaining 3 items split: 1 partially-closed DEFERRED (#6 P6 expected-value — engineering scaffolding shipped, P6 capture user-blocked), 1 ACCEPTED-LIMITATION (#8 real-XER sourcing — client consent), 1 BLOCKED (#5 third-party reproduction memo — Dana to identify reviewer). The per-row tally and the closure-wave manifest were tracked in internal working documents that are not published in this repository.
 
 ## What is in this folder
 
@@ -58,7 +58,7 @@ Rekor log index:        1624543133
 
 ## What v2.9.34 closes vs leaves OPEN
 
-See [`../../ROADMAP_OPEN.md`](../../ROADMAP_OPEN.md) for the machine-readable register; the v2.9.34 audit-ledger snapshot is at [`../../AUDIT_LEDGER_v2.9.34.md`](../../AUDIT_LEDGER_v2.9.34.md). Summary:
+See [`../../ROADMAP_OPEN.md`](../../ROADMAP_OPEN.md) for the machine-readable register; the v2.9.34 audit-ledger snapshot was an internal working document that is not published in this repository. Summary:
 
 - **CLOSED in v2.9.34:** #9 alert triage (all 23 alerts of case `01-small-clean-baseline` opened, categorized, root-cause documented); #10 1k DAG fixture (new case `13-large-1000-dag-branching` — 10-phase diamond cascade, 5-way fan-out + 5-way fan-in at every phase boundary, 1020 acts / 1059 rels); #16 cryptographic-signoff stub (real Ed25519 sign/verify via Node built-in `crypto`, `cpp-skill-manifest/v2` wrapper, 7-sub-suite tamper detection); #17 SOP-checklist schema + validator (JSON Schema draft-07 + semantic validator with per-step evidence binding from FORENSIC_USE_SOP.md, 4-fixture regression suite). Plus HS3 — `CLAUDE.md` operating contract added in repo root.
 - **DEFERRED (engineering portion closed):** #6 P6 expected-value population — `scripts/validate-p6-comparison.js` + 7-scenario test + `docs/p6-comparison-schema.md` + matrix-doc cleanup (removed stale row-14/15 references) all shipped. P6-VALUES portion (filling `*_p6` columns) stays user-blocked on Dana's P6 access.

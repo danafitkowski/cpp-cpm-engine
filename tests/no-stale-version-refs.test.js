@@ -268,6 +268,201 @@ if (missingRequired.length > 0) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Gate 2: python_reference/README.md SHA-256 pin vs the actual bundled bytes.
+//
+// The pin in that README was hand-rotated, so a content edit to cpm.py that
+// forgot the rotation left the file's OWN verification procedure returning a
+// false verdict (commit c279a5c edited cpm.py and the pin kept naming the
+// pre-edit hash). The README also embeds an "Expected output" transcript
+// carrying the same byte count and hash, which drifted with it. Both are now
+// measured against the file on disk rather than trusted.
+//
+// This is a NEW gate. It does not relax anything above it.
+// ---------------------------------------------------------------------------
+const crypto = require('crypto');
+
+const pinFailures = [];
+const PY_REF_REL = 'python_reference/cpm.py';
+const PY_README_REL = 'python_reference/README.md';
+const pyRefFull = path.join(repoRoot, PY_REF_REL);
+const pyReadmeFull = path.join(repoRoot, PY_README_REL);
+
+if (!fs.existsSync(pyRefFull)) {
+    pinFailures.push(`${PY_REF_REL} is missing — the SHA-256 pin cannot be checked.`);
+} else if (!fs.existsSync(pyReadmeFull)) {
+    pinFailures.push(`${PY_README_REL} is missing — the SHA-256 pin cannot be checked.`);
+} else {
+    const pyBytes = fs.readFileSync(pyRefFull);
+    const actualHash = crypto.createHash('sha256').update(pyBytes).digest('hex');
+    const actualBytes = pyBytes.length;
+    const readmeLines = fs.readFileSync(pyReadmeFull, 'utf-8').split('\n');
+
+    // (a) The declared pin: "cpm.py  SHA-256:  <hex>"
+    let pinSeen = 0;
+    readmeLines.forEach((line, idx) => {
+        const m = line.match(/^cpm\.py\s+SHA-256:\s+([0-9a-f]{64})\s*$/);
+        if (!m) return;
+        pinSeen++;
+        if (m[1] !== actualHash) {
+            pinFailures.push(
+                `${PY_README_REL}:${idx + 1} pins SHA-256 ${m[1]}\n` +
+                `    but ${PY_REF_REL} on disk hashes to ${actualHash}`
+            );
+        }
+    });
+    if (pinSeen !== 1) {
+        pinFailures.push(
+            `${PY_README_REL}: expected exactly 1 "cpm.py  SHA-256:  <hex>" pin line, found ${pinSeen}. ` +
+            `The gate cannot verify a pin it cannot locate.`
+        );
+    }
+
+    // (b) The "Expected output" transcript figures: "  bytes:    N" and
+    //     "  sha-256:  <hex>". Both must describe the bundled file.
+    let bytesSeen = 0;
+    let shaSeen = 0;
+    readmeLines.forEach((line, idx) => {
+        const mb = line.match(/^\s*bytes:\s+(\d+)\s*$/);
+        if (mb) {
+            bytesSeen++;
+            if (Number(mb[1]) !== actualBytes) {
+                pinFailures.push(
+                    `${PY_README_REL}:${idx + 1} sample output shows bytes: ${mb[1]}\n` +
+                    `    but ${PY_REF_REL} on disk is ${actualBytes} bytes`
+                );
+            }
+        }
+        const ms = line.match(/^\s*sha-256:\s+([0-9a-f]{64})\s*$/);
+        if (ms) {
+            shaSeen++;
+            if (ms[1] !== actualHash) {
+                pinFailures.push(
+                    `${PY_README_REL}:${idx + 1} sample output shows sha-256: ${ms[1]}\n` +
+                    `    but ${PY_REF_REL} on disk hashes to ${actualHash}`
+                );
+            }
+        }
+    });
+    if (bytesSeen < 1 || shaSeen < 1) {
+        pinFailures.push(
+            `${PY_README_REL}: Expected-output block is missing its "bytes:" (${bytesSeen} found) ` +
+            `or "sha-256:" (${shaSeen} found) line. The gate cannot verify figures that were deleted.`
+        );
+    }
+}
+
+console.log(
+    `no-stale-version-refs.test.js: python_reference SHA-256 pin check — ` +
+    `${pinFailures.length === 0 ? 'pin and sample figures match the bundled bytes' : pinFailures.length + ' mismatch(es)'}`
+);
+
+// ---------------------------------------------------------------------------
+// Gate 3: no bare "925/925" (executed-over-executed) in prose.
+//
+// The harness PRINTS "925 / 925" because its denominator is the executed
+// count, not the 989-comparison surface. Quoting that ratio bare in prose
+// reads as 100% coverage. Docs must carry the executed/defined form.
+//
+// Files that legitimately reproduce the harness banner verbatim are exempt:
+// they are transcripts of tool output, and editing them would falsify the
+// transcript. Everything else must disclose the surface.
+// ---------------------------------------------------------------------------
+const BARE_RATIO_RE = /\b925\s*\/\s*925\b/;
+const RATIO_SCANNED = [
+    'README.md',
+    'CONTRIBUTING.md',
+    'DAUBERT.md',
+    'VERIFY_RELEASE.md',
+    'FORENSIC_USE_SOP.md',
+    'SECURITY.md',
+    'docs/api.md',
+    'docs/algorithm.md',
+    'docs/examples.md',
+    'docs/citations.md',
+    'docs/jurisdictions.md',
+];
+// release-evidence/ was NOT walked when this gate was written, and the live
+// v2.9.39 exhibit carried the undisclosed ratio three times as a result — the
+// one folder a court actually receives. Walk it, and every future version
+// folder, by discovery rather than by list, so a new release cannot be missed.
+for (const dir of ['release-evidence']) {
+    const base = path.join(repoRoot, dir);
+    if (!fs.existsSync(base)) continue;
+    const walk = (d) => {
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+            const abs = path.join(d, e.name);
+            if (e.isDirectory()) walk(abs);
+            else if (e.name.endsWith('.md')) {
+                RATIO_SCANNED.push(path.relative(repoRoot, abs).split(path.sep).join('/'));
+            }
+        }
+    };
+    walk(base);
+}
+// Lines that ARE the harness banner (or explicitly quote/explain it) keep the
+// bare ratio by design. Keep this list narrow.
+const RATIO_OK_PATTERNS = [
+    /comparisons executed/,          // the full banner line, disclosure attached
+    /^\s*Checks:\s+925 \/ 925/,      // verbatim harness transcript line
+    /denominator is (the )?(checks run|the executed count)/i,
+    /harness (prints|reports).*989/i,  // must carry the real surface, not merely say 'the harness prints'
+];
+const ratioFailures = [];
+for (const rel of RATIO_SCANNED) {
+    const full = path.join(repoRoot, rel);
+    if (!fs.existsSync(full)) continue;
+    const lines = fs.readFileSync(full, 'utf-8').split('\n');
+    lines.forEach((line, idx) => {
+        if (!BARE_RATIO_RE.test(line)) return;
+        if (RATIO_OK_PATTERNS.some(p => p.test(line))) return;
+        // The surface disclosure is allowed to sit on the next line or two —
+        // the verdict block in VERIFY_RELEASE.md is wrapped that way.
+        const window = lines.slice(idx, idx + 3).join(' ');
+        if (/\b989\b/.test(window)) return;
+        ratioFailures.push({ file: rel, line: idx + 1, excerpt: line.trim().slice(0, 200) });
+    });
+}
+
+console.log(
+    `no-stale-version-refs.test.js: bare-925/925 scan — ${RATIO_SCANNED.length} docs, ` +
+    `${ratioFailures.length} undisclosed occurrence(s)`
+);
+
+if (pinFailures.length > 0) {
+    console.error('');
+    console.error('FAIL: python_reference/cpm.py SHA-256 pin does not describe the bundled bytes.');
+    console.error('');
+    for (const f of pinFailures) {
+        console.error('  ' + f);
+    }
+    console.error('');
+    console.error('Fix by rotating the pin and the Expected-output figures in');
+    console.error('python_reference/README.md to the measured values above.');
+    console.error('Do NOT weaken this gate — a stale pin makes the README\'s own');
+    console.error('verification procedure return a false verdict.');
+    console.error('');
+    process.exit(1);
+}
+
+if (ratioFailures.length > 0) {
+    console.error('');
+    console.error('FAIL: bare "925/925" found in prose.');
+    console.error('That ratio is executed-over-executed. 925 of 989 defined comparisons');
+    console.error('execute; 64 are skipped (61 ff_signed_working_days, 3 ff_signed).');
+    console.error('');
+    for (const f of ratioFailures) {
+        console.error(`  ${f.file}:${f.line}`);
+        console.error(`    ${f.excerpt}`);
+    }
+    console.error('');
+    console.error('Fix by writing the executed/defined form, e.g.');
+    console.error('  "925 of 989 defined comparisons executed and bit-identical, 0 failures,');
+    console.error('   across 45 fixtures; 64 comparisons are skipped rather than compared".');
+    console.error('');
+    process.exit(1);
+}
+
 if (failures.length > 0) {
     console.error('');
     console.error('FAIL: stale version references found.');

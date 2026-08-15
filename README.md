@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/cpp-cpm-engine.svg)](https://www.npmjs.com/package/cpp-cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![tests: 1134 passing](https://img.shields.io/badge/tests-1134%20passing-brightgreen.svg)](cpm-engine.test.js)
-[![crossval: 925/925](https://img.shields.io/badge/JS%E2%86%94Python-925%2F925-brightgreen.svg)](cpm-engine.crossval.js)
+[![crossval: JS↔Python 925/989](https://img.shields.io/badge/JS%E2%86%94Python-925%2F989-brightgreen.svg)](DAUBERT.md#31-independent-verification)
 [![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2939-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
@@ -218,7 +218,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.39.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,134 unit tests and 925/925 cross-validation checks across 45 fixtures, plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,134 unit tests and the cross-validation harness, in which 925 of 989 defined comparisons execute and are bit-identical with 0 failures across 45 fixtures (the remaining 64 are skipped rather than compared — 61 `ff_signed_working_days`, 3 `ff_signed`), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

@@ -1,3 +1,5 @@
+> Archived snapshot. Relative links in this document resolve against the repository root, not this folder.
+
 # VERIFY_RELEASE.md — `cpm-engine` v2.9.33 Forensic Verification Packet
 
 This document is the **courtroom-exhibit-form** of the engine release verification chain. Cite **this file**, the **Sigstore-signed witness** attached to the [v2.9.33 release](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.33), and the [DAUBERT.md](DAUBERT.md) disclosure together — that triad is the engine's reliability record under FRE 702 / Daubert Prong 1 (testability).

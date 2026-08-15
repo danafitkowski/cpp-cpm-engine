@@ -37,9 +37,11 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  da792b52c743b62dd71b4ea2ea1b1dcd724088fd230ab977171edd00aace4423
+cpm.py  SHA-256:  73ae19aa2c191d51ae9e4d1ce5aa3672f03d7934e102184b87bc36f09ed5dc18
 
-(v2.9.39 release 2026-08-11 - bumped from 89fb6f05...: ENGINE_VERSION sync
+(post-v2.9.39 - bumped from da792b52... by c279a5c: embedded coverage-gap
+disclosure strings in the module header only, no math change. Prior:
+v2.9.39 release 2026-08-11 from 89fb6f05...: ENGINE_VERSION sync
 2.9.34 -> 2.9.39 only, no math change. Prior: P6 alignment wave B4+B5
 2026-08-11 from 0e95eb67...: retained-
 logic restart, T3.19 pin deletion, schedule_mode, FF completed-successor
@@ -110,7 +112,7 @@ shasum -a 256 python_reference/cpm.py
 Get-FileHash python_reference/cpm.py -Algorithm SHA256
 ```
 
-Compare the hash you computed against the pin recorded above. Do not compare it against the hash `npm run crossval` prints: that banner hashes whichever `cpm.py` the harness resolved, in the same run, so it tells you which file was loaded, not whether that file matches the pin. If your computed hash disagrees with the pin, the bundled file has drifted from the bytes the published result was produced on, and the cross-validation result is **invalid** until it is re-run from a clean checkout at the pinned bytes. The pin above is rotated by hand and can lag a release; the generated `python_reference/cpm.py.sha256` and `release-evidence/<version>/python_reference-cpm.py.sha256` carry the hash of the released bytes (`da792b52...` at v2.9.39).
+Compare the hash you computed against the pin recorded above. Do not compare it against the hash `npm run crossval` prints: that banner hashes whichever `cpm.py` the harness resolved, in the same run, so it tells you which file was loaded, not whether that file matches the pin. If your computed hash disagrees with the pin, the bundled file has drifted from the bytes the published result was produced on, and the cross-validation result is **invalid** until it is re-run from a clean checkout at the pinned bytes. The pin above is asserted against the bundled bytes by `tests/no-stale-version-refs.test.js`, which hashes `python_reference/cpm.py` under `npm run test:version-refs` (and therefore under `npm run test:all`, though not under bare `npm test`, which runs only `cpm-engine.test.js`) and fails if the pin or the figures in the Expected-output block below disagree, so it cannot silently lag a content edit; the generated `python_reference/cpm.py.sha256` and `release-evidence/<version>/python_reference-cpm.py.sha256` carry the hash of the released bytes (`da792b52...` at v2.9.39).
 
 ## Usage
 
@@ -151,15 +153,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes:    81338
-  sha-256:  da792b52c743b62dd71b4ea2ea1b1dcd724088fd230ab977171edd00aace4423
+  bytes:    84712
+  sha-256:  73ae19aa2c191d51ae9e4d1ce5aa3672f03d7934e102184b87bc36f09ed5dc18
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
   Fixtures: 45 passed, 0 failed
-  Checks:   925 / 925
+  Checks:   925 / 925 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

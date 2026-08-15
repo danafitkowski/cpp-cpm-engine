@@ -1951,7 +1951,7 @@ Four T1 engine-math bugs identified by the Round 8 R8A audit. Each was a silent-
 
 ## v2.9.10 — 2026-05-16 — Round 7 independent-verification infrastructure (Daubert Angle 5 closer)
 
-Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening). No engine math changed; the engine bytes at v2.9.9 are unchanged in this docs/infra release — `cpm-engine.js` byte content is identical apart from the `ENGINE_VERSION` constant bump and a few v2.9.9-era inline comments rewritten to cite v2.9.10. The verification + attestation infrastructure landed in this release.
+Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification). No engine math changed; the engine bytes at v2.9.9 are unchanged in this docs/infra release — `cpm-engine.js` byte content is identical apart from the `ENGINE_VERSION` constant bump and a few v2.9.9-era inline comments rewritten to cite v2.9.10. The verification + attestation infrastructure landed in this release.
 
 ### New
 

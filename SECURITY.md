@@ -79,7 +79,7 @@ gh attestation verify <artifact-or-tarball> --repo danafitkowski/cpp-cpm-engine
 
 A failing `gh attestation verify` on a release artifact is itself a security finding and should be reported through this channel.
 
-The Python reference (`python_reference/cpm.py`) is byte-pinned by SHA-256 in `DAUBERT.md` §3.1. If the published bytes do not match the pinned hash, that is also a security finding.
+The Python reference (`python_reference/cpm.py`) is byte-pinned by SHA-256 in `release-evidence/<version>/python_reference-cpm.py.sha256`, the committed per-release pin. If the published bytes at a tag do not match that release's pinned hash, that is a security finding.
 
 ### Forked-PR isolation
 

@@ -912,8 +912,8 @@ compareFixture('F26 — Calendar fallback, 3 distinct missing clndr_ids', {
 // when is_complete was true. The reference was extended in this round to
 // mirror the JS engine's in-progress immutability behavior — see
 // python_reference/cpm.py around line 577 (search "AACE 29R-03 §4.3").
-// The SHA-256 pin in python_reference/README.md + DAUBERT.md §3 was
-// rotated to reflect this change.
+// The SHA-256 pin in release-evidence/<version>/python_reference-cpm.py.sha256
+// (the committed per-release pin) was rotated to reflect this change.
 compareFixture('F27 — actual_start AFTER data_date pins ES (AACE 29R-03 §4.3)', {
     activities: [
         { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },

@@ -214,10 +214,13 @@ log(`\nWitness written to: ${path.relative(REPO_ROOT, outFile)}`);
 
 // v2.9.25 — audit LOW R20. Write mechanically-diffable SHA-256 sidecar
 // files next to the source. SECURITY.md §"Sigstore attestation" tells
-// auditors the Python reference is byte-pinned by SHA-256 in DAUBERT.md
-// §3.1; sidecar files give them a one-line file diff alongside the
-// prose. Sidecars are gitignored (regenerated on every `npm run
-// attest`); the canonical pinned value lives in DAUBERT.md.
+// auditors the Python reference is byte-pinned by SHA-256 in
+// release-evidence/<version>/python_reference-cpm.py.sha256; these
+// sidecar files give them a one-line file diff alongside that pin.
+// Sidecars written here are gitignored (regenerated on every `npm run
+// attest`) and describe the WORKING TREE, so they are not the published
+// pin. The canonical pinned value is the git-tracked, per-release file
+// release-evidence/<version>/python_reference-cpm.py.sha256.
 if (engineSha) {
   fs.writeFileSync(path.join(REPO_ROOT, 'cpm-engine.js.sha256'),
     engineSha + '  cpm-engine.js\n', 'utf8');

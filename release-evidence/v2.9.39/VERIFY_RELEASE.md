@@ -12,7 +12,7 @@ This is the per-release snapshot of the verification packet. The top-level [`../
 | Engine SHA-256 | `6bf24fb038657945478cf40c92273d8dc0bec7312e79eab8c8129667c356d045` |
 | Python reference SHA-256 | `fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68` |
 | Unit tests | 1,134 / 1,134 passing |
-| Cross-validation | 925 / 925 across 45 fixtures |
+| Cross-validation | 925 of 989 defined comparisons executed and bit-identical, 0 failures, across 45 fixtures; 64 skipped rather than compared (61 `ff_signed_working_days`, 3 `ff_signed`) |
 | `npm run verify` verdict | PASS |
 | Sigstore Rekor logIndex | 2073912299 (rekor.sigstore.dev) |
 
@@ -20,7 +20,7 @@ This is the per-release snapshot of the verification packet. The top-level [`../
 
 ## What changed since the prior pinned release
 
-Engine math byte-identical to v2.9.37 — no `computeCPM` / `computeTIA` / Section-D behavior changed, and cross-validation stays 925 / 925 bit-identical against the Python reference. This release supersedes the prior one (v2.9.37 → v2.9.39) and corrects the release-integrity and disclosure record:
+Engine math **changed** in this release. `cpm-engine.js` differs from v2.9.37 by 228 insertions and 37 deletions, and it is not byte-identical to v2.9.37 or to any earlier tag. Five behaviors moved in the P6 23.12 alignment wave (commits `264de84`, `bf442d5`, `05dc8b4`, all 2026-08-11), none of which are ancestors of v2.9.37: open-end backward seeding now takes the project-finish instant on each activity's own calendar rather than a scalar max-EF; SS and SF successors bound the predecessor's `LS` only; `MS_Finish` / `MFO` pins both ends with `ES` back-computed on the activity's own calendar; under the default `retained_logic` mode the remaining work of an in-progress activity restarts at max(data date, driving predecessor logic); and published free float floors at zero, with the signed forensic value carried in `ff_signed` / `ff_signed_working_days`. See [DAUBERT.md §8](../../DAUBERT.md#8-constraint-handling-v2912). Of the 989 defined cross-validation comparisons, the 925 that execute are bit-identical against the Python reference with 0 failures; the other 64 are skipped by the field guards and are not compared. This release supersedes the prior one (v2.9.37 → v2.9.39) and corrects the release-integrity and disclosure record:
 
 - **Attestation SHA chain corrected.** The prior attestation chain pinned a stale engine SHA-256. The engine SHA above (`6bf24fb0…d045`) is recomputed from the shipped `cpm-engine.js` bytes, so `shasum -c` now succeeds against the committed source.
 - **Unit-test counts reconciled.** Every current-state unit-test count across DAUBERT.md, README.md, VERIFY_RELEASE.md, FORENSIC_USE_SOP.md, METHODOLOGY.md, and CONTRIBUTING.md is reconciled to the live `node cpm-engine.test.js` result of 1,134 (prior docs carried stale 1,128 / 1,104 / 1,071 / 1,112 values).
@@ -58,7 +58,8 @@ Verification chain for cpm-engine v2.9.39:
   Witness:            release-evidence/v2.9.39/witness-v2.9.39.json
                       (Sigstore-signed; Rekor logIndex 2073912299 on rekor.sigstore.dev)
   Verification:       npm run verify PASS; 1,134 / 1,134 unit tests;
-                      925 / 925 crossval checks across 45 fixtures
+                      925 of 989 defined crossval comparisons executed, 0 failures,
+                      across 45 fixtures (64 skipped, not compared)
   Disclosure:         cpp-cpm-engine/DAUBERT.md
   Reproduction:       git clone github.com/danafitkowski/cpp-cpm-engine && \
                       git checkout v2.9.39 && npm run verify
