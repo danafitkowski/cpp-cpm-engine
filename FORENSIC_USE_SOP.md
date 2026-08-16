@@ -258,7 +258,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - Verify the deliverable's report manifest references:
-  - Engine version (e.g., `cpm-engine v2.9.39`)
+  - Engine version (e.g., `cpm-engine v2.9.40`)
   - Source SHA-256 (from Step 2)
   - This SOP (`FORENSIC_USE_SOP.md`)
   - DAUBERT.md (engine disclosure)
@@ -277,7 +277,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 FRE 702 attacks come in two flavors:
 
-1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.39 verification chain answer this layer.
+1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.40 verification chain answer this layer.
 
 2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
@@ -312,4 +312,4 @@ Use this checklist as the cover sheet of the case folder. Opposing counsel askin
 
 ## Document version
 
-This SOP is aligned to `cpm-engine` v2.9.39. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.
+This SOP is aligned to `cpm-engine` v2.9.40. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.

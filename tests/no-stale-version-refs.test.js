@@ -156,6 +156,47 @@ function isHistoric(line) {
     return HISTORIC_OK_PATTERNS.some(pat => pat.test(line));
 }
 
+// ── The release window ──────────────────────────────────────────────────────
+// Between "tag pushed" and "evidence packet built" there is a real window where
+// documents correctly still point at the PREVIOUS release: `git checkout
+// v2.9.39`, `release-evidence/v2.9.39/...`, `gh release download v2.9.39`.
+// Those name artifacts that exist. Rewriting them to the new version would
+// point a reader at files that do not exist yet, which is worse than being one
+// release behind.
+//
+// Without this the release deadlocks, and it did: the v2.9.40 tag failed the
+// `verify` workflow on all four platforms over exactly these references, and
+// `verify` is the workflow that mints the Sigstore witness the packet is built
+// from. Docs could not name v2.9.40 until the packet existed, and the packet
+// could not exist until the docs named v2.9.40.
+//
+// The exemption is deliberately self-limiting: it applies ONLY while the
+// current version has no evidence packet, and ONLY to the newest version that
+// does. The moment the packet lands these references fail again, which is the
+// prompt to update them. It cannot hide ordinary drift.
+const _pkgVersionForWindow = CURRENT;
+const _currentPacketExists = fs.existsSync(
+    path.join(repoRoot, 'release-evidence', `v${_pkgVersionForWindow}`, 'VERIFY_RELEASE.md'));
+
+function _newestPackagedVersion() {
+    const dir = path.join(repoRoot, 'release-evidence');
+    if (!fs.existsSync(dir)) return null;
+    const versions = fs.readdirSync(dir)
+        .map(n => /^v(\d+)\.(\d+)\.(\d+)$/.exec(n))
+        .filter(Boolean)
+        .filter(m => fs.existsSync(path.join(dir, m[0], 'VERIFY_RELEASE.md')))
+        .map(m => [Number(m[1]), Number(m[2]), Number(m[3]), m[0].slice(1)]);
+    if (!versions.length) return null;
+    versions.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+    return versions[versions.length - 1][3];
+}
+
+const _packagedVersion = _currentPacketExists ? null : _newestPackagedVersion();
+
+function inReleaseWindow(version) {
+    return _packagedVersion !== null && version === _packagedVersion;
+}
+
 let _filesScanned = 0;
 let _totalLines = 0;
 let _totalRefs = 0;
@@ -270,6 +311,11 @@ for (const rel of FILES) {
             // iteration (matchAll handles this, but be defensive).
             if (`2.9.${version}` === CURRENT) continue;
             if (historic) continue;
+            // Mid-release: the current version has no evidence packet yet, and
+            // this reference names the newest version that does. See
+            // inReleaseWindow above — self-limiting, expires the moment the
+            // packet lands.
+            if (inReleaseWindow(`2.9.${version}`)) continue;
             failures.push({
                 file: rel,
                 line: idx + 1,
@@ -372,7 +418,27 @@ if (!fs.existsSync(pyRefFull)) {
 } else if (!fs.existsSync(pyReadmeFull)) {
     pinFailures.push(`${PY_README_REL} is missing — the SHA-256 pin cannot be checked.`);
 } else {
-    const pyBytes = fs.readFileSync(pyRefFull);
+    // Hash the COMMITTED bytes, not the working tree.
+    //
+    // This repo stores LF and checks out native line endings, so on Windows the
+    // working copy is CRLF and hashes differently from what anybody else gets.
+    // Pinning the worktree hash produced a pin that passed on the author's
+    // machine and failed on every Linux runner and every clone: at v2.9.40 the
+    // README pinned 77f97cf9 (CRLF, 86,609 bytes) while the committed file
+    // hashes to 27829dda (LF, 84,712 bytes), and the release verify workflow
+    // failed on all four platforms because of it.
+    //
+    // A published pin is a promise to someone who clones the repo, so it must
+    // describe the bytes they will receive.
+    let pyBytes;
+    try {
+        pyBytes = require('child_process').execSync(`git show HEAD:${PY_REF_REL}`,
+            { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 });
+    } catch (e) {
+        // Not a git checkout (vendored copy): fall back to disk, which is
+        // correct wherever the checkout is LF anyway.
+        pyBytes = fs.readFileSync(pyRefFull);
+    }
     const actualHash = crypto.createHash('sha256').update(pyBytes).digest('hex');
     const actualBytes = pyBytes.length;
     const readmeLines = fs.readFileSync(pyReadmeFull, 'utf-8').split('\n');
