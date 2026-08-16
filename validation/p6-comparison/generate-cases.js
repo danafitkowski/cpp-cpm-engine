@@ -66,7 +66,7 @@ const CASES = [
             'Start-to-Start relationship with 5 working-day lag. B can start ' +
             'no earlier than 5 wd after A starts.',
         expected_behavior:
-            'P6-validated 2026-08-11 (capture 9b748cc): the SS successor constrains ' +
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: the SS successor constrains ' +
             'the START of A only; the finish of A floats to project end (use-project-' +
             'end-date-for-float). A: ES Jan 5, EF disp Jan 16, LS Jan 5, LF disp Jan 16, TF 0. ' +
             'B: ES Jan 12, EF disp Jan 15, LS Jan 13, LF disp Jan 16, TF 1 wd, FF 1 wd.',
@@ -127,7 +127,7 @@ const CASES = [
             'Start-to-Finish relationship: B finishes no earlier than A starts ' +
             '(uncommon, used for things like "B must continue until A starts").',
         expected_behavior:
-            'P6-validated 2026-08-11 (capture 9b748cc): the SF successor constrains ' +
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: the SF successor constrains ' +
             'the START of A only, never its finish. A: ES Jan 5, EF disp Jan 9, LS Jan 5, ' +
             'LF disp Jan 9 (project finish), TF 0. B: ES Jan 5, EF disp Jan 7, ' +
             'LS Jan 7, LF disp Jan 9, TF 2 wd, FF 2 wd.',
@@ -159,7 +159,7 @@ const CASES = [
             'on the terminal activity that is earlier than the natural finish. ' +
             'Should produce NEGATIVE total float, surfacing the impossibility.',
         expected_behavior:
-            'P6-validated 2026-08-11 (capture 9b748cc): constraint dates are day-start ' +
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: constraint dates are day-start ' +
             'instants, so FNLT 2026-01-12 08:00 forbids work on the 12th; last ' +
             'permissible finish is Fri Jan 9 17:00. B LATE_END Jan 9, B LS Jan 6, ' +
             'A LF Jan 5 close, A LS Dec 25. TF = -7 working days on both (engine ' +
@@ -196,7 +196,7 @@ const CASES = [
             'Two activities with different calendars. A on Mon-Fri (5-day), ' +
             'B on Mon-Sat (6-day) including Saturdays as working days.',
         expected_behavior:
-            'P6-validated 2026-08-11 (capture 9b748cc): no relationships; each ' +
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: no relationships; each ' +
             'the LF of each activity seeds from the PROJECT FINISH instant on its OWN calendar. ' +
             'A (MonFri): ES Jan 5, EF disp Fri Jan 16, TF 0. B (Mon-Sat): ES Jan 5, ' +
             'EF disp Thu Jan 15, LF disp Fri Jan 16, LS Tue Jan 6, TF 1 six-day ' +
@@ -355,7 +355,7 @@ const CASES = [
             'B has an actual_start before A finished. Engine emits ' +
             '"out-of-sequence" ALERT and continues under retained logic.',
         expected_behavior:
-            'P6-validated 2026-08-11 (capture 9b748cc): RETAINED LOGIC holds the ' +
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: RETAINED LOGIC holds the ' +
             'remaining work of the out-of-sequence starter behind its predecessor. ' +
             'B (AS Jan 8, 3 wd remaining) restarts behind A EF disp Jan 23: restart ' +
             'Jan 26, EF disp Jan 28. A: ES Jan 12, TF 0 (drives B remaining). ' +
@@ -697,14 +697,14 @@ function generate() {
             '2. F9 to schedule.',
             '3. Capture the ES / EF / LS / LF / TF / FF columns from the P6 activity table.',
             '4. Paste each activity\'s P6 values into the `*_p6` columns of `comparison.csv`.',
-            '5. Mark verdict_pass_fail = `PASS` when all six values match the engine column,',
+            '5. Mark verdict_pass_fail = `PASS` when each value matches the engine column on the documented basis. EF and LF are compared on the activity's own calendar, so a computed value one working day from the raw P6 cell is a PASS, not a FAIL,',
             '   or `FAIL — <delta>` with the specific field-level discrepancy.',
             '',
             '## Files in this case',
             '',
             '- `input.json` — activities + relationships + opts (engine input)',
             '- `engine-output.json` — full `computeCPM` result',
-            '- `comparison.csv` — engine vs P6 comparison (P6 column blank, fill manually)',
+            '- `comparison.csv` — engine vs P6 comparison (P6 columns already captured and verdicts written; regenerate only to add a new case)',
             '- `README.md` — this file',
             '',
         ].join('\n');

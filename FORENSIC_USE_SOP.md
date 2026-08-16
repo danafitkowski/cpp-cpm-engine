@@ -273,6 +273,39 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 ---
 
+## After issuance: re-issue and supersession
+
+The 14 steps run from intake to signoff and stop there. They do not cover what
+happens when the engine changes underneath a deliverable that has already been
+signed and sent, and that gap is not theoretical: a scheduling-behaviour change can
+make a signed report compute differently today than it did on the day it was
+issued, while a disclosure-only change can leave a report pointing its reader at
+published hashes that no longer verify. Those two situations need opposite
+responses, and neither one is a step in this SOP.
+
+That procedure lives in the operator procedure, not here:
+
+> **CPP Schedule Analytics Suite Operator Procedure, `PROCEDURE.md` §12,
+> "Re-issue and supersession of issued deliverables"**
+> (`~/.claude/skills/_cpp_common/PROCEDURE.md`)
+
+`PROCEDURE.md` §12 answers, concretely: which classes of engine change require
+action on already-issued work and which do not; what to re-run and what to compare
+in order to test one specific report for exposure; what the client is told, and by
+when, for each outcome; how a superseded deliverable is marked so it cannot be
+mistaken for the current one; and who decides.
+
+**Step 14 is what makes it runnable.** The engine version, the source SHA-256 and
+the deliverable SHA-256 recorded at signoff are the first fields §12.2 reads. A
+deliverable signed without them cannot be tested for exposure later, so treat the
+Step 14 manifest references as the precondition for post-issuance change control
+rather than as paperwork.
+
+Run §12.1 on the day an engine release is tagged, before the new version touches
+live work. Do not wait for a client to ask.
+
+---
+
 ## Why this SOP exists
 
 FRE 702 attacks come in two flavors:
@@ -307,6 +340,21 @@ For each deliverable, the analyst should be able to mark every line below as ✅
 - [ ] Step 14 — Signed deliverable + manifest + source + SHA filed read-only in case folder
 
 Use this checklist as the cover sheet of the case folder. Opposing counsel asking "did you follow your own SOP?" gets an answer they can see line by line.
+
+The cover sheet is also where post-issuance change control is recorded. Leave a
+**Supersession** block at the foot of it, empty until it is needed, and enter one
+line per event per `PROCEDURE.md` §12.5:
+
+```
+Supersession
+  <deliverable filename> (issued <date>, engine v<X.Y.Z>, SHA-256 <first 8 hex>)
+    superseded <date> by <replacement filename> (SHA-256 <first 8 hex>): <reason>
+```
+
+An engine re-check that moved nothing still gets recorded, as the re-check note
+named in `PROCEDURE.md` §12.2. A blank Supersession block on a case that was never
+re-checked and a blank one on a case that was re-checked clean look identical, and
+only the second is an answer.
 
 ---
 

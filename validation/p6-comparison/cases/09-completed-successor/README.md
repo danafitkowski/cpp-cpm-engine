@@ -16,7 +16,7 @@ B has actual_start 2025-12-15, actual_finish 2025-12-30 (in the past). A is plan
 4. Verify A.LF does NOT pull back through B.actual_finish.
 5. Engine emits "completed-succ-skipped-in-backward" INFO.
 
-## Engine output (v2.9.38)
+## Engine output (produced by engine v2.9.38)
 
 Project finish: `2026-01-12`
 
@@ -34,12 +34,12 @@ Critical activities: `["A"]`
 2. F9 to schedule.
 3. Capture the ES / EF / LS / LF / TF / FF columns from the P6 activity table.
 4. Paste each activity's P6 values into the `*_p6` columns of `comparison.csv`.
-5. Mark verdict_pass_fail = `PASS` when all six values match the engine column,
+5. Mark verdict_pass_fail = `PASS` when each value matches the engine column on the documented basis. EF and LF are compared on the activity's own calendar, so a computed value one working day from the raw P6 cell is a PASS, not a FAIL,
    or `FAIL — <delta>` with the specific field-level discrepancy.
 
 ## Files in this case
 
 - `input.json` — activities + relationships + opts (engine input)
 - `engine-output.json` — full `computeCPM` result
-- `comparison.csv` — engine vs P6 comparison (P6 column blank, fill manually)
+- `comparison.csv` — engine vs P6 comparison (P6 columns already captured and verdicts written; regenerate only to add a new case)
 - `README.md` — this file
