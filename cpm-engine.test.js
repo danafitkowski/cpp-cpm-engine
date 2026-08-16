@@ -6,14 +6,38 @@
 
 const E = require('./cpm-engine.js');
 
-// Read the expected version from package.json rather than hardcoding it here.
-// Five assertions carried the literal '2.9.39', so every release edited this
-// file to keep the suite green — the same second-source-of-truth churn the
-// lockstep guard exists to stop, sitting inside the test that is supposed to
-// catch it. Comparing the engine's export against package.json is a real
-// cross-check (a bump that misses one of the two now fails) and needs no edit
-// next release.
-const EXPECTED_VERSION = require('./package.json').version;
+// Derive the expected version instead of hardcoding it. Five assertions used
+// to carry the literal '2.9.39', so every release edited this file to keep the
+// suite green — the same second-source-of-truth churn the lockstep guard exists
+// to stop, sitting inside the test meant to catch it.
+//
+// Read it from the ENGINE SOURCE TEXT, not from the module export, so the
+// assertions still compare two independent things: the literal in the file
+// against the value the module actually exports.
+//
+// Not package.json alone: this file is vendored into _cpp_common/cpm-engine-js/
+// with no package.json beside it, and require()-ing one there throws before a
+// single test runs. That broke the count gate the moment the mirrors synced.
+// package.json is used as an ADDITIONAL cross-check when it is present.
+const EXPECTED_VERSION = (() => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, 'cpm-engine.js'), 'utf-8');
+    const m = src.match(/const\s+ENGINE_VERSION\s*=\s*'([^']+)'/);
+    if (!m) throw new Error('cpm-engine.js no longer declares ENGINE_VERSION');
+    try {
+        const pkg = require('./package.json').version;
+        if (pkg !== m[1]) {
+            throw new Error(
+                `package.json version ${pkg} disagrees with cpm-engine.js ${m[1]} — ` +
+                'a version bump missed one of them');
+        }
+    } catch (e) {
+        if (e && /disagrees with/.test(e.message)) throw e;
+        // no package.json beside a vendored copy: source literal is enough
+    }
+    return m[1];
+})();
 
 let pass = 0, fail = 0;
 function check(label, ok, extra) {
