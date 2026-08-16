@@ -59,7 +59,7 @@
   "verdict": "PASS",
   "reproducibility_notes": [
     "To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,",
-    "(2) `npm install` is NOT required \u2014 engine has zero dependencies, (3) install Python 3.10+,",
+    "(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,",
     "(4) run `npm run verify` on your own machine,",
     "(5) compare your engine.sha256, python_reference.sha256, and results to the values above.",
     "Bit-identical SHA-256s + matching pass counts = reproduced; any drift documents the delta."

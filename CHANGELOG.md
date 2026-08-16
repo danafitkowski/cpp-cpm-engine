@@ -12,7 +12,7 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
-## v2.9.40 — 2026-08-15 — disclosure corrections; no engine math change
+## v2.9.40 — 2026-08-16 — disclosure corrections; no engine math change
 
 Supersedes v2.9.39 (v2.9.39 → v2.9.40). **Engine math is unchanged.** `computeCPM`,
 `computeTIA` and the Section-D behaviours are byte-identical in behaviour to

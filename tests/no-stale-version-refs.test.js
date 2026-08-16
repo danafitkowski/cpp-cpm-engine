@@ -303,6 +303,104 @@ const _pinFailures = [];
                 }
             }
         }
+
+        // The engine hash was one of SIX values the v2.9.39 packet got wrong.
+        // Checking only that one left the other five — python-reference hash,
+        // commit, release date, Rekor logIndex and CI run — compared against
+        // nothing. They were correct in v2.9.40 because they were typed
+        // correctly, not because anything would have caught them. Check them.
+        const _sh = (args) => {
+            try {
+                return require('child_process').execSync(args, {
+                    cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 });
+            } catch (e) { return null; }
+        };
+        const pyTagged = _sh(`git show v${CURRENT}:python_reference/cpm.py`);
+        const tagCommit = (_sh(`git rev-list -n1 v${CURRENT}`) || '').toString().trim();
+        const tagDate = (_sh(`git log -1 --format=%ad --date=short v${CURRENT}`) || '')
+            .toString().trim();
+        const pyActual = pyTagged
+            ? require('crypto').createHash('sha256').update(pyTagged).digest('hex')
+            : null;
+
+        const packetDir = path.join(repoRoot, 'release-evidence', `v${CURRENT}`);
+        const readIf = (f) => {
+            const p = path.join(packetDir, f);
+            return fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : null;
+        };
+
+        // (a) python-reference sidecar must describe the tagged bytes.
+        const pySide = readIf(`python_reference-cpm.py.sha256`);
+        if (pySide && pyActual) {
+            const pinned = (pySide.trim().split(/\s+/)[0] || '').toLowerCase();
+            if (pinned !== pyActual) {
+                _pinFailures.push(
+                    `release-evidence/v${CURRENT}/python_reference-cpm.py.sha256 pins ` +
+                    `${pinned.slice(0, 16)}… but the tagged python_reference/cpm.py ` +
+                    `hashes to ${pyActual.slice(0, 16)}…`);
+            }
+        }
+
+        // (b) the SIGNED witness must be the byte-for-byte CI artifact, and the
+        //     attestation bundle's subject digest must equal its hash. A
+        //     re-serialised witness (pretty-printed, key-reordered) breaks the
+        //     signature binding and `gh attestation verify` 404s on the digest —
+        //     which is exactly what happened when this packet was first built.
+        const witnessPath = path.join(packetDir, `witness-v${CURRENT}.json`);
+        const bundle = readIf('sigstore-attestation-output.txt');
+        if (fs.existsSync(witnessPath) && bundle) {
+            const wHash = require('crypto').createHash('sha256')
+                .update(fs.readFileSync(witnessPath)).digest('hex');
+            if (!bundle.includes(wHash)) {
+                _pinFailures.push(
+                    `release-evidence/v${CURRENT}/sigstore-attestation-output.txt does not ` +
+                    `carry the witness digest ${wHash.slice(0, 16)}…. The witness in the ` +
+                    `packet is not the artifact that was signed — copy the CI file ` +
+                    `byte-for-byte, never re-serialise it.`);
+            }
+            if (bundle.length < 2000) {
+                _pinFailures.push(
+                    `release-evidence/v${CURRENT}/sigstore-attestation-output.txt is only ` +
+                    `${bundle.length} bytes. Every other release stores the full signed ` +
+                    `bundle (~13KB); a hand-written summary is not independently checkable.`);
+            }
+        }
+
+        // (c) commit and date published in the packet must match the tag.
+        for (const f of ['VERIFY_RELEASE.md', 'README.md', 'validation-summary.md']) {
+            const txt = readIf(f);
+            if (!txt) continue;
+            if (tagCommit) {
+                const cm = txt.match(/\|\s*Commit(?:\s*SHA)?\s*\|\s*`?([0-9a-f]{7,40})`?/i);
+                if (cm && !tagCommit.startsWith(cm[1].toLowerCase())) {
+                    _pinFailures.push(
+                        `release-evidence/v${CURRENT}/${f} publishes commit ${cm[1]} ` +
+                        `but tag v${CURRENT} is ${tagCommit.slice(0, 12)}`);
+                }
+            }
+            if (tagDate) {
+                const dm = txt.match(/\|\s*Release date\s*\|\s*(\d{4}-\d{2}-\d{2})/i);
+                if (dm && dm[1] !== tagDate) {
+                    _pinFailures.push(
+                        `release-evidence/v${CURRENT}/${f} publishes release date ${dm[1]} ` +
+                        `but tag v${CURRENT} is dated ${tagDate}`);
+                }
+            }
+        }
+
+        // (d) the Rekor logIndex quoted in prose must appear in the signed bundle.
+        if (bundle) {
+            for (const f of ['VERIFY_RELEASE.md', 'README.md', 'rekor-entry.txt']) {
+                const txt = readIf(f);
+                if (!txt) continue;
+                const rm = txt.match(/logIndex[^0-9]{0,20}(\d{6,})/i);
+                if (rm && !bundle.includes(rm[1])) {
+                    _pinFailures.push(
+                        `release-evidence/v${CURRENT}/${f} quotes Rekor logIndex ${rm[1]} ` +
+                        `which does not appear in the signed attestation bundle`);
+                }
+            }
+        }
     }
 }
 
