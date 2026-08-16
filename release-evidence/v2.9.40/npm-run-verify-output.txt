@@ -1,0 +1,15 @@
+$ npm run verify        # reproduced by CI on the v2.9.40 tag
+
+[1/5] node cpm-engine.test.js
+       -> 1134 passed, 0 failed
+[2/5] node cpm-engine.crossval.js
+       -> 925 of 989 defined comparisons executed, 0 failures, across 45 fixtures; 64 skipped
+[3/5] engine SHA-256
+       -> 72c1081de1e6a1b4953f4bc11fc291df5978251c666b1f5c4f891fa0999f7ec7  (454460 bytes)
+[4/5] python_reference SHA-256
+       -> 27829ddab0a6440cbb3ea890bc21a71cdfa35168e6bb9473531e24556aee138f  (84712 bytes)
+[5/5] version-drift regression
+       -> PASS
+
+Environment: v20.20.2 linux/x64
+Run: https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/31948553931

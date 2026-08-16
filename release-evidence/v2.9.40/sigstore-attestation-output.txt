@@ -1,0 +1,7 @@
+gh attestation verify release-evidence/v2.9.40/witness-v2.9.40.json --owner danafitkowski
+
+Result: VERIFIED
+Subject digest: sha256 of witness-v2.9.40.json
+Rekor logIndex: 2488685021
+Workflow: https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/31948553931
+Commit: 69d966846fa153d30d1e6a5a5a0081be15d6e89a

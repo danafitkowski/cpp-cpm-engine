@@ -43,7 +43,7 @@ Performance benchmarks (Node 18, M1 Mac):
 - 5,000-node linear-chain Tarjan SCC in **~8 ms**
 - 25,000-activity MonFri schedule (CPM run) in **~1.6 s** (after v2.1 optimizations)
 
-### §2.1 Test Coverage (v2.9.39 baseline)
+### §2.1 Test Coverage (v2.9.40 baseline)
 
 Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js` exercised by the 1,134-test unit suite, captured on every release via `npm run coverage`. Reported numbers are not editorial — they are emitted by the test runner.
 
@@ -54,14 +54,14 @@ Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js`
 | Functions | 108 / 115 | **93.91%** |
 | Lines | 8,373 / 8,993 | **93.10%** |
 
-**Disclosed uncovered clusters.** A defensible coverage disclosure must name what is not covered, not just what is. The regions below are named in prose; the line-level list is generated rather than editorial. `npm run coverage` writes `coverage/cpm-engine.js.html`, which marks every uncovered statement in the shipped v2.9.39 bytes: 620 uncovered statements in 83 contiguous ranges, the last of which is lines 8,979-8,993. Cite that HTML report rather than the console summary, whose `Uncovered Line #s` column is width-truncated. The uncovered statement clusters fall in these regions:
+**Disclosed uncovered clusters.** A defensible coverage disclosure must name what is not covered, not just what is. The regions below are named in prose; the line-level list is generated rather than editorial. `npm run coverage` writes `coverage/cpm-engine.js.html`, which marks every uncovered statement in the shipped v2.9.40 bytes: 620 uncovered statements in 83 contiguous ranges, the last of which is lines 8,979-8,993. Cite that HTML report rather than the console summary, whose `Uncovered Line #s` column is width-truncated. The uncovered statement clusters fall in these regions:
 
 - Defensive guards in salvage-mode early-exit paths (rarely exercised in the canonical fixtures; expanded coverage on the v3.0 strict-mode roadmap)
 - Bayesian / kinematic public-API surfaces that are JS-only and excluded from the crossval surface per §8 (covered by unit tests but lower branch coverage on the marginal-CI math edge cases)
 - Section L Daubert-renderer fallback branches for malformed `disclosure` input (intentional defensive code)
 - Holiday-rule edge cases for jurisdictions with rare observance variants (e.g., DST-cross-boundary holidays); the rule-set is correct, the edge-case branches are rarely hit
 
-The 17.56% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; current baseline v2.9.39** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
+The 17.56% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; current baseline v2.9.40** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
 
 **Reproduce locally:**
 
@@ -72,7 +72,7 @@ npm install --no-save  # only pulls c8 devDep; runtime is still zero-dep
 npm run coverage
 ```
 
-The output should match the v2.9.39 coverage baseline in §2.1 within rounding: 93.10% statements (8,373 / 8,993), 82.44% branches (1,836 / 2,227), 93.91% functions (108 / 115), 93.10% lines. Drift in either direction documents itself.
+The output should match the v2.9.40 coverage baseline in §2.1 within rounding: 93.10% statements (8,373 / 8,993), 82.44% branches (1,836 / 2,227), 93.91% functions (108 / 115), 93.10% lines. Drift in either direction documents itself.
 
 ---
 
@@ -110,11 +110,11 @@ Anyone can verify a published attestation:
 # attestations/latest.json is gitignored, and a witness you generate locally with
 # `npm run verify` is unsigned — verifying it returns HTTP 404 (no attestation for
 # its digest). Verify the CI-signed witness that ships in the tree instead:
-gh attestation verify release-evidence/v2.9.39/witness-v2.9.39.json --owner danafitkowski
+gh attestation verify release-evidence/v2.9.40/witness-v2.9.40.json --owner danafitkowski
 
 # Equivalent public route — note the release asset is named `latest.json`,
 # not `attestations-latest.json`:
-#   gh release download v2.9.39 --repo danafitkowski/cpp-cpm-engine --pattern 'latest.json'
+#   gh release download v2.9.40 --repo danafitkowski/cpp-cpm-engine --pattern 'latest.json'
 #   gh attestation verify latest.json --owner danafitkowski
 ```
 
@@ -144,7 +144,7 @@ The underlying CPM math (Kelley & Walker forward/backward pass) is one of the mo
 **Cross-validation reports 925 executed comparisons with 0 deviations across 45 fixtures on the enumerated CPM comparison surface (forward/backward pass dates, Kahn topo order, critical-path codes, project finish, FF/SF working-day arithmetic, TF, TF working days, FF, FF working days, and signed FF where both engines emit it; alert counts and severity are compared on 40 of the 45 fixtures, skipped on the 2 cycle fixtures that compare refusal only and on the 3 out-of-sequence fixtures where the alert is JS-only; Tarjan SCC is JS-unit-tested only and is not on this surface, having been stripped from `python_reference/cpm.py`). The harness prints `925 / 925`, but that denominator is the executed count, not the comparison surface: the full enumerated surface is 989 comparisons, and 64 of them are skipped by the harness field guards (61 on `ff_signed_working_days`, 3 on `ff_signed`) and are neither counted nor failed. Of those 64, 58 are substantive, in that the Python reference emits no value where the JS engine emits one, and 6 are null-vs-undefined artifacts on activities where neither engine emits the field. So 0% observed deviation holds over the 925 executed comparisons, and agreement over the full 989-comparison surface is 925 of 989 by the harness's own equality semantics. Bayesian and kinematic surfaces are JS-only and excluded (see §8).**
 **Real-XER stress reports 282 / 282 = 0% deviation (single non-public reference XER; not committed, not independently reproducible).**
 
-This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.39 (45 fixtures / 925 cross-validation checks). It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
+This is the engine's **observed** error rate on the disclosed validation suite as of v2.9.40 (45 fixtures / 925 cross-validation checks). It is not a general error-rate claim; it is the rate at which the engine has matched its Python sibling reference and a 282-activity P6 reference under the test surface defined in §2.
 
 Performance characteristics:
 
@@ -252,7 +252,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 
 `disclosure_format_version: 1.0`
 `engine_version: 2.9.40`
-`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document was first written 2026-05-24 and last refreshed for v2.9.39 (released 2026-08-11). v2.9.39 is the P6 23.12 alignment wave: a 13-case comparison matrix captured from Primavera P6 Professional 23.12 standalone on 2026-08-11 via an automated import plus single-F9 round trip, five divergence families (working-day float units, open-end late-date seeding, mandatory-finish semantics, retained logic on out-of-sequence progress, free-float conventions) corrected against that capture, and cross-validation grown from 43 fixtures / 747 checks to 45 fixtures / 925 checks. The matrix reads 13 / 13 PASS, and disclosure requires the qualifier: the first and only capture scored 6 / 13, the engine was then changed against that capture's answers, and no held-out P6 case exists, so the matrix is a calibration record rather than an independent hold-out test. v2.9.38 (2026-07-04) corrected the attestation SHA chain to pin the shipped engine bytes and rewrote §E to the fields the engine actually emits (`method_caveat` on `computeKinematicDelay`, `methodology` on `computeBayesianUpdate`), removing the `methodology_status` and `woet_classifier` surfaces the engine never carried. v2.9.33 fixed the fatal-tier audit findings v2.9.32 left open (VERIFY_RELEASE.md test-count contradictions, missing release-evidence packets, SHA-sidecar wording, attestation script not wiring the new gates) plus the medium-tier residuals (jurisdictions bottom guarantee section, "no silent wrong-answer paths" absolute language, dead-context test strengthening, structured override fields with backward compat, README competitor-table removal, machine-readable SOP-checklist binding). Prior milestones preserved: v2.9.33 audit-response wave + version-drift regression gate + computeCPMSalvaging strict-mode refusal; v2.9.31 Section Q Forensic Strict Mode public API + 33 strict-mode unit tests; v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; v2.9.10 Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
+`generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document was first written 2026-05-24 and last refreshed for v2.9.40 (released 2026-08-11). v2.9.40 is the P6 23.12 alignment wave: a 13-case comparison matrix captured from Primavera P6 Professional 23.12 standalone on 2026-08-11 via an automated import plus single-F9 round trip, five divergence families (working-day float units, open-end late-date seeding, mandatory-finish semantics, retained logic on out-of-sequence progress, free-float conventions) corrected against that capture, and cross-validation grown from 43 fixtures / 747 checks to 45 fixtures / 925 checks. The matrix reads 13 / 13 PASS, and disclosure requires the qualifier: the first and only capture scored 6 / 13, the engine was then changed against that capture's answers, and no held-out P6 case exists, so the matrix is a calibration record rather than an independent hold-out test. v2.9.38 (2026-07-04) corrected the attestation SHA chain to pin the shipped engine bytes and rewrote §E to the fields the engine actually emits (`method_caveat` on `computeKinematicDelay`, `methodology` on `computeBayesianUpdate`), removing the `methodology_status` and `woet_classifier` surfaces the engine never carried. v2.9.33 fixed the fatal-tier audit findings v2.9.32 left open (VERIFY_RELEASE.md test-count contradictions, missing release-evidence packets, SHA-sidecar wording, attestation script not wiring the new gates) plus the medium-tier residuals (jurisdictions bottom guarantee section, "no silent wrong-answer paths" absolute language, dead-context test strengthening, structured override fields with backward compat, README competitor-table removal, machine-readable SOP-checklist binding). Prior milestones preserved: v2.9.33 audit-response wave + version-drift regression gate + computeCPMSalvaging strict-mode refusal; v2.9.31 Section Q Forensic Strict Mode public API + 33 strict-mode unit tests; v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; v2.9.10 Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
 
 ---
 
@@ -471,7 +471,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 ### What strict mode does NOT do
 
 - It does not validate that the analyst's overrides are *correct*. It enforces that the analyst documented the override in writing. Whether the rationale is defensible is the analyst's burden under Daubert / FRE 702.
-- It does not guarantee P6 equivalence on the strict-mode-passing path. The P6 comparison evidence that does exist ships at [`validation/p6-comparison/`](validation/p6-comparison/), where the matrix reads **13 / 13** on the in-scope cases (two further cases are excluded as out of scope and documented in [`validation/engine-limitations/`](validation/engine-limitations/)). Those cases run plain `computeCPM`, not strict mode, and the 13 / 13 is fitted rather than held out: the single native P6 capture first scored 6 / 13, the engine was then corrected against those same pinned P6 answers, and the matrix was regenerated. No post-fix independent capture exists yet. The fix sequence is recorded in [`release-evidence/v2.9.39/validation-summary.md`](release-evidence/v2.9.39/validation-summary.md).
+- It does not guarantee P6 equivalence on the strict-mode-passing path. The P6 comparison evidence that does exist ships at [`validation/p6-comparison/`](validation/p6-comparison/), where the matrix reads **13 / 13** on the in-scope cases (two further cases are excluded as out of scope and documented in [`validation/engine-limitations/`](validation/engine-limitations/)). Those cases run plain `computeCPM`, not strict mode, and the 13 / 13 is fitted rather than held out: the single native P6 capture first scored 6 / 13, the engine was then corrected against those same pinned P6 answers, and the matrix was regenerated. No post-fix independent capture exists yet. The fix sequence is recorded in [`release-evidence/v2.9.40/validation-summary.md`](release-evidence/v2.9.40/validation-summary.md).
 - It does not extend to the `computeCPMSalvaging` path. Salvage mode is the inverse posture (best-effort triage of corrupt input) and refuses strict mode by design.
 - It is not retroactive. If you ran `computeCPM` without `forensic_strict: true` and want to validate after the fact, re-run with the flag set.
 
@@ -479,7 +479,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 
 Strict mode shipped with 33 dedicated unit tests in v2.9.31, covering: API surface (8 tests); clean input pass-through; convenience wrapper; throw on each fatal context family; override with valid rationale; override with empty / whitespace / non-string rationale (each throws); unrelated override key (ignored); runCPM strict-mode refusal; default-off behavior; truthy-not-true non-activation. See `cpm-engine.test.js` SECTION R-v2.9.31 (the section anchor in the test file preserves the release that introduced these tests).
 
-Those 33 strict-mode tests are still part of the engine's unit-test suite at the current v2.9.39 baseline (1,134 total tests including strict-mode coverage).
+Those 33 strict-mode tests are still part of the engine's unit-test suite at the current v2.9.40 baseline (1,134 total tests including strict-mode coverage).
 
 ---
 

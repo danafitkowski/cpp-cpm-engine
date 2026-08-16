@@ -61,6 +61,21 @@ const FILES = [
 // intended "historic narration" lines, not current-state lines that
 // happen to mention an old version casually.
 const HISTORIC_OK_PATTERNS = [
+    // A release packet has to be able to say what changed SINCE the previous
+    // release, and to describe a defect in an earlier packet. Both name older
+    // versions on purpose: "Engine math is unchanged from v2.9.39" is the
+    // disclosure, not drift, and "the v2.9.39 packet published v2.9.38's
+    // hashes" is the correction record. Added 2026-08-16 when the v2.9.40
+    // packet tripped the gate on its own honesty.
+    //
+    // Deliberately narrow: each requires the comparative phrasing, so a bare
+    // stale reference still fails.
+    // `\**` tolerates markdown emphasis: the real line reads
+    // "Engine math is **unchanged** from v2.9.39", so the closing asterisks sit
+    // between the keyword and "from".
+    /\b(?:unchanged|identical|byte-identical)\**\s+(?:from|to)\s+\**v?2\.9\.\d+/i,
+    /\bthe\s+v2\.9\.\d+\s+packet\b/i,
+    /\bsince\s+(?:the\s+)?(?:prior|previous)\s+(?:pinned\s+)?release\b/i,
     // CHANGELOG-style release headers: "## v2.9.X — date — title"
     /^##\s+v2\.9\.\d+\s+—\s/,
     /^##\s+v2\.9\.\d+\s+-\s/,
