@@ -12,6 +12,44 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.40 — 2026-08-15 — disclosure corrections; no engine math change
+
+Supersedes v2.9.39 (v2.9.39 → v2.9.40). **Engine math is unchanged.** `computeCPM`,
+`computeTIA` and the Section-D behaviours are byte-identical in behaviour to
+v2.9.39; the only edits inside `cpm-engine.js` are to the embedded Daubert and
+FAQ answer strings it serves. Cross-validation, the P6 comparison matrix and the
+unit suite all produce identical results.
+
+This version exists because those string edits landed after v2.9.39 was tagged
+while the file still declared `ENGINE_VERSION = '2.9.39'`. The tagged bytes hash
+to `8dc37455…` and the tree's to `3cd673e8…`, so a build from `main` shipped an
+engine that was not the tagged v2.9.39 and reported that it was. A version
+number whose bytes are ambiguous is the defect this project audits itself for,
+so it gets a release rather than a footnote.
+
+### Disclosure corrections
+
+- **The v2.9.39 evidence packet published v2.9.38's hashes.** Every prose file in
+  `release-evidence/v2.9.39/` named engine SHA `6bf24fb0` and python-reference
+  `fefc9811`, against actual tagged values `8dc37455` and `da792b52`, plus
+  v2.9.38's commit, date, Rekor logIndex and CI run. An expert following the
+  packet's own verification instructions got a mismatch, whose adverse reading is
+  tampering. All three files now carry values resolved from the tag and the
+  signed witness.
+- **The packet's SHA sidecars were never published.** `.gitignore` carried bare
+  filenames matching at any depth, so a clean clone received 9 of the packet's 10
+  files while the strict gate's `existsSync` check passed against the local copy.
+- **The gate now verifies content, not existence.** It hashes the engine at the
+  tag and fails if the sidecar pin or any `Engine SHA-256` published in the
+  packet's prose disagrees. A wrong pin is fatal, never a warning.
+- **`VERIFY_RELEASE.md` claimed the math never changed.** The v2.9.39 exhibit said
+  "byte-identical to v2.9.37" when `cpm-engine.js` differs from that tag by 228
+  insertions and 37 deletions and all three alignment commits post-date it.
+- **Cross-validation is reported as a surface, not a ratio.** Published figures
+  now read 925 of 989 defined comparisons executed with 0 failures across 45
+  fixtures, and disclose the 64 skipped (61 `ff_signed_working_days`, 3
+  `ff_signed`) rather than printing `925 / 925` as though it were a pass rate.
+
 ## v2.9.39 — 2026-08-11 — P6 23.12 alignment wave + first P6-native capture
 
 Supersedes v2.9.38 (v2.9.38 → v2.9.39). Engine math changed in this release. It is the first one whose scheduling rules were altered to match answers captured from Primavera P6 Professional 23.12. The first P6-native capture (commit `9b748cc`, 13 cases scheduled by a human operator through an automated import and a single F9 round trip) scored 6 PASS / 7 FAIL. Five divergence families were then fixed against P6's pinned answers in commits `23ffeca`, `264de84`, `bf442d5` and `05dc8b4`, and the comparison matrix was regenerated to 13 / 13. That 13 / 13 is fitted to the one capture: the engine was changed to match the cases it failed, and no held-out capture exists, so it is not an independent accuracy figure.

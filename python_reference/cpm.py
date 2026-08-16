@@ -110,7 +110,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed_working_days. The crossval guards on those two fields are
 # skip-not-fail, so where Python emits nothing the field is silently not
 # compared and not counted rather than reported as a divergence.
-ENGINE_VERSION = '2.9.39'
+ENGINE_VERSION = '2.9.40'
 
 
 # =============================================================================
