@@ -11,10 +11,10 @@ v2.9.39 is an **attestation-and-accuracy release** that supersedes the prior one
 | `README.md` | Folder orientation |
 | `validation-summary.md` | This file |
 | `VERIFY_RELEASE.md` | Citation-ready expert-report packet (per-release snapshot) |
-| `witness-v2.9.39.json` | Canonical Sigstore-signed witness (CI run 28724785215; all fields populated) |
+| `witness-v2.9.39.json` | Canonical Sigstore-signed witness (CI run 31527272430; all fields populated) |
 | `sigstore-attestation-output.txt` | Sigstore `gh attestation verify` output (verified, exit 0) |
-| `rekor-entry.txt` | Rekor transparency-log entry pointer (logIndex 2073912299) |
-| `github-actions-run-url.txt` | CI matrix run URL (run 28724785215) |
+| `rekor-entry.txt` | Rekor transparency-log entry pointer (logIndex 2425152069) |
+| `github-actions-run-url.txt` | CI matrix run URL (run 31527272430) |
 | `cpm-engine.js.sha256` | Engine source SHA pin |
 | `python_reference-cpm.py.sha256` | Python reference SHA pin |
 | `npm-run-verify-output.txt` | Local `npm run verify` reproduction output |
@@ -44,8 +44,8 @@ v2.9.39 is an **attestation-and-accuracy release** that supersedes the prior one
 
 ## Key SHAs
 
-- Engine: `6bf24fb038657945478cf40c92273d8dc0bec7312e79eab8c8129667c356d045`
-- Python reference: `fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68`
+- Engine: `8dc37455f7dc76d88e761d73391b791cf9807e29157203e051977430490bd05b`
+- Python reference: `da792b52c743b62dd71b4ea2ea1b1dcd724088fd230ab977171edd00aace4423`
 
 
 ## v2.9.39 - P6 23.12 alignment wave

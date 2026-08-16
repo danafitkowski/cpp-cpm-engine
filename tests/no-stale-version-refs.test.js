@@ -186,6 +186,70 @@ for (const required of REQUIRED_FILES) {
     }
 }
 
+// existsSync is not verification. The v2.9.39 packet passed this gate for its
+// whole life while publishing v2.9.38's hashes: every prose file named engine
+// 6bf24fb0 and python-ref fefc9811 when the shipped bytes hash to 8dc37455 and
+// da792b52. That packet is what an expert cites, so it handed the other side a
+// pin that fails to verify against the very artifact it names, and a failed
+// hash check reads as tampering. Separately the sha256 sidecar it requires was
+// matched by a bare-filename .gitignore rule at any depth, so it satisfied
+// existsSync locally and was never published at all.
+//
+// So: hash the shipped engine, and require every published pin to agree.
+const _pinFailures = [];
+{
+    // Compare against the bytes AT THE TAG, not the working tree. The packet
+    // documents a tagged release; the working tree legitimately moves ahead of
+    // it between releases, and comparing to the tree would make this gate cry
+    // wolf on every post-tag commit. If the tag is absent (phase 1 of the
+    // release flow, tag not yet pushed) there is nothing to verify yet.
+    let taggedEngine = null;
+    try {
+        taggedEngine = require('child_process').execSync(
+            `git show v${CURRENT}:cpm-engine.js`,
+            { cwd: repoRoot, maxBuffer: 64 * 1024 * 1024 });
+    } catch (e) {
+        taggedEngine = null;
+    }
+    if (taggedEngine) {
+        // require locally: the file's shared `crypto` binding is declared
+        // further down, so referencing it here would hit the temporal dead zone.
+        const _crypto = require('crypto');
+        const actual = _crypto.createHash('sha256').update(taggedEngine).digest('hex');
+
+        const sidecar = path.join(repoRoot,
+            `release-evidence/v${CURRENT}/cpm-engine.js.sha256`);
+        if (fs.existsSync(sidecar)) {
+            const pinned = (fs.readFileSync(sidecar, 'utf-8').trim().split(/\s+/)[0] || '');
+            if (pinned.toLowerCase() !== actual) {
+                _pinFailures.push(
+                    `release-evidence/v${CURRENT}/cpm-engine.js.sha256 pins ${pinned.slice(0, 16)}… ` +
+                    `but cpm-engine.js hashes to ${actual.slice(0, 16)}…`);
+            }
+        }
+
+        // Any 64-hex value in the packet's prose that is presented as THE engine
+        // hash must be the real one. Catches a packet copied from the previous
+        // release, which is exactly how this broke.
+        for (const rel of [`release-evidence/v${CURRENT}/VERIFY_RELEASE.md`,
+                           `release-evidence/v${CURRENT}/README.md`,
+                           `release-evidence/v${CURRENT}/validation-summary.md`]) {
+            const full = path.join(repoRoot, rel);
+            if (!fs.existsSync(full)) continue;
+            const text = fs.readFileSync(full, 'utf-8');
+            const re = /Engine SHA-?256[^0-9a-f]{0,40}([0-9a-f]{64})/gi;
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                if (m[1].toLowerCase() !== actual) {
+                    _pinFailures.push(
+                        `${rel} publishes engine SHA ${m[1].slice(0, 16)}… ` +
+                        `but the shipped cpm-engine.js hashes to ${actual.slice(0, 16)}…`);
+                }
+            }
+        }
+    }
+}
+
 for (const rel of FILES) {
     const full = path.join(repoRoot, rel);
     if (!fs.existsSync(full)) {
@@ -221,6 +285,21 @@ console.log(
     `${_totalLines} lines / ${_totalRefs} version references; ` +
     `current engine = v${CURRENT}`
 );
+
+// A wrong pin is always fatal, never a warning. The two-phase accommodation
+// below exists because a packet may not have been BUILT yet; it does not excuse
+// a packet that exists and publishes the wrong hash. That is the failure mode
+// that would be quoted back at you in cross-examination.
+if (_pinFailures.length > 0) {
+    console.error('FAIL: release-evidence publishes a hash that does not match '
+        + 'the shipped bytes.');
+    for (const f of _pinFailures) console.error('  ' + f);
+    console.error('  Regenerate the packet from the tag rather than copying the '
+        + 'previous release folder.');
+    process.exit(1);
+}
+console.log(`no-stale-version-refs.test.js: release-evidence pin check — `
+    + `engine hash agrees with every published pin for v${CURRENT}`);
 
 if (missingRequired.length > 0) {
     // Two-phase release workflow accommodation:

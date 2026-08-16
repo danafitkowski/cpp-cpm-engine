@@ -52,6 +52,14 @@ attestations/witness-*.json
 cpm-engine.js.sha256
 python_reference/cpm.py.sha256
 
+# ...but the release-evidence copies are NOT convenience sidecars. They are the
+# published pin a third party verifies the shipped bytes against, and the rules
+# above are bare filenames so they match at any depth and were silently
+# excluding them. release-evidence/v2.9.39/cpm-engine.js.sha256 existed on disk,
+# satisfied the strict gate's existsSync check, and was never published: a clean
+# clone had 9 of the packet's 10 files. Un-ignore them.
+!release-evidence/**/*.sha256
+
 # Defensive secret-pattern blocklist — these should never be committed.
 # Reflects the SECURITY.md scope: zero runtime deps means zero accidental
 # secret material in the tree either.
