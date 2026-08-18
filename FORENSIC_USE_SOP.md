@@ -174,7 +174,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 - Select the AACE method:
   - **3.3 Observational / Dynamic / Contemporaneous As-Is** (windows analysis) — most common for retrospective EOT claims.
   - **3.7 Modeled / Additive / Multiple Base** (prospective TIA) — fragnet insertion.
-  - **3.8 Modeled / Subtractive / Single Base** (collapsed as-built / but-for) — independent validation method.
+  - **3.8 Modeled / Subtractive / Single Simulation** (collapsed as-built / but-for) — independent validation method.
   - **3.9 Modeled / Subtractive / Multiple Base** — but-for with windowed baselines.
   - Other methods per the case posture.
 - The engine emits the AACE-canonical `method_id` automatically in `result.manifest.method_id` based on the entry point used (computeCPM, computeTIA, etc.). Verify the emitted label matches the analyst's intent.
