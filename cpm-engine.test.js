@@ -2003,7 +2003,7 @@ console.log('\n=== Section L — buildDaubertDisclosure (E3) ===');
             computed_at: new Date().toISOString(),
             activity_count: 50,
             relationship_count: 48,
-            methodology: 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)',
+            methodology: 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA)',
         },
     };
     const d = E.buildDaubertDisclosure(tiaMockResult, { test_count: 265 });
@@ -3366,7 +3366,7 @@ console.log('\n=== v2.9.27 — data_date floor snaps to workday ===');
 // ============================================================================
 console.log('\n=== v2.9.27 — completed-succ skipped in backward pass ===');
 {
-    // Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic: completed
+    // Per SCL Protocol §4 / AACE 29R-03 §4.3.D.5.a retained-logic: completed
     // successors are removed from CP propagation. Before this fix, a
     // completed B with lf=ef pulled predecessor A's LF backward through
     // historical dates, producing negative TF on A purely because B
@@ -4596,7 +4596,7 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     const r = E.computeCPM(acts, rels, { dataDate: '2026-01-20' });
-    check('R-v295-4: in-progress B.ES = actual_start (immutable per AACE 29R-03)',
+    check('R-v295-4: in-progress B.ES = actual_start (P6 forward-pass semantics)',
         r.nodes.B.es_date === '2026-01-19',
         'got ' + r.nodes.B.es_date + ' (expected 2026-01-19)');
 }
@@ -6832,13 +6832,13 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     // activities pin LF = EF, TF = 0) was uncovered. Strengthen:
     // Note on LS: for a single-activity schedule, the backward init
     // sets LS = retreat(maxEF, duration), which can be EARLIER than ES.
-    // The v2.9.13 F1-Bug1 immutability pin only fires when LS > ES
-    // (i.e. LS would drift LATER than the historical actual). Earlier-
+    // The v2.9.13 F1-Bug1 actual-start pin only fires when LS > ES
+    // (i.e. LS would drift LATER than the recorded actual). Earlier-
     // LS is forensically benign — the activity has unconsumed float
     // on its early side. We assert TF=0 and LF=EF only.
     check('T3.18 (R8): in-progress sole activity is critical — TF=0',
         A.tf === 0, 'tf=' + A.tf);
-    check('T3.18 (R8): in-progress sole activity has LF = EF (immutable)',
+    check('T3.18 (R8): in-progress sole activity has LF = EF (actual-start pin)',
         A.lf_date === A.ef_date,
         'lf=' + A.lf_date + ' ef=' + A.ef_date);
     check('T3.18 (R8): A is in critical-path set',
@@ -6859,7 +6859,7 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         { data_date: '2026-01-12',
           cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } } }
     );
-    check('T3.18-pair (R8): A is critical (in-progress immutable)',
+    check('T3.18-pair (R8): A is critical (in-progress, actual-start pinned)',
         r.nodes.A && r.nodes.A.tf === 0);
     check('T3.18-pair (R8): B inherits criticality from in-progress A',
         r.nodes.B && r.nodes.B.tf === 0,

@@ -89,7 +89,8 @@ def _round_half_up_to(x, decimals=0):
 # math fix wave) backports several JS-only fixes from the audit memo:
 #   T1.1 — MS_Start hard-pin on backward LF clamp (mirrors JS).
 #   T1.2 — constraint-noop WARN emitted when ES-side constraints are
-#          suppressed by an actual_start (AACE 29R-03 §4.3 immutability).
+#          suppressed by an actual_start (P6 forward-pass semantics: a
+#          recorded actual start governs ES).
 #   T1.6 — _normalize_constraint emits constraint-unrecognized /
 #          constraint-incomplete WARN with optional alerts parameter.
 #   T1.7 — CS_MANSTART / CS_MANFINISH alias tokens recognized.
@@ -1037,10 +1038,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             continue
         preds = pred_map.get(code, [])
         node_cal = _cal_for(node)
-        # v2.9.10 Round 8 F27 — AACE 29R-03 §4.3 in-progress immutability.
+        # v2.9.10 Round 8 F27 — in-progress actual-start pinning.
         # When an activity has an actual_start but is NOT complete, that
-        # historical event is immutable: neither the data_date floor nor
-        # predecessor logic may push ES forward of it. Mirrors the JS engine
+        # recorded actual governs ES: neither the data_date floor nor
+        # predecessor logic pushes ES forward of it. This is Oracle P6 / CPM
+        # forward-pass behaviour, not an AACE rule. Mirrors the JS engine
         # (cpm-engine.js Section C, ~line 1109). The OoS-style behavior — predecessor
         # would push later — is silent on the Python side (the JS engine
         # emits OUT_OF_SEQUENCE alerts, which is a documented JS-only
@@ -1115,7 +1117,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 drive = _advance_workdays(anchor, lag, node_cal,
                                           alerts=alerts,
                                           ctx=f'FS-default lag {pnode["code"]}->{code}')
-            # AACE 29R-03 §4.3 — pred logic cannot override actual_start.
+            # P6 forward-pass semantics: pred logic cannot override actual_start.
             if has_actual_start:
                 if drive > max_es and driving_pred is None:
                     # Track which pred WOULD have driven (forensic visibility)
@@ -1173,7 +1175,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # secondary; secondary tightens further per P6 spec.
         cstr = node.get('constraint')
         cstr2 = node.get('constraint2')
-        # AACE 29R-03 §4.3 — constraints also cannot override actual_start.
+        # P6 forward-pass semantics: constraints also cannot override actual_start.
         # v2.9.12 T1.2 — emit constraint-noop WARN when ES-side constraints
         # are suppressed by actual_start. Mirrors JS Section C.
         if not has_actual_start:
@@ -1203,7 +1205,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     'context': 'constraint-noop',
                     'message': (
                         f"{cstr['type']} on {code} suppressed by "
-                        'actual_start (AACE 29R-03 §4.3 immutability)'
+                        'actual_start (P6 forward-pass semantics: a recorded '
+                        'actual start governs ES)'
                     ),
                 })
             if cstr2 and cstr2.get('type') in ('SNET', 'MS_Start', 'SO'):
@@ -1212,7 +1215,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     'context': 'constraint-noop',
                     'message': (
                         f"{cstr2['type']} (secondary) on {code} suppressed "
-                        'by actual_start (AACE 29R-03 §4.3 immutability)'
+                        'by actual_start (P6 forward-pass semantics: a '
+                        'recorded actual start governs ES)'
                     ),
                 })
 
@@ -1355,7 +1359,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         succs = succ_map.get(code, [])
         min_lf = node['lf']
         # v2.9.27 — audit MED R6 PAIRED FIX (JS + Python in lockstep).
-        # Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic, completed
+        # Per SCL Protocol §4 / AACE 29R-03 §4.3.D.5.a retained-logic, completed
         # successors are removed from CP propagation. JS paired site is
         # cpm-engine.js:2073. INFO alert emitted on JS side; Python
         # tracks the count for diagnostic parity.
@@ -1435,12 +1439,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # B2 — apply SS/SF start bounds. LS only; LF stays seed/FS/FF-driven.
         if min_ls_bound is not None and min_ls_bound < node['ls']:
             node['ls'] = min_ls_bound
-        # v2.9.12 T3.19 — AACE 29R-03 §4.3 immutability on backward pass.
-        # An activity with actual_start cannot have LS later than ES (it
-        # already started — drifting LS through float-rich successor logic
+        # v2.9.12 T3.19 — recorded-actual-start precedence on the backward
+        # pass. An activity with actual_start cannot have LS later than ES (it
+        # already started, so drifting LS through float-rich successor logic
         # is physically impossible). Pin LS = ES, LF = EF (mirror of
         # completed-activity branch); the in-progress activity is on the
-        # critical path of its own historical fact.
+        # critical path of its own recorded actual.
         #
         # v2.9.13 F1-Bug1 — under P6 retained-logic (T3.18), EF was anchored
         # at max(actual_start, data_date) + remaining_duration. The previous
@@ -1465,9 +1469,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             node['ls'] = node['remaining_late_start']
         node['tf'] = _round_half_up_to(node['lf'] - node['ef'], 3)
 
-    # v2.9.7 — ALAP post-pass. Per AACE 29R-03 §4 (Technical Considerations) and Oracle P6 docs, ALAP
-    # activities slide their early dates to match their late dates (consume
-    # float). Only applied when the activity has no actual_start and is not
+    # v2.9.7 — ALAP post-pass per Oracle P6 docs. ALAP is a P6 constraint
+    # type; AACE 29R-03 does not define ALAP (constraint effects on the
+    # critical path: §4.3.D.4). ALAP activities slide their early dates to
+    # match their late dates (consume float). Only applied when the activity has no actual_start and is not
     # complete.
     # v2.9.12 T4.26 — ALAP honored on EITHER primary or secondary slot.
     # Mirrors JS v2.9.8 Bug B7.

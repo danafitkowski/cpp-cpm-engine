@@ -90,7 +90,7 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
         duration_days: 5,                // Required. Calendar-day duration.
         early_start: '2026-01-05',       // Optional. Pin ES to this date (or later via predecessors).
         clndr_id: 'MF',                  // Optional. Calendar key in opts.calMap.
-        actual_start: '2026-01-05',      // Optional. Marks activity as in-progress (immutable per AACE 29R-03 §4.3).
+        actual_start: '2026-01-05',      // Optional. Marks activity as in-progress. A recorded actual start governs ES over the data-date floor and over predecessor-driven early start, per Oracle P6 / CPM forward-pass semantics.
         actual_finish: '2026-01-09',     // Optional. Marks activity as complete.
         is_complete: false,              // Optional. Sets ES=actual_start, EF=actual_finish.
         constraint: {                    // Optional. Primary P6 constraint.
@@ -217,7 +217,7 @@ const r = E.computeCPMWithStrategies(acts, rels, {
 
 ### `E.computeTIA(activities, relationships, fragnets, opts)`
 
-Insert one or more delay fragnets into the network and report impact. Implements AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA, `mode='isolated'`) and AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base, `mode='cumulative-additive'`). The umbrella RP for prospective TIA is AACE 52R-06.
+Insert one or more delay fragnets into the network and report impact. Implements AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA, `mode='isolated'`) and AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base, `mode='cumulative-additive'`). The umbrella RP for prospective TIA is AACE 52R-06.
 
 ```js
 const r = E.computeTIA(activities, relationships, fragnets, {
@@ -229,7 +229,7 @@ const r = E.computeTIA(activities, relationships, fragnets, {
 // r.per_fragnet[i] = { fragnet_id, name, liability, status, impact_days, impact_working_days, post_cpm }
 // r.cumulative_days (total days extension)
 // r.by_liability = { Owner: 6, Contractor: 4 }
-// r.manifest.methodology = 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)'
+// r.manifest.methodology = 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA)'
 ```
 
 **Fragnets array:**

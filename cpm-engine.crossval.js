@@ -770,11 +770,11 @@ compareFixture('F20 — Out-of-sequence (completed B before A starts)', {
 // =====================================================================
 // FIXTURE 21 — ALAP slide SUPPRESSED when actual_start set
 // =====================================================================
-// ALAP normally slides ES forward to consume float. But per AACE 29R-03
-// §4.3 (immutability), ALAP MUST NOT override actual_start (immutable historical fact).
-// Both engines guard the post-pass with `if not n.actual_start`. B has
-// actual_start in the past — ALAP slide is suppressed and ES locks to
-// actual_start.
+// ALAP normally slides ES forward to consume float. Under P6 forward-pass
+// semantics a recorded actual start governs ES, so ALAP must not override
+// actual_start. Both engines guard the post-pass with `if not n.actual_start`.
+// B has actual_start in the past, so the ALAP slide is suppressed and ES
+// locks to actual_start.
 // JS emits an OoS ALERT (B started before A); Python does not. Alert
 // parity SKIPPED for the same reason as F20.
 compareFixture('F21 — ALAP slide suppressed by actual_start', {
@@ -840,8 +840,8 @@ compareFixture('F23 — Cycle detection (both engines refuse)', {
 // =====================================================================
 // FIXTURE 24 — Free-Float parity (gap LIFTED in v2.9.27)
 // =====================================================================
-// JS computes free_float (ff / ff_working_days) per AACE 29R-03 §4 (Forensic
-// Schedule Analysis, peer-reviewed RP) and Wickwire et al., Construction
+// JS computes free_float (ff / ff_working_days) per AACE 29R-03 §4.3
+// (Critical Path and Float) and Wickwire et al., Construction
 // Scheduling: Preparation, Liability, and Claims (3rd ed., Aspen Publishers,
 // 2010). See cpm-engine.js Section ~1120-1158.
 //
@@ -871,10 +871,14 @@ compareFixture('F24 — Free-float parity DOCUMENTED GAP (no FF in Python ref)',
 // audit identified seven specific edge cases that crossval did not yet
 // exercise. Round 8 closes those gaps.
 //
-// Two of these (F27 in-progress immutability, plus the ALAP-secondary-slot
-// behavior covered by F28's primary placement) required minimal Python
-// reference extension; see python_reference/cpm.py @v2.9.10 and the
-// rotated SHA-256 pin documented in DAUBERT.md §3.
+// Two of these (F27 in-progress actual-start pinning, plus the
+// ALAP-secondary-slot behavior covered by F28's primary placement) required
+// minimal Python reference extension; see python_reference/cpm.py @v2.9.10
+// and the rotated SHA-256 pin documented in DAUBERT.md §3. Note the
+// independence limit this creates: on the F27 behaviour the reference was
+// changed to match the engine, so F27 tests that the two implementations
+// agree, not that they arrived at the rule independently. DAUBERT.md
+// §"Known limitations" records the same caveat.
 
 // =====================================================================
 // FIXTURE 26 — Calendar fallback with MULTIPLE distinct bad clndr_ids
@@ -903,18 +907,23 @@ compareFixture('F26 — Calendar fallback, 3 distinct missing clndr_ids', {
 // =====================================================================
 // FIXTURE 27 — actual_start AFTER data_date (in-progress, not complete)
 // =====================================================================
-// AACE 29R-03 §4.3: actual_start is an immutable historical fact. Neither
-// the data_date floor nor predecessor logic may push ES forward of an
-// event that demonstrably already happened. B has actual_start 2026-02-01
-// but data_date 2026-01-15 — both engines must pin B.ES = 2026-02-01.
+// P6 forward-pass semantics: a recorded actual start governs over the
+// data-date floor and over predecessor-driven early start. B has
+// actual_start 2026-02-01 but data_date 2026-01-15, so both engines must
+// pin B.ES = 2026-02-01. This is software behaviour, not an AACE rule; the
+// RP's only treatment of an actual start later than the data date is
+// 29R-03 §2.2.B.1.c, which flags it as a source-validation exception to
+// investigate at intake, not a calculation rule.
 //
 // Note: prior to v2.9.10 the Python reference only honored actual_start
 // when is_complete was true. The reference was extended in this round to
-// mirror the JS engine's in-progress immutability behavior — see
-// python_reference/cpm.py around line 577 (search "AACE 29R-03 §4.3").
+// mirror the JS engine's in-progress behaviour. See
+// python_reference/cpm.py (search "in-progress actual-start pinning").
 // The SHA-256 pin in release-evidence/<version>/python_reference-cpm.py.sha256
 // (the committed per-release pin) was rotated to reflect this change.
-compareFixture('F27 — actual_start AFTER data_date pins ES (AACE 29R-03 §4.3)', {
+// The reference was aligned to the engine here, so this fixture is a
+// consistency check on this behaviour, not independent corroboration of it.
+compareFixture('F27 — actual_start AFTER data_date pins ES (P6 forward-pass semantics)', {
     activities: [
         { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
         // B's actual_start is AFTER data_date — exotic but legal (e.g. work
@@ -966,8 +975,8 @@ compareFixture('F28 — ALAP primary + FNLT secondary compound', {
 // FIXTURE 29 — Mixed FF + SS predecessors on the same successor
 // =====================================================================
 // C has BOTH FF from A (lag 0) AND SS from B (lag 3). The forward pass
-// must take max of the two drives. Per AACE 29R-03 §4 and Wickwire
-// Construction Scheduling §6.5, multi-relationship merges are common in
+// must take max of the two drives. Per Wickwire Construction
+// Scheduling §6.5, multi-relationship merges are common in
 // real P6 schedules and the engine must agree on the drive selection.
 //   - A(5d, start 01-05): EF = 01-09
 //   - B(8d, start 01-05): ES = 01-05, EF = 01-14
@@ -1089,7 +1098,7 @@ compareFixture('F33 — MS_Start primary pins LS=ES, TF=0 (v2.9.12 T1.1)', {
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
 });
 
-// F34 — actual_start immutability suppresses MS_Start (T1.2 / T1.3).
+// F34 — recorded actual_start suppresses MS_Start (T1.2 / T1.3).
 compareFixture('F34 — MS_Start suppressed by actual_start (v2.9.12 T1.2)', {
     activities: [
         { code: 'A', duration_days: 5, early_start: '2026-01-05',

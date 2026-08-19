@@ -185,8 +185,8 @@ function _enforceEngineCaps(activities, relationships, context) {
 //
 // References:
 //  - Oracle Primavera P6 Database Reference, TASK.cstr_type column (XER spec).
-//  - AACE 29R-03 §4 Technical Considerations (constraint handling per
-//    forensic schedule analysis RP).
+//  - AACE 29R-03 §4.3.D.4 (Start and Finish Constraints; constraints are a
+//    common critical path alteration technique in forensic analysis).
 const CONSTRAINT_TYPE_MAP = {
     // Primavera XER tokens → canonical names used by the engine.
     // v2.9.5 — Tokens corrected against Oracle P6 Database Reference
@@ -1691,11 +1691,13 @@ function computeCPM(activities, relationships, opts) {
         const preds = predMap[code] || [];
         const nodeCal = calFor(node);
         // v2.9.5 in-progress ES pin (corrected pin order). When an activity has
-        // an actual_start, that historical fact is immutable per AACE 29R-03
-        // §4.3 — neither the data_date floor NOR predecessor logic may push ES
-        // forward of an event that demonstrably already happened. When the
-        // predecessor would push ES later, the engine emits an OoS alert
-        // (handled in the post-pass detector) but the actual_start still wins.
+        // an actual_start, that recorded actual governs the early start: this is
+        // Oracle P6 / CPM forward-pass behaviour, in which neither the data_date
+        // floor nor predecessor logic pushes ES forward of a start the schedule
+        // records as having occurred. When the predecessor would push ES later,
+        // the engine emits an OoS alert (handled in the post-pass detector) but
+        // the actual_start still wins. This is software semantics, not an AACE
+        // rule; see docs/citations.md for the citation history.
         //
         // v2.9.3 had the wrong order: data_date floored ES first and
         // actual_start was a Math.max afterward, so when data_date > actual_start
@@ -1705,7 +1707,7 @@ function computeCPM(activities, relationships, opts) {
         // v2.9.22 — KNOWN LIMITATION (audit HIGH R12): an activity with
         // actual_start='2020-01-01' (the engine's epoch) has actStartNum
         // === 0, which collides with the "no actual_start" sentinel. The
-        // immutability gate below treats it as "not started" and lets ES
+        // actual-start gate below treats it as "not started" and lets ES
         // drift to data_date. Affects forensic schedules whose actual
         // start dates fall on the epoch boundary — narrow real-world
         // exposure but documented for traceability. v3.0 will move the
@@ -1714,7 +1716,7 @@ function computeCPM(activities, relationships, opts) {
         const hasActualStart = actStartNum > 0;
         let maxES;
         if (hasActualStart) {
-            // Historical actual — immutable per AACE 29R-03 §4.3.
+            // Recorded actual start governs ES (P6 forward-pass semantics).
             maxES = actStartNum;
         } else {
             // No actual — forecasts cannot precede dataDate.
@@ -1787,7 +1789,7 @@ function computeCPM(activities, relationships, opts) {
             // v2.9.5 — when this node has an actual_start, predecessor logic
             // cannot push ES later. We still track the driving_predecessor for
             // forensic traceability (which pred *would* have driven if not for
-            // the immutable actual), but maxES stays pinned.
+            // the recorded actual), but maxES stays pinned.
             //
             // v2.9.18 A4-HIGH — track the MAX-drive pred ("would have driven"),
             // not the FIRST one that exceeded maxES. The previous
@@ -1858,8 +1860,8 @@ function computeCPM(activities, relationships, opts) {
         // and cstr_type2 / cstr_date (secondary). Per P6 spec, both apply
         // independently; secondary tightens after primary so it "wins" on
         // conflict. See `CONSTRAINT_TYPE_MAP` for canonical short codes.
-        // v2.9.12 T1.2 / T1.3 — AACE 29R-03 §4.3 immutability. When an
-        // activity has an actual_start, that historical fact is immutable;
+        // v2.9.12 T1.2 / T1.3 — recorded-actual-start precedence (P6
+        // forward-pass semantics). When an activity has an actual_start,
         // ES-side constraints (including MS_Start / SO hard-pin) cannot
         // override the actual. This matches the Python reference, which
         // already had `if not has_actual_start` around the ES-constraint
@@ -1943,14 +1945,14 @@ function computeCPM(activities, relationships, opts) {
                 alerts.push({
                     severity: 'WARN',
                     context: 'constraint-noop',
-                    message: cstr.type + ' on ' + code + ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                    message: cstr.type + ' on ' + code + ' suppressed by actual_start (P6 forward-pass semantics: a recorded actual start governs ES)',
                 });
             }
             if (cstr2 && (cstr2.type === 'SNET' || cstr2.type === 'MS_Start' || cstr2.type === 'SO')) {
                 alerts.push({
                     severity: 'WARN',
                     context: 'constraint-noop',
-                    message: cstr2.type + ' (secondary) on ' + code + ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                    message: cstr2.type + ' (secondary) on ' + code + ' suppressed by actual_start (P6 forward-pass semantics: a recorded actual start governs ES)',
                 });
             }
         }
@@ -2202,7 +2204,7 @@ function computeCPM(activities, relationships, opts) {
         const succs = succMap[code] || [];
         let minLF = node.lf;
         // v2.9.27 — audit MED R6 PAIRED FIX (JS + Python in lockstep).
-        // Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic, completed
+        // Per SCL Protocol §4 / AACE 29R-03 §4.3.D.5.a retained-logic, completed
         // successors are removed from CP propagation — they don't drive
         // the un-finished network's LF. Before this fix, a completed B
         // with lf=ef pulled predecessor A's LF backward through historical
@@ -2324,14 +2326,14 @@ function computeCPM(activities, relationships, opts) {
         if (_minLSBound !== null && _minLSBound < node.ls) {
             node.ls = _minLSBound;
         }
-        // v2.9.12 T3.19 — AACE 29R-03 §4.3 immutability on backward pass.
-        // When the activity has an actual_start (in-progress, not yet
+        // v2.9.12 T3.19 — recorded-actual-start precedence on the backward
+        // pass. When the activity has an actual_start (in-progress, not yet
         // complete), LS cannot drift later than ES — that would imply the
         // activity should have started LATER than it actually did, which is
         // physically impossible (the work already started). Pin LS = ES and
         // LF = EF (mirror of the completed-activity branch at lines
         // ~1294-1298); the in-progress activity is on the critical path of
-        // its own historical fact.
+        // its own recorded actual.
         //
         // v2.9.13 F1-Bug1 — under P6 retained-logic (T3.18), EF was anchored
         // at max(actual_start, data_date) + remaining_duration. The previous
@@ -2340,16 +2342,17 @@ function computeCPM(activities, relationships, opts) {
         // positive TF = duration_days - remaining_duration on in-progress
         // critical activities, dropping them OFF the critical path. Pinning
         // LF = EF directly preserves the retained-logic EF anchor and forces
-        // TF = 0 as required for an immutable in-progress activity.
+        // TF = 0 as required for an in-progress activity pinned to its
+        // recorded actual start.
         // B4 (P6 alignment wave, capture 9b748cc case 10) — the v2.9.12
         // T3.19 pin (LS=ES, LF=EF for every in-progress activity) is
         // DELETED. P6 does not zero the float of started work: a started,
         // non-driving activity legitimately carries positive float, and its
         // late fields are the REMAINING-work late dates (REM_LATE_START /
         // REM_LATE_END; the P6 grid shows LATE_START = REM_LATE_START for
-        // TK_Active rows). The display LS remains the actual start (AACE
-        // 29R-03 4.3 immutability applies to what HAPPENED, not to the
-        // remaining-work float calculus); the stringify block emits
+        // TK_Active rows). The display LS remains the actual start (the
+        // recorded actual governs what HAPPENED, not the remaining-work
+        // float calculus); the stringify block emits
         // ls_date = actual_start for in-progress and carries the late
         // calculus in remaining_late_start.
         if (node.actual_start && !node.is_complete) {
@@ -2368,11 +2371,12 @@ function computeCPM(activities, relationships, opts) {
         node.tf = _roundHalfUpTo(node.lf - node.ef, 3);
     }
 
-    // v2.9.5 — ALAP (As Late As Possible) post-pass. ALAP post-pass per Oracle
-    // P6 documentation and AACE 29R-03 §4 (technical considerations). ALAP
+    // v2.9.5 — ALAP (As Late As Possible) post-pass per Oracle P6
+    // documentation. ALAP is a P6 constraint type; AACE 29R-03 does not
+    // define ALAP (constraint effects on the critical path: §4.3.D.4). ALAP
     // activities slide their early dates to match their
     // late dates (consuming float). Only applied when the activity has no
-    // actual_start (immutable historical fact) and is not complete.
+    // actual_start (a recorded actual start governs ES) and is not complete.
     for (const c in nodes) {
         const n = nodes[c];
         // v2.9.8 Bug B7 — ALAP honored on EITHER primary or secondary constraint slot.
@@ -2430,7 +2434,7 @@ function computeCPM(activities, relationships, opts) {
         n.es_date = numToDate(n.es);
         n.ef_date = numToDate(n.ef);
         // B4 — for in-progress activities the DISPLAY late start is the
-        // actual start (what happened is immutable); the remaining-work
+        // recorded actual start; the remaining-work
         // late calculus is exposed separately, mirroring P6's grid
         // (LATE_START column shows REM_LATE_START on TK_Active rows, and
         // the capture path sources LS from the actual with an ' A' suffix).
@@ -3387,9 +3391,10 @@ function runCPM(opts) {
     const { sorted, excluded } = _mcTopologicalSort();
     const sortedLen = sorted.length;
 
-    // v2.9.12 T1.4 — AACE 29R-03 §4.3 in-progress immutability for Section D.
+    // v2.9.12 T1.4 — in-progress actual-start pinning for Section D, matching
+    // Section C's P6 forward-pass semantics.
     // The per-iteration Monte Carlo engine previously ignored task.actual_start
-    // entirely: predecessor logic overrode the historical fact, and
+    // entirely: predecessor logic overrode the recorded actual, and
     // constraints layered on top. This is wrong for any mid-project schedule
     // — an activity that started yesterday cannot have a forecast ES three
     // days from now.
@@ -3457,8 +3462,8 @@ function runCPM(opts) {
             if (predContribution > maxES) maxES = predContribution;
         }
         if (hasActualStart) {
-            // AACE 29R-03 §4.3 — actual_start is immutable; predecessor
-            // logic cannot push ES later than the recorded actual.
+            // P6 forward-pass semantics: predecessor logic cannot push ES
+            // later than the recorded actual start.
             task.ES = actOff;
         } else {
             // F11 — for un-started activities, floor ES at dataDate when
@@ -3540,7 +3545,7 @@ function runCPM(opts) {
                 task.ES = cOff;
             }
         }
-        // v2.9.12 T1.4 — AACE 29R-03 §4.3 immutability also applies to
+        // v2.9.12 T1.4 — recorded-actual-start precedence also applies to
         // Section D ES-side constraint clamps. When actual_start is present,
         // SNET/MS_Start/SO cannot override it. Emit constraint-noop WARN per
         // suppressed constraint so the forensic record shows the skip.
@@ -3555,7 +3560,7 @@ function runCPM(opts) {
                     severity: 'WARN',
                     context: 'constraint-noop',
                     message: 'Section D ' + _cstr.type + ' on ' + task.code +
-                        ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                        ' suppressed by actual_start (P6 forward-pass semantics: a recorded actual start governs ES)',
                 });
             }
             if (_cstr2 && (_cstr2.type === 'SNET' || _cstr2.type === 'MS_Start' || _cstr2.type === 'SO')) {
@@ -3563,7 +3568,7 @@ function runCPM(opts) {
                     severity: 'WARN',
                     context: 'constraint-noop',
                     message: 'Section D ' + _cstr2.type + ' (secondary) on ' + task.code +
-                        ' suppressed by actual_start (AACE 29R-03 §4.3 immutability)',
+                        ' suppressed by actual_start (P6 forward-pass semantics: a recorded actual start governs ES)',
                 });
             }
         }
@@ -3654,8 +3659,8 @@ function runCPM(opts) {
     }
 
     // v2.9.12 T1.4 — one-time WARN if any tasks had actual_start but
-    // projectStart was missing (so we couldn't pin ES to the historical
-    // fact). Emitted once per runCPM call to avoid alert flooding on
+    // projectStart was missing (so we couldn't pin ES to the recorded
+    // actual start). Emitted once per runCPM call to avoid alert flooding on
     // large schedules.
     if (_projectStartMissingClashCount > 0) {
         alerts.push({
@@ -3664,9 +3669,9 @@ function runCPM(opts) {
             message: 'Section D could not pin ES to actual_start for ' +
                 _projectStartMissingClashCount + ' task(s) because ' +
                 'opts.projectStart is missing or invalid. Predecessor logic ' +
-                'overrode the historical fact — this is the pre-v2.9.12 ' +
-                'behavior. Pass opts.projectStart=\'YYYY-MM-DD\' to enforce ' +
-                'AACE 29R-03 §4.3 actual-start immutability in Section D.',
+                'overrode the recorded actual start; this is the pre-v2.9.12 ' +
+                'behavior. Pass opts.projectStart=\'YYYY-MM-DD\' to pin ES to ' +
+                'the recorded actual start in Section D (P6 forward-pass semantics).',
         });
     }
 
@@ -3806,13 +3811,13 @@ function runCPM(opts) {
         // shrinks via the constraint clamp, LS must follow (LS = LF - duration).
         const lsFromLF = task.LF - task.remaining;
         if (lsFromLF < task.LS) task.LS = lsFromLF;
-        // v2.9.13 F1-Bug6 — AACE 29R-03 §4.3 in-progress LS pin (mirror of
+        // v2.9.13 F1-Bug6 — in-progress LS pin (mirror of
         // Section C T3.19). Section D's MC per-iteration backward pass
         // previously omitted this pin, so any in-progress activity with
         // float-rich successors silently appeared non-critical in the MC
         // distribution. Forward pass at line ~2065-2068 already pins ES to
         // actual_start; pin LS = ES and LF = EF here to preserve the
-        // immutability invariant on the backward leg.
+        // actual-start invariant on the backward leg.
         if (task.actual_start && !task.is_complete && task.LS > task.ES) {
             task.LS = task.ES;
             task.LF = task.ES + task.remaining;
@@ -5302,7 +5307,7 @@ function computeTIA(activities, relationships, fragnets, opts) {
             method_id: 'computeTIA',
             methodology: mode === 'cumulative-additive'
                 ? 'AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base)'
-                : 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)',
+                : 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA)',
             method_caveat: 'SCL Protocol 2nd Ed (2017) and AACE recommend fragnet TIA for contemporaneous analysis. Retrospective TIA has limited forensic acceptance (cf. Sanders, M.C. (July 2024), "Junk science: the fallacy of retrospective time impact analysis," International Bar Association). Caller is responsible for method selection.',
             activity_count: activities.length,
             relationship_count: (relationships || []).length,
@@ -5344,12 +5349,13 @@ const SH_ALERT_PENALTY_PER_UNIT     = 2;    // SmartPM-equiv: −2 pts per engin
 const SH_ALERT_PENALTY_CAP          = 20;   // CPP house heuristic: cap to 20 of 100
 const SH_SALVAGE_PENALTY_PER_UNIT   = 3;    // CPP house heuristic: salvage > alert
 const SH_SALVAGE_PENALTY_CAP        = 30;   // CPP house heuristic
-// Critical-path activity ratio. Healthy band derived from AACE 49R-06 §4
-// guidance + SmartPM's published CP-ratio benchmarks (10-15% typical).
+// Critical-path activity ratio. Healthy band is a CPP-derived heuristic,
+// informed by AACE 49R-06's critical-path discussion (the RP sets no numeric
+// bands) + SmartPM's published CP-ratio benchmarks (10-15% typical).
 const SH_CP_PCT_HEALTHY_LOW         = 5;    // SmartPM whitepaper: <5% suspicious
 const SH_CP_PCT_HEALTHY_HIGH        = 15;   // SmartPM whitepaper: 5-15% healthy
 const SH_CP_PCT_WARN                = 20;   // CPP house heuristic: 20-30% drift
-const SH_CP_PCT_FALSE_CP_TRIGGER    = 30;   // AACE 49R-06 §6: >30% suggests constraint-driven false-CP
+const SH_CP_PCT_FALSE_CP_TRIGGER    = 30;   // CPP-derived, informed by AACE 49R-06: >30% suggests constraint-driven false-CP
 const SH_CP_PCT_WARN_PENALTY        = 5;    // CPP house heuristic
 const SH_CP_PCT_FALSE_CP_PENALTY    = 10;   // CPP house heuristic
 const SH_CP_PCT_ZERO_PENALTY        = 8;    // CPP house heuristic: nothing critical is itself an anomaly
@@ -6199,23 +6205,23 @@ function buildDaubertDisclosure(result, opts) {
             if (mode === 'multi_base_prospective')
                 return 'AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base — Prospective Multi-Base TIA)';
             if (mode === 'single_base_retrospective')
-                return 'AACE 29R-03 MIP 3.6 retrospective (Modeled / Additive / Single Simulation — see SCL Protocol §4 on retrospective TIA caveat)';
+                return 'AACE 29R-03 MIP 3.6 retrospective (Modeled / Additive / Single Base — see SCL Protocol §4 on retrospective TIA caveat)';
             if (mode === 'multi_base_retrospective')
                 return 'AACE 29R-03 MIP 3.7 retrospective (Modeled / Additive / Multiple Base — see SCL Protocol §4)';
             if (mode === 'single_base_prospective' || mode === '')
-                return 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)' +
+                return 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA)' +
                     (mode === '' ? ' [DEFAULT: caller did not specify tia_mode — confirm before filing]' : '');
             return 'AACE 29R-03 TIA family (unrecognized tia_mode=' + JSON.stringify(manifest.tia_mode) +
                 ' — defaulted to 3.6 single-base prospective)';
         }
-        if (id === 'computeCPMWithStrategies') return 'AACE 49R-06 §3 + AACE TFM + P6 native MFP (multi-method critical-path identification with divergence analysis)';
+        if (id === 'computeCPMWithStrategies') return 'AACE 49R-06 "Longest Path" + AACE TFM + P6 native MFP (multi-method critical-path identification with divergence analysis)';
         if (id === 'computeCPMSalvaging') return 'AACE 29R-03 source validation + iterative cycle-break (highest-|lag| heuristic with alphabetical tiebreak)';
         // v2.9.27 — audit HIGH R18. Explicit AACE-canonical mappings for
         // the remaining engine method_ids. Previously these collapsed to
         // the generic "CPM forward/backward pass..." line, leaving an
         // opposing expert without a clear methodology citation.
         if (id === 'computeScheduleHealth')
-            return 'DCMA 14-Point Schedule Health Assessment (DCMA, GAO Schedule Assessment Guide, AACE 49R-06 §4) with letter-grade rollup';
+            return 'DCMA 14-Point Schedule Health Assessment (DCMA, GAO Schedule Assessment Guide; CP-ratio thresholds are CPP-derived, informed by AACE 49R-06) with letter-grade rollup';
         if (id === 'computeBayesianUpdate')
             return 'Normal-Normal conjugate Bayesian update with optional hierarchical pooling per WBS group (Carlin & Louis 2008, §5.4; Elshaer 2013 IJPM 31:579-588). Pre-publication; not a substitute for AACE 122R-22 QRAMM.';
         if (id === 'computeKinematicDelay')
@@ -6223,7 +6229,7 @@ function buildDaubertDisclosure(result, opts) {
         if (id === 'computeTopologyHash')
             return 'SHA-256 of canonical-v2 form (sorted activity codes + deduplicated preds, JSON-encoded line per code). Industry-first schedule-topology fingerprint; no AACE precedent, intended as a provenance primitive.';
         if (id === 'computeFloatBurndown')
-            return 'Float Burndown — per-snapshot total-float evolution + cumulative slip velocity (AACE 29R-03 §4 + Sanders 2024 IBA on retrospective TIA). Companion to MIP 3.3 windows analysis.';
+            return 'Float Burndown — per-snapshot total-float evolution + cumulative slip velocity (AACE 29R-03 §4.3.B historical rate of float consumption; Sanders 2024 IBA on retrospective TIA). Companion to MIP 3.3 windows analysis.';
         return 'CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03';
     })();
 
@@ -7372,9 +7378,10 @@ function computeFloatBurndown(snapshots, opts) {
     opts = opts || {};
     const tfField = opts.tfField || 'tf';
     // v2.9.3 disclosed heuristic — near-critical TF threshold.
-    // Source: AACE 49R-06 §5 ("near-critical paths typically defined within
-    // 5-10 working days of zero float"). Default 5 is the conservative end of
-    // that range. Caller can override via opts.nearCriticalThreshold.
+    // CPP-derived, informed by AACE 49R-06's "Near-Critical Activities/Paths"
+    // discussion; the RP itself sets no numeric window. Common practice treats
+    // 5-10 working days of float as near-critical; default 5 is the
+    // conservative end. Caller can override via opts.nearCriticalThreshold.
     const DEFAULT_NEAR_CRITICAL_TF_DAYS = 5;
     const nearCriticalThreshold = (opts.nearCriticalThreshold !== undefined)
         ? opts.nearCriticalThreshold : DEFAULT_NEAR_CRITICAL_TF_DAYS;

@@ -12,6 +12,68 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## Unreleased — withdrawal of a fabricated AACE citation on actual-start pinning
+
+**Engine math is unchanged.** No forward-pass, backward-pass or Section D
+calculation moves. What changes is the justification attached to one existing
+behaviour, the text of the WARN messages that describe it, and the disclosure
+around the cross-validation of it.
+
+### What was wrong
+
+The engine attributed its recorded-actual-start pinning rule to "AACE 29R-03 §4.3 immutability". That rule does not exist. §4.3 of the 25 April 2011 revision is "Critical Path and Float" (identifying the critical path, quantifying near-critical, identifying the as-built critical path, common critical path alteration techniques, ownership of float). Across the full §4.3 span there is no occurrence of "early start", "actual start", "pin" or "immutable", and across all 134 pages "immutable", "historical fact" and "already happened" return nothing. The RP's only treatment of an actual start later than the data date is source validation at §2.2.B.1.c, which tells the analyst to ensure activities to the right of the data date do not carry actual start or finish dates. That is a data defect to rectify at intake, not a calculation rule, and it points the other way from the pinning behaviour.
+
+### What replaced it
+
+- The behaviour is now described as what it is: Oracle P6 / CPM forward-pass
+  semantics, in which a recorded actual start governs over the data-date floor
+  and over predecessor-driven early start. It is defensible as software
+  behaviour and needs no Recommended Practice citation. The Oracle P6
+  documentation is the anchor if one is wanted.
+- §1.5.B.2 was considered as a substitute and rejected. It addresses the data
+  date concept and says critical path and float are computable only forward of
+  the data date, which is silent on actual starts and arguably cuts against the
+  pinning rule, so substituting it would trade one mis-citation for another.
+- The emitted `constraint-noop` WARN strings changed text in both engines, in
+  Section C and Section D. These reach client deliverables. The old text named a
+  rule that does not exist: `<TYPE> on <CODE> suppressed by actual_start (AACE 29R-03 §4.3 immutability)`.
+  The new text reads `<TYPE> on <CODE> suppressed by actual_start (P6 forward-pass
+  semantics: a recorded actual start governs ES)`. The
+  `actual-start-not-anchored` WARN was reworded the same way.
+- Crossval fixture F27 was renamed from `actual_start AFTER data_date pins ES
+  (AACE 29R-03 §4.3)`, naming a rule that does not exist, to `actual_start AFTER
+  data_date pins ES (P6 forward-pass semantics)`.
+
+### Disclosure added
+
+The same non-existent rule was the stated reason for changing the Python
+reference implementation to mirror the JS engine on this behaviour. That matters
+because the cross-validation and the Daubert disclosure rest on the two
+implementations being separately maintained. `python_reference/cpm.py` honoured
+`actual_start` only on complete activities until the backport introduced in
+v2.9.10 extended it to match the JS engine. DAUBERT.md now records, in both the
+validator-independence section and the known-limitations list, that on this
+behaviour the reference was aligned to the engine, so fixtures F27 and F21 show
+the two implementations agreeing rather than corroborating the rule
+independently. The crossval source comment says the same thing.
+
+### Release steps still owed
+
+- `python_reference/cpm.py` changed (comments only). Its SHA-256 pin and the
+  Expected-output figures in `python_reference/README.md` still name the
+  committed bytes and must be rotated when this work is committed. The new
+  values are `65306f701f177eaf04effadf8bc09f9c7e653a4a88c25486517d04a93e664bf8`
+  and 84,947 bytes, assuming the file commits as LF.
+- `ENGINE_VERSION` still reads 2.9.40 while the tree no longer matches what was
+  released in v2.9.40 (2026-08-16). This needs a version bump before anything
+  ships, for the same reason that release exists.
+- The published `validation.html` fixture table on the CPP site carried F27's old
+  label. No generator for that page exists in the site mirror, the engine repo or
+  the viewer repo, so the label was corrected in place on 2026-08-19 to match the
+  harness fixture name. The page should still be regenerated from the harness the
+  next time one exists.
+
+---
 ## v2.9.40 — 2026-08-16 — disclosure corrections; no engine math change
 
 Supersedes v2.9.39 (v2.9.39 → v2.9.40). **Engine math is unchanged.** `computeCPM`,
@@ -1002,7 +1064,9 @@ across 43 fixtures.**
   four mandatory constraint types when a hard pin widens minLF.
 - **R18 HIGH** — Five `method_id`s gained explicit AACE-canonical
   methodology labels: computeScheduleHealth (DCMA 14-Point + AACE
-  49R-06 §4), computeBayesianUpdate (Carlin & Louis 2008 §5.4;
+  49R-06 §4 [2026-08-19: that section number was fabricated; 49R-06 has
+  no numbered sections, and the label now presents the CP-ratio
+  thresholds as CPP-derived]), computeBayesianUpdate (Carlin & Louis 2008 §5.4;
   Elshaer 2013 IJPM 31:579-588), computeKinematicDelay (pre-pub;
   AACE 29R-03 / 52R-06 companions), computeTopologyHash (industry-
   first), computeFloatBurndown (AACE 29R-03 §4 + Sanders 2024 IBA).
@@ -1299,7 +1363,7 @@ direct file:line cross-reference. No "X/X closed" framing.
   epoch). Regex-validates YYYY-MM-DD shape first.
 - **R12/cpm-engine.js:1627** — Documented limitation: an activity
   legitimately started on 2020-01-01 (engine epoch) silently misses
-  immutability gate. Fix requires epoch move; deferred to v3.0.
+  the actual-start gate. Fix requires epoch move; deferred to v3.0.
 
 ### Daubert disclosure
 
@@ -1916,9 +1980,9 @@ Hardcore audit identified ~30 engine math defects across constraint handling, ca
 ### T1 — Constraint handling
 
 - **T1.1 — MS_Start backward LF clamp.** `_applyBackwardLFConstraint` previously only honored MS_Finish / MFO / FNLT / SNLT on the backward pass. MS_Start / SO were silently ignored, allowing LS to drift later than the pinned ES — breaking the P6 invariant that MS_Start is always on the critical path. Both engines now emit `LF = cstr.date + duration` so the post-clamp LS recompute lands on cstr.date and TF = 0.
-- **T1.2 — `constraint-noop` WARN on actual_start suppression.** When an activity has an `actual_start`, AACE 29R-03 §4.3 makes the historical fact immutable; ES-side constraints (SNET, MS_Start, SO) cannot override it. Both engines now emit a `constraint-noop` WARN per suppressed constraint so the forensic record shows what was skipped.
+- **T1.2 — `constraint-noop` WARN on actual_start suppression.** When an activity has an `actual_start`, that recorded actual governs ES under Oracle P6 / CPM forward-pass semantics; ES-side constraints (SNET, MS_Start, SO) cannot override it. Both engines now emit a `constraint-noop` WARN per suppressed constraint so the forensic record shows what was skipped. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the Unreleased entry at the top of this file.]
 - **T1.3 — Section C ES-side constraint gate.** Section C's forward pass now gates `_applyForwardESConstraint` calls on `!hasActualStart`, matching Python reference behavior. Was a JS-only divergence.
-- **T1.4 — Section D Monte Carlo pins ES to actual_start.** `runCPM` previously ignored `task.actual_start` entirely — predecessor logic overrode the historical fact. Section D now pins `task.ES = actual_start_offset` (relative to `opts.projectStart`) when present, suppresses ES-side constraint clamps with `constraint-noop` WARN, and emits a one-time `actual-start-not-anchored` WARN if `projectStart` was missing.
+- **T1.4 — Section D Monte Carlo pins ES to actual_start.** `runCPM` previously ignored `task.actual_start` entirely — predecessor logic overrode the recorded actual start. Section D now pins `task.ES = actual_start_offset` (relative to `opts.projectStart`) when present, suppresses ES-side constraint clamps with `constraint-noop` WARN, and emits a one-time `actual-start-not-anchored` WARN if `projectStart` was missing. [Citation corrected 2026-08-19: this entry originally described the recorded actual start as "the historical fact", the characterisation withdrawn with "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the Unreleased entry at the top of this file.]
 - **T1.5 — `task-dropped` + `relationship-dropped` INFO alerts.** TT_LOE / TT_WBS / completed / zero-remaining activity drops + dangling-relationship drops in `parseXER` were silent. v2.9.12 surfaces every drop as an INFO alert propagated to `result.alerts` (via a new `_MC.parseAlerts` collector). Non-finite `lag_hr_cnt` (e.g. `Infinity`) is now rejected with an ALERT instead of propagating to `projectFinish: Infinity`.
 - **T1.6 — `constraint-unrecognized` / `constraint-incomplete` WARN.** `_normalizeConstraint` previously returned null silently on unknown tokens and empty dates. Both engines now emit a WARN identifying the activity and the offending token / missing date.
 - **T1.7 — `CS_MANSTART` / `CS_MANFINISH` aliases.** Older P6 R8.x XER variants emit these tokens without the "D" of "MANDATORY". Added to `CONSTRAINT_TYPE_MAP` in both engines as aliases for `MS_Start` / `MS_Finish`.
@@ -2000,14 +2064,14 @@ Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBE
 - DAUBERT.md §3.1 "Independent Verification" — full Daubert framing: Layer 1 (public CI), Layer 2 (Sigstore attestation), Layer 3 (one-command local reproduction). Documents what this closes (Prong 1 testing objection) and what it does not (peer review).
 - DAUBERT.md §10 "Roadmap — Forward-looking Daubert hardening" — near-term (real third-party attestation, MPXJ Java-bridge crossval, Coq / TLA+ formal verification), mid-term (AACE TCM Forum peer review, CPP-house-heuristic threshold sourcing, branch coverage, DCMA-14 alignment with PPG #20 2024), long-term v3.0 (`_MC` Section D thread-safety, MPXJ XER round-trip, MS Project / Synchro / Asta cross-engine validation), and continuously-updated citation regression list.
 - `attestations/README.md` — explains the witness shape + how to use it.
-- Round 8 crossval expansion: F26-F32 edge-case fixtures (multi-id calendar fallback, actual_start AACE-immutability with matching Python reference extension, ALAP+FNLT secondary compound, mixed FF+SS predecessors, negative-lag ordinal arithmetic, cycle-in-sub-network detection, far-future date arithmetic stress). Crossval suite: 25 → 32 fixtures, 281 → 346 checks (all bit-identical between JS and Python).
+- Round 8 crossval expansion: F26-F32 edge-case fixtures (multi-id calendar fallback, actual_start pinning with matching Python reference extension, ALAP+FNLT secondary compound, mixed FF+SS predecessors, negative-lag ordinal arithmetic, cycle-in-sub-network detection, far-future date arithmetic stress). Crossval suite: 25 → 32 fixtures, 281 → 346 checks (all bit-identical between JS and Python).
 - Round 8 hot-loop perf bench (`scripts/bench.js`) — synthetic 100 / 1k / 10k / 25k / 50k benchmark driver, min/median/max across 5 runs each, suitable for tracking the cost of the OPT-1 head-index Kahn queue and OPT-2 hoisted-`_MC.tasks` micro-optimizations across versions.
 - OSS hygiene: `SECURITY.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/{bug_report,feature_request,citation_correction,config}.{md,yml}`.
 
 ### Notes
 
 - The engine math is byte-identical to v2.9.9 — this is a docs + infrastructure release. Only `ENGINE_VERSION` and the inline comments tied to it are bumped to `'2.9.10'` (plus the consequent test version-pin assertions and disclosure-string updates, plus a Round 8 hot-loop perf pass — OPT-1/OPT-2 — that is bit-identical at the manifest level and verified by 728/728 unit + 346/346 crossval).
-- `package.json` + `cpm-engine.js` ENGINE_VERSION bumped 2.9.9 → 2.9.10. Python reference `cpm.py` ENGINE_VERSION bumped 2.9.8 → 2.9.10 to track the JS engine (Round 8 also backported F27 in-progress immutability per AACE 29R-03 §4.3 — the Python file legitimately changes in this release and the bundled SHA-256 pin is rotated accordingly in `python_reference/README.md`). `__init__.py` re-exports `ENGINE_VERSION` from `cpm`, so `from python_reference import ENGINE_VERSION` returns `'2.9.10'`.
+- `package.json` + `cpm-engine.js` ENGINE_VERSION bumped 2.9.9 → 2.9.10. Python reference `cpm.py` ENGINE_VERSION bumped 2.9.8 → 2.9.10 to track the JS engine (Round 8 also backported F27 in-progress actual-start pinning — the Python file legitimately changes in this release and the bundled SHA-256 pin is rotated accordingly in `python_reference/README.md`). `__init__.py` re-exports `ENGINE_VERSION` from `cpm`, so `from python_reference import ENGINE_VERSION` returns `'2.9.10'`.
 - DAUBERT.md title, §1 footer, §3.1 anchor, §6 manifest sample, §8 header, footer disclosure-format-version bumped to v2.9.10. New §10 Roadmap section added (near-term: third-party attest, MPXJ crossval, Coq formal verification; mid-term: AACE peer review, threshold sourcing, branch coverage; long-term: `_MC` thread-safety, cross-engine validation).
 - `attestations/latest.json` is gitignored (locally regenerated on every `npm run verify`); CI-generated witnesses are published as workflow artifacts (90-day retention) + release assets on tag pushes (permanent).
 
@@ -2144,9 +2208,9 @@ Round-5 Wave-2 audit follow-through — five deferred features shipped together 
 
 ## v2.9.6 — 2026-05-14
 
-Round-4 audit fix wave — citation cleanup. One inline-comment AACE RP citation in `cpm-engine.js` referenced a fabricated `49R-03` (the false-CP threshold comment escaped the v2.9.5 truncation sweep because the regression test scans rendered narrative, not source comments — fixed to `49R-06`, the AACE RP for critical-path identification, citing §6). Two documentation files (`docs/algorithm.md`, `README.md`, `docs/api.md`) cited AACE RPs without the "rev." annotations used elsewhere in the suite (`docs/citations.md`, `DAUBERT.md`) — normalized to `29R-03 (2003, rev. 2011)` and `49R-06 (2006, rev. 2010)`. TIA documentation now disambiguates MIP 3.6 (Single Base, `mode='isolated'`) vs MIP 3.7 (Multiple Base, `mode='cumulative-additive'`) instead of citing only MIP 3.6 — matches the manifest output the engine has emitted since v2.2.
+Round-4 audit fix wave — citation cleanup. One inline-comment AACE RP citation in `cpm-engine.js` referenced a fabricated `49R-03` (the false-CP threshold comment escaped the v2.9.5 truncation sweep because the regression test scans rendered narrative, not source comments — fixed to `49R-06`, the AACE RP for critical-path identification, citing §6 [2026-08-19: the §6 itself was later removed as fabricated; 49R-06 has no numbered sections]). Two documentation files (`docs/algorithm.md`, `README.md`, `docs/api.md`) cited AACE RPs without the "rev." annotations used elsewhere in the suite (`docs/citations.md`, `DAUBERT.md`) — normalized to `29R-03 (2003, rev. 2011)` and `49R-06 (2006, rev. 2010)`. TIA documentation now disambiguates MIP 3.6 (Single Base, `mode='isolated'`) vs MIP 3.7 (Multiple Base, `mode='cumulative-additive'`) instead of citing only MIP 3.6 — matches the manifest output the engine has emitted since v2.2.
 
-- **`cpm-engine.js:2267` (T1) — false-CP threshold comment now cites `AACE 49R-06 §6`** (was `AACE 49R-03 §6`, a fabricated RP). DAUBERT.md §7 and `daubert_docx.py` already cited 49R-06; the inline comment is now consistent.
+- **`cpm-engine.js:2267` (T1) — false-CP threshold comment now cites `AACE 49R-06 §6`** (was `AACE 49R-03 §6`, a fabricated RP). DAUBERT.md §7 and `daubert_docx.py` already cited 49R-06; the inline comment is now consistent. [2026-08-19: the §6 was itself a fabricated section number; 49R-06 has no numbered sections. The comment now presents the 30% trigger as CPP-derived, informed by the RP.]
 - **`docs/algorithm.md:179-180` (T2) — AACE 29R-03 and 49R-06 reference entries now carry rev. annotations** (`(2003, rev. 2011)` and `(2006, rev. 2010)` respectively), matching `docs/citations.md:45,54` and `DAUBERT.md:140-141`.
 - **`README.md:71` + `README.md:88` (T2) — TIA disambiguation.** Bullet now says "MIP 3.6 Single Base or MIP 3.7 Multiple Base, depending on mode"; RP-table row now says "MIP 3.6 (Single Base) / MIP 3.7 (Multiple Base)". v2.9.5 flat-cited MIP 3.6 in both places even though the engine has supported both modes since v2.2.
 - **`docs/api.md:175` (T2) — `computeTIA` description now names both modes** with their AACE labels and references AACE 52R-06 as the umbrella RP.
@@ -2160,8 +2224,8 @@ No code-path changes; documentation and one source comment only. 584 tests + 13 
 Round-3a audit fix wave. v2.9.3 added a Section C constraint-clamping path but never wired the XER reader to populate `task.constraint`, so every constrained XER silently lost its constraint mid-pipeline. v2.9.3's in-progress ES pin used the wrong pin order — `data_date` floored ES before `actual_start` was considered, so any schedule updated after work began clamped ES to data_date instead of the recorded historical start. Both gaps closed here. Two T2 follow-ups also shipped: finish-milestones are no longer silently dropped, and FF/SF anchor retreat now uses target (original) duration rather than progressed remaining.
 
 - **parseXER reads `cstr_type` / `cstr_date2` (T1 #1).** The Section C constraint code added in v2.9.3 was unreachable from real XER files — `parseXER()` populated no constraint field. The XER reader now extracts `cstr_type` and `cstr_date2` (and `cstr_date` as fallback) into a normalized `constraint = {type, date}` on each task. `CS_MSOA` / `CS_MSOB` / `CS_MEOA` / `CS_MEOB` are remapped per the Oracle P6 Database Reference (TASK.cstr_type column) — v2.9.3 had them as mandatory variants, but per the P6 spec they are deadline-style soft constraints (SNET / SNLT / FNET / FNLT respectively). `ALAP` constraint now honored.
-- **Actual-start ES pin order corrected (T1 #2).** v2.9.3 computed `maxES = Math.max(node.es, ddNum)` first and only then applied `actual_start` via `Math.max`. When `data_date > actual_start` (the common case — schedule updated days after work began), ES was pinned to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins immutably (per AACE 29R-03 §4.3 — historical facts are not rescheduled); only when no `actual_start` is recorded does the data_date floor apply. Predecessor-driven ES also cannot push past `actual_start` (the post-pass OoS detector still flags retained-logic anomalies); `driving_predecessor` is still surfaced for forensic traceability even when actual_start dominates.
-- **ALAP forward-pass support added.** Activities with `constraint.type === 'ALAP'` (or `CS_ALAP` from XER) now slide ES/EF to LS/LF in a post-backward-pass sweep (consuming float). Skipped when the activity has `actual_start` or `is_complete` (historical facts are immutable). Emits `WARN constraint-applied` recording the float consumed.
+- **Actual-start ES pin order corrected (T1 #2).** v2.9.3 computed `maxES = Math.max(node.es, ddNum)` first and only then applied `actual_start` via `Math.max`. When `data_date > actual_start` (the common case — schedule updated days after work began), ES was pinned to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins over the data_date floor (Oracle P6 / CPM forward-pass semantics: a recorded actual start governs the early start); only when no `actual_start` is recorded does the data_date floor apply. Predecessor-driven ES also cannot push past `actual_start` (the post-pass OoS detector still flags retained-logic anomalies); `driving_predecessor` is still surfaced for forensic traceability even when actual_start dominates. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the Unreleased entry at the top of this file.]
+- **ALAP forward-pass support added.** Activities with `constraint.type === 'ALAP'` (or `CS_ALAP` from XER) now slide ES/EF to LS/LF in a post-backward-pass sweep (consuming float). Skipped when the activity has `actual_start` or `is_complete` (a recorded actual start governs ES). Emits `WARN constraint-applied` recording the float consumed.
 - **TT_Hammock dropped (T1 #3, Option B — documented gap).** Implementing real hammock semantics (duration computed from `last_predecessor.EF − first_successor.ES` then re-running CPM) was non-trivial and out of scope for v2.9.5. TT_Hammock activities now appear in `dropped_activities` with `reason: 'hammock-unsupported'`. Caller is informed; no silent corruption. DAUBERT.md §8 documents the gap as a known limitation.
 - **Finish milestones retained (T2 #1).** `parseXER` previously dropped any row with `remaining <= 0`. Finish milestones (`TT_FinMile`) and start milestones (`TT_Mile`) legitimately have zero duration; the v2.9.4 rule silently removed the project's terminal/CP endpoint from the network. v2.9.5 retains milestones with `remaining = 0` and only drops zero-remaining rows that are not milestones. The dropped reason is also split: `'completed'` (has `act_end_date`) vs `'zero-remaining'` (no actual finish).
 - **PR_FF / PR_SF use target duration (T2 #2).** Section D Monte Carlo previously computed `predContribution = predTask.EF + lag - task.remaining` for FF/SF anchor retreat. On in-progress activities, `remaining` is the post-progress hour count — using it shrinks the anchor and pulls the successor earlier than physically possible. v2.9.5 uses `task.originalRemaining` (parsed from `target_drtn_hr_cnt`) which is the at-baseline planned duration. Falls back to `remaining` when `originalRemaining` is unavailable (e.g., synthetic inputs lacking target_drtn_hr_cnt).
@@ -2203,7 +2267,7 @@ Audit round-2 fix wave. Adds P6 constraint handling — the engine previously ha
 - **In-progress activity ES pin (T1).** Activities with `actual_start` set but `actual_finish` empty now pin ES to `actual_start` in the forward pass. Previously `actual_start` on in-progress work was silently ignored, allowing predecessor logic to override the recorded start.
 - **OoS scanner covers in-progress (T1).** Out-of-sequence detection at `cpm-engine.js:881` previously skipped in-progress activities (`if (!a.is_complete) continue;`). The guard is now `if (!a.actual_start && !a.is_complete) continue;` and the ALERT message distinguishes between "is complete" and "is in progress".
 - **parseXER `dropped_activities` surfaced (T1).** `parseXER()` previously discarded `TT_LOE`, `TT_WBS`, and zero-remaining rows without trace. The return object now includes `dropped_activities: [{task_code, task_type, reason}]` with `reason ∈ {'level-of-effort','wbs-summary','completed-or-zero-remaining'}`. Caller decides whether to surface; previously hidden from any audit.
-- **Disclosed heuristic thresholds (T1 — Daubert risk).** Every magic number in `computeScheduleHealth()` (alert/salvage/CP-pct/orphan/oos/letter-grade) and the default `nearCriticalThreshold = 5` are now named constants with comments citing source (SmartPM whitepaper, AACE 49R-06 §5/§6, DCMA-14 §1/§10, or "CPP house heuristic"). DAUBERT.md adds a new §7 "Disclosed Heuristic Thresholds" enumerating each. The headline "no hidden heuristics" claim is now true.
+- **Disclosed heuristic thresholds (T1 — Daubert risk).** Every magic number in `computeScheduleHealth()` (alert/salvage/CP-pct/orphan/oos/letter-grade) and the default `nearCriticalThreshold = 5` are now named constants with comments citing source (SmartPM whitepaper, AACE 49R-06 §5/§6, DCMA-14 §1/§10, or "CPP house heuristic"). DAUBERT.md adds a new §7 "Disclosed Heuristic Thresholds" enumerating each. The headline "no hidden heuristics" claim is now true. [2026-08-19: the 49R-06 §5/§6 section numbers were fabricated; the RP has no numbered sections. Both thresholds are now presented as CPP-derived, informed by the RP.]
 - **Constraint Handling disclosed.** DAUBERT.md adds §8 "Constraint Handling" documenting which P6 constraint types are honored, the forward / backward semantics, and which alert contexts mark each.
 - **FF / SF relationship coverage (T1).** New Section Q-3 (8 tests) covers forward FF lag-0 + lag>0, forward SF lag-0 + lag>0, and backward FF / SF chains. The v14 SF forward-pass fix (`predTask.ES`, not `EF`) now has regression coverage.
 - **Section R — constraints (10 tests).** Hand-computed expected ES/EF/LS/LF for SNET, SNLT, FNET, FNLT, MS_Start, MS_Finish, XER long-form normalization, in-progress ES pin, in-progress OoS detection, and `dropped_activities` enumeration.

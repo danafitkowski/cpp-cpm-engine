@@ -104,13 +104,13 @@ The engine emits `tf` (calendar days), `tf_working_days`, `ff` (calendar days), 
 
 ## 6. Critical path identification
 
-The engine implements all three AACE 49R-06 methods:
+The engine implements three critical-path identification strategies drawn from the methods described in AACE 49R-06:
 
 ### LPM — Longest Path Method
 
 The Longest Path is the chain of driving predecessors backward from the project finish. Forward pass identifies driving predecessors; LPM walks them backward.
 
-This is the **forensically-most-defensible** method per AACE 49R-06 §3.
+This is the method CPP treats as the **most defensible forensically**, informed by AACE 49R-06, "Longest Path" (total float becomes unreliable as a critical-path indicator under constraints and multiple calendars). The RP itself compares the accepted methods and expressly sets no standard.
 
 ### TFM — Total Float Method
 
@@ -133,7 +133,7 @@ r.divergence = {
 }
 ```
 
-Divergence is a **forensic signal** — it means the schedule has multiple parallel paths and a single-method analysis would miss something. AACE 49R-06 §3 specifically calls for divergence reporting in expert reports.
+Divergence is a **forensic signal** — it means the schedule has multiple parallel paths and a single-method analysis would miss something. AACE RP 49R-06 observes that different identification methods, different software, and different settings in the same software can produce different critical paths; reporting the divergence rather than hiding it is CPP practice built on that observation.
 
 ---
 
@@ -145,8 +145,8 @@ The engine emits AACE-canonical method labels in `result.manifest.methodology`:
 |--------------------------------------|----------------------------------------------------------------------------|
 | `computeCPM`                          | "CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03"        |
 | `computeCPMSalvaging`                 | "AACE 29R-03 source validation + iterative cycle-break ..."               |
-| `computeCPMWithStrategies`            | "AACE 49R-06 §3 + AACE TFM + P6 native MFP ..."                            |
-| `computeTIA` (`mode='isolated'`)      | "AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA)" |
+| `computeCPMWithStrategies`            | "AACE 49R-06 'Longest Path' + AACE TFM + P6 native MFP ..."              |
+| `computeTIA` (`mode='isolated'`)      | "AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA)" |
 | `computeTIA` (`mode='cumulative-additive'`) | "AACE 29R-03 MIP 3.7 (Modeled / Additive / Multiple Base)"           |
 
 These strings are the ones AACE peer-reviewers and opposing experts expect to see in an expert report. The engine emits them automatically — you do not have to remember which RP applies to which method.

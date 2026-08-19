@@ -90,12 +90,15 @@ only (2.9.10 → 2.9.11). The R8A engine math fix wave is JS-only — see
 CHANGELOG.md v2.9.11 entry for the four T1 fixes. No Python math changes.
 
 Prior v2.9.10 Round 8 — bumped from 0602e50d with two changes: ENGINE_VERSION
-2.9.8 → 2.9.10 sync (matches the JS engine), and AACE 29R-03 §4.3
-in-progress immutability backported — when an activity has `actual_start`
-set but is not is_complete, both ES is pinned to actual_start (predecessor
+2.9.8 → 2.9.10 sync (matches the JS engine), and in-progress
+actual-start pinning backported: when an activity has `actual_start`
+set but is not is_complete, ES is pinned to actual_start (predecessor
 logic and the data_date floor cannot override) and the forward-pass
-constraint clamps are bypassed. This mirrors the JS engine's behavior at
-cpm-engine.js Section ~931. Required for fixture F27.
+constraint clamps are bypassed. This is Oracle P6 / CPM forward-pass
+behaviour, and the reference was changed here to mirror the JS engine at
+cpm-engine.js Section ~931, so fixture F27 checks that the two
+implementations agree rather than corroborating the rule independently.
+See DAUBERT.md, section "Validator independence".
 
 Prior v2.9.8 Round 6 — bumped from 9a966777 with two changes: ENGINE_VERSION
 2.9.7 → 2.9.8 sync, and `tf` initialized as int `0` instead of float `0.0`
