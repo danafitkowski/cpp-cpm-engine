@@ -5861,7 +5861,11 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
 // v2.9.27: parity surface expanded 444 → 747 checks (tf_working_days, ff,
 //          ff_working_days backported to the Python reference). Disclosure
 //          string refreshed to 747 to match `npm run crossval` and DAUBERT.md §3.
-// v2.9.39: parity surface 43 → 45 fixtures, 747 → 925 executed checks. The two
+// v2.9.39: parity surface 43 → 45 fixtures, 747 → 925 executed checks.
+// v2.9.41: 925 → 931 executed checks (surface 989 → 995): the F20/F21/F27
+//          skip_alert_parity carve-outs were retired — the Python reference
+//          has emitted the OUT_OF_SEQUENCE ALERT since v2.9.27, so the three
+//          fixtures' alert_count + severity_counts comparisons now execute. The two
 //          prong strings had drifted apart (prong 1 said 45, prong 3 still said
 //          43) and this gate pinned both, so it pinned the contradiction. Both
 //          now read 45. The "× N checks" product phrasing is also retired: it
@@ -5874,8 +5878,9 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
     const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
     check('R-v298-B10: Daubert disclosure references 45 fixtures (current count)',
         src.indexOf('45 fixtures + 282-activity') >= 0);
-    check('R-v298-B10: Daubert disclosure references 45 fixtures / 925 checks (current)',
-        src.indexOf('45 cross-validation fixtures. The harness defines 989 node-field') >= 0);
+    check('R-v298-B10: Daubert disclosure references 45 fixtures / 931 checks, no stale 925',
+        src.indexOf('45 cross-validation fixtures. The harness defines 995 node-field') >= 0
+        && src.indexOf('925 / 925') < 0);
     check('R-v298-B10: no remaining "× 747 checks" reference (stale pre-alignment-wave)',
         src.indexOf('× 747 checks') < 0);
     check('R-v298-B10: no remaining "13 fixtures" reference in source',

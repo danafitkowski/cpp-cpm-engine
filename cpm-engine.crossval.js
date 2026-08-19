@@ -7,13 +7,13 @@
 // A skipped field is neither compared nor counted, so the denominator in the
 // printed "Checks: N / N" line is the executed count — a skip shrinks both
 // sides of the ratio and never surfaces as a shortfall.
-// On the current 45 fixtures (105 node comparison groups) 64 of the 989
+// On the current 45 fixtures (105 node comparison groups) 64 of the 995
 // possible comparisons are skipped: 61 ff_signed_working_days and 3 ff_signed.
 // 58 of the 64 are substantive — the Python reference never assigns
 // ff_signed_working_days on the has-successors path, so it emits null where JS
 // emits a real number; the other 6 fall on activities where neither engine
 // assigns the field. Agreement over the full comparison surface is therefore
-// 925 of 989, not 925 of 925.
+// 931 of 995, not 931 of 931.
 
 'use strict';
 
@@ -234,8 +234,11 @@ let totalFails = 0;
 //   the SAME exception class (Python ValueError ↔ JS Error) and the fixture
 //   does not compare node output. Used for the cycle fixture (F23).
 // opts.skip_alert_parity: bool — when true, alert_count + severity_counts
-//   are skipped for this fixture (e.g. fixtures that intentionally diverge
-//   on alerts — Section D / runCPM-only paths). Kept off by default.
+//   are skipped for this fixture. RETIRED 2026-08-19: the three F20/F21/F27
+//   carve-outs claimed the OUT_OF_SEQUENCE ALERT was JS-only, but the Python
+//   reference has emitted it since the v2.9.27 paired-fix wave, so alert
+//   parity now runs on every fixture (925/989 -> 931/995). The option is
+//   kept for future genuine divergences; nothing sets it today.
 // opts.note: string — printed under the fixture header for context.
 //
 // Round 6 expansion: compareFixture now compares alert_severity_counts
@@ -750,8 +753,8 @@ compareFixture('F19 — Secondary constraint pair (SNET + FNLT window)', {
 // =====================================================================
 // B is_complete with actuals BEFORE A's planned start. Both engines should
 // produce identical node output (B locked to actuals, A unchanged forward).
-// JS additionally emits an OUT_OF_SEQUENCE ALERT (Python does not — this is
-// an INTENTIONAL JS-only feature; see A4 §F20). Alert parity SKIPPED.
+// Both engines emit the OUT_OF_SEQUENCE ALERT (Python gained it in the
+// v2.9.27 paired-fix wave); alert parity is compared like any fixture.
 compareFixture('F20 — Out-of-sequence (completed B before A starts)', {
     activities: [
         { code: 'A', duration_days: 5, early_start: '2026-01-20', clndr_id: 'MF' },
@@ -763,8 +766,8 @@ compareFixture('F20 — Out-of-sequence (completed B before A starts)', {
     data_date: '2026-01-15',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
 }, {
-    skip_alert_parity: true,
-    note: 'OoS ALERT is JS-only (Python parity gap — INTENTIONAL, A4 §F20).',
+    note: 'OoS ALERT emitted by BOTH engines; parity compared (carve-out ' +
+          'retired 2026-08-19).',
 });
 
 // =====================================================================
@@ -775,8 +778,8 @@ compareFixture('F20 — Out-of-sequence (completed B before A starts)', {
 // actual_start. Both engines guard the post-pass with `if not n.actual_start`.
 // B has actual_start in the past, so the ALAP slide is suppressed and ES
 // locks to actual_start.
-// JS emits an OoS ALERT (B started before A); Python does not. Alert
-// parity SKIPPED for the same reason as F20.
+// Both engines emit the OoS ALERT (B started before A); alert parity
+// is compared like any fixture (carve-out retired 2026-08-19).
 compareFixture('F21 — ALAP slide suppressed by actual_start', {
     activities: [
         { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
@@ -794,8 +797,8 @@ compareFixture('F21 — ALAP slide suppressed by actual_start', {
     data_date: '2026-01-05',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
 }, {
-    skip_alert_parity: true,
-    note: 'OoS ALERT JS-only — node output parity is what matters here.',
+    note: 'Alert parity compared; node-output parity (ALAP suppressed by ' +
+          'actual_start) is the substantive test.',
 });
 
 // =====================================================================
@@ -936,9 +939,8 @@ compareFixture('F27 — actual_start AFTER data_date pins ES (P6 forward-pass se
     data_date: '2026-01-15',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
 }, {
-    skip_alert_parity: true,
-    note: 'OoS ALERT JS-only (B in-progress, A unstarted — retained-logic). ' +
-          'Node-output parity (ES pin to actual_start) is the substantive test.',
+    note: 'Alert parity compared (carve-out retired 2026-08-19); node-output ' +
+          'parity (ES pin to actual_start) is the substantive test.',
 });
 
 // =====================================================================

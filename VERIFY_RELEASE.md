@@ -32,7 +32,7 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 | Python reference SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/python_reference-cpm.py.sha256` (the top-level `python_reference/cpm.py.sha256` is **gitignored** for the same reason — generated artifact, not committed pin). |
 | Witness JSON (release asset) | `attestations/latest.json` on [the v2.9.40 release page](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.40) |
 | Unit tests | 1,134 / 1,134 passing |
-| Cross-validation | 925 of 989 enumerated comparisons bit-identical across 45 fixtures, 0 deviations. The harness prints `Checks: 925 / 925` because its denominator is the executed count: 64 comparisons on the enumerated surface (61 `ff_signed_working_days`, 3 `ff_signed`) are skipped by the field guards wherever one side emits no value, and are excluded from both the numerator and the denominator. 58 of the 64 are substantive, the Python reference not assigning `ff_signed_working_days` on the has-successors path; the remaining 6 are representation-only, on completed activities where neither engine emits the field (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)) |
+| Cross-validation | 931 of 995 enumerated comparisons bit-identical across 45 fixtures, 0 deviations. The harness prints `Checks: 931 / 931` because its denominator is the executed count: 64 comparisons on the enumerated surface (61 `ff_signed_working_days`, 3 `ff_signed`) are skipped by the field guards wherever one side emits no value, and are excluded from both the numerator and the denominator. 58 of the 64 are substantive, the Python reference not assigning `ff_signed_working_days` on the has-successors path; the remaining 6 are representation-only, on completed activities where neither engine emits the field (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)) |
 | Branch coverage | 82.44% (1,836 / 2,227 branches); see [DAUBERT.md §2.1](DAUBERT.md#21-test-coverage-v2939-baseline) |
 | Statement coverage | 93.10% (8,373 / 8,993 statements) |
 | Citation regression | PASS |
@@ -150,7 +150,7 @@ python_ref.sha256: <python_sha from manifest>
 
 [2/3] cross-validation
   Fixtures: 45 passed, 0 failed
-  Checks:   925 / 925
+  Checks:   931 / 931
 
 [3/3] citation regression
   PASS
@@ -160,7 +160,7 @@ Verdict: PASS
 Witness written to: attestations/latest.json
 ```
 
-**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,134 / 925 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
+**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,134 / 931 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
 
 **Drift documents itself.** Any mismatch — different SHA, different pass count, different verdict — is itself usable evidence. The verifier can publish a witness from their own machine showing the drift; it is the same JSON shape as the proponent's witness.
 
@@ -197,8 +197,8 @@ Verification chain for cpm-engine v2.9.40:
   Witness:           attestations/latest.json (Sigstore-signed via GitHub OIDC,
                      recorded on Rekor transparency log)
   Verification:      `npm run verify` PASS, 1,134 / 1,134 unit tests,
-                     925 / 925 crossval checks executed across 45 fixtures
-                     (925 of a 989-comparison enumerated surface; 64 skipped)
+                     931 / 931 crossval checks executed across 45 fixtures
+                     (931 of a 995-comparison enumerated surface; 64 skipped)
   Coverage:          93.10% stmts / 82.44% branches / 93.91% funcs
                      (see cpp-cpm-engine/DAUBERT.md §2.1)
   Disclosure:        cpp-cpm-engine/DAUBERT.md

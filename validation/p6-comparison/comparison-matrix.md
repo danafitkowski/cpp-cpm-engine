@@ -31,8 +31,10 @@ only when every one of its field checks passes.
 | 12 | `12-snet-fnlt` | 2 | PASS |
 | 13 | `13-alap` | 3 | PASS |
 
-Two further cases are by-construction divergences that P6 cannot
-represent, so they are excluded from this matrix and documented
-separately in `validation/engine-limitations/`: sub-day lag
-rounding (the engine is day-granular, P6 stores hours) and a
-relationship pointing at a non-existent activity.
+Two further cases are by-construction non-comparable, excluded
+from this matrix and documented separately in
+`validation/engine-limitations/`: sub-day lag rounding, where the
+ENGINE deliberately diverges (it is day-granular; P6 stores lags
+in hours and honors sub-day precision natively), and a
+relationship pointing at a non-existent activity, an input P6
+cannot author.

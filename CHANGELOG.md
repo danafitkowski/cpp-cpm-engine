@@ -12,18 +12,60 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
-## Unreleased — withdrawal of a fabricated AACE citation on actual-start pinning
+## v2.9.41 — 2026-08-19 — alert-parity carve-outs retired; citation withdrawal released; validation-doc corrections
+
+**Engine math is unchanged.** No forward-pass, backward-pass or Section D
+calculation moves. This release ships three things: the retirement of a stale
+cross-validation carve-out, the previously-unreleased withdrawal of a
+fabricated AACE citation (below, authored 2026-08-18), and corrections to
+validation documents that blamed P6 for a divergence that is the engine's own.
+
+### Alert-parity carve-outs retired (crossval 925 → 931 of 995)
+
+The 2026-08-16 external audit re-ran the cross-validation harness with the
+three `skip_alert_parity` flags off and all six additional comparisons passed.
+Investigation confirmed why: the flags on F20, F21 and F27 said the
+OUT_OF_SEQUENCE ALERT was "JS-only (Python parity gap — INTENTIONAL)", but the
+Python reference has emitted that alert since the v2.9.27 paired-fix wave. The
+carve-outs were guarding against a divergence that no longer existed, and every
+run since v2.9.27 has been under-counting proven parity. The three flags are
+removed, alert parity now runs on 43 of 45 fixtures (the two cycle fixtures
+compare refusal only), and the executed count moves from 925 of a
+989-comparison surface to **931 of 995**. The 64 ff_signed /
+ff_signed_working_days skips are unchanged and still disclosed. All published
+figures (README badge, DAUBERT §2/§3, VERIFY_RELEASE, CONTRIBUTING,
+METHODOLOGY, python_reference/README, the engine's embedded disclosure strings
+and the unit test that pins them) move together in this release.
+
+### Validation-doc corrections: the sub-day divergence is the engine's, not P6's
+
+`comparison-matrix.md` (and the `apply-p6-capture.py` lines that generate it),
+DAUBERT §2, `docs/cross-exam-prep.md` and `FORENSIC_USE_SOP.md` all described
+the two excluded cases as "by-construction divergences that P6 cannot
+represent". That is true of only one of them (a relationship to a non-existent
+activity, which P6 cannot author). For sub-day lags it is backwards: P6 stores
+lags in hours and honors sub-day precision natively, and the ENGINE is the side
+that deliberately rounds to whole days — as `validation/engine-limitations/`
+itself already said. All four now state the two cases with the blame pointing
+the right way, and the limitations README's comparison-table heading no longer
+reads "Why P6 cannot compare". The two limitation-case READMEs, which still
+carried "Engine output (v2.9.31)" headers, were re-run at v2.9.41: same project
+finish and critical set, two additional calendar-fallback alerts from the newer
+seed pass, `engine-output.json` regenerated, and the alert lists are now quoted
+in full rather than truncated mid-word.
+
+### Withdrawal of a fabricated AACE citation on actual-start pinning (authored 2026-08-18)
 
 **Engine math is unchanged.** No forward-pass, backward-pass or Section D
 calculation moves. What changes is the justification attached to one existing
 behaviour, the text of the WARN messages that describe it, and the disclosure
 around the cross-validation of it.
 
-### What was wrong
+#### What was wrong
 
 The engine attributed its recorded-actual-start pinning rule to "AACE 29R-03 §4.3 immutability". That rule does not exist. §4.3 of the 25 April 2011 revision is "Critical Path and Float" (identifying the critical path, quantifying near-critical, identifying the as-built critical path, common critical path alteration techniques, ownership of float). Across the full §4.3 span there is no occurrence of "early start", "actual start", "pin" or "immutable", and across all 134 pages "immutable", "historical fact" and "already happened" return nothing. The RP's only treatment of an actual start later than the data date is source validation at §2.2.B.1.c, which tells the analyst to ensure activities to the right of the data date do not carry actual start or finish dates. That is a data defect to rectify at intake, not a calculation rule, and it points the other way from the pinning behaviour.
 
-### What replaced it
+#### What replaced it
 
 - The behaviour is now described as what it is: Oracle P6 / CPM forward-pass
   semantics, in which a recorded actual start governs over the data-date floor
@@ -44,7 +86,7 @@ The engine attributed its recorded-actual-start pinning rule to "AACE 29R-03 §4
   (AACE 29R-03 §4.3)`, naming a rule that does not exist, to `actual_start AFTER
   data_date pins ES (P6 forward-pass semantics)`.
 
-### Disclosure added
+#### Disclosure added
 
 The same non-existent rule was the stated reason for changing the Python
 reference implementation to mirror the JS engine on this behaviour. That matters
@@ -57,7 +99,7 @@ behaviour the reference was aligned to the engine, so fixtures F27 and F21 show
 the two implementations agreeing rather than corroborating the rule
 independently. The crossval source comment says the same thing.
 
-### Release steps still owed
+#### Release steps still owed
 
 - `python_reference/cpm.py` changed (comments only). Its SHA-256 pin and the
   Expected-output figures in `python_reference/README.md` still name the

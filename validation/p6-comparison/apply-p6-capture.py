@@ -155,11 +155,13 @@ def write_matrix(verdict_summary, per_case_checks, engine_version):
         lines.append('| %02d | `%s` | %d | %s |'
                      % (i, case_id, per_case_checks.get(case_id, 0), mark))
     lines.append('')
-    lines.append('Two further cases are by-construction divergences that P6 cannot')
-    lines.append('represent, so they are excluded from this matrix and documented')
-    lines.append('separately in `validation/engine-limitations/`: sub-day lag')
-    lines.append('rounding (the engine is day-granular, P6 stores hours) and a')
-    lines.append('relationship pointing at a non-existent activity.')
+    lines.append('Two further cases are by-construction non-comparable, excluded')
+    lines.append('from this matrix and documented separately in')
+    lines.append('`validation/engine-limitations/`: sub-day lag rounding, where the')
+    lines.append('ENGINE deliberately diverges (it is day-granular; P6 stores lags')
+    lines.append('in hours and honors sub-day precision natively), and a')
+    lines.append('relationship pointing at a non-existent activity, an input P6')
+    lines.append('cannot author.')
     lines.append('')
 
     (here / MATRIX_NAME).write_text('\n'.join(lines), encoding='utf-8')

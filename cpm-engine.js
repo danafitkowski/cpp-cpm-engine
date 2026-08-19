@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.40';
+const ENGINE_VERSION = '2.9.41';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -6277,16 +6277,16 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '45 cross-validation fixtures. The harness defines 989 node-field ' +
+                '45 cross-validation fixtures. The harness defines 995 node-field ' +
                 'comparisons; 64 of them are never executed because the Python ' +
                 'reference returns null for the field (61 ff_signed_working_days, ' +
                 '3 ff_signed) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 925 / 925" counts executed comparisons only and ' +
+                'reported "Checks: 931 / 931" counts executed comparisons only and ' +
                 'is not a coverage figure. In 58 of those 64 the engine returns a ' +
                 'real value where the reference returns null, which is an unverified ' +
                 'parity gap on that field; in the remaining 6 neither implementation ' +
                 'emits a value. 34 of the 45 fixtures contain at least one skipped ' +
-                'comparison. The 925 comparisons that did run are bit-identical ' +
+                'comparison. The 931 comparisons that did run are bit-identical ' +
                 '(including ' +
                 'severity-level alert parity). Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -6328,7 +6328,7 @@ function buildDaubertDisclosure(result, opts) {
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
                 'emit the field, so 64 checks are skipped rather than compared, counted, ' +
                 'or reported as failures (61 ff_signed_working_days, 3 ff_signed). The ' +
-                'printed 925 / 925 therefore sits on a nominal surface of 989 checks, and ' +
+                'printed 931 / 931 therefore sits on a nominal surface of 995 checks, and ' +
                 'those two fields go uncompared somewhere in 34 of the 45 fixtures. In ' +
                 'all 64 cases the Python reference emits nothing for the field, so those ' +
                 'two fields are unverified against the reference rather than shown to ' +
@@ -6341,14 +6341,17 @@ function buildDaubertDisclosure(result, opts) {
                 '45 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '925 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 925 / 925 tally cannot express ' +
+                '931 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 931 / 931 tally cannot express ' +
                 'the following gaps. Not executed: 64 node comparisons on the signed ' +
                 'free-float variants (ff_signed_working_days on activities with ' +
                 'successors; ff_signed and ff_signed_working_days on completed ' +
-                'activities), which the Python reference does not emit; alert parity ' +
-                'on 3 fixtures where the alert is JS-only by design; and node output ' +
-                'on the 2 fixtures where both engines are required to throw. All ' +
+                'activities), which the Python reference does not emit; and node output ' +
+                'on the 2 fixtures where both engines are required to throw. Alert ' +
+                'parity runs on all 43 non-throwing fixtures: the former F20/F21/F27 ' +
+                'carve-out (out-of-sequence ALERT believed JS-only) was retired ' +
+                '2026-08-19, the Python reference having emitted that alert since ' +
+                'the v2.9.27 paired-fix wave. All ' +
                 'ES/EF/LS/LF/TF, calendar-date, total-float-working-day, free-float ' +
                 'and free-float-working-day comparisons executed on all 105 activity ' +
                 'comparison groups. Edge-case torture audit ' +

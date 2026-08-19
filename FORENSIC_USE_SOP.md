@@ -156,7 +156,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - If the opinion relies on engine output that the analyst has not personally verified against P6 (or another commercial CPM tool), run the engine against the source XER AND open the source XER in P6, capture P6's native ES/EF/LS/LF/TF/FF for the activities the opinion turns on, and document field-level agreement or divergence.
-- The engine ships a [P6 comparison matrix framework](validation/p6-comparison/) covering 13 P6-comparable scenarios. Two further scenarios are by-construction divergences that P6 cannot represent, so they sit outside the matrix and are documented separately in `validation/engine-limitations/`. Use it as a template for case-specific comparisons.
+- The engine ships a [P6 comparison matrix framework](validation/p6-comparison/) covering 13 P6-comparable scenarios. Two further scenarios are by-construction non-comparable, so they sit outside the matrix and are documented separately in `validation/engine-limitations/`: one is a deliberate engine divergence (day-granular rounding of sub-day lags P6 handles natively), one an input P6 cannot author (a dangling relationship). Use it as a template for case-specific comparisons.
 
 **Engine support:**
 - `result.nodes[code]` carries `{ es, ef, ls, lf, tf, ff }` per activity (engine output).
@@ -314,7 +314,7 @@ FRE 702 attacks come in two flavors:
 
 2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
-Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,134 unit tests, 925 of 989 enumerated crossval comparisons bit-identical, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
+Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,134 unit tests, 931 of 995 enumerated crossval comparisons bit-identical, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
 
 Following this SOP does not guarantee admissibility. It documents a defensible application discipline. Whether the opinion itself is defensible remains the analyst's burden under FRE 702.
 
