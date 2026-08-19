@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Tag | `v2.9.41` |
-| Commit | (filled from the tagged commit after push) |
+| Commit | `af9808f414b65424ebc068105efbe1439a1c82de` |
 | Release date | 2026-08-19 |
 | Engine SHA-256 | `7f52979b63fce0353e2f13935bba47bcafcb2c5796726921ba9b1d76510c2709` |
 | Engine bytes | 455384 |
@@ -11,8 +11,8 @@
 | Python reference bytes | 85030 |
 | Unit tests | 1134 / 1134 passing |
 | Cross-validation | 931 of 995 defined comparisons executed and bit-identical, 0 failures, across 45 fixtures; 64 skipped rather than compared (61 `ff_signed_working_days`, 3 `ff_signed`) |
-| Sigstore Rekor logIndex | (filled from the CI attestation after push) |
-| CI run | (filled from the CI run after push) |
+| Sigstore Rekor logIndex | 2519955184 (rekor.sigstore.dev) |
+| CI run | https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/32296380957 |
 
 ## Suites
 

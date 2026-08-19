@@ -76,6 +76,14 @@ const HISTORIC_OK_PATTERNS = [
     /\b(?:unchanged|identical|byte-identical)\**\s+(?:from|to)\s+\**v?2\.9\.\d+/i,
     /\bthe\s+v2\.9\.\d+\s+packet\b/i,
     /\bsince\s+(?:the\s+)?(?:prior|previous)\s+(?:pinned\s+)?release\b/i,
+    // Dated-measurement narration: coverage figures and citation-withdrawal
+    // records name the version the measurement or defect BELONGS to. "the
+    // shipped v2.9.40 bytes", "measured on the v2.9.40 bytes" and "Through
+    // v2.9.40 this entry rested..." are history, not current-state claims.
+    // Added 2026-08-19 with the v2.9.41 release. Narrow: each requires its
+    // surrounding phrase, so a bare stale reference still fails.
+    /\b(?:shipped|measured\s+on\s+the)\s+v2\.9\.\d+\s+bytes\b/i,
+    /\bThrough\s+v2\.9\.\d+\s+this\s+entry\b/i,
     // CHANGELOG-style release headers: "## v2.9.X — date — title"
     /^##\s+v2\.9\.\d+\s+—\s/,
     /^##\s+v2\.9\.\d+\s+-\s/,
