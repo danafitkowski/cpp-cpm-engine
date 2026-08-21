@@ -4,11 +4,17 @@
 // but NOT field-by-field: five per-node float fields (tf_working_days, ff,
 // ff_working_days, ff_signed, ff_signed_working_days) are compared only when
 // both engines emit the field, and the four ff_* guards treat a null as absent.
-// A skipped field is neither compared nor counted, so the denominator in the
-// printed "Checks: N / N" line is the executed count — a skip shrinks both
-// sides of the ratio and never surfaces as a shortfall.
+// A skipped field is not compared, so the denominator in the printed
+// "Checks: N / N" line is the executed count — a skip shrinks both sides of
+// that ratio and never surfaces there as a shortfall. Since 2026-08-21 skips
+// ARE counted separately, and the run prints a "Skipped:" line and a
+// "Surface:" line stating agreement over the full comparison surface. Run with
+// --json to write validation/crossval-summary.json, which is what the public
+// validation page renders its tables from; before that file existed the tables
+// were transcribed by hand and drifted to 925 of 989 under a 931 of 995 headline.
 // On the current 45 fixtures (105 node comparison groups) 64 of the 995
 // possible comparisons are skipped: 61 ff_signed_working_days and 3 ff_signed.
+// Those two figures are no longer maintained here; the run computes them.
 // 58 of the 64 are substantive — the Python reference never assigns
 // ff_signed_working_days on the has-successors path, so it emits null where JS
 // emits a real number; the other 6 fall on activities where neither engine
@@ -228,6 +234,23 @@ let fixturesFailed = 0;
 let totalChecks = 0;
 let totalFails = 0;
 
+// Skip accounting, added 2026-08-21.
+//
+// Until now a skipped comparison was invisible: the guards below returned
+// without counting, the printed "Checks: N / N" line reported the executed
+// count only, and the 64-skip figure lived in a hand-written header comment.
+// The public validation page then quoted 931 of 995 in its prose while its
+// per-fixture table, maintained separately by hand, still summed to 925 checks
+// and 61 skips. The suite now counts what it skips, per fixture and per field,
+// so the page can be generated from the run instead of transcribed from it.
+//
+// Nothing about which comparisons execute changes here. These are counters.
+let totalSkips = 0;
+const skipByField = Object.create(null);
+const checksByField = Object.create(null);
+const fixtureRows = [];
+const EMIT_JSON = process.argv.includes('--json');
+
 // compareFixture(name, payload, opts?)
 //
 // opts.expect_throw: bool — when true, BOTH engines must throw an error of
@@ -248,23 +271,36 @@ function compareFixture(name, payload, opts) {
     opts = opts || {};
     console.log('\n--- ' + name + ' ---');
     if (opts.note) console.log('  (note: ' + opts.note + ')');
+    // Declared before the harness calls so the error paths can still record a
+    // row; a fixture that never ran is worse to omit from the table than to
+    // show with zero checks.
+    let fails = 0;
+    let checks = 0;
+    let skips = 0;
+    const skipsHere = Object.create(null);
     let py, js;
     try { py = runPython(payload); }
     catch (e) {
         console.log('  PYTHON ERROR: ' + e.message);
         fixturesFailed += 1;
+        recordFixture();
         return;
     }
     try { js = runJS(payload); }
     catch (e) {
         console.log('  JS ERROR: ' + e.message);
         fixturesFailed += 1;
+        recordFixture();
         return;
     }
-
-    let fails = 0;
     function eq(label, a, b) {
         totalChecks += 1;
+        checks += 1;
+        // Field key for the published field-set table. Per-node labels carry the
+        // activity code ("node A.ff"), so they collapse to one row; everything
+        // else is a whole-schedule comparison and keeps its own label.
+        const key = label.startsWith('node ') ? 'node <id>' : label;
+        checksByField[key] = (checksByField[key] || 0) + 1;
         if (JSON.stringify(a) === JSON.stringify(b)) {
             console.log('  PASS  ' + label);
         } else {
@@ -274,6 +310,33 @@ function compareFixture(name, payload, opts) {
             console.log('    py: ' + JSON.stringify(a));
             console.log('    js: ' + JSON.stringify(b));
         }
+    }
+    // eqGuarded — compare when both engines emit the field, otherwise record a
+    // skip. Same predicate the inline guards used; the only new behaviour is
+    // that the skip is counted instead of vanishing. nullIsAbsent mirrors the
+    // difference between the tf_working_days guard (undefined only) and the
+    // four ff_* guards (undefined or null).
+    function eqGuarded(label, field, a, b, nullIsAbsent) {
+        const present = v => v !== undefined && !(nullIsAbsent && v === null);
+        if (present(a) && present(b)) { eq(label, a, b); return; }
+        skips += 1;
+        totalSkips += 1;
+        skipByField[field] = (skipByField[field] || 0) + 1;
+        skipsHere[field] = (skipsHere[field] || 0) + 1;
+    }
+    function recordFixture() {
+        // F6.5 exists, so the id is not always F<digits>. A regex that stopped
+        // at the first non-digit merged F6.5 into F6 and produced 44 rows for
+        // 45 fixtures.
+        const m = /^(F\d+(?:\.\d+)?)/.exec(name);
+        fixtureRows.push({
+            id: m ? m[1] : name.split(/[\s—-]/)[0],
+            name: name,
+            checks: checks,
+            fails: fails,
+            skips: skips,
+            skips_by_field: Object.assign({}, skipsHere),
+        });
     }
 
     // expect_throw — both engines must throw, no node comparison.
@@ -287,6 +350,7 @@ function compareFixture(name, payload, opts) {
             console.log('  js error: ' + (js.error_type || '?') + ' — ' + (js.error_msg || ''));
         }
         if (fails === 0) fixturesPassed += 1; else fixturesFailed += 1;
+        recordFixture();
         return;
     }
 
@@ -297,6 +361,7 @@ function compareFixture(name, payload, opts) {
         if (py.threw) console.log('    py error: ' + py.error_msg);
         if (js.threw) console.log('    js error: ' + js.error_msg);
         fixturesFailed += 1;
+        recordFixture();
         return;
     }
 
@@ -319,20 +384,12 @@ function compareFixture(name, payload, opts) {
             { es_date: b.es_date, ef_date: b.ef_date, ls_date: b.ls_date, lf_date: b.lf_date });
         // v2.9.27 — audit R9 LOW. tf_working_days now backported to Python;
         // compare bit-identically. Only compare if BOTH sides emit the field.
-        if (a.tf_working_days !== undefined && b.tf_working_days !== undefined) {
-            eq('node ' + code + '.tf_working_days',
-                a.tf_working_days, b.tf_working_days);
-        }
+        eqGuarded('node ' + code + '.tf_working_days', 'tf_working_days',
+            a.tf_working_days, b.tf_working_days, false);
         // v2.9.27 — audit F24. ff + ff_working_days backported to Python.
-        if (a.ff !== undefined && b.ff !== undefined &&
-            a.ff !== null && b.ff !== null) {
-            eq('node ' + code + '.ff', a.ff, b.ff);
-        }
-        if (a.ff_working_days !== undefined && b.ff_working_days !== undefined &&
-            a.ff_working_days !== null && b.ff_working_days !== null) {
-            eq('node ' + code + '.ff_working_days',
-                a.ff_working_days, b.ff_working_days);
-        }
+        eqGuarded('node ' + code + '.ff', 'ff', a.ff, b.ff, true);
+        eqGuarded('node ' + code + '.ff_working_days', 'ff_working_days',
+            a.ff_working_days, b.ff_working_days, true);
         // B5 (P6 alignment wave) — the published ff floors at 0; the signed
         // forensic value moved to ff_signed. NOT in lockstep: on the current
         // fixtures ff_signed is compared on 102 of the 105 node groups but
@@ -342,18 +399,16 @@ function compareFixture(name, payload, opts) {
         // further 3 nodes (completed activities) neither side emits either
         // field. The two guards below silently skip those 64 comparisons:
         // they are not failed, and they are not counted in the Checks total
-        // printed at the end of the run.
-        if (a.ff_signed !== undefined && b.ff_signed !== undefined &&
-            a.ff_signed !== null && b.ff_signed !== null) {
-            eq('node ' + code + '.ff_signed', a.ff_signed, b.ff_signed);
-        }
-        if (a.ff_signed_working_days !== undefined && b.ff_signed_working_days !== undefined &&
-            a.ff_signed_working_days !== null && b.ff_signed_working_days !== null) {
-            eq('node ' + code + '.ff_signed_working_days',
-                a.ff_signed_working_days, b.ff_signed_working_days);
-        }
+        // printed at the end of the run. Since 2026-08-21 they ARE counted as
+        // skips, which is what lets the published agreement figure be stated
+        // over the full comparison surface rather than over the executed subset.
+        eqGuarded('node ' + code + '.ff_signed', 'ff_signed',
+            a.ff_signed, b.ff_signed, true);
+        eqGuarded('node ' + code + '.ff_signed_working_days', 'ff_signed_working_days',
+            a.ff_signed_working_days, b.ff_signed_working_days, true);
     }
     if (fails === 0) fixturesPassed += 1; else fixturesFailed += 1;
+    recordFixture();
 }
 
 // =====================================================================
@@ -1275,7 +1330,37 @@ console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' a guarded field is skipped and not counted when either engine does not emit it,' +
     ' and the free-float guards on ff, ff_working_days, ff_signed and' +
     ' ff_signed_working_days also skip when either side is null)');
+console.log('  Skipped:  ' + totalSkips + ' guarded comparisons not executed (' +
+    Object.keys(skipByField).sort().map(k => skipByField[k] + ' ' + k).join(', ') + ')');
+console.log('  Surface:  ' + (totalChecks - totalFails) + ' of ' +
+    (totalChecks + totalSkips) + ' over the full comparison surface');
 console.log('=========================================\n');
+
+// --json emits the per-fixture table the public validation page renders.
+// Before this existed the page's tables were transcribed by hand and drifted:
+// the prose said 931 of 995 with 64 skips while the table summed to 925 and 61.
+// A generated table cannot disagree with the run that produced it.
+if (EMIT_JSON) {
+    const out = {
+        engine_version: E.ENGINE_VERSION || require('./package.json').version,
+        generated_utc: new Date().toISOString(),
+        fixtures: { total: fixtureRows.length, passed: fixturesPassed, failed: fixturesFailed },
+        checks: {
+            executed: totalChecks,
+            failed: totalFails,
+            passed: totalChecks - totalFails,
+            skipped: totalSkips,
+            surface: totalChecks + totalSkips,
+        },
+        skips_by_field: skipByField,
+        checks_by_field: checksByField,
+        rows: fixtureRows,
+    };
+    fs.writeFileSync(path.join(__dirname, 'validation', 'crossval-summary.json'),
+        JSON.stringify(out, null, 2) + '\n');
+    console.log('wrote validation/crossval-summary.json');
+}
+
 // v2.9.23 — exit 1 if EITHER fixture-level OR per-check counter is non-zero
 // (audit LOW R21). Currently they're always in lockstep (any per-check
 // fail bumps fixturesFailed via the inner branches), but a future refactor
