@@ -176,7 +176,34 @@ const VERSION_RE = /\bv?2\.9\.(\d+)\b/g;
 const failures = [];
 
 function isHistoric(line) {
+    // The word "current" defeats every historic exemption. "shipped in
+    // v2.9.31; current baseline v2.9.40" sailed through on its historic
+    // markers while making a present-tense claim about which release is
+    // current — the exact wording DAUBERT.md carried into the v2.9.41 refresh
+    // (found by an external audit 2026-08-23, not by this gate). A line that
+    // SAYS "current" is a current-state claim whatever else it says, so a
+    // stale version on it always fails. "currently" and "the current" are the
+    // same word wearing different hats; "concurrent"/"currency" are not, hence
+    // the boundary.
+    if (/\bcurrent(ly)?\b/i.test(line)) return false;
     return HISTORIC_OK_PATTERNS.some(pat => pat.test(line));
+}
+
+// Fires-proof for the "current" override: the literal DAUBERT.md line that
+// shipped must be caught, and a genuinely historic line must stay exempt.
+{
+    const shipped = 'coverage was measured on the v2.9.40 bytes; current baseline v2.9.40';
+    const historic = 'Engine math is **unchanged** from v2.9.39; see the packet.';
+    if (isHistoric(shipped)) {
+        console.error('FAIL: isHistoric() exempts a line that claims "current" — '
+            + 'the DAUBERT.md defect would ship again.');
+        process.exit(1);
+    }
+    if (!isHistoric(historic)) {
+        console.error('FAIL: isHistoric() no longer exempts plain release history; '
+            + 'the gate would flag every changelog line.');
+        process.exit(1);
+    }
 }
 
 // ── The release window ──────────────────────────────────────────────────────

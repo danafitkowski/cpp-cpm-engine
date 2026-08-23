@@ -149,4 +149,5 @@ For real-XER coverage beyond the 282-activity stress test, see the [DAUBERT.md Â
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.39. The engine outputs in each case's `engine-output.json` were captured as of v2.9.34 and have not been regenerated since, so both the at-a-glance table above and the per-case outputs report that v2.9.34 capture rather than v2.9.39. Regenerating at the current engine surfaces real drift that is not yet committed or recorded in `CHANGELOG.md`: case 10's project finish moves from 2026-01-18 to 2026-01-25, and the alert count rises in every case except `06-fully-completed`, which is 12 of the 13 case folders now on disk (the table above reports the committed v2.9.34 figures for all 13).
+This corpus is BEHIND the current engine, and regenerating surfaces real drift that is not yet committed or recorded in `CHANGELOG.md`: case 10's project finish moves from 2026-01-18 to 2026-01-25, and the alert count rises in every case except `06-fully-completed` â€” 12 of the 13 case folders now on disk.
+The engine outputs in each case's `engine-output.json` were captured as of v2.9.34 and have not been regenerated since, so both the at-a-glance table above and the per-case outputs report that capture; the prose was last reviewed as of v2.9.39.
