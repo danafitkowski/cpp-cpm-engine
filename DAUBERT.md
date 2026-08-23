@@ -61,7 +61,7 @@ Coverage is measured via [`c8`](https://github.com/bcoe/c8) over `cpm-engine.js`
 - Section L Daubert-renderer fallback branches for malformed `disclosure` input (intentional defensive code)
 - Holiday-rule edge cases for jurisdictions with rare observance variants (e.g., DST-cross-boundary holidays); the rule-set is correct, the edge-case branches are rarely hit
 
-The 17.56% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; current baseline v2.9.40** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
+The 17.56% uncovered branch slice is the most legitimate cross-exam target. Branch-coverage expansion is on the v3.0 roadmap (§10). Forensic strict mode itself **shipped in v2.9.31; coverage baseline v2.9.40 (see §2.1)** — see [§9 Forensic Strict Mode](#9-forensic-strict-mode-shipped-v2931).
 
 **Reproduce locally:**
 
@@ -242,9 +242,9 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 **Opposing experts are encouraged** to:
 
 1. Clone the repository.
-2. Run `npm run test:all` to reproduce the 1,134 unit tests + 931 cross-validation checks across 45 fixtures + citation regression + truncation regression + version-drift regression gate = 2,065 verifications. Or `npm run verify` for the full attestation-witness flow (which now invokes the same five gates and records each in the witness JSON).
+2. Run `npm run test:all` to reproduce the full 11-gate chain: the 1,134 unit tests and the 931-of-995 cross-validation checks across 45 fixtures (2,065 counted checks), plus the citation, client-name, truncation, version-drift, SOP, reissue, crypto-signoff, P6-comparison and corpus-DAG regression gates. Or `npm run verify` for the attestation-witness flow, which invokes five of those gates and records each in the witness JSON.
 3. Run the engine against their own P6 schedule export and compare `tf_working_days` / `ff_working_days` against P6's Total Float / Free Float columns. Those are working days on the activity's own calendar, which is what P6's float columns mean; the raw calendar-day `tf` / `ff` fields are not the comparison surface (see §8). Finish dates need the day-start versus day-end convention applied first: the engine reports a day-start instant, so an engine EF or LF of `D` corresponds to a P6 finish at the close of the previous **workday** on that activity's own calendar (engine EF `2026-01-12` Mon = P6 `09-Jan-26 17:00` Fri, not `11-Jan-26`). Start dates (ES / LS) and actual dates carry no shift and compare directly. See `validation/p6-comparison/apply-p6-capture.py` for the normalization actually used.
-4. Inspect the source — it is intentionally readable and well-commented (8,993 lines including narrative comments).
+4. Inspect the source — it is intentionally readable and well-commented (about 9,000 lines including narrative comments; `wc -l cpm-engine.js` gives the exact count for the release you are reading).
 
 ---
 
@@ -485,7 +485,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 
 Strict mode shipped with 33 dedicated unit tests in v2.9.31, covering: API surface (8 tests); clean input pass-through; convenience wrapper; throw on each fatal context family; override with valid rationale; override with empty / whitespace / non-string rationale (each throws); unrelated override key (ignored); runCPM strict-mode refusal; default-off behavior; truthy-not-true non-activation. See `cpm-engine.test.js` SECTION R-v2.9.31 (the section anchor in the test file preserves the release that introduced these tests).
 
-Those 33 strict-mode tests are still part of the engine's unit-test suite at the current v2.9.40 baseline (1,134 total tests including strict-mode coverage).
+Those 33 strict-mode tests are still part of the engine's unit-test suite in the current v2.9.41 release (1,134 total tests including strict-mode coverage).
 
 ---
 
