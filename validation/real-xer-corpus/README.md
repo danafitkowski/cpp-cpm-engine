@@ -1,6 +1,16 @@
 # `validation/real-xer-corpus/` — Sanitized Real XER Corpus
 
-**STATUS:** EMPTY — awaiting analyst sourcing + anonymization.
+**STATUS:** EMPTY — and largely superseded. See `../p6-oracle/`.
+
+The gap this folder was created to close (synthetic-only XER coverage) is now
+closed a different way: `validation/p6-oracle/` differential-tests the engine
+against the CPM answers P6 itself stored inside a real export, using YOUR own
+files. That needs no redistributable corpus, because the schedules never leave
+the machine they are on. Point `CPP_XER_ROOT` at your exports and run it.
+
+A published corpus would still be useful for CI, and this folder remains the
+place for one. But it is no longer the only route to real-world validation, and
+nothing should wait on it.
 
 Closes (placeholder for) ChatGPT audit finding #8: synthetic-only XER coverage is not a bridge to real-world XER pathology. This folder is where sanitized real Primavera P6 schedule exports will live once the analyst (a) sources them from project owners/contractors who consent to publish, and (b) runs them through an anonymization pass that strips client identifiers, project codes, activity names, resource names, and any other client-confidential data while preserving the structural pathology that makes them valuable as test inputs.
 

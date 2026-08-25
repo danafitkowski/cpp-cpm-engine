@@ -78,9 +78,15 @@ secrets.*
 validation/p6-comparison/P6 Capture Sheet (DB).csv
 validation/p6-comparison/p6-import-log.txt
 
-# P6 oracle harness — runs against Dana's real client XERs, so its corpus
-# manifests and per-file result CSVs carry client names, project codes and
-# third-party email addresses. The harness lives OUTSIDE this MIT repo at
-# ../cpp-cpm-engine-p6-oracle. Ignored here as a second guard in case a tool
-# re-creates the path; tests/no-client-names.test.js is the first.
-validation/p6-oracle/
+# P6 oracle harness. The SCRIPTS are tracked: they are what lets anyone
+# differential-test the engine against P6's own stored answers using their own
+# exports. The DATA they generate is not, and must never be: a corpus manifest
+# built on a working machine carried project names, full filesystem paths and a
+# third-party email address, and this repo is public. tests/no-client-names.js
+# is the first guard; these rules are the second.
+validation/p6-oracle/corpus.json
+validation/p6-oracle/seed-probe.json
+validation/p6-oracle/out/
+validation/p6-oracle/__pycache__/
+validation/p6-oracle/*.csv
+validation/p6-oracle/*.local.json
