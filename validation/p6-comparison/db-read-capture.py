@@ -37,11 +37,11 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 CASES = HERE / 'cases'
-DB = pathlib.Path(r'C:\Users\danaf\OneDrive\Documents\PPMDBSQLite.db')
+DB = pathlib.Path(_P6_DB) if _P6_DB else None
 OUT_CSV = HERE / 'P6 Capture Sheet (DB).csv'
 APPLY = HERE / 'apply-p6-capture.py'
 
-sys.path.insert(0, r'C:\Users\danaf\.claude\skills\xer-parser\scripts')
+sys.path.insert(0, _XER_PARSER)
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 from xer_parser import get_calendar_map, duration_hours_to_days  # noqa: E402

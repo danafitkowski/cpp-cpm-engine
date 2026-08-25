@@ -9858,6 +9858,173 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
         'got ' + r.nodes.B.es_date + ' (2026-01-13 is the one-day-early answer)');
 }
 
+// ---------------------------------------------------------------------------
+// V2942-14 — special_workdays (forced-ON calendar exception dates) were decoded
+// by the canonical XER parser but DROPPED by the engine, which treated a
+// worked Saturday as non-working. The gap is now closed end to end:
+// _resolveCalendar / _preResolveCalendars carry a specialSet, _isWorkDayOffset
+// honours it, and _isCleanMonFri refuses the O(1) fast path when one is
+// present (the modular walk cannot add the extra worked day back in).
+//
+// Measured impact on the corpus at the time of the fix: ZERO. 476 calendars
+// across 157 unique genuine exports, 155 of them carrying at least one special
+// workday, and in 0 of the 476 does a special workday fall on a weekday the
+// weekly pattern does not already work — so no date on that corpus moves.
+// The exposure is real for future files: one calendar in the same corpus works
+// all seven weekdays and carries 276 special workdays.
+{
+    // Mon-Fri calendar with Saturday 2026-01-10 switched ON.
+    const CAL_SAT = { workDays: [1, 2, 3, 4, 5], holidays: [],
+                      special_workdays: ['2026-01-10'] };
+    const CAL_PLAIN = { workDays: [1, 2, 3, 4, 5], holidays: [] };
+
+    // Fri 09-Jan + 2 working days. Weekly pattern alone: Mon 12 is the first,
+    // Tue 13 the second. With Sat 10 worked: Sat 10 is the first, Mon 12 the
+    // second. 2026-01-13 is the pre-fix (dropped-parameter) answer.
+    check('V2942-14: addWorkDays consumes a forced-ON Saturday',
+        E.numToDate(E.addWorkDays(E.dateToNum('2026-01-09'), 2, CAL_SAT)) === '2026-01-12',
+        'got ' + E.numToDate(E.addWorkDays(E.dateToNum('2026-01-09'), 2, CAL_SAT)) +
+        ' (2026-01-13 is the answer that ignores the special workday)');
+    check('V2942-14: the same walk without the exception is unchanged',
+        E.numToDate(E.addWorkDays(E.dateToNum('2026-01-09'), 2, CAL_PLAIN)) === '2026-01-13',
+        'got ' + E.numToDate(E.addWorkDays(E.dateToNum('2026-01-09'), 2, CAL_PLAIN)));
+
+    // Symmetric retreat: Mon 12-Jan back 2 working days. Weekly pattern alone:
+    // Fri 09 is the first step back, Thu 08 the second. With Sat 10 worked:
+    // Sat 10 is the first, Fri 09 the second. 2026-01-08 is the pre-fix answer.
+    check('V2942-14: subtractWorkDays consumes a forced-ON Saturday',
+        E.numToDate(E.subtractWorkDays(E.dateToNum('2026-01-12'), 2, CAL_SAT)) === '2026-01-09',
+        'got ' + E.numToDate(E.subtractWorkDays(E.dateToNum('2026-01-12'), 2, CAL_SAT)) +
+        ' (2026-01-08 is the answer that ignores the special workday)');
+    check('V2942-14: the same retreat without the exception is unchanged',
+        E.numToDate(E.subtractWorkDays(E.dateToNum('2026-01-12'), 2, CAL_PLAIN)) === '2026-01-08',
+        'got ' + E.numToDate(E.subtractWorkDays(E.dateToNum('2026-01-12'), 2, CAL_PLAIN)));
+
+    // Zero-advance / zero-retreat snap must see the exception too: an anchor
+    // landing on the worked Saturday is already a working day and must not be
+    // pushed off it.
+    check('V2942-14: the zero-advance snap leaves a forced-ON Saturday alone',
+        E.numToDate(E.addWorkDays(E.dateToNum('2026-01-10'), 0, CAL_SAT)) === '2026-01-10',
+        'got ' + E.numToDate(E.addWorkDays(E.dateToNum('2026-01-10'), 0, CAL_SAT)));
+    check('V2942-14: the zero-retreat snap leaves a forced-ON Saturday alone',
+        E.numToDate(E.subtractWorkDays(E.dateToNum('2026-01-10'), 0, CAL_SAT)) === '2026-01-10',
+        'got ' + E.numToDate(E.subtractWorkDays(E.dateToNum('2026-01-10'), 0, CAL_SAT)));
+
+    // Precedence, taken verbatim from the canonical parser: a forced-OFF
+    // holiday beats a forced-ON special workday on the same date.
+    const CAL_BOTH = { workDays: [1, 2, 3, 4, 5], holidays: ['2026-01-10', '2026-01-12'],
+                       special_workdays: ['2026-01-10', '2026-01-12'] };
+    check('V2942-14: a holiday beats a special workday on the same date',
+        E.numToDate(E.addWorkDays(E.dateToNum('2026-01-09'), 1, CAL_BOTH)) === '2026-01-13',
+        'got ' + E.numToDate(E.addWorkDays(E.dateToNum('2026-01-09'), 1, CAL_BOTH)) +
+        ' (Mon 12 is forced OFF by holidays and must stay off)');
+
+    // End-to-end through computeCPM, which pre-resolves calMap into the
+    // {_resolved:true, workDays, holidaysSet, specialSet} struct — a specialSet
+    // dropped there would never reach the walker.
+    const rSat = E.computeCPM(
+        [{ code: 'A', duration_days: 2, clndr_id: 'S' }],
+        [],
+        { dataDate: '2026-01-09', calMap: { S: CAL_SAT }, projectCalendar: 'S' });
+    check('V2942-14: computeCPM carries special_workdays through the pre-resolved calMap',
+        rSat.nodes.A.ef_date === '2026-01-12',
+        'got ef_date ' + rSat.nodes.A.ef_date +
+        ' (2026-01-13 is the answer that ignores the special workday)');
+    const rPlain = E.computeCPM(
+        [{ code: 'A', duration_days: 2, clndr_id: 'S' }],
+        [],
+        { dataDate: '2026-01-09', calMap: { S: CAL_PLAIN }, projectCalendar: 'S' });
+    check('V2942-14: computeCPM without the exception is unchanged',
+        rPlain.nodes.A.ef_date === '2026-01-13',
+        'got ef_date ' + rPlain.nodes.A.ef_date);
+}
+
+// ---------------------------------------------------------------------------
+// V2942-15 — FNET (Finish No Earlier Than / CS_MEOA) moved the early finish
+// and left the early start where predecessor logic put it.
+// _applyForwardEFConstraint returns the constraint date for EF and never
+// touches ES for ANY duration, so a binding FNET stretched the activity
+// instead of shifting it.
+//
+// Measured on real P6 exports, not argued:
+//   * a 408-activity export carries a zero-duration finish milestone with
+//     CS_MEOA 2027-02-04. P6 stores es 2027-02-05 / ef 2027-02-05; the engine
+//     produced es 2026-12-01 / ef 2027-02-05 — a 46-working-day span on a
+//     milestone that occupies ONE instant — and handed that milestone's
+//     predecessor ff 0 where P6 stores ff 46, because free float was measured
+//     to the stale ES. A 234-activity export carries the same defect on its
+//     own CS_MEOA finish milestone.
+//   * for NON-ZERO durations no corpus row has a binding CS_MEOA, so P6 does
+//     not arbitrate that case directly. It arbitrates it in aggregate: across
+//     36 gate-strict real exports, 9,204 of 9,204 unstarted rows satisfy
+//     work_hours(ES → EF) == remain_drtn_hr_cnt. P6 never publishes an
+//     activity whose span exceeds its own remaining duration.
+//
+// Fix: FNET joins MS_Finish / MFO / FO in the finish-pin back-compute
+// (ES = EF − duration on the activity's own calendar, floored at the data
+// date, never on started work).
+{
+    const _CALMF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
+
+    // Zero-duration milestone: ES and EF name the same instant.
+    const rM = E.computeCPM(
+        [{ code: 'A', duration_days: 5, clndr_id: 'MF' },
+         { code: 'M', duration_days: 0, clndr_id: 'MF',
+           constraint: { type: 'FNET', date: '2026-02-02' } }],
+        [{ from_code: 'A', to_code: 'M', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-01-05', calMap: _CALMF, projectCalendar: 'MF' });
+    check('V2942-15: a zero-duration FNET milestone keeps ES === EF',
+        rM.nodes.M.es_date === rM.nodes.M.ef_date,
+        'es=' + rM.nodes.M.es_date + ' ef=' + rM.nodes.M.ef_date +
+        ' (2026-01-12 / 2026-02-02 is the pre-fix negative-length span)');
+    check('V2942-15: the milestone lands on its constraint date',
+        rM.nodes.M.ef_date === '2026-02-02', 'got ' + rM.nodes.M.ef_date);
+    // The predecessor's free float is measured to the successor's ES, so a
+    // stale ES silently zeroed it. A finishes 2026-01-12, the milestone now
+    // starts 2026-02-02: 15 working days of free float, not 0.
+    check('V2942-15: the predecessor free float is measured to the moved ES',
+        rM.nodes.A.ff_working_days === 15,
+        'got ff_working_days=' + rM.nodes.A.ff_working_days +
+        ' (0 is the pre-fix answer measured to the stale ES)');
+
+    // Non-zero duration: the activity SHIFTS, it does not stretch.
+    const rS = E.computeCPM(
+        [{ code: 'A', duration_days: 3, clndr_id: 'MF',
+           constraint: { type: 'FNET', date: '2026-01-20' } }],
+        [],
+        { dataDate: '2026-01-05', calMap: _CALMF, projectCalendar: 'MF' });
+    check('V2942-15: a binding FNET shifts a non-zero-duration activity',
+        rS.nodes.A.es_date === '2026-01-15' && rS.nodes.A.ef_date === '2026-01-20',
+        'es=' + rS.nodes.A.es_date + ' ef=' + rS.nodes.A.ef_date +
+        ' (es 2026-01-05 is the pre-fix stretched span)');
+
+    // A NON-binding FNET must not move anything: logic already finishes later
+    // than the constraint date, so the back-compute is not entered.
+    const rN = E.computeCPM(
+        [{ code: 'A', duration_days: 3, clndr_id: 'MF',
+           constraint: { type: 'FNET', date: '2026-01-06' } }],
+        [],
+        { dataDate: '2026-01-05', calMap: _CALMF, projectCalendar: 'MF' });
+    check('V2942-15: a non-binding FNET leaves ES and EF alone',
+        rN.nodes.A.es_date === '2026-01-05' && rN.nodes.A.ef_date === '2026-01-08',
+        'es=' + rN.nodes.A.es_date + ' ef=' + rN.nodes.A.ef_date);
+
+    // Slot selection: the back-compute must key off the constraint that
+    // ACTUALLY held EF, not the first slot carrying a finish-pin type. Here a
+    // soft primary FNET (2026-01-20) loses to a mandatory secondary
+    // (2026-01-15); picking the FNET by type alone would find no date match
+    // and skip the back-compute, leaving ES on the logic date.
+    const rP = E.computeCPM(
+        [{ code: 'A', duration_days: 5, clndr_id: 'MF',
+           constraint:  { type: 'FNET',      date: '2026-01-20' },
+           constraint2: { type: 'MS_Finish', date: '2026-01-15' } }],
+        [],
+        { dataDate: '2026-01-05', calMap: _CALMF, projectCalendar: 'MF' });
+    check('V2942-15: the back-compute keys off the constraint that held EF',
+        rP.nodes.A.es_date === '2026-01-08' && rP.nodes.A.ef_date === '2026-01-15',
+        'es=' + rP.nodes.A.es_date + ' ef=' + rP.nodes.A.ef_date);
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

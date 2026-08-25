@@ -27,6 +27,20 @@ zero-exception Mon-Fri calendar in Dana's own P6 database. SIXDAY and CA_ON are
 derived from it by minimal, surgical edits, then round-tripped through the
 canonical decoder to prove they read back correctly.
 """
+import os as _os  # noqa: E402  (path configuration, see below)
+
+# Paths are supplied at run time. They used to be hardcoded to one machine's
+# home directory, which named the author in a PUBLIC repo and meant these
+# scripts only ever ran there. Set the variables below, or edit them locally;
+# tests/no-client-names.test.js fails any absolute path under a user home.
+_ENGINE_ROOT = _os.environ.get('CPP_ENGINE_ROOT', _os.getcwd())
+_XER_ROOT = _os.environ.get('CPP_XER_ROOT', _os.getcwd())
+_P6_DB = _os.environ.get('CPP_P6_DB', '')
+_XER_PARSER = _os.environ.get(
+    'CPP_XER_PARSER',
+    _os.path.join(_os.path.expanduser('~'), '.claude', 'skills',
+                  'xer-parser', 'scripts'))
+
 from __future__ import annotations
 
 import datetime as dt
@@ -35,14 +49,16 @@ import pathlib
 import sqlite3
 import sys
 
-sys.path.insert(0, r"C:\Users\danaf\.claude\skills\xer-parser\scripts")
+sys.path.insert(0, _XER_PARSER)
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from xer_parser import parse_xer, get_fields, generate_xer, parse_calendar_data  # noqa: E402
 
-CASES = pathlib.Path(r"C:\Users\danaf\Projects\cpp-cpm-engine\validation\p6-comparison\cases")
-TEMPLATE = pathlib.Path(r"C:\Users\danaf\Downloads\AMD-2CPCM-CT.xer")
-P6DB = pathlib.Path(r"C:\Users\danaf\OneDrive\Documents\PPMDBSQLite.db")
+CASES = pathlib.Path(_ENGINE_ROOT) / 'validation' / 'p6-comparison' / 'cases'
+# Any genuine export works as a structural template; supply your own.
+TEMPLATE = pathlib.Path(_XER_ROOT) / _os.environ.get(
+    'CPP_TEMPLATE_XER', 'template.xer')
+P6DB = pathlib.Path(_P6_DB) if _P6_DB else None
 OUT = pathlib.Path(__file__).resolve().parent / "cases-import.xer"
 
 # Verified zero-exception Mon-Fri, 8h/day calendar in Dana's DB.

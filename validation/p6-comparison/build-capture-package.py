@@ -1,8 +1,22 @@
+import os as _os  # noqa: E402  (path configuration, see below)
+
+# Paths are supplied at run time. They used to be hardcoded to one machine's
+# home directory, which named the author in a PUBLIC repo and meant these
+# scripts only ever ran there. Set the variables below, or edit them locally;
+# tests/no-client-names.test.js fails any absolute path under a user home.
+_ENGINE_ROOT = _os.environ.get('CPP_ENGINE_ROOT', _os.getcwd())
+_XER_ROOT = _os.environ.get('CPP_XER_ROOT', _os.getcwd())
+_P6_DB = _os.environ.get('CPP_P6_DB', '')
+_XER_PARSER = _os.environ.get(
+    'CPP_XER_PARSER',
+    _os.path.join(_os.path.expanduser('~'), '.claude', 'skills',
+                  'xer-parser', 'scripts'))
+
 import json, csv, html, re
 from pathlib import Path
 
-CASES_DIR = Path(r'C:\Users\danaf\Projects\cpp-cpm-engine\validation\p6-comparison\cases')
-OUT_DIR = Path(r'C:\Users\danaf\Downloads\CPP - P6 Comparison Capture - 2026-08-10')
+CASES_DIR = Path(_ENGINE_ROOT) / 'validation' / 'p6-comparison' / 'cases'
+OUT_DIR = Path(_os.environ.get('CPP_CAPTURE_OUT', _os.getcwd())) / 'p6-comparison-capture'
 OUT_DIR.mkdir(exist_ok=True)
 
 case_ids = sorted(p.name for p in CASES_DIR.iterdir() if p.is_dir())

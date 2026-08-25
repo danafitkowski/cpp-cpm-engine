@@ -755,7 +755,11 @@ compareFixture('F16 — SNLT primary (forward ALERT + backward LF clamp)', {
 // FNET says "finish no earlier than" — if logic places EF BEFORE the FNET
 // date, EF is pushed forward to the FNET date. A WARN is emitted.
 // A: 3-day duration starting 2026-01-05 would naturally finish 2026-01-08;
-// FNET on 2026-01-20 forces EF to 01-20 and stretches the activity.
+// FNET on 2026-01-20 forces EF to 01-20 and SHIFTS the activity, ES backing
+// off the pin to 2026-01-15. Until v2.9.42 the comment here read "stretches
+// the activity", which is what the engine did and what P6 never does: across
+// the 36 gate-strict real exports 9,204 of 9,204 unstarted rows satisfy
+// work_hours(ES -> EF) == remain_drtn_hr_cnt.
 compareFixture('F17 — FNET pushes EF forward (warn)', {
     activities: [
         { code: 'A', duration_days: 3, early_start: '2026-01-05', clndr_id: 'MF',
@@ -1322,6 +1326,28 @@ compareFixture('F49 - out-of-sequence progress_override: remaining continues fro
     data_date: '2026-01-12',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
     schedule_mode: 'progress_override',
+});
+
+// =====================================================================
+// FIXTURE 50 — special_workdays (forced-ON calendar exception dates)
+// =====================================================================
+// v2.9.42 PAIRED FIX. Both ports previously dropped the parameter and
+// treated a worked Saturday as non-working, while the canonical XER parser
+// that feeds them has honoured it since 2.8.0. Sat 2026-01-10 is switched ON
+// on an otherwise Mon-Fri calendar that also carries a forced-OFF holiday on
+// Mon 2026-01-19, so the fixture exercises both exception directions and the
+// refusal of the O(1) Mon-Fri fast path.
+// A: 4 wd from the 2026-01-09 data date; B: FS+1 successor on the same
+// calendar, so the exception has to survive the lag walk too.
+compareFixture('F50 — special_workdays: a forced-ON Saturday and a forced-OFF Monday', {
+    activities: [
+        { code: 'A', duration_days: 4, clndr_id: 'SAT' },
+        { code: 'B', duration_days: 3, clndr_id: 'SAT' },
+    ],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 1 }],
+    data_date: '2026-01-09',
+    cal_map: { SAT: { work_days: [1,2,3,4,5], holidays: ['2026-01-19'],
+                      special_workdays: ['2026-01-10'] } },
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

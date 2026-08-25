@@ -328,24 +328,71 @@ def _num_from_date(d):
 #   * v2.9.16 F11 gives n == 0 a snap contract when the anchor falls on a
 #     non-workday, forward in add_work_days and backward in subtract_work_days,
 #     where upstream returns the anchor unchanged.
-# Two differences are structural only:
+# One difference is structural only:
 #   * The v2.9.27 R21 MonFri fast path (_is_clean_monfri, _walk_from_mon,
 #     _walk_from_first_fw, _BW_MIRROR) has no upstream counterpart, but it is
 #     output-identical to the day-by-day walker on clean Mon-Fri calendars.
-#   * The inlined _is_work_day drops upstream's special_workdays parameter,
-#     which appears nowhere in this file, so forced-ON exception dates such as
-#     a worked Saturday are treated as non-working here.
+#
+# v2.9.42 removed a third result-changing difference that had previously been
+# mis-filed under "structural only": the inlined _is_work_day dropped
+# upstream's special_workdays parameter, so forced-ON exception dates (a worked
+# Saturday) were treated as non-working here while the upstream parser honoured
+# them. That claim of "structural only" was false — dropping the parameter
+# changes dates whenever a special workday falls on an otherwise-idle weekday.
+# It changed no date on the corpus measured at the time of the fix (see
+# _is_work_day below), but the parameter is now carried end to end.
 
-def _is_work_day(dt, work_days, holidays):
+def _is_work_day(dt, work_days, holidays, special_workdays=None):
     """True if dt is a working day on the given calendar.
 
     work_days: list of P6 weekday indices (0=Sun, 1=Mon, ..., 6=Sat).
-    holidays: iterable of 'YYYY-MM-DD' exception date strings (non-working).
+    holidays: iterable of 'YYYY-MM-DD' exception date strings (forced OFF —
+        non-working even when the weekday is normally worked).
+    special_workdays: iterable of 'YYYY-MM-DD' exception date strings (forced
+        ON — worked even when the weekday is normally non-working). Optional
+        for backward compatibility; default = none.
+
+    Exception precedence, taken verbatim from the canonical XER parser: an
+    explicit holiday wins (the day is off), then an explicit special workday
+    (the day is on), otherwise the weekly pattern.
+
+    v2.9.42 PAIRED FIX with JS _isWorkDayOffset. Measured impact on the corpus
+    at the time of the fix: ZERO. 476 calendars across 157 unique genuine
+    exports, 155 of them carrying at least one special workday, and in 0 of the
+    476 does a special workday fall on a weekday the weekly pattern does not
+    already work. One calendar in that corpus works all seven weekdays and
+    carries 276 special workdays, so the exposure on a future file is real even
+    though no date on the measured corpus moves.
     """
+    date_str = dt.strftime('%Y-%m-%d')
+    if date_str in holidays:
+        return False
+    if special_workdays and date_str in special_workdays:
+        return True
     day_of_week = dt.weekday()  # Python: Mon=0..Sun=6
     p6_day = (day_of_week + 1) % 7  # Python Mon=0 -> P6 1 ; Python Sun=6 -> P6 0
-    date_str = dt.strftime('%Y-%m-%d')
-    return (p6_day in work_days) and (date_str not in holidays)
+    return p6_day in work_days
+
+
+def _special_workdays_set(calendar_info):
+    """Forced-ON exception dates for a calendar_info dict, cached like holidays.
+
+    v2.9.42 PAIRED FIX. Mirrors the JS `specialSet` produced by
+    _resolveCalendar / _preResolveCalendars. Returns an empty set when the
+    calendar carries none, so the caller's precedence check short-circuits.
+    """
+    if not calendar_info:
+        return set()
+    _ss = calendar_info.get('_special_workdays_set_cache')
+    if _ss is None:
+        _ss = set(calendar_info.get('special_workdays')
+                  or calendar_info.get('specialWorkdays') or [])
+        try:
+            calendar_info['_special_workdays_set_cache'] = _ss
+        except TypeError:
+            # immutable mapping — fall back without caching
+            pass
+    return _ss
 
 
 # v2.9.27 — audit R21 PAIRED FIX. MonFri fast-path helpers ported from
@@ -395,14 +442,23 @@ def _walk_from_first_fw(fw, n):
 _BW_MIRROR = [0, 6, 5, 4, 3, 2, 1]
 
 
-def _is_clean_monfri(work_days, holidays):
-    """True if this calendar is the standard 5-day Mon-Fri with no holidays.
+def _is_clean_monfri(work_days, holidays, special_workdays=None):
+    """True if this calendar is the standard 5-day Mon-Fri with no exceptions.
 
-    Mirrors JS _isCleanMonFri at cpm-engine.js:507 (post-v2.9.23 bitmask
-    version). Returns False if any holidays present or work_days is not
+    Mirrors JS _isCleanMonFri (post-v2.9.23 bitmask version). Returns False if
+    any holidays are present, if any forced-ON special workday is present
+    (v2.9.42 PAIRED FIX — the O(1) modular walk cannot add the extra worked day
+    back in, so it would silently ignore the exception), or if work_days is not
     exactly {Mon, Tue, Wed, Thu, Fri}.
+
+    Cost of the special-workday guard, measured: of 476 calendars across 157
+    unique genuine exports, 27 are fast-path eligible (clean Mon-Fri, no
+    holidays) and 0 of those 27 carry a special workday, so no calendar on that
+    corpus loses the fast path to this guard.
     """
     if holidays:
+        return False
+    if special_workdays:
         return False
     if not work_days or len(work_days) != 5:
         return False
@@ -450,6 +506,7 @@ def _count_work_days_between(from_num, to_num, calendar_info=None):
         except TypeError:
             pass
     holidays = _hs
+    specials = _special_workdays_set(calendar_info)   # v2.9.42 PAIRED FIX
     if not work_days:
         return 0
     # Walk day-by-day from from_num+1 to to_num inclusive.
@@ -459,7 +516,7 @@ def _count_work_days_between(from_num, to_num, calendar_info=None):
     while cur < end:
         cur += 1
         dt = date.fromordinal(cur + _epoch_ordinal())
-        if _is_work_day(dt, work_days, holidays):
+        if _is_work_day(dt, work_days, holidays, specials):
             n += 1
     return n
 
@@ -490,6 +547,7 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
     if calendar_info is None:
         work_days = [1, 2, 3, 4, 5]
         holidays = set()
+        specials = set()
     else:
         work_days = calendar_info.get('work_days') or [1, 2, 3, 4, 5]
         # v2.9.24 — audit R21. Cache the holiday Set on the calendar_info
@@ -505,6 +563,7 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
                 # immutable mapping — fall back without caching
                 pass
         holidays = _hs
+        specials = _special_workdays_set(calendar_info)   # v2.9.42 PAIRED FIX
 
     if not work_days:
         return current
@@ -517,7 +576,7 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
         # successor on MonFri) silently produces succ.ES on Sat in Python
         # while JS produces succ.ES on Mon — JS↔Python parity gap exposed
         # by crossval F11.
-        while not _is_work_day(current, work_days, holidays):
+        while not _is_work_day(current, work_days, holidays, specials):
             current += timedelta(days=1)
         return current
 
@@ -526,7 +585,7 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
     # output to the day-by-day walker on all clean Mon-Fri calendars
     # with no holidays; verified by F47-class fixtures + the JS
     # regression test that compares the two walkers across 30x50 grid.
-    if _is_clean_monfri(work_days, holidays):
+    if _is_clean_monfri(work_days, holidays, specials):
         # P6 weekday from Python isoweekday: Mon=1..Sun=7 → P6 Mon=1..Sun=0
         start_p6 = current.isoweekday() % 7
         fw = (start_p6 + 1) % 7
@@ -536,7 +595,7 @@ def add_work_days(start_date, n_workdays, calendar_info=None):
     remaining = n
     while remaining > 0:
         current += timedelta(days=1)
-        if _is_work_day(current, work_days, holidays):
+        if _is_work_day(current, work_days, holidays, specials):
             remaining -= 1
     return current
 
@@ -567,6 +626,7 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
     if calendar_info is None:
         work_days = [1, 2, 3, 4, 5]
         holidays = set()
+        specials = set()
     else:
         work_days = calendar_info.get('work_days') or [1, 2, 3, 4, 5]
         # v2.9.27 — same holiday-Set cache as add_work_days.
@@ -578,6 +638,7 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
             except TypeError:
                 pass
         holidays = _hs
+        specials = _special_workdays_set(calendar_info)   # v2.9.42 PAIRED FIX
 
     if not work_days:
         return current
@@ -586,14 +647,14 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
         # v2.9.16 F11-parity backport — symmetric to add_work_days. When
         # n === 0 with a real calendar, a non-workday anchor snaps BACKWARD
         # to the prior working day. Matches JS F2.1 contract.
-        while not _is_work_day(current, work_days, holidays):
+        while not _is_work_day(current, work_days, holidays, specials):
             current -= timedelta(days=1)
         return current
 
     # v2.9.27 — MonFri fast path (audit R21 PAIRED FIX). Mirrors JS
     # cpm-engine.js:783 (the subtractWorkDays clean-MonFri path that
     # uses backwardMirror to flip end-weekday to forward-fw).
-    if _is_clean_monfri(work_days, holidays):
+    if _is_clean_monfri(work_days, holidays, specials):
         end_p6 = current.isoweekday() % 7  # 0=Sun..6=Sat
         fw = _BW_MIRROR[end_p6]
         retreat = _walk_from_first_fw(fw, n)
@@ -602,7 +663,7 @@ def subtract_work_days(end_date, n_workdays, calendar_info=None):
     remaining = n
     while remaining > 0:
         current -= timedelta(days=1)
-        if _is_work_day(current, work_days, holidays):
+        if _is_work_day(current, work_days, holidays, specials):
             remaining -= 1
     return current
 
@@ -750,6 +811,14 @@ def _apply_forward_ef_constraint(code, ef, cstr, label, alerts, es=None):
     function guarantees EF >= ES on the returned value so a constraint
     cannot pin EF below ES (which would produce a negative-duration
     activity). Mirrors JS _applyForwardEFConstraint v2.9.12 T3.20.
+
+    NOTE (v2.9.42): this helper returns EF ONLY and deliberately never
+    moves ES. EF >= ES is not the same invariant as EF - ES == duration:
+    on its own, a pushed EF stretches the activity. Shifting ES so the
+    span stays equal to the duration is done by the caller, in the
+    finish-pin back-compute block that runs after both EF clamps (search
+    _FIN_PIN_TYPES). Anything added here that pushes EF must be added to
+    that list too, or it will stretch.
     """
     if not cstr:
         return ef
@@ -1550,24 +1619,52 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # Measured on three real exports, every row that moved was a TT_FinMile
         # carrying CS_MEO - e.g. P6 es 2026-07-24 / ef 2026-07-24 against engine
         # es 2026-03-30 / ef 2026-07-24.
-        _FIN_PIN_TYPES = ('MS_Finish', 'MFO', 'FO')
+        # v2.9.42 PAIRED FIX - 'FNET' (the CS_MEOA "Finish On or After" token)
+        # joins this block for the same reason, measured directly rather than by
+        # analogy. _apply_forward_ef_constraint returns the constraint date for
+        # EF and never touches ES for ANY duration, so an FNET that binds
+        # stretches the activity instead of shifting it.
+        #   * ZERO DURATION: on a 408-activity real export a TT_FinMile carrying
+        #     CS_MEOA (stored 2027-02-04 17:00, boundary form 2027-02-05) was
+        #     engine es 2026-12-01 / ef 2027-02-05 against P6 es 2027-02-05 /
+        #     ef 2027-02-05 - a 46-working-day span
+        #     on a milestone that occupies one instant. Its predecessor was
+        #     handed ff 0 against P6's ff 46, free float having been measured to
+        #     the stale ES. A second real export (234 activities) carries the
+        #     same defect on its own CS_MEOA finish milestone.
+        #   * NON-ZERO DURATION: no row on the corpus has a binding CS_MEOA on a
+        #     non-zero-duration activity, so P6 does not arbitrate that case
+        #     directly. It arbitrates it decisively in aggregate: across the 36
+        #     gate-strict real exports, 9,204 of 9,204 unstarted rows satisfy
+        #     work_hours(ES -> EF) == remain_drtn_hr_cnt. P6 never publishes an
+        #     activity whose span exceeds its own remaining duration, so
+        #     shifting (ES = EF - duration) is the only treatment consistent
+        #     with every P6 row measured; stretching is consistent with none.
+        _FIN_PIN_TYPES = ('MS_Finish', 'MFO', 'FO', 'FNET')
         if not has_actual_start:
+            # Select the slot whose date ACTUALLY held EF, not merely the first
+            # slot carrying a finish-pin type: with FNET in the list a soft
+            # primary could otherwise shadow a mandatory secondary that is the
+            # constraint really holding EF. Single-pin behaviour is unchanged.
             _mfc = None
-            if cstr and cstr.get('type') in _FIN_PIN_TYPES:
-                _mfc = cstr
-            elif cstr2 and cstr2.get('type') in _FIN_PIN_TYPES:
-                _mfc = cstr2
-            if _mfc and _mfc.get('date'):
-                _mf_num = date_to_num(_mfc['date'])
-                if _mf_num > 0 and node['ef'] == _mf_num:
-                    _bes = _retreat_workdays(
-                        node['ef'], node['duration_days'], node_cal,
-                        alerts=alerts, ctx=f'MEO back-compute ES {code}')
-                    if dd_num > 0 and _bes < dd_num:
-                        _bes = dd_num
-                    if _bes != node['es']:
-                        node['es'] = _bes
-                        driving_pred = {'type': 'CONSTRAINT', 'date': _mfc['date']}
+            for _c in (cstr, cstr2):
+                if not _c or not _c.get('date'):
+                    continue
+                if _c.get('type') not in _FIN_PIN_TYPES:
+                    continue
+                _c_num = date_to_num(_c['date'])
+                if _c_num > 0 and node['ef'] == _c_num:
+                    _mfc = _c
+                    break
+            if _mfc:
+                _bes = _retreat_workdays(
+                    node['ef'], node['duration_days'], node_cal,
+                    alerts=alerts, ctx=f'MEO back-compute ES {code}')
+                if dd_num > 0 and _bes < dd_num:
+                    _bes = dd_num
+                if _bes != node['es']:
+                    node['es'] = _bes
+                    driving_pred = {'type': 'CONSTRAINT', 'date': _mfc['date']}
 
         # v2.9.15 P2 (F14-4) backport — DATA_DATE-driven driver. When no pred
         # and no constraint won, but max_es == dd_num AND the activity has preds,
@@ -1609,11 +1706,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             return max_ef                       # ordinal fallback nodes
         work_days = n_cal.get('work_days') or [1, 2, 3, 4, 5]
         holidays = set(n_cal.get('holidays') or [])
+        specials = _special_workdays_set(n_cal)         # v2.9.42 PAIRED FIX
         d = _date_from_num(d_last)
         if d is None:
             return max_ef
         guard = 0
-        while not _is_work_day(d, work_days, holidays):
+        while not _is_work_day(d, work_days, holidays, specials):
             d -= timedelta(days=1)
             guard += 1
             if guard > 366:

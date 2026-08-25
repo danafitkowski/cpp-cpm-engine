@@ -98,7 +98,9 @@ function check(name, got, want, note) {
 // ---------------------------------------------------------------------------
 // D3 — free float converted to working days over the wrong window when the
 // binding successor link carries a lag.
-// Real case: C0405 - clean headings.xer, C05-2610 -FS+3d-> C05-2730.
+// Real evidence: a genuine 577-activity export carries an FS+3d link whose
+// successor's free float P6 reports as 26 working days and the engine as 24.
+// The file is not named: this repo is public and it is a client schedule.
 // P6 FF 208 h = 26 wd; engine 24 wd.
 // ---------------------------------------------------------------------------
 {
@@ -123,7 +125,8 @@ function check(name, got, want, note) {
         'Free float is measured from the lag-advanced anchor to the successor ' +
         'start; the engine converts the calendar-day slack over a window that ' +
         'starts at the activity EF instead, losing whole weekends. Real case: ' +
-        'C0405 - clean headings.xer C05-2610, P6 26 wd, engine 24 wd.');
+        'Real evidence: on a genuine 577-activity export P6 reports 26 wd of '
+        + 'free float where the engine reports 24.');
 }
 
 // ---------------------------------------------------------------------------
@@ -162,10 +165,10 @@ function check(name, got, want, note) {
 // D5 — a finish-no-earlier-than constraint on a ZERO-DURATION milestone moves
 // the engine's early finish but not its early start, leaving ES != EF on a
 // milestone. P6 moves the milestone as a unit.
-// Real case: CON-05 Mill REV-TB1.xer, C05-3610 "Structural steel erection
+// Real evidence: a genuine 408-activity export carries a finish milestone
 // complete", CS_MEOA 2027-02-04 17:00. P6 ES = EF = 2027-02-05; engine
 // ES 2026-12-01, EF 2027-02-05. The stale ES then feeds the predecessor's
-// free float: C05-0370 P6 FF 368 h (46 wd), engine FF 0.
+// free float: a constrained milestone P6 FF 368 h (46 wd), engine FF 0.
 // ---------------------------------------------------------------------------
 {
     const acts = [

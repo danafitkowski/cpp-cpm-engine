@@ -55,7 +55,10 @@ E.addWorkDays(
 **Calendar info object:**
 
 - `work_days` — array of weekday integers (`0=Sun, 1=Mon, ..., 6=Sat`). Default `[1,2,3,4,5]`.
-- `holidays` — array of `'YYYY-MM-DD'` strings. Default `[]`.
+- `holidays` — array of `'YYYY-MM-DD'` strings, forced OFF (non-working even when the weekday is normally worked). Default `[]`.
+- `special_workdays` — array of `'YYYY-MM-DD'` strings, forced ON (worked even when the weekday is normally non-working — a worked Saturday, a shift added to an idle day). Default `[]`. Optional; omitting it leaves the calendar's behaviour exactly as it was before the field existed.
+
+Exception precedence: an explicit `holidays` entry wins (the day is off), then an explicit `special_workdays` entry (the day is on), otherwise the weekly `work_days` pattern decides.
 
 ### `E.subtractWorkDays(endNum, n, calendarInfo)`
 

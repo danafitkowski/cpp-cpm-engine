@@ -10,6 +10,31 @@
 // names it guards. To add a name to the denylist:
 //   node -e "console.log(require('crypto').createHash('sha256').update('NAME'.toLowerCase()).digest('hex'))"
 // and append the resulting hash below.
+//
+// A DENYLIST IS NOT ENOUGH, and on 2026-08-25 it proved it. Three real client
+// exports were named in tracked files that this gate passed: two .xer
+// filenames plus four activity ids in validation/p6-oracle/repro_defects.js,
+// and an absolute path to a third export in
+// validation/p6-comparison/build-import-xer.py. `validation/` is in
+// package.json's `files`, so all three were publishing to npm.
+//
+// None of them could ever have been caught here. The tokeniser needs
+// [a-z0-9]{4,}, so a code like `CON-05` yields NO token at all — both halves
+// are too short — and codes that do tokenise only match if somebody remembered
+// to add them. You cannot enumerate the project codes of clients you have not
+// worked for yet.
+//
+// So there are now two rules that do not depend on knowing the name:
+//
+//   1. NO .xer FILENAME may appear in tracked source. The tell is the
+//      extension, not the words around it.
+//   2. NO ABSOLUTE PATH under a user home directory (C:\Users\x, /home/x,
+//      /Users/x). Those name the author's machine even when they name no
+//      client.
+//
+// Both accept a per-line `client-name-ok: <reason>` escape, the same
+// convention _cpp_common/scripts/client_names.py uses, for the rare line whose
+// subject genuinely is the name.
 'use strict';
 
 const crypto = require('crypto');
@@ -43,18 +68,83 @@ function* walk(dir) {
   }
 }
 
+// Structural tells. These need no denylist entry and no foreknowledge.
+//
+// A real export filename. `.xer` also appears constantly as a file TYPE in
+// prose here ("every .xer on this machine", "<file.xer>") and as generated
+// fixtures, so the extension alone is far too broad — it produced 60+ false
+// positives. Discriminate on the STEM: take the last whitespace-delimited word
+// before `.xer` and flag it unless it is a generic placeholder.
+//
+// The allowlist holds GENERIC words, never client names, which is what makes it
+// safe to maintain: a new placeholder is flagged until someone adds it, and a
+// real client export is flagged until someone scrubs it. It fails closed both
+// ways.
+const XER_REF = /([A-Za-z0-9][A-Za-z0-9 _().+-]{0,60})\.xer\b/g;
+// Generic PARTS, not whole filenames. The stem is split on hyphens and
+// underscores and accepted only when EVERY part is generic or numeric, so
+// 'owner-baseline-2026-03' passes on its parts while 'amd-2cpcm-ct' fails on
+// its first. Nothing here is a client name; adding one would defeat the gate.
+const XER_GENERIC_PARTS = new Set([
+  'case', 'cases', 'file', 'files', 'out', 'output', 'input', 'import',
+  'example', 'examples', 'sample', 'test', 'tests', 'fixture', 'fixtures',
+  'a', 'an', 'the', 'this', 'that', 'every', 'any', 'some', 'each', 'no',
+  'one', 'per', 'genuine', 'real', 'current', 'baseline', 'schedule',
+  'export', 'exports', 'xer', 'name', 'its', 'own', 'your', 'my', 'renames',
+  'moves', 'holding', 'owner', 'args', 'path', 'src', 'dst', 'tmp', 'temp',
+  'new', 'old', 'copy', 'demo', 'dummy', 'stub', 'golden', 'from', 'to',
+  'template', 'placeholder', 'yours',
+]);
+function namesAnExport(line) {
+  XER_REF.lastIndex = 0;
+  let m;
+  while ((m = XER_REF.exec(line)) !== null) {
+    const words = m[1].trim().split(/\s+/);
+    // Take the last identifier-ish run, so `build_case(args.xer` reads as
+    // 'args' and a quoted path reads as its basename.
+    const raw = (words[words.length - 1] || '').toLowerCase();
+    const runs = raw.match(/[a-z0-9][a-z0-9._-]*/g) || [];
+    const stem = (runs[runs.length - 1] || '').replace(/[^a-z0-9]+$/, '');
+    if (!stem) continue;
+    const parts = stem.split(/[-_]+/).filter(Boolean);
+    const allGeneric = parts.every(
+      (p) => XER_GENERIC_PARTS.has(p) || /^[0-9]+$/.test(p));
+    if (!allGeneric) return stem;
+  }
+  return null;
+}
+// An absolute path under someone's home directory, either platform.
+const HOME_PATH = /(?:[A-Za-z]:[\\/]+Users[\\/]+[A-Za-z0-9._-]+)|(?:\/(?:home|Users)\/[A-Za-z0-9._-]+)/;
+// Per-line escape, same convention as _cpp_common/scripts/client_names.py.
+const ALLOW = /client-name-ok:\s*\S/;
+
 const root = path.resolve(__dirname, '..');
 const leaks = [];
 for (const f of walk(root)) {
   let text;
   try { text = fs.readFileSync(f, 'utf8'); } catch { continue; }
+  // This gate's own source necessarily contains the patterns it matches on.
+  const isSelf = path.resolve(f) === path.resolve(__filename);
   text.split(/\r?\n/).forEach((ln, i) => {
+    const where = `${path.relative(root, f)}:${i + 1}`;
+    const shown = ln.trim().slice(0, 100);
+    if (ALLOW.test(ln)) return;
+
     const tokens = ln.toLowerCase().match(/[a-z0-9]{4,}/g) || [];
     for (const t of tokens) {
       if (DENY_HASHES.has(hash(t))) {
-        leaks.push(`${path.relative(root, f)}:${i + 1}  ${ln.trim().slice(0, 100)}`);
-        break;
+        leaks.push(`${where}  [denylisted name]  ${shown}`);
+        return;
       }
+    }
+    if (isSelf) return;
+    const stem = namesAnExport(ln);
+    if (stem) {
+      leaks.push(`${where}  [names a .xer export: '${stem}']  ${shown}`);
+      return;
+    }
+    if (HOME_PATH.test(ln)) {
+      leaks.push(`${where}  [absolute path under a user home]  ${shown}`);
     }
   });
 }

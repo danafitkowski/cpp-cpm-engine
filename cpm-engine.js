@@ -524,10 +524,20 @@ function _walkFromFirstFw(fw, n) {
 const _BW_MIRROR = [0, 6, 5, 4, 3, 2, 1];
 
 // Returns true when calendarInfo is the clean Mon-Fri case (work_days=[1..5],
-// no holidays) where the arithmetic fast path is safe. Any deviation (custom
-// workdays, any holiday) falls back to the day-by-day walk.
-function _isCleanMonFri(workDays, holidaysSet) {
+// no holidays, no forced-ON exception dates) where the arithmetic fast path is
+// safe. Any deviation (custom workdays, any holiday, any special workday)
+// falls back to the day-by-day walk.
+function _isCleanMonFri(workDays, holidaysSet, specialSet) {
     if (holidaysSet && holidaysSet.size > 0) return false;
+    // v2.9.42 — a forced-ON exception date (special workday) makes the
+    // calendar non-clean even with a Mon-Fri pattern and no holidays: the
+    // O(1) modular walk cannot add the extra worked day back in, so it would
+    // silently ignore the exception. Fall through to the day-by-day walker.
+    // Cost measured, not assumed: of 476 calendars across 157 unique genuine
+    // exports, 27 are fast-path eligible (clean Mon-Fri, no holidays) and 0 of
+    // those 27 carry a special workday, so no calendar on that corpus loses
+    // the fast path to this guard.
+    if (specialSet && specialSet.size > 0) return false;
     if (!workDays || workDays.length !== 5) return false;
     // v2.9.24 — audit LOW R21. Avoid the per-call `new Set(workDays)`
     // allocation. On a 50k-activity × ~4-work-day-calls schedule that's
@@ -631,11 +641,36 @@ function _dateStringFromOffset(offset) {
     return dt.getUTCFullYear() + '-' + _pad2(dt.getUTCMonth() + 1) + '-' + _pad2(dt.getUTCDate());
 }
 
-function _isWorkDayOffset(offset, workDays, holidaysSet) {
-    const p6 = _p6WeekdayFromOffset(offset);
-    if (workDays.indexOf(p6) === -1) return false;
-    if (!holidaysSet || holidaysSet.size === 0) return true;
-    return !holidaysSet.has(_dateStringFromOffset(offset));
+// v2.9.42 — `specialSet` carries the calendar's forced-ON exception dates
+// (P6 "special workdays": a worked Saturday, a shift added to a normally-idle
+// day). Before this parameter existed the engine dropped them and treated
+// every such date as non-working, while the upstream XER parser
+// (xer_parser.py `_is_work_day`, which decodes them out of `clndr_data`) had
+// honoured them since 2.8.0.
+//
+// Measured impact on the current corpus at the time of the fix: ZERO. 476
+// calendars across 157 unique genuine exports carry 155 calendars with at
+// least one special workday, and in 0 of those 476 does a special workday
+// fall on a weekday the weekly pattern does not already work — so every
+// special workday on file is already a working day by the weekly pattern and
+// the flag changes no date. The exposure is nonetheless real: one calendar in
+// that corpus works all seven weekdays and carries 276 special workdays, so a
+// future file that switches on a genuinely idle day would have been mis-dated
+// silently.
+//
+// Exception precedence is the canonical parser's, verbatim: an explicit
+// holiday wins (the day is off), then an explicit special workday (the day is
+// on), otherwise the weekly pattern decides.
+function _isWorkDayOffset(offset, workDays, holidaysSet, specialSet) {
+    const hasHol = holidaysSet && holidaysSet.size > 0;
+    const hasSpec = specialSet && specialSet.size > 0;
+    if (!hasHol && !hasSpec) {
+        return workDays.indexOf(_p6WeekdayFromOffset(offset)) !== -1;
+    }
+    const ds = _dateStringFromOffset(offset);
+    if (hasHol && holidaysSet.has(ds)) return false;
+    if (hasSpec && specialSet.has(ds)) return true;
+    return workDays.indexOf(_p6WeekdayFromOffset(offset)) !== -1;
 }
 
 // v2.9.12 F2.1 — Snap a calendar offset to the nearest working day.
@@ -643,21 +678,21 @@ function _isWorkDayOffset(offset, workDays, holidaysSet) {
 // subtractWorkDays so FS-0 / SS-0 / FF-0 / SF-0 forwarders never inherit
 // a Sat / Sun / holiday anchor verbatim. Cap the walk at 366 days as a
 // safety bound — an all-holiday calendar would otherwise hang.
-function _roundForwardToWorkday(num, workDays, holidaysSet) {
+function _roundForwardToWorkday(num, workDays, holidaysSet, specialSet) {
     if (!Number.isFinite(num) || num <= 0) return num;
     let cur = _roundHalfUp(num);
     let guard = 0;
-    while (!_isWorkDayOffset(cur, workDays, holidaysSet)) {
+    while (!_isWorkDayOffset(cur, workDays, holidaysSet, specialSet)) {
         cur += 1;
         if (++guard > 366) return _roundHalfUp(num);
     }
     return cur;
 }
-function _roundBackwardToWorkday(num, workDays, holidaysSet) {
+function _roundBackwardToWorkday(num, workDays, holidaysSet, specialSet) {
     if (!Number.isFinite(num) || num <= 0) return num;
     let cur = _roundHalfUp(num);
     let guard = 0;
-    while (!_isWorkDayOffset(cur, workDays, holidaysSet)) {
+    while (!_isWorkDayOffset(cur, workDays, holidaysSet, specialSet)) {
         cur -= 1;
         if (++guard > 366) return _roundHalfUp(num);
     }
@@ -671,13 +706,22 @@ function _resolveCalendar(calendarInfo) {
     // 25k-activity schedule with a 365-holiday calendar (~1,572ms saved per
     // Audit 2026-05-09 OPT-3 measurement).
     if (calendarInfo && calendarInfo._resolved) {
-        return { workDays: calendarInfo.workDays, holidaysSet: calendarInfo.holidaysSet };
+        return {
+            workDays: calendarInfo.workDays,
+            holidaysSet: calendarInfo.holidaysSet,
+            specialSet: calendarInfo.specialSet || null,
+        };
     }
     if (!calendarInfo) {
-        return { workDays: [1, 2, 3, 4, 5], holidaysSet: null };
+        return { workDays: [1, 2, 3, 4, 5], holidaysSet: null, specialSet: null };
     }
     const wdRaw = calendarInfo.work_days || calendarInfo.workDays;
     const hl = calendarInfo.holidays || [];
+    // v2.9.42 — forced-ON exception dates. The canonical XER parser emits
+    // these as `special_workdays`; accept the camelCase spelling too so
+    // callers that hand-build a calendar are not silently ignored.
+    const swRaw = calendarInfo.special_workdays || calendarInfo.specialWorkdays || [];
+    const sw = Array.isArray(swRaw) ? swRaw : [];
     // Filter to valid P6 weekday indices (0=Sun, ..., 6=Sat). Drops empty
     // arrays and impossible values like [7] that would cause the
     // addWorkDays/subtractWorkDays loop to never decrement remaining and
@@ -687,6 +731,7 @@ function _resolveCalendar(calendarInfo) {
     return {
         workDays: wd.length ? wd : [1, 2, 3, 4, 5],
         holidaysSet: new Set(hl),
+        specialSet: sw.length ? new Set(sw) : null,
     };
 }
 
@@ -704,6 +749,9 @@ function _preResolveCalendars(calMap, alerts) {
         if (orig._resolved) { out[k] = orig; continue; }  // already resolved (re-entry safety)
         const wdRaw = orig.work_days || orig.workDays;
         const hl = orig.holidays || [];
+        // v2.9.42 — forced-ON exception dates, pre-resolved alongside holidays.
+        const swRaw = orig.special_workdays || orig.specialWorkdays || [];
+        const sw = Array.isArray(swRaw) ? swRaw : [];
         const wd = (Array.isArray(wdRaw) ? wdRaw : [])
             .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
         // v2.9.12 T2.16 — silent fallback to MonFri was forensically opaque.
@@ -735,9 +783,11 @@ function _preResolveCalendars(calMap, alerts) {
             _resolved: true,
             workDays: wd.length ? wd : [1, 2, 3, 4, 5],
             holidaysSet: new Set(hl),
+            specialSet: sw.length ? new Set(sw) : null,
             // Preserve originals so callers that inspect work_days / holidays still work.
             work_days: orig.work_days,
             holidays: orig.holidays,
+            special_workdays: orig.special_workdays,
         };
     }
     return out;
@@ -762,29 +812,30 @@ function addWorkDays(startNum, nDays, calendarInfo) {
     // stays identity (preserves Section D ordinal-arithmetic callers).
     if (n === 0) {
         if (!calendarInfo || startNum <= 0) return startNum;
-        const { workDays: wd0, holidaysSet: hs0 } = _resolveCalendar(calendarInfo);
+        const { workDays: wd0, holidaysSet: hs0, specialSet: sp0 } = _resolveCalendar(calendarInfo);
         if (!wd0 || wd0.length === 0) return startNum;
-        return _roundForwardToWorkday(startNum, wd0, hs0);
+        return _roundForwardToWorkday(startNum, wd0, hs0, sp0);
     }
     if (startNum <= 0) return startNum + n;  // no anchor — ordinal fallback
 
-    const { workDays, holidaysSet } = _resolveCalendar(calendarInfo);
+    const { workDays, holidaysSet, specialSet } = _resolveCalendar(calendarInfo);
     if (workDays.length === 0) return startNum;  // pathological, prevent infinite loop
 
     // v2.1-C1 fast path: clean MonFri, no holidays → O(1) modular arithmetic.
     // Hot path on real schedules; ~250× speedup for a 30d activity vs the walk.
-    if (_isCleanMonFri(workDays, holidaysSet)) {
+    if (_isCleanMonFri(workDays, holidaysSet, specialSet)) {
         const startInt = _roundHalfUp(startNum);
         const fw = (_p6WeekdayFromOffset(startInt) + 1) % 7;
         return startInt + _walkFromFirstFw(fw, n);
     }
 
-    // General fallback: day-by-day walk (custom workdays or holidays present).
+    // General fallback: day-by-day walk (custom workdays, holidays or
+    // forced-ON special workdays present).
     let cur = _roundHalfUp(startNum);
     let remaining = n;
     while (remaining > 0) {
         cur += 1;
-        if (_isWorkDayOffset(cur, workDays, holidaysSet)) remaining -= 1;
+        if (_isWorkDayOffset(cur, workDays, holidaysSet, specialSet)) remaining -= 1;
     }
     return cur;
 }
@@ -801,29 +852,30 @@ function subtractWorkDays(endNum, nDays, calendarInfo) {
     // the prior working day. Used by FF-0 / SF-0 anchor → succ.ES retreat.
     if (n === 0) {
         if (!calendarInfo || endNum <= 0) return endNum;
-        const { workDays: wd0, holidaysSet: hs0 } = _resolveCalendar(calendarInfo);
+        const { workDays: wd0, holidaysSet: hs0, specialSet: sp0 } = _resolveCalendar(calendarInfo);
         if (!wd0 || wd0.length === 0) return endNum;
-        return _roundBackwardToWorkday(endNum, wd0, hs0);
+        return _roundBackwardToWorkday(endNum, wd0, hs0, sp0);
     }
     if (endNum <= 0) return endNum - n;
 
-    const { workDays, holidaysSet } = _resolveCalendar(calendarInfo);
+    const { workDays, holidaysSet, specialSet } = _resolveCalendar(calendarInfo);
     if (workDays.length === 0) return endNum;
 
     // v2.1-C1 fast path: clean MonFri, no holidays → O(1) modular arithmetic.
     // Symmetry: walkToEnd(lw, n) === walkFromFirstFw(_BW_MIRROR[lw], n).
-    if (_isCleanMonFri(workDays, holidaysSet)) {
+    if (_isCleanMonFri(workDays, holidaysSet, specialSet)) {
         const endInt = _roundHalfUp(endNum);
         const lw = _p6WeekdayFromOffset(endInt);
         return endInt - _walkFromFirstFw(_BW_MIRROR[lw], n);
     }
 
-    // General fallback: day-by-day walk (custom workdays or holidays present).
+    // General fallback: day-by-day walk (custom workdays, holidays or
+    // forced-ON special workdays present).
     let cur = _roundHalfUp(endNum);
     let remaining = n;
     while (remaining > 0) {
         cur -= 1;
-        if (_isWorkDayOffset(cur, workDays, holidaysSet)) remaining -= 1;
+        if (_isWorkDayOffset(cur, workDays, holidaysSet, specialSet)) remaining -= 1;
     }
     return cur;
 }
@@ -842,13 +894,13 @@ function _countWorkDaysBetween(fromNum, toNum, calendarInfo) {
     if (toNum === fromNum) return 0;
     if (toNum < fromNum) return -_countWorkDaysBetween(toNum, fromNum, calendarInfo);
     if (!calendarInfo) return _roundHalfUp(toNum - fromNum);
-    const { workDays, holidaysSet } = _resolveCalendar(calendarInfo);
+    const { workDays, holidaysSet, specialSet } = _resolveCalendar(calendarInfo);
     if (workDays.length === 0) return 0;
     let n = 0, cur = _roundHalfUp(fromNum);
     const end = _roundHalfUp(toNum);
     while (cur < end) {
         cur += 1;
-        if (_isWorkDayOffset(cur, workDays, holidaysSet)) n += 1;
+        if (_isWorkDayOffset(cur, workDays, holidaysSet, specialSet)) n += 1;
     }
     return n;
 }
@@ -1067,7 +1119,10 @@ function tarjanSCC(nodeCodes, succMap) {
 //   date  = 'YYYY-MM-DD'
 // relationships: [{ from_code, to_code, type: 'FS'|'SS'|'FF'|'SF', lag_days }]
 // opts: { dataDate?: 'YYYY-MM-DD', calMap?: { clndrId: calendarInfo } }
-// calendarInfo: { work_days: [P6 weekdays], holidays: ['YYYY-MM-DD', ...] }
+// calendarInfo: { work_days: [P6 weekdays], holidays: ['YYYY-MM-DD', ...],
+//                 special_workdays?: ['YYYY-MM-DD', ...] }
+//   holidays        = forced OFF exception dates.
+//   special_workdays = forced ON exception dates (v2.9.42; optional).
 //
 // result: { nodes, projectFinish, projectFinishNum, criticalCodes (Set),
 //           topoOrder, alerts }
@@ -1157,6 +1212,12 @@ function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
 // activity). Section D already enforced this invariant (Bug B2 in v2.9.8);
 // Section C did not. Backward-compat: callers that don't pass es are
 // unaffected.
+// NOTE (v2.9.42): this helper returns EF ONLY and deliberately never moves ES.
+// EF >= ES is not the same invariant as EF - ES == duration: on its own, a
+// pushed EF stretches the activity. Shifting ES to keep the span equal to the
+// duration is done by the caller, in the finish-pin back-compute block that
+// runs after both EF clamps (search _FIN_PIN_TYPES). Anything added here that
+// pushes EF must be added to that list too, or it will stretch.
 function _applyForwardEFConstraint(code, ef, cstr, label, alerts, es) {
     if (!cstr) return ef;
     const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
@@ -2400,20 +2461,49 @@ function computeCPM(activities, relationships, opts) {
             // against engine es 2026-03-30 / ef 2026-07-24. Back-computing
             // ES = EF - duration here (the same treatment MS_Finish/MFO already
             // get, under the same guards) restores P6's answer on all of them.
-            const _FIN_PIN_TYPES = ['MS_Finish', 'MFO', 'FO'];
-            const _mfc = (cstr && _FIN_PIN_TYPES.indexOf(cstr.type) !== -1) ? cstr
-                       : (cstr2 && _FIN_PIN_TYPES.indexOf(cstr2.type) !== -1) ? cstr2
-                       : null;
-            if (_mfc && _mfc.date) {
-                const _mfNum = dateToNum(_mfc.date);
-                if (_mfNum > 0 && node.ef === _mfNum) {
-                    let _bes = _retreatWithAlerts(node.ef, node.duration_days,
-                        nodeCal, alerts, 'MEO back-compute ES ' + code);
-                    if (ddNum > 0 && _bes < ddNum) _bes = ddNum;
-                    if (_bes !== node.es) {
-                        node.es = _bes;
-                        drivingPred = { type: 'CONSTRAINT', date: _mfc.date };
-                    }
+            // v2.9.42 - 'FNET' (Finish On or After, the CS_MEOA token) joins
+            // this block for the same reason, measured directly rather than by
+            // analogy. _applyForwardEFConstraint returns the constraint date
+            // for EF and never touches ES for ANY duration, so an FNET that
+            // binds stretches the activity instead of shifting it.
+            //   * ZERO DURATION: on a 408-activity real export a TT_FinMile
+            //     carrying CS_MEOA (stored 2027-02-04 17:00, boundary form
+            //     2027-02-05) was engine es 2026-12-01 / ef 2027-02-05
+            //     against P6 es 2027-02-05 / ef 2027-02-05 - a
+            //     46-working-day span on a milestone that occupies one instant.
+            //     Its predecessor was handed ff 0 against P6's ff 46, because
+            //     free float was measured to the stale ES. A second real export
+            //     (234 activities) carries the same defect on its own CS_MEOA
+            //     finish milestone.
+            //   * NON-ZERO DURATION: no row on the corpus has a binding CS_MEOA
+            //     on a non-zero-duration activity, so P6 does not arbitrate that
+            //     case directly here. It arbitrates it indirectly and decisively:
+            //     across the 36 gate-strict real exports, 9,204 of 9,204
+            //     unstarted rows satisfy work_hours(ES -> EF) ==
+            //     remain_drtn_hr_cnt. P6 never publishes an activity whose span
+            //     exceeds its own remaining duration, so shifting (ES = EF -
+            //     duration) is the only treatment consistent with every P6 row
+            //     measured; stretching is consistent with none.
+            const _FIN_PIN_TYPES = ['MS_Finish', 'MFO', 'FO', 'FNET'];
+            // Select the slot whose date ACTUALLY held EF, not merely the first
+            // slot carrying a finish-pin type. With FNET in the list a soft
+            // primary FNET could otherwise shadow a mandatory secondary that is
+            // the constraint really holding EF, and the back-compute would be
+            // skipped. Single-pin behaviour is unchanged.
+            let _mfc = null;
+            for (const _c of [cstr, cstr2]) {
+                if (!_c || !_c.date) continue;
+                if (_FIN_PIN_TYPES.indexOf(_c.type) === -1) continue;
+                const _cNum = dateToNum(_c.date);
+                if (_cNum > 0 && node.ef === _cNum) { _mfc = _c; break; }
+            }
+            if (_mfc) {
+                let _bes = _retreatWithAlerts(node.ef, node.duration_days,
+                    nodeCal, alerts, 'MEO back-compute ES ' + code);
+                if (ddNum > 0 && _bes < ddNum) _bes = ddNum;
+                if (_bes !== node.es) {
+                    node.es = _bes;
+                    drivingPred = { type: 'CONSTRAINT', date: _mfc.date };
                 }
             }
         }
@@ -2529,7 +2619,7 @@ function computeCPM(activities, relationships, opts) {
         const rc = _resolveCalendar(cal);
         if (!rc || !rc.workDays) return maxEF;
         const lastWorkable = _roundBackwardToWorkday(_dLast, rc.workDays,
-            rc.holidaysSet);
+            rc.holidaysSet, rc.specialSet);
         return _advanceWithAlerts(lastWorkable, 1, cal, alerts,
             'seed-LF ' + n.code);
     }
@@ -5723,10 +5813,10 @@ function _impactWorkingDays(beforeDate, afterDate, calMap, projectCalendarId) {
     let cur = dateToNum(beforeDate);
     const end = dateToNum(afterDate);
     if (end <= cur) return 0;
-    const { workDays, holidaysSet } = _resolveCalendar(firstCal);
+    const { workDays, holidaysSet, specialSet } = _resolveCalendar(firstCal);
     while (cur < end) {
         cur += 1;
-        if (_isWorkDayOffset(cur, workDays, holidaysSet)) n += 1;
+        if (_isWorkDayOffset(cur, workDays, holidaysSet, specialSet)) n += 1;
     }
     return n;
 }
