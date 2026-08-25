@@ -2956,17 +2956,31 @@ function parseXER(content) {
                     // per-iteration and re-derives criticality.
                     const actStart = (row.act_start_date || '').slice(0, 10);
                     const actFinish = (row.act_end_date || '').slice(0, 10);
-                    // v2.9.5 — read XER cstr_type / cstr_date2 (primary), and
-                    // v2.9.7 — also cstr_type2 / cstr_date (secondary). Per
-                    // Oracle P6 Database Reference TASK schema, cstr_type2 is
-                    // a secondary constraint applied independently. v2.9.7
-                    // honors both and applies them sequentially in
-                    // forward/backward passes (secondary tightens further).
+                    // Primary constraint is cstr_type + cstr_date. Secondary is
+                    // cstr_type2 + cstr_date2. Both pairs stay together.
+                    //
+                    // v2.9.5 through v2.9.12 had these transposed: the primary
+                    // TYPE was read with the SECONDARY date and vice versa, on
+                    // a misreading of the Oracle TASK schema. Because most real
+                    // schedules carry a primary constraint and no secondary
+                    // one, the primary date came back empty and the constraint
+                    // was dropped entirely. Parsing a genuine 577-activity
+                    // export produced ZERO constraint objects and scheduled the
+                    // network as though it had none.
+                    //
+                    // Measured across every .xer on this machine:
+                    //   cstr_type  set -> date in cstr_date  6394, cstr_date2 9
+                    //   cstr_type2 set -> date in cstr_date2 3270, cstr_date  0
+                    //
+                    // With the pairing corrected the engine reproduces P6's own
+                    // stored ES/EF/LS/LF/TF 577 of 577 on that file; with the
+                    // transposition it matched 1 of 577.
+                    //
                     // v2.9.12 T1.6 — route via _normalizeConstraint with
                     // parseAlerts so unrecognized tokens and missing dates
                     // emit a forensic WARN instead of dropping silently.
                     const cstrType = row.cstr_type || '';
-                    const cstrDate = (row.cstr_date2 || '').slice(0, 10);
+                    const cstrDate = (row.cstr_date || '').slice(0, 10);
                     let constraint = null;
                     if (cstrType) {
                         constraint = _normalizeConstraint(
@@ -2974,9 +2988,9 @@ function parseXER(content) {
                             _MC.parseAlerts,
                             (row.task_code || taskId));
                     }
-                    // v2.9.7 — Secondary constraint (cstr_type2 + cstr_date).
+                    // v2.9.7 — Secondary constraint (cstr_type2 + cstr_date2).
                     const cstrType2 = row.cstr_type2 || '';
-                    const cstrDate2nd = (row.cstr_date || '').slice(0, 10);
+                    const cstrDate2nd = (row.cstr_date2 || '').slice(0, 10);
                     let constraint2 = null;
                     if (cstrType2) {
                         constraint2 = _normalizeConstraint2(

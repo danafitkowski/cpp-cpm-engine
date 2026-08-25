@@ -4511,11 +4511,11 @@ function _rChain(constraint, opts) {
 // ============================================================================
 console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
 
-// R-v295-1: parseXER reads cstr_type / cstr_date2 (T1 #1 — round-2 reachability).
+// R-v295-1: parseXER reads cstr_type / cstr_date (T1 #1 — round-2 reachability).
 {
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date',
         // Activity B: SNET on 2026-01-20 (CS_MSOA = Start On or After).
         '%R 100\tA\tFirst\tTT_Task\t40\t40\t\t\t1\t\t',
         '%R 101\tB\tSecond\tTT_Task\t24\t24\t\t\t1\tCS_MSOA\t2026-01-20 00:00',
@@ -4543,7 +4543,7 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
 {
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date',
         '%R 200\tA\tFirst\tTT_Task\t40\t40\t\t\t1\t\t',
         '%R 201\tB\tSecond\tTT_Task\t24\t24\t\t\t1\tCS_MSOA\t2026-02-15 00:00',
         '',
@@ -4575,7 +4575,7 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
 {
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 300\tFM\tFinishConstrained\tTT_Task\t40\t40\tCS_MEOB\t2026-03-01 00:00',
         '',
     ].join('\n');
@@ -4825,8 +4825,15 @@ console.log('\n=== Section R-v297 — secondary cstr_type2 ===');
     const xer = [
         '%T TASK',
         '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id\tcstr_type\tcstr_date\tcstr_type2\tcstr_date2',
-        // B: primary SNET (cstr_type=CS_MSOA, cstr_date2=2026-01-15),
-        //    secondary FNLT (cstr_type2=CS_MEOB, cstr_date=2026-01-25)
+        // B: primary SNET (cstr_type=CS_MSOA, cstr_date=2026-01-25),
+        //    secondary FNLT (cstr_type2=CS_MEOB, cstr_date2=2026-01-15)
+        // Each type stays with its own date column. The two dates are
+        // deliberately ten days apart so a transposed read is visible rather
+        // than silently plausible. This test used to assert them CROSSED, and
+        // called that "XER convention"; it is not. Measured across every .xer
+        // on this machine: a primary constraint's date sits in cstr_date 6394
+        // times against 9 in cstr_date2, and a secondary's sits in cstr_date2
+        // 3270 times against 0 in cstr_date.
         '%R 800\tA\tFirst\tTT_Task\t40\t40\t\t\t1\t\t\t\t',
         '%R 801\tB\tSecond\tTT_Task\t24\t24\t\t\t1\tCS_MSOA\t2026-01-25 00:00\tCS_MEOB\t2026-01-15 00:00',
         '',
@@ -4840,12 +4847,21 @@ console.log('\n=== Section R-v297 — secondary cstr_type2 ===');
     check('R-v297-3: parseXER captured secondary constraint',
         !!taskB && !!taskB.constraint2 && taskB.constraint2.type === 'FNLT',
         'got ' + (taskB && taskB.constraint2 && taskB.constraint2.type));
-    check('R-v297-3: primary date from cstr_date2 (XER convention)',
-        taskB && taskB.constraint && taskB.constraint.date === '2026-01-15',
+    check('R-v297-3: primary constraint takes its date from cstr_date',
+        taskB && taskB.constraint && taskB.constraint.date === '2026-01-25',
         'got ' + (taskB && taskB.constraint && taskB.constraint.date));
-    check('R-v297-3: secondary date from cstr_date (XER convention)',
-        taskB && taskB.constraint2 && taskB.constraint2.date === '2026-01-25',
+    check('R-v297-3: secondary constraint takes its date from cstr_date2',
+        taskB && taskB.constraint2 && taskB.constraint2.date === '2026-01-15',
         'got ' + (taskB && taskB.constraint2 && taskB.constraint2.date));
+    // Guard the transposition directly: neither constraint may carry the
+    // other's date. Both assertions above would still pass if the two dates
+    // happened to be equal, so this states the failure mode by name.
+    check('R-v297-3: primary did not pick up the secondary date',
+        taskB && taskB.constraint && taskB.constraint.date !== '2026-01-15',
+        'primary carries the secondary constraint date');
+    check('R-v297-3: secondary did not pick up the primary date',
+        taskB && taskB.constraint2 && taskB.constraint2.date !== '2026-01-25',
+        'secondary carries the primary constraint date');
 }
 
 // R-v297-4: Only primary set — secondary is null (regression guard).
@@ -5104,7 +5120,7 @@ console.log('\n=== Section R-MC — runCPM constraint enforcement ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 100\tA\tFirst\tTT_Task\t40\t40\t\t',
         '%R 101\tB\tSecond\tTT_Task\t24\t24\tCS_MSOA\t2026-01-15 00:00',
         '',
@@ -5138,7 +5154,7 @@ console.log('\n=== Section R-MC — runCPM constraint enforcement ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 200\tA\tFirst\tTT_Task\t40\t40\t\t',
         '%R 201\tB\tSecond\tTT_Task\t24\t24\tCS_MSOA\t2026-02-01 00:00',
         '',
@@ -5183,7 +5199,7 @@ console.log('\n=== Section R-MC — runCPM constraint enforcement ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 400\tA\tFirst\tTT_Task\t40\t40\t\t',
         '%R 401\tB\tSecond\tTT_Task\t24\t24\tCS_MSO\t2026-01-22 00:00',
         '',
@@ -5358,7 +5374,7 @@ console.log('\n=== Section R-ALAP-bw — ALAP backward pass tightens predecessor
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 300\tA\tFirst\tTT_Task\t40\t40\t\t',                       // 5d
         '%R 301\tB\tSecond\tTT_Task\t24\t24\tCS_MEOB\t2026-01-12 00:00', // FNLT day 7
         '%R 302\tC\tLong\tTT_Task\t80\t80\t\t',                        // 10d
@@ -5387,7 +5403,7 @@ console.log('\n=== Section R-ALAP-bw — ALAP backward pass tightens predecessor
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 500\tA\tFirst\tTT_Task\t40\t40\t\t',
         '%R 501\tB\tSecond\tTT_Task\t24\t24\tCS_MEOB\t2026-01-12 00:00',
         '%R 502\tC\tLong\tTT_Task\t80\t80\t\t',
@@ -5607,7 +5623,7 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 100\tA\tA\tTT_Task\t80\t80\t\t',
         '%R 101\tB\tB\tTT_Task\t40\t40\tCS_MEO\t2026-01-13 00:00',  // MS_Finish day 8 (impossible)
         '',
@@ -5755,7 +5771,7 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2\tcstr_type2\tcstr_date',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date\tcstr_type2\tcstr_date2',
         '%R 400\tA\tA\tTT_Task\t40\t40\t\t\t\t',     // 5d
         // Secondary slot only: ALAP via cstr_type2 (no primary).
         '%R 401\tB\tB\tTT_Task\t24\t24\t\t\tCS_ALAP\t',  // 3d
@@ -5819,7 +5835,7 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         // A is a 10-day predecessor with FNET pinning its EF late (day 20).
         '%R 500\tA\tA\tTT_Task\t80\t80\tCS_MEOA\t2026-01-25 00:00',  // FNET = day 20 forward clamp
         // B is a successor anchored EARLY via direct end-mile chain.
@@ -6409,13 +6425,16 @@ console.log('\n=== Section R-v2.9.11 — Round 8 R8A engine math fixes ===');
 }
 
 // R8A-4: Section D constraint with no projectStart emits constraint-skipped.
-// XER schema uses cstr_date2 for the PRIMARY constraint date (per Oracle P6
-// Database Reference). Secondary uses cstr_date.
+// XER schema pairs cstr_type with cstr_date (PRIMARY) and cstr_type2 with
+// cstr_date2 (SECONDARY). These were documented the other way round here for
+// several releases, and the parser was written to match the comment rather
+// than the data. Measured across every .xer on this machine: primary dates
+// sit in cstr_date 6394 times against 9 in cstr_date2.
 {
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 1\tA\tA\tTT_Task\t40\t40\tCS_MSO\t2026-01-15 08:00',
         '',
     ].join('\n');
@@ -6436,7 +6455,7 @@ console.log('\n=== Section R-v2.9.11 — Round 8 R8A engine math fixes ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 1\tA\tA\tTT_Task\t40\t40\tCS_MSO\t2026-01-15 08:00',
         '',
     ].join('\n');
@@ -6622,7 +6641,7 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 1\tA\tA\tTT_Task\t800\t800\t\t',  // 100 days
         '%R 2\tB\tB\tTT_Task\t80\t80\tCS_MSOB\t2026-01-15 08:00',  // SNLT 2026-01-15
         '%T TASKPRED',
@@ -6645,7 +6664,7 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 1\tA\tA\tTT_Task\t800\t800\t\t',
         '%R 2\tB\tB\tTT_Task\t80\t80\tCS_MEOB\t2026-01-15 08:00',  // FNLT 2026-01-15
         '%T TASKPRED',
@@ -6665,7 +6684,7 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     E.resetMC();
     const xer = [
         '%T TASK',
-        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R 1\tA\tA\tTT_Task\t40\t40\tCS_MSO\t2026-01-15 08:00',
         '',
     ].join('\n');
@@ -7013,11 +7032,12 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
 // distributions even though it's hard-pinned.
 {
     E.resetMC();
-    // XER columns: cstr_type + cstr_date2 = PRIMARY (per Oracle P6 schema —
-    // the suffix-2 belongs to the date, not the type).
+    // XER columns: cstr_type + cstr_date = PRIMARY, cstr_type2 + cstr_date2 =
+    // SECONDARY. The suffix-2 belongs to BOTH halves of the secondary pair, not
+    // to the date alone; believing otherwise is what transposed the parser.
     const xer = [
         '%T\tTASK',
-        '%F\ttask_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\tcstr_type\tcstr_date2',
+        '%F\ttask_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\tcstr_type\tcstr_date',
         '%R\t1\tA\tA\tTT_Task\t40\tCS_MSO\t2026-01-10',
     ].join('\n');
     E.parseXER(xer);
