@@ -80,39 +80,49 @@ function* walk(dir) {
 // safe to maintain: a new placeholder is flagged until someone adds it, and a
 // real client export is flagged until someone scrubs it. It fails closed both
 // ways.
-const XER_REF = /([A-Za-z0-9][A-Za-z0-9 _().+-]{0,60})\.xer\b/g;
-// Generic PARTS, not whole filenames. The stem is split on hyphens and
-// underscores and accepted only when EVERY part is generic or numeric, so
-// 'owner-baseline-2026-03' passes on its parts while 'amd-2cpcm-ct' fails on
-// its first. Nothing here is a client name; adding one would defeat the gate.
-const XER_GENERIC_PARTS = new Set([
-  'case', 'cases', 'file', 'files', 'out', 'output', 'input', 'import',
-  'example', 'examples', 'sample', 'test', 'tests', 'fixture', 'fixtures',
-  'a', 'an', 'the', 'this', 'that', 'every', 'any', 'some', 'each', 'no',
-  'one', 'per', 'genuine', 'real', 'current', 'baseline', 'schedule',
-  'export', 'exports', 'xer', 'name', 'its', 'own', 'your', 'my', 'renames',
-  'moves', 'holding', 'owner', 'args', 'path', 'src', 'dst', 'tmp', 'temp',
-  'new', 'old', 'copy', 'demo', 'dummy', 'stub', 'golden', 'from', 'to',
-  'template', 'placeholder', 'yours',
-]);
+// No "." in the class: with it a match spans a sentence boundary and
+// the uppercase comes from prose rather than a filename.
+const XER_REF = /([A-Za-z0-9][A-Za-z0-9 _()+-]{0,60})\.xer\b/g;
+// The signal that separates a CLIENT EXPORT from a committed fixture is its
+// code: a real export name carries an UPPERCASE run or a letter-then-digits
+// code, while fixtures are lowercase snake_case (rich_v23.xer, as_built.xer,
+// case.xer). A generic-word allowlist was tried first and flagged all of those
+// across ten repos, with no remedy except adding more words — the
+// maintained-list trap these rules exist to escape.
+const XER_SEPS = '/\\\'"(),=:;`*[]{}<>|';
+const XER_CODEY = /[A-Z]{2,}|[A-Za-z][0-9]{3,}/;
+const XER_GENERIC_UPPER = ['RFP', 'XER', 'WBS', 'TASK', 'BASELINE', 'CURRENT',
+                           'SCHEDULE', 'README', 'TODO', 'NOTE',
+                           // Technical words that sit next to a filename in
+                           // prose and are not project codes.
+                           'FS', 'SS', 'FF', 'SF', 'CALENDAR', 'TASKPRED',
+                           'PROJECT', 'DUP', 'SAMPLE', 'DEMO', 'TEST', 'CASE',
+                           'P6', 'CPM', 'DCMA', 'OK', 'NEW', 'OLD'];
 function namesAnExport(line) {
   XER_REF.lastIndex = 0;
   let m;
   while ((m = XER_REF.exec(line)) !== null) {
-    const words = m[1].trim().split(/\s+/);
-    // Take the last identifier-ish run, so `build_case(args.xer` reads as
-    // 'args' and a quoted path reads as its basename.
-    const raw = (words[words.length - 1] || '').toLowerCase();
-    const runs = raw.match(/[a-z0-9][a-z0-9._-]*/g) || [];
-    const stem = (runs[runs.length - 1] || '').replace(/[^a-z0-9]+$/, '');
+    let stem = m[1];
+    // Cut at the last character that cannot occur inside a filename, so the
+    // test sees the NAME and not the prose or code around it.
+    for (const sep of XER_SEPS) {
+      const i = stem.lastIndexOf(sep);
+      if (i !== -1) stem = stem.slice(i + 1);
+    }
+    // A real export name is one to three words ("CON-05 Mill REV-TB1"). Cap
+    // the window so surrounding prose cannot supply the uppercase.
+    stem = stem.trim().split(/\s+/).slice(-4).join(' ');
     if (!stem) continue;
-    const parts = stem.split(/[-_]+/).filter(Boolean);
-    const allGeneric = parts.every(
-      (p) => XER_GENERIC_PARTS.has(p) || /^[0-9]+$/.test(p));
-    if (!allGeneric) return stem;
+    let probe = stem;
+    for (const w of XER_GENERIC_UPPER) {
+      probe = probe.replace(
+        new RegExp('(?<![A-Za-z0-9])' + w + '(?![A-Za-z0-9])', 'g'), '');
+    }
+    if (XER_CODEY.test(probe)) return stem;
   }
   return null;
 }
+
 // An absolute path under someone's home directory, either platform.
 const HOME_PATH = /(?:[A-Za-z]:[\\/]+Users[\\/]+[A-Za-z0-9._-]+)|(?:\/(?:home|Users)\/[A-Za-z0-9._-]+)/;
 // Per-line escape, same convention as _cpp_common/scripts/client_names.py.
