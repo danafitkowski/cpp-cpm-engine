@@ -4448,11 +4448,42 @@ function _rChain(constraint, opts) {
         'got ' + r.nodes.B.ef_date);
 }
 
-// R-8: Long-form XER token (CS_MSO) normalizes to MS_Start.
+// R-8: CS_MSO is P6's "Start On" — a SOFT two-sided constraint, not a
+// mandatory pin.
+//
+// TITLE CORRECTED 2026-08-25. This read "CS_MSO normalizes to MS_Start" and
+// asserted only the later-date case. CS_MSO now maps to 'SO', so the title
+// asserted the opposite of the behaviour, and the single case could not tell
+// the two apart: with the constraint date LATER than the predecessor-driven
+// ES, a soft push-out and a hard pin land on the same day. Planting
+// CS_MSO -> 'MS_Start' back produced five failures and this was not among
+// them.
+//
+// The discriminating case is a constraint date EARLIER than the driving logic.
+// Start On pushes a date out and never pulls it in ahead of the logic; when
+// logic wins the constraint reports as violated. A mandatory pin would force
+// B to start before A finished, which is what the engine used to do.
 {
+    // Later than the logic: the constraint pushes B out, and applies.
     const r = _rChain({ type: 'CS_MSO', date: '2026-01-20' });
-    check('R-8: CS_MSO normalizes to MS_Start',
-        r.nodes.B.es_date === '2026-01-20');
+    check('R-8: CS_MSO (Start On) pushes ES out when it is later than logic',
+        r.nodes.B.es_date === '2026-01-20',
+        'got ' + r.nodes.B.es_date);
+    check('R-8: CS_MSO normalizes to the SOFT Start On token, not a hard pin',
+        r.nodes.B.constraint && r.nodes.B.constraint.type === 'SO',
+        'got ' + (r.nodes.B.constraint && r.nodes.B.constraint.type));
+
+    // Earlier than the logic: predecessor logic WINS and the constraint is
+    // reported violated. Under a mandatory pin B.ES would be 2026-01-05,
+    // i.e. B starting before A finished on 2026-01-10.
+    const r2 = _rChain({ type: 'CS_MSO', date: '2026-01-05' });
+    check('R-8: CS_MSO does NOT pull ES in ahead of the driving predecessor',
+        r2.nodes.B.es_date === r2.nodes.A.ef_date,
+        'B.ES=' + r2.nodes.B.es_date + ' A.EF=' + r2.nodes.A.ef_date
+        + ' (a hard pin would give 2026-01-05)');
+    check('R-8: CS_MSO beaten by logic reports constraint-violated',
+        (r2.alerts || []).some(a => a.context === 'constraint-violated'),
+        'contexts=' + JSON.stringify([...new Set((r2.alerts || []).map(a => a.context))]));
 }
 
 // R-9: In-progress activity ES pin (fix #2).
