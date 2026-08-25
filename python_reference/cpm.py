@@ -1364,10 +1364,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # cpm-engine.js:2073. INFO alert emitted on JS side; Python
         # tracks the count for diagnostic parity.
         skipped_completed_succ = 0
-        # B2 (P6 alignment wave) — SS/SF successors constrain the
-        # predecessor's START, not its finish. Bounds are collected on LS
-        # and applied after LS derives from LF. JS paired site: the SS/SF
-        # lsBound branches in cpm-engine.js's backward loop.
+        # SS/SF successors constrain the predecessor's START. In standard CPM
+        # a bound on LS is equally a bound on LF one duration later, so the
+        # bound is converted below and folded into the same min() as every
+        # other drive. PAIRED FIX (JS + Python in lockstep): the JS site is
+        # the _minLSBound handling in cpm-engine.js's backward loop.
+        #
+        # B2 (the "P6 alignment wave") removed that conversion and bounded LS
+        # only, leaving LF at the seed, so TF = LF - EF was measured to
+        # project end and any activity whose successors are all SS or SF was
+        # reported float-rich. B2 was fitted to capture cases 02 and 04, in
+        # which the SS/SF predecessor is the network's LAST activity, so its
+        # TF is 0 under either rule and they proved nothing. Reverting it took
+        # four real exports to 100% exact against P6's own stored
+        # ES/EF/LS/LF/TF with no field regressing on any file.
         min_ls_bound = None
         if succs:
             min_lf = None
@@ -1409,6 +1419,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     min_ls_bound = ls_bound
             if min_lf is None:
                 min_lf = node['_seed_lf']
+            # Convert the tightest SS/SF start bound into its late-finish
+            # equivalent, one duration later on THIS activity's calendar (the
+            # successor's calendar governed only the lag walk above). Applied
+            # after the seed fallback and only when it tightens, so a start
+            # bound falling later than the seed can never push LF outward.
+            # min over successors of (ls_bound + duration) equals
+            # (min ls_bound) + duration because the duration is constant, so
+            # one conversion covers every SS/SF successor.
+            if min_ls_bound is not None:
+                lf_from_ls = _advance_workdays(
+                    min_ls_bound, node['duration_days'], node_cal,
+                    alerts=alerts, ctx=f'backward SS/SF LF-equivalent {code}')
+                if lf_from_ls is not None and lf_from_ls < min_lf:
+                    min_lf = lf_from_ls
             # v2.9.27 — INFO alert when completed successors were skipped
             # (matches JS cpm-engine.js:2110).
             if skipped_completed_succ > 0:
@@ -1436,7 +1460,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         node['ls'] = _retreat_workdays(
             node['lf'], node['duration_days'], node_cal,
             alerts=alerts, ctx=f'backward {code}.LS')
-        # B2 — apply SS/SF start bounds. LS only; LF stays seed/FS/FF-driven.
+        # Keep the tightest SS/SF start bound as an explicit floor on LS.
+        # The LF equivalent above already bounds LF, but advance/retreat are
+        # not exact inverses when either endpoint lands on a non-working day,
+        # so LS is clamped directly rather than trusted to fall out of LF.
         if min_ls_bound is not None and min_ls_bound < node['ls']:
             node['ls'] = min_ls_bound
         # v2.9.12 T3.19 — recorded-actual-start precedence on the backward

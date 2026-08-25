@@ -5574,6 +5574,97 @@ function _rRel(relType, lag) {
         r.nodes.B.tf === 2, 'B.TF=' + r.nodes.B.tf);
 }
 
+// SS/SF backward pass — a start-bound successor must also bound LATE FINISH.
+//
+// THIS IS THE DISCRIMINATING CASE. Every pre-existing SS/SF backward test,
+// including Q3-SF0 and Q3-SF2 above and comparison capture cases 02 and 04,
+// puts the SS/SF predecessor LAST in the network. Its EF then equals the
+// project finish, so its LF is the seed and its TF is 0 whichever rule the
+// backward pass uses. Those tests agreed with the LS-only rule because they
+// could not disagree with anything, which is how the defect survived.
+//
+// Here A is NOT last: A --SS0--> B --FS0--> C, and C carries the finish. The
+// two rules give visibly different answers.
+//
+//   LS-only rule (wrong): A.LF stays at the seed 2026-01-30, A.TF = 15
+//   Standard CPM (right): A.LF = A.LS + duration = 2026-01-15, A.TF = 0
+//
+// A drives B's start, B drives C, C is the project finish, so A is on the
+// critical path and P6 reports zero float for it. Measured on real exports,
+// which are not named here because this repo is public and they are client
+// schedules. Three activities with a sole SS successor came back P6 TF 23
+// against the engine's 96, P6 TF 2 against 125, and P6 TF 32 against 141.
+// Applying the standard rule took four real exports (67, 33, 409 and 410
+// activities) to 100% exact on ES/EF/LS/LF/TF against P6's own stored
+// values, with no field regressing on any file.
+{
+    const acts = [
+        { code: 'A', duration_days: 10, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 5 },
+        { code: 'C', duration_days: 20 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'SS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('SS-LF: fixture is discriminating (A is not the last activity)',
+        r.nodes.A.ef_date < r.projectFinish,
+        'A.EF=' + r.nodes.A.ef_date + ' projectFinish=' + r.projectFinish);
+    check('SS-LF: A.LF bounded by its SS successor, not the seed',
+        r.nodes.A.lf_date === '2026-01-15',
+        'A.LF=' + r.nodes.A.lf_date + ' (seed would be ' + r.projectFinish + ')');
+    check('SS-LF: A.LF is strictly earlier than the project finish',
+        r.nodes.A.lf_date < r.projectFinish,
+        'A.LF=' + r.nodes.A.lf_date + ' projectFinish=' + r.projectFinish);
+    check('SS-LF: A.TF === 0 (A drives B drives C)',
+        r.nodes.A.tf === 0, 'A.TF=' + r.nodes.A.tf);
+    check('SS-LF: A.LS unchanged at 2026-01-05',
+        r.nodes.A.ls_date === '2026-01-05', 'A.LS=' + r.nodes.A.ls_date);
+    check('SS-LF: the FS chain is untouched (B and C still zero float)',
+        r.nodes.B.tf === 0 && r.nodes.C.tf === 0,
+        'B.TF=' + r.nodes.B.tf + ' C.TF=' + r.nodes.C.tf);
+}
+
+// Same shape through an SF link, so the SF branch is guarded too rather than
+// relying on the SS branch to cover both.
+{
+    const acts = [
+        { code: 'A', duration_days: 10, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 5 },
+        { code: 'C', duration_days: 20 },
+    ];
+    const rels = [
+        { from_code: 'A', to_code: 'B', type: 'SF', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('SF-LF: A.LF is bounded, not left at the project-finish seed',
+        r.nodes.A.lf_date < r.projectFinish,
+        'A.LF=' + r.nodes.A.lf_date + ' projectFinish=' + r.projectFinish);
+    check('SF-LF: A.TF is not project-end float',
+        r.nodes.A.tf < 15, 'A.TF=' + r.nodes.A.tf);
+}
+
+// A start-bound that falls LATER than the seed must never push LF outward.
+// The first attempt at this fix folded the bound in before the seed fallback,
+// which replaced the seed instead of tightening it and made LF later. Six
+// assertions caught it; this one states the rule directly.
+{
+    const acts = [
+        { code: 'A', duration_days: 2, early_start: '2026-01-05' },
+        { code: 'B', duration_days: 2 },
+        { code: 'LONG', duration_days: 40, early_start: '2026-01-05' },
+    ];
+    const rels = [{ from_code: 'A', to_code: 'B', type: 'SS', lag_days: 0 }];
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    check('SS-LF: LF never exceeds the project finish',
+        r.nodes.A.lf_date <= r.projectFinish,
+        'A.LF=' + r.nodes.A.lf_date + ' projectFinish=' + r.projectFinish);
+    check('SS-LF: A.TF is not negative',
+        r.nodes.A.tf >= 0, 'A.TF=' + r.nodes.A.tf);
+}
+
 // ============================================================================
 // Section R-v298 — v2.9.8 Round 6 engine math + concurrency hardening
 // One test per fix; uses each bug's worst-case fixture. Asserts exact

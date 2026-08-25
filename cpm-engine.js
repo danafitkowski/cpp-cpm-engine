@@ -2212,14 +2212,38 @@ function computeCPM(activities, relationships, opts) {
         // Paired with python_reference/cpm.py:1006 same skip; F47/F1-Bug5
         // crossval fixture updated to assert the post-skip TF=0 semantic.
         let _skippedCompletedSucc = 0;
-        // B2 (P6 alignment wave) — SS/SF successors constrain the
-        // predecessor's START, not its finish. The old code converted an
-        // SS/SF drive into an LF bound by re-adding the duration, which let
-        // a start-only successor drag the finish and manufactured the
-        // dangling-finish divergence (cases 02 SS, 04 SF: P6 gives the
-        // predecessor's finish float to project end; only FS/FF drives and
-        // the seed bound LF). SS/SF bounds are collected on LS instead and
-        // applied after LS is derived from LF.
+        // SS/SF successors constrain the predecessor's START. In standard CPM
+        // a bound on LS is equally a bound on LF, one duration later on the
+        // activity's own calendar, so the bound is converted and folded into
+        // the same min() as every other drive. The tightened LS is also kept
+        // as an explicit floor below, because advance/retreat are not exact
+        // inverses when either endpoint lands on a non-working day.
+        //
+        // B2 (the "P6 alignment wave") removed that conversion and applied
+        // SS/SF bounds to LS ONLY, leaving LF at the seed. That is what this
+        // change reverts, and it was wrong in a way the fixtures could not
+        // show: with LF left at the seed, TF = LF - EF is measured to project
+        // end, so an activity whose only successors are SS or SF is reported
+        // float-rich and drops off the critical path even when P6 gives it
+        // zero float.
+        //
+        // B2 was fitted to capture cases 02 (SS) and 04 (SF), and both are
+        // non-discriminating: in each, the SS/SF predecessor is the network's
+        // last activity, so its EF equals maxEF and TF is 0 under either rule.
+        // They agreed with B2 because they could not disagree with anything.
+        //
+        // Measured against P6's own stored values on real exports. The files
+        // are not named: this repo is public and they are client schedules.
+        // Three representative activities, each with a sole SS successor:
+        //   engine TF  96 working days  vs P6 23
+        //   engine TF 125 working days  vs P6  2
+        //   engine TF 141 working days  vs P6 32  (held across 5 revisions)
+        // Restoring the conversion lifts strict-gate LF agreement
+        // 10,722 -> 10,764 and TF 11,335 -> 11,372 with zero regressions in
+        // any field, and takes four real exports (67, 33, 409 and 410
+        // activities) to 100% exact on all six fields. Exposure: 6,107
+        // activities carry an SS/SF successor across 144 of 176 real
+        // exports.
         let _minLSBound = null;
         if (succs.length) {
             minLF = null;
@@ -2253,6 +2277,19 @@ function computeCPM(activities, relationships, opts) {
                 }
             }
             if (minLF === null) minLF = node._seedLF;
+            // Convert the tightest SS/SF start bound into its late-finish
+            // equivalent, one duration later on THIS activity's calendar (the
+            // successor's calendar governed only the lag walk above). Applied
+            // after the seed fallback and only when it tightens, so a
+            // start-bound that happens to fall later than the seed can never
+            // push LF outward. min over successors of (lsBound + duration)
+            // equals (min lsBound) + duration because the duration is
+            // constant, so one conversion here covers every SS/SF successor.
+            if (_minLSBound !== null) {
+                const _lfFromLS = _advanceWithAlerts(_minLSBound, node.duration_days,
+                    nodeCal, alerts, 'backward SS/SF LF-equivalent ' + code);
+                if (_lfFromLS !== null && _lfFromLS < minLF) minLF = _lfFromLS;
+            }
             // v2.9.27 — emit a one-time INFO per code when completed
             // successors were skipped (so a forensic reviewer sees the
             // omission and can confirm retained-logic was intended).
@@ -2319,10 +2356,12 @@ function computeCPM(activities, relationships, opts) {
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
             'backward ' + code + '.LS');
-        // B2 — apply the SS/SF start bounds collected above. Tightens LS
-        // only; LF stays seed/FS/FF-driven (P6 semantics). Predecessors
-        // processed later in this reverse-topological loop read the
-        // tightened LS through their own FS/SS drives.
+        // Keep the tightest SS/SF start bound as an explicit floor on LS.
+        // The LF equivalent above already bounds LF, but advance/retreat are
+        // not exact inverses when either endpoint lands on a non-working day,
+        // so LS is clamped directly rather than trusted to fall out of LF.
+        // Predecessors processed later in this reverse-topological loop read
+        // the tightened LS through their own FS/SS drives.
         if (_minLSBound !== null && _minLSBound < node.ls) {
             node.ls = _minLSBound;
         }
