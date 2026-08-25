@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **989 / 989 executed-check** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to **989 of 995**. The 6 comparisons still skipped are activities where NEITHER engine emits the field (3 `ff_signed`, 3 `ff_signed_working_days`, all on completed activities), so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **1009 / 1009 executed-check** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995, and the 2026-08-25 wave took it to **1009 of 1015** across 46 fixtures. The 6 comparisons still skipped are activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
 
 ## Provenance
 
@@ -37,7 +37,7 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  a3021bcec22af8d17ad707029703225fe859e5f7401cc390b837412880ef1757
+cpm.py  SHA-256:  4d921cc8c826346fe103981b89b6cab11f3c03b2d8ee48ee27f10ee32e0395cc
 
 (post-v2.9.39 - bumped from da792b52... by c279a5c: embedded coverage-gap
 disclosure strings in the module header only, no math change. Prior:
@@ -156,15 +156,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 110642
-  sha-256:  a3021bcec22af8d17ad707029703225fe859e5f7401cc390b837412880ef1757
+  bytes: 116284
+  sha-256:  4d921cc8c826346fe103981b89b6cab11f3c03b2d8ee48ee27f10ee32e0395cc
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 45 passed, 0 failed
-  Checks:   989 / 989 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 46 passed, 0 failed
+  Checks:   1009 / 1009 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

@@ -9838,14 +9838,33 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
     const fs = require('fs');
     const path = require('path');
     const apiPath = path.join(__dirname, 'docs', 'api.md');
-    const api = fs.existsSync(apiPath) ? fs.readFileSync(apiPath, 'utf-8') : '';
-    check('V2942-13: docs/api.md states that actual_finish is an EF boundary',
-        /actual_finish` is an EF boundary, not the last worked day/.test(api),
-        'docs/api.md does not carry the actual_finish boundary contract');
-    check('V2942-13: the api.md example is consistent with the exclusive convention',
-        !/actual_finish: '2026-01-09'/.test(api),
-        "docs/api.md still shows actual_finish: '2026-01-09', the inclusive form, " +
-        'on a 5-day activity starting 2026-01-05 whose boundary is 2026-01-12');
+    // This suite is mirrored into _cpp_common/cpm-engine-js/, which carries the
+    // .js files but no docs/. package.json sits beside the suite in the engine
+    // repo and is NOT mirrored, so it tells the two contexts apart. A blanket
+    // skip would be worse than the failure: if docs/ ever vanished from
+    // canonical the contract would quietly stop being checked anywhere.
+    const inCanonicalRepo = fs.existsSync(path.join(__dirname, 'package.json'));
+    if (!inCanonicalRepo) {
+        // TWO checks, matching the canonical branch exactly. The suite's pass
+        // count is a single-source-of-truth constant (JS_UNIT_TEST_COUNT); a
+        // count that changes with WHERE the suite runs makes that constant
+        // unmaintainable.
+        check('V2942-13: docs/api.md contract — not applicable outside the engine repo',
+            true,
+            'running from a mirror with no docs/; the contract is checked in canonical');
+        check('V2942-13: api.md example check — not applicable outside the engine repo',
+            true,
+            'running from a mirror with no docs/; the contract is checked in canonical');
+    } else {
+        const api = fs.existsSync(apiPath) ? fs.readFileSync(apiPath, 'utf-8') : '';
+        check('V2942-13: docs/api.md states that actual_finish is an EF boundary',
+            /actual_finish` is an EF boundary, not the last worked day/.test(api),
+            'docs/api.md does not carry the actual_finish boundary contract');
+        check('V2942-13: the api.md example is consistent with the exclusive convention',
+            !/actual_finish: '2026-01-09'/.test(api),
+            "docs/api.md still shows actual_finish: '2026-01-09', the inclusive form, " +
+            'on a 5-day activity starting 2026-01-05 whose boundary is 2026-01-12');
+    }
     // Behavioural pin on the contract the doc now states.
     const r = E.computeCPM(
         [{ code: 'A', duration_days: 5, clndr_id: '1',
