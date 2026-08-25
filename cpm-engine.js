@@ -193,8 +193,24 @@ const CONSTRAINT_TYPE_MAP = {
     // (TASK.cstr_type). The "A/B" suffix is After/Before (Start/Finish No
     // Earlier/Later Than). v2.9.3 misclassified CS_MEOA / CS_MSOA as
     // mandatory; per the P6 spec they are deadline-style soft constraints.
-    'CS_MSO':      'MS_Start',     // Mandatory Start On
-    'CS_MEO':      'MS_Finish',    // Mandatory Finish On (Mandatory End Originally)
+    // v2.9.42 — CS_MSO / CS_MEO are P6's "Start On" / "Finish On", NOT the
+    // mandatory pins. They mapped to MS_Start / MS_Finish — the identical
+    // canonical names CS_MANDSTART / CS_MANDFIN take below — so the engine could
+    // not tell a Start On from a Mandatory Start at all, and gave both the hard
+    // "forced regardless of pred logic" treatment. Measured before this fix:
+    // P (60 d) -FS+0-> X with constraint {CS_MSO, 2026-01-05} returned
+    // X.es_date 2026-01-05 while P.ef_date was 2026-03-30 — the engine scheduled
+    // the successor SIXTY WORKING DAYS BEFORE ITS PREDECESSOR FINISHED, emitting
+    // only a constraint-violated ALERT. P6 does not do that: on the corpus files
+    // P6 actually rescheduled (FS+0 links between unstarted activities honoured
+    // at >= 97%), 5 of 26 CS_MSO activities carry an early_start AFTER the
+    // constraint date — P6 lets predecessor logic win on Start On, and this
+    // engine could not. Start On / Finish On are two-sided SOFT constraints
+    // (SNET+SNLT and FNET+FNLT on the same date): they push the date out, they
+    // never pull it in ahead of the driving logic, and when logic wins the
+    // constraint reports as violated. The mandatory tokens keep the hard pin.
+    'CS_MSO':      'SO',           // Start On (soft two-sided: SNET + SNLT)
+    'CS_MEO':      'FO',           // Finish On (soft two-sided: FNET + FNLT)
     'CS_MSOA':     'SNET',         // Start On or After (Start No Earlier Than)
     'CS_MSOB':     'SNLT',         // Start On or Before (Start No Later Than)
     'CS_MEOA':     'FNET',         // Finish On or After (Finish No Earlier Than)
@@ -209,7 +225,7 @@ const CONSTRAINT_TYPE_MAP = {
     'CS_MANSTART': 'MS_Start',
     'CS_MANFINISH':'MS_Finish',
     'CS_ALAP':     'ALAP',
-    'CS_SO':       'SO',           // Start On (treated as MS_Start)
+    'CS_SO':       'SO',           // Start On (soft two-sided)
     // Short tokens (already canonical or P6 GUI labels)
     'SNET':        'SNET',
     'SNLT':        'SNLT',
@@ -220,20 +236,22 @@ const CONSTRAINT_TYPE_MAP = {
     'ALAP':        'ALAP',
     'MFO':         'MFO',
     'SO':          'SO',
+    'FO':          'FO',
     // Common P6 short tokens for start/finish constraints
     'CS_MSO_S':    'SNET',
     'CS_MSO_F':    'SNLT',
     'CS_MEO_S':    'FNET',
     'CS_MEO_F':    'FNLT',
-    'StartOn':     'MS_Start',
-    'FinishOn':    'MS_Finish',
+    // v2.9.42 — the GUI labels name Start On / Finish On, not the mandatory pins.
+    'StartOn':     'SO',
+    'FinishOn':    'FO',
     'StartNoEarlierThan':  'SNET',
     'StartNoLaterThan':    'SNLT',
     'FinishNoEarlierThan': 'FNET',
     'FinishNoLaterThan':   'FNLT',
 };
 const CANONICAL_CONSTRAINT_TYPES = new Set([
-    'SNET','SNLT','FNET','FNLT','MS_Start','MS_Finish','ALAP','MFO','SO',
+    'SNET','SNLT','FNET','FNLT','MS_Start','MS_Finish','ALAP','MFO','SO','FO',
 ]);
 
 // v2.9.12 T1.6 — Optional `alerts` array. Previously the function silently
@@ -1083,7 +1101,34 @@ function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
                     numToDate(maxES) + ' is after constraint date ' + cstr.date,
             });
         }
-    } else if (cstr.type === 'MS_Start' || cstr.type === 'SO') {
+    } else if (cstr.type === 'SO' && cdNum > 0) {
+        // v2.9.42 — Start On is SNET + SNLT on the same date, NOT a hard pin.
+        // It pushes ES out to the date; it never pulls ES back ahead of the
+        // driving logic. When logic wins, the constraint is violated and says so
+        // — that is P6's own conduct (5 of 26 properly-rescheduled CS_MSO
+        // activities on the corpus carry an early_start AFTER their constraint
+        // date). The pre-fix hard pin scheduled a successor 60 working days
+        // before its predecessor finished.
+        if (cdNum > maxES) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-applied',
+                message: 'Start On' + tag + ' on ' + code + ' pushes ES from ' +
+                    numToDate(maxES) + ' to ' + cstr.date,
+            });
+            return cdNum;
+        }
+        if (maxES > cdNum) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'constraint-violated',
+                message: 'Start On' + tag + ' on ' + code + ' violated: ES=' +
+                    numToDate(maxES) + ' is after constraint date ' + cstr.date +
+                    '. Predecessor logic governs; P6 does not pull a Start On ' +
+                    'activity back ahead of its drivers.',
+            });
+        }
+    } else if (cstr.type === 'MS_Start') {
         if (cdNum > 0) {
             if (maxES > cdNum) {
                 alerts.push({
@@ -1150,6 +1195,27 @@ function _applyForwardEFConstraint(code, ef, cstr, label, alerts, es) {
                     numToDate(ef) + ' is after constraint date ' + cstr.date,
             });
         }
+    } else if (cstr.type === 'FO' && cdNum > 0) {
+        // v2.9.42 — Finish On is FNET + FNLT on the same date, NOT a hard pin.
+        // Same reasoning as Start On above.
+        if (cdNum > ef) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-applied',
+                message: 'Finish On' + tag + ' on ' + code + ' pushes EF from ' +
+                    numToDate(ef) + ' to ' + cstr.date,
+            });
+            return _guardEF(cdNum);
+        }
+        if (ef > cdNum) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'constraint-violated',
+                message: 'Finish On' + tag + ' on ' + code + ' violated: EF=' +
+                    numToDate(ef) + ' is after constraint date ' + cstr.date +
+                    '. Predecessor logic governs.',
+            });
+        }
     } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
         if (cdNum > 0) {
             if (ef > cdNum) {
@@ -1209,7 +1275,17 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
         const lfFromSnlt = _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
             'SNLT LF ' + code);
         if (lfFromSnlt < minLF) return lfFromSnlt;
-    } else if ((cstr.type === 'MS_Start' || cstr.type === 'SO') && cdNum > 0) {
+    } else if (cstr.type === 'FO' && cdNum > 0) {
+        // v2.9.42 — Finish On caps LF at the date (its FNLT half). It does NOT
+        // widen LF the way the mandatory pin does.
+        if (cdNum < minLF) return cdNum;
+    } else if (cstr.type === 'SO' && cdNum > 0) {
+        // v2.9.42 — Start On caps LS at the date (its SNLT half): LF =
+        // date + duration, applied only when it TIGHTENS.
+        const lfFromSO = _advanceWithAlerts(cdNum, durationDays, nodeCal, alerts,
+            'SO LF ' + code);
+        if (lfFromSO < minLF) return lfFromSO;
+    } else if (cstr.type === 'MS_Start' && cdNum > 0) {
         // v2.9.12 T1.1 — Mandatory Start hard-pins LS = cstr.date.
         // Achieve by setting LF = cstr.date + duration so that the
         // post-clamp `LS = retreat(LF, duration)` recompute lands on
@@ -1328,6 +1404,8 @@ function computeCPM(activities, relationships, opts) {
     // position in topo_order vs Python and break Section 3's alphabetical
     // edge-drop tiebreak when cycles include numeric-only codes.
     const nodes = Object.create(null);
+    // v2.9.42 — TT_LOE / TT_WBS activities excluded from the network.
+    const excludedByTaskType = [];
     const nodeCodesOrdered = [];
     // v2.9.20 A16-M4 — empty schedule alert. Returning an empty result
     // silently lets downstream consumers compute Δ against an empty
@@ -1367,6 +1445,48 @@ function computeCPM(activities, relationships, opts) {
                 context: 'activity-missing-code',
                 message: 'activities[' + _activityIdx + '] has missing/empty code; ' +
                     'activity skipped. Verify the upstream parser preserved task_code.',
+            });
+            continue;
+        }
+        // v2.9.42 — task-type exclusion. Section C previously had NO task_type
+        // field on its node record and nothing anywhere between the node build
+        // and criticalCodes excluded TT_LOE / TT_WBS, so a level-of-effort bar
+        // could drive the critical path and set the project finish date.
+        // Measured: a 60-day TT_LOE hung off A by SS+0 and feeding B by FS
+        // became the SOLE critical path (criticalCodes ['A','LOE','B']) and set
+        // projectFinish to 2026-04-02, with zero alerts emitted. In P6 an LOE's
+        // dates are DERIVED from its predecessors and successors, and a
+        // WBS-summary activity's dates are derived from its children; neither
+        // drives logic and neither appears on the longest path. Section D's
+        // parseXER has dropped both since v2.9.3 (context 'task-dropped'), so
+        // the two ingestion routes disagreed. Section C now applies the same
+        // policy. Every excluded activity is enumerated — no truncation, no
+        // top-N. The validation corpus carries 124 TT_LOE and 9 TT_WBS rows.
+        const _ttRaw = (a.task_type !== undefined && a.task_type !== null)
+            ? a.task_type
+            : (a.taskType !== undefined && a.taskType !== null ? a.taskType : '');
+        const _tt = _ttRaw ? String(_ttRaw).trim() : '';
+        if (_tt === 'TT_LOE' || _tt === 'TT_WBS') {
+            excludedByTaskType.push({
+                code,
+                task_type: _tt,
+                reason: (_tt === 'TT_LOE') ? 'level-of-effort' : 'wbs-summary',
+            });
+            alerts.push({
+                severity: 'ALERT',
+                // Reuses Section D parseXER's existing 'task-dropped'
+                // context: identical policy, identical hazard, already a
+                // member of FATAL_STRICT_CONTEXTS, so a court-grade run
+                // now stops on an LOE bar instead of silently letting it
+                // drive. Overridable with a written rationale like any
+                // other fatal context.
+                context: 'task-dropped',
+                message: 'Activity ' + code + ' has task_type=' + _tt + ' (' +
+                    ((_tt === 'TT_LOE') ? 'level of effort' : 'WBS summary') +
+                    '); excluded from the CPM network. P6 derives its dates ' +
+                    'from surrounding logic, so it must not drive the critical ' +
+                    'path or the project finish date. Relationships touching ' +
+                    'it are dropped with it.',
             });
             continue;
         }
@@ -1582,6 +1702,45 @@ function computeCPM(activities, relationships, opts) {
         };
     }
 
+    // v2.9.42 — missing-data-date gate. ddNum is `dataDate ? dateToNum(dataDate) : 0`
+    // and the forward pass seeds maxES from it, so with no data date every
+    // unstarted source activity gets ES = 0. addWorkDays then short-circuits on
+    // `startNum <= 0` and returns `startNum + n`, silently switching the whole
+    // network from calendar arithmetic to ordinal 7-day arithmetic anchored on
+    // the 2020-01-01 epoch. Measured before this gate existed:
+    // computeCPMForensicStrict([A 5 d, B 3 d], [A->B], {calMap, projectCalendar})
+    // with no dataDate returned A.es_date = '' (empty string), A.ef_date =
+    // 2020-01-06, projectFinish = 2020-01-09 and alerts.length = 0 — A's five
+    // WORKING days applied as five ORDINAL days from the epoch, reported as a
+    // clean run by the function the documentation nominates for expert
+    // testimony. The alert fires only when the epoch seed is actually reachable
+    // (at least one activity that is neither complete nor actually started), so
+    // an all-actuals as-built is not flagged for a date it does not use.
+    // 'missing-data-date' is a member of FATAL_STRICT_CONTEXTS.
+    if (ddNum <= 0) {
+        let _epochSeeded = 0;
+        for (const _c in nodes) {
+            const _n = nodes[_c];
+            if (!_n.is_complete && !_n.actual_start) _epochSeeded += 1;
+        }
+        if (_epochSeeded > 0) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'missing-data-date',
+                message: 'MISSING_DATA_DATE: opts.dataDate is ' +
+                    (dataDate ? JSON.stringify(dataDate) + ' which did not parse as YYYY-MM-DD'
+                              : 'absent') +
+                    '; the forward pass seeds early start at offset 0 (the ' +
+                    '2020-01-01 epoch) for the ' + _epochSeeded + ' activit' +
+                    (_epochSeeded === 1 ? 'y' : 'ies') + ' that are neither ' +
+                    'complete nor actually started, and addWorkDays falls back ' +
+                    'to ORDINAL 7-day arithmetic below offset 0. Every date in ' +
+                    'this result is epoch-anchored and non-calendar. Supply ' +
+                    'opts.dataDate.',
+            });
+        }
+    }
+
     // Adjacency.
     const predMap = Object.create(null);
     const succMap = Object.create(null);
@@ -1684,6 +1843,132 @@ function computeCPM(activities, relationships, opts) {
         return _projectCal;
     }
 
+    // v2.9.42 — SCHEDOPTIONS.sched_calendar_on_relationship_lag.
+    // P6 schedules a relationship's lag on a calendar the SCHEDULE chooses, and
+    // the engine hardcoded the successor's while docs/algorithm.md asserted that
+    // as "P6 convention". It is not the P6 default and it is not what real
+    // schedules ask for: scanning SCHEDOPTIONS across the validation corpus
+    // gives rcal_Predecessor 191 files and rcal_Successor 4, and a grep for
+    // SCHEDOPTIONS / sched_calendar_on_relationship_lag over the whole engine
+    // returned ZERO hits — the setting was never read anywhere.
+    // Measured consequence of the hardcode on a mixed-calendar network:
+    // predecessor on a 7-day calendar, duration 5 from 2026-01-05 (EF Sat
+    // 2026-01-10), successor on Mon-Fri with FS+2 gave successor ES 2026-01-13
+    // where the predecessor's calendar gives 2026-01-12 — and the same run
+    // handed the PREDECESSOR lf 2026-01-09 against ef 2026-01-10, tf -1,
+    // tf_working_days -1, flagged critical, in a network with no constraint and
+    // no imposed deadline. That negative float is manufactured purely by the
+    // forward walk and the backward walk not being inverses when the anchor
+    // falls on a non-working day of the lag calendar; walking both on the
+    // predecessor's calendar (where its own EF is by construction a working
+    // instant) makes them inverses again. Activities in 58 of 189 corpus files
+    // reference more than one calendar, so the exposure is 30.7% of real files.
+    // DEFAULT IS 'successor', AND THAT IS NOT THE P6 SETTING. Switching the
+    // default to 'predecessor' was tried and MEASURED against P6's own stored
+    // dates on six real gate-passing multi-calendar exports. It regressed:
+    //   2,918-activity export  es 0.96642->0.91090, ef 0.96642->0.91056,
+    //                          ls 0.82968->0.72858, lf 0.82454->0.73098,
+    //                          tf 0.82625->0.74195, all 0.74537->0.65113
+    //   1,168-activity export  tf 0.36216->0.15240, all 0.26541->0.09418
+    //   786-activity export    es +0.00255, ef +0.00255, tf -0.00763,
+    //                          ff -0.00509, all 0.76209->0.75700
+    //   788 / 875 / 408-activity exports: unchanged (or ff +0.00114)
+    // — every one of those files carries sched_calendar_on_relationship_lag =
+    // rcal_Predecessor. So the SETTING says predecessor while P6's OWN COMPUTED
+    // DATES agree better with a successor-calendar walk in this engine's
+    // whole-working-day representation. The likely reason is that the lag
+    // MAGNITUDE is already fixed in the predecessor's hours by the hour->day
+    // conversion, leaving the successor's availability to govern where the walk
+    // lands. That reasoning is a hypothesis; the six measurements are not.
+    // The engine therefore keeps the measured-better behaviour as the default
+    // and exposes the setting instead of pretending it does not exist. Callers
+    // holding a real SCHEDOPTIONS row can pass it through explicitly:
+    //   computeCPM(acts, rels, { relationshipLagCalendar: 'rcal_Predecessor' })
+    // See docs/algorithm.md for the disclosure a report has to carry.
+    let _lagCalMode = opts.relationshipLagCalendar ||
+                      opts.relationship_lag_calendar ||
+                      opts.sched_calendar_on_relationship_lag || 'successor';
+    _lagCalMode = String(_lagCalMode).trim();
+    // Accept the raw P6 tokens as well as the short forms.
+    const _LAG_CAL_ALIASES = {
+        'rcal_Predecessor': 'predecessor',
+        'rcal_Successor': 'successor',
+        'rcal_Project': 'project',
+        'rcal_24Hour': '24hour',
+        'rcal_24hour': '24hour',
+        'pred': 'predecessor',
+        'succ': 'successor',
+    };
+    if (Object.prototype.hasOwnProperty.call(_LAG_CAL_ALIASES, _lagCalMode)) {
+        _lagCalMode = _LAG_CAL_ALIASES[_lagCalMode];
+    }
+    if (_lagCalMode !== 'predecessor' && _lagCalMode !== 'successor') {
+        // P6's rcal_Project and rcal_24Hour were not captured against a P6
+        // reschedule, so the engine does not guess at them. Disclosed, not
+        // silently substituted — same posture as
+        // useProjectEndDateForFloat=false.
+        alerts.push({
+            severity: 'ALERT',
+            context: 'lag-calendar-mode-unsupported',
+            message: 'relationshipLagCalendar=' + JSON.stringify(_lagCalMode) +
+                ' is not implemented (supported: predecessor | successor; P6 ' +
+                'tokens rcal_Predecessor | rcal_Successor). P6 behaviour for ' +
+                'rcal_Project / rcal_24Hour is uncaptured, so the engine ' +
+                'computed with its measured-best default, the successor ' +
+                'calendar, rather than guessing. Disclosed, not substituted ' +
+                'silently.',
+        });
+        _lagCalMode = 'successor';
+    }
+    // v2.9.42 — SCHEDOPTIONS.sched_float_type. P6 lets a schedule choose which
+    // float its Total Float column reports; the engine hardcoded the FINISH
+    // definition (LF - EF) as the only total-float assignment in Section C and
+    // never read the setting (a grep for sched_float_type over the whole engine
+    // returned zero hits), while docs/algorithm.md asserted 'sched_float_type =
+    // FT_FF' as if it were universal rather than per-schedule. Corpus
+    // distribution: FT_FF 170 files, FT_Min 19, FT_Total 4, FT_Start 2 — so 25
+    // of 195 real schedules were computed under a definition the engine did not
+    // implement, with the source setting sitting in the same file.
+    // Honesty note on magnitude, because the fix should not be oversold:
+    // computing start float and finish float from P6's OWN stored ES/LS/EF/LF on
+    // each activity's decoded calendar across the 19 FT_Min files, the two are
+    // EQUAL on 99.60% of unstarted activities and P6's stored
+    // total_float_hr_cnt matches the finish definition on 99.46% — identical to
+    // the start and min-of-both rates — because P6 keeps LF = LS + duration for
+    // ordinary tasks. So this is mostly a disclosure gap, and the residual 0.5%
+    // is what the definitions actually decide. Default FT_FF keeps every
+    // existing result byte-identical.
+    let _floatType = opts.floatType || opts.float_type ||
+                     opts.schedFloatType || opts.sched_float_type || 'FT_FF';
+    _floatType = String(_floatType).trim();
+    const _FLOAT_TYPE_ALIASES = {
+        'finish': 'FT_FF', 'FT_Finish': 'FT_FF',
+        'start': 'FT_Start', 'FT_start': 'FT_Start',
+        'min': 'FT_Min', 'FT_min': 'FT_Min', 'smallest': 'FT_Min',
+    };
+    if (Object.prototype.hasOwnProperty.call(_FLOAT_TYPE_ALIASES, _floatType)) {
+        _floatType = _FLOAT_TYPE_ALIASES[_floatType];
+    }
+    if (_floatType !== 'FT_FF' && _floatType !== 'FT_Start' && _floatType !== 'FT_Min') {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'float-type-unsupported',
+            message: 'sched_float_type=' + JSON.stringify(_floatType) +
+                ' is not one of the implemented definitions (FT_FF = finish ' +
+                'float LF-EF, P6 default; FT_Start = start float LS-ES; ' +
+                'FT_Min = smallest of the two). Total float was computed on ' +
+                'the FINISH definition. Disclosed, not substituted silently — ' +
+                'read SCHEDOPTIONS.sched_float_type from the source XER and ' +
+                'pass it through if it is one of the three.',
+        });
+        _floatType = 'FT_FF';
+    }
+
+    // The calendar a lag between predNode and succNode is walked on.
+    function lagCalFor(predNode, succNode) {
+        return (_lagCalMode === 'successor') ? calFor(succNode) : calFor(predNode);
+    }
+
     // Forward pass.
     for (const code of sortRes.order) {
         const node = nodes[code];
@@ -1764,26 +2049,30 @@ function computeCPM(activities, relationships, opts) {
             let drive = 0;
             const lag = p.lag_days;
             let thisAnchorEF = null;  // FF/SF only; null otherwise
+            // v2.9.42 — the LAG walk runs on the relationship-lag calendar
+            // (see lagCalFor); the DURATION walk stays on this activity's own
+            // calendar, which is a different question.
+            const lagCal = lagCalFor(pnode, node);
             if (p.type === 'FS') {
-                drive = _advanceWithAlerts(pnode.ef, lag, nodeCal, alerts,
+                drive = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
                     'FS lag ' + pnode.code + '->' + code);
             } else if (p.type === 'SS') {
-                drive = _advanceWithAlerts(pnode.es, lag, nodeCal, alerts,
+                drive = _advanceWithAlerts(pnode.es, lag, lagCal, alerts,
                     'SS lag ' + pnode.code + '->' + code);
             } else if (p.type === 'FF') {
-                const ffAnchor = _advanceWithAlerts(pnode.ef, lag, nodeCal, alerts,
+                const ffAnchor = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
                     'FF lag ' + pnode.code + '->' + code);
                 drive = _retreatWithAlerts(ffAnchor, node.duration_days, nodeCal, alerts,
                     'FF duration ' + code);
                 thisAnchorEF = ffAnchor;
             } else if (p.type === 'SF') {
-                const sfAnchor = _advanceWithAlerts(pnode.es, lag, nodeCal, alerts,
+                const sfAnchor = _advanceWithAlerts(pnode.es, lag, lagCal, alerts,
                     'SF lag ' + pnode.code + '->' + code);
                 drive = _retreatWithAlerts(sfAnchor, node.duration_days, nodeCal, alerts,
                     'SF duration ' + code);
                 thisAnchorEF = sfAnchor;
             } else {
-                drive = _advanceWithAlerts(pnode.ef, lag, nodeCal, alerts,
+                drive = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
                     'FS-default lag ' + pnode.code + '->' + code);
             }
             // v2.9.5 — when this node has an actual_start, predecessor logic
@@ -1829,6 +2118,25 @@ function computeCPM(activities, relationships, opts) {
                 };
                 // v2.9.12 F2.2 — capture FF/SF anchor of WINNING driver.
                 finishAnchorEF = thisAnchorEF;
+            } else if (drive === maxES && drivingPred === null) {
+                // v2.9.42 - a predecessor whose drive EXACTLY EQUALS the current
+                // maxES could never become the recorded driver, because the
+                // tie-break below required an incumbent. When maxES is still the
+                // data-date seed, that predecessor is a real driver and the node
+                // instead got the {type:'DATA_DATE'} sentinel stamped on it.
+                // Measured: A(2 d) -SS+0-> B(10 d) with data date 2026-01-05
+                // returned B.driving_predecessor.type = 'DATA_DATE', and because
+                // the longest-path walk breaks on any sentinel lacking a .code
+                // field, computeCPMWithStrategies returned LPM ['B'] - A absent
+                // from the path the documentation calls the most defensible
+                // forensic method, although A is genuinely driving it.
+                // Attribution only: finishAnchorEF is deliberately NOT captured
+                // here, so this branch cannot move a single date.
+                drivingPred = {
+                    code: pnode.code,
+                    type: p.type,
+                    lag_days: lag,
+                };
             } else if (drive === maxES && drivingPred !== null && drivingPred.type !== 'CONSTRAINT' && drivingPred.type !== 'DATA_DATE') {
                 // v2.9.15 P2 (F14-2) — deterministic tie-break on equal drive
                 // dates. Prefer FS with lag_days===0 (the "canonical" tightest
@@ -1888,7 +2196,9 @@ function computeCPM(activities, relationships, opts) {
             // v2.9.16 F5-A — capture primary mandatory-start pin so secondary
             // SNET cannot silently override it. Per P6, MS_Start/SO is a
             // hard pin; soft secondary constraints cannot move it.
-            const _isPrimaryMandatoryStart = cstr && (cstr.type === 'MS_Start' || cstr.type === 'SO') && cstr.date;
+            // v2.9.42 — SO dropped: Start On is soft, so a secondary constraint
+            // is allowed to move ES off it. Only the mandatory pin is protected.
+            const _isPrimaryMandatoryStart = cstr && cstr.type === 'MS_Start' && cstr.date;
             const _primaryMandatoryStartNum = _isPrimaryMandatoryStart ? dateToNum(cstr.date) : -1;
             const _esBeforeSecondary = maxES;
             maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts);
@@ -1919,7 +2229,8 @@ function computeCPM(activities, relationships, opts) {
             }
             // v2.9.16 F5-B (symmetric) — if secondary is mandatory and primary
             // is soft, primary can have moved maxES off the secondary mandatory.
-            const _isSecondaryMandatoryStart = cstr2 && (cstr2.type === 'MS_Start' || cstr2.type === 'SO') && cstr2.date;
+            // v2.9.42 — SO dropped (soft), same reasoning as the primary above.
+            const _isSecondaryMandatoryStart = cstr2 && cstr2.type === 'MS_Start' && cstr2.date;
             if (_isSecondaryMandatoryStart) {
                 const _secondaryMandatoryStartNum = dateToNum(cstr2.date);
                 if (maxES !== _secondaryMandatoryStartNum) {
@@ -2038,6 +2349,38 @@ function computeCPM(activities, relationships, opts) {
         _checkFinalEFDeadline(cstr, 'primary');
         _checkFinalEFDeadline(cstr2, 'secondary');
 
+        // v2.9.42 — in-progress work with no remaining_duration. The
+        // retained-logic restart above applies ONLY when remaining_duration is
+        // finite and >= 0; otherwise EF falls through to
+        // advance(node.es, node.duration_days) anchored on the ACTUAL START,
+        // which forecasts remaining work in the past. Measured before this
+        // gate: activity A with actual_start 2025-07-01, duration_days 10, no
+        // remaining_duration and dataDate 2026-01-05 returned ES 2025-07-01,
+        // EF 2025-07-15 — an unfinished activity forecast to have finished six
+        // months before the schedule update — with ZERO non-INFO alerts.
+        // P6 never schedules remaining work before the data date.
+        // The engine does not invent a remaining duration (that would be
+        // fabricating an input); it discloses. 'completion-data-incomplete' is
+        // already a member of FATAL_STRICT_CONTEXTS, so a court-grade run stops
+        // here instead of publishing a past-dated forecast finish.
+        if (hasActualStart && !node.is_complete && !_hasRem) {
+            alerts.push({
+                severity: 'ALERT',
+                context: 'completion-data-incomplete',
+                message: 'MISSING_REMAINING_DURATION on ' + code + ': activity ' +
+                    'has actual_start=' + node.actual_start + ' and no ' +
+                    'actual_finish, but no remaining_duration was supplied, so ' +
+                    'EF was computed as actual_start + duration_days (' +
+                    node.duration_days + ' d) = ' + numToDate(node.ef) +
+                    (ddNum > 0 && node.ef < ddNum
+                        ? ' — which is BEFORE the data date ' + numToDate(ddNum) +
+                          '. Remaining work cannot be forecast in the past; the ' +
+                          'float carried on this activity is fictitious.'
+                        : '.') +
+                    ' Supply remaining_duration for in-progress activities.',
+            });
+        }
+
         // B3 (P6 alignment wave 2026-08-11, capture 9b748cc, case 11) —
         // Mandatory Finish pins BOTH ends. P6 anchors EF at the mandatory
         // date and BACK-COMPUTES ES = EF - duration on the activity's own
@@ -2048,8 +2391,18 @@ function computeCPM(activities, relationships, opts) {
         // The infeasible side (pred logic pushes EF past the pin) keeps the
         // existing ALERT behavior; P6's conduct there is uncaptured.
         if (!hasActualStart) {
-            const _mfc = (cstr && (cstr.type === 'MS_Finish' || cstr.type === 'MFO')) ? cstr
-                       : (cstr2 && (cstr2.type === 'MS_Finish' || cstr2.type === 'MFO')) ? cstr2
+            // v2.9.42 - 'FO' (Start/Finish On, the CS_MEO token) joins this block.
+            // Routing CS_MEO through the soft FNET half alone moved EF to the
+            // constraint date but left ES on the logic date, which on a
+            // ZERO-DURATION finish milestone is impossible: ES must equal EF.
+            // Measured on three real exports, every row that moved was a
+            // TT_FinMile carrying CS_MEO - e.g. P6 es 2026-07-24 / ef 2026-07-24
+            // against engine es 2026-03-30 / ef 2026-07-24. Back-computing
+            // ES = EF - duration here (the same treatment MS_Finish/MFO already
+            // get, under the same guards) restores P6's answer on all of them.
+            const _FIN_PIN_TYPES = ['MS_Finish', 'MFO', 'FO'];
+            const _mfc = (cstr && _FIN_PIN_TYPES.indexOf(cstr.type) !== -1) ? cstr
+                       : (cstr2 && _FIN_PIN_TYPES.indexOf(cstr2.type) !== -1) ? cstr2
                        : null;
             if (_mfc && _mfc.date) {
                 const _mfNum = dateToNum(_mfc.date);
@@ -2251,7 +2604,12 @@ function computeCPM(activities, relationships, opts) {
                 const snode = nodes[s.to_code];
                 if (!snode) continue;
                 if (snode.is_complete) { _skippedCompletedSucc += 1; continue; }
-                const sCal = calFor(snode);
+                // v2.9.42 — the backward lag walk must use the SAME calendar
+                // the forward walk used, or the two stop being inverses and
+                // manufacture float out of nothing. `node` is the predecessor
+                // here and `snode` the successor, so the argument order matches
+                // the forward call.
+                const sCal = lagCalFor(node, snode);
                 let drive = null;
                 let lsBound = null;
                 const lag = s.lag_days;
@@ -2315,7 +2673,8 @@ function computeCPM(activities, relationships, opts) {
         // SO / MS_Finish / MFO) would have set, then refuse to let the
         // secondary FNLT / SNLT pull LF below it.
         function _isMandatoryConstraint(c) {
-            return c && (c.type === 'MS_Start' || c.type === 'SO' ||
+            // v2.9.42 — SO / FO are NOT mandatory; only the four hard pins are.
+            return c && (c.type === 'MS_Start' ||
                          c.type === 'MS_Finish' || c.type === 'MFO');
         }
         const _primaryMandatoryLF = _isMandatoryConstraint(cstr)
@@ -2407,7 +2766,69 @@ function computeCPM(activities, relationships, opts) {
             // by B's remaining late start 01-26 -> A LF disp 01-23, TF 0).
             node.ls = node.remaining_late_start;
         }
-        node.tf = _roundHalfUpTo(node.lf - node.ef, 3);
+        // v2.9.42 — both float definitions are now always published, and `tf`
+        // takes whichever SCHEDOPTIONS.sched_float_type selected. FT_FF (the
+        // P6 default and this engine's historical hardcode) leaves `tf`
+        // byte-identical to every prior release.
+        node.tf_finish = _roundHalfUpTo(node.lf - node.ef, 3);
+        node.tf_start = _roundHalfUpTo(node.ls - node.es, 3);
+        node.tf = (_floatType === 'FT_Start')
+            ? node.tf_start
+            : (_floatType === 'FT_Min')
+                ? Math.min(node.tf_start, node.tf_finish)
+                : node.tf_finish;
+    }
+
+    // v2.9.42 — impossible-negative-float invariant. In a CPM network with no
+    // imposed deadline and no date-bearing constraint anywhere, the backward
+    // pass is seeded from the network's own latest early finish, so TF >= 0 is
+    // an ARITHMETIC IDENTITY — a negative total float there cannot be a schedule
+    // fact and can only be an engine artifact. One such artifact is live and
+    // measured: on a mixed-calendar network the relationship-lag walk is not
+    // its own inverse when the anchor falls on a non-working day of the lag
+    // calendar. Predecessor on a 7-day calendar, duration 5 from 2026-01-05
+    // (EF Sat 2026-01-10), successor on Mon-Fri with FS+2, no constraint and no
+    // deadline anywhere, produced predecessor lf 2026-01-09 against ef
+    // 2026-01-10 — tf -1, tf_working_days -1, flagged critical. Negative float
+    // reads as "behind schedule" on an activity that is not, so it must never
+    // reach a deliverable unannounced. The guard is deliberately conservative:
+    // it stays silent the moment ANY constraint or an imposed project finish
+    // exists, because negative float is then a legitimate schedule fact.
+    // Every affected activity is enumerated — no truncation, no top-N.
+    {
+        let _anyConstraint = false;
+        for (const _c in nodes) {
+            const _n = nodes[_c];
+            if ((_n.constraint && _n.constraint.type) ||
+                (_n.constraint2 && _n.constraint2.type)) { _anyConstraint = true; break; }
+        }
+        if (!_projectDeadlineNum && !_anyConstraint) {
+            const _impossible = [];
+            for (const _c of _order) {
+                const _n = nodes[_c];
+                if (_n.is_complete) continue;
+                if (_n.tf < 0) {
+                    _impossible.push(_c + ' (tf ' + _n.tf + ' d, ef ' +
+                        numToDate(_n.ef) + ', lf ' + numToDate(_n.lf) + ')');
+                }
+            }
+            if (_impossible.length > 0) {
+                alerts.push({
+                    severity: 'ALERT',
+                    context: 'impossible-negative-float',
+                    message: 'IMPOSSIBLE_NEGATIVE_FLOAT: ' + _impossible.length +
+                        ' activit' + (_impossible.length === 1 ? 'y carries' : 'ies carry') +
+                        ' negative total float in a network with NO imposed ' +
+                        'project finish and NO date-bearing constraint on any ' +
+                        'activity. With a maxEF-seeded backward pass that is ' +
+                        'arithmetically impossible, so this is an engine artifact, ' +
+                        'not a schedule fact — the known cause is the ' +
+                        'relationship-lag walk not being its own inverse across ' +
+                        'two calendars. Do not report these as behind schedule. ' +
+                        'Affected: ' + _impossible.join('; ') + '.',
+                });
+            }
+        }
     }
 
     // v2.9.5 — ALAP (As Late As Possible) post-pass per Oracle P6
@@ -2490,9 +2911,35 @@ function computeCPM(activities, relationships, opts) {
         }
         n.lf_date = numToDate(n.lf);
         const nCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
+        // v2.9.42 — inclusive companions to the exclusive boundary dates.
+        // ef_date / lf_date are EXCLUSIVE (the opening of the day after the last
+        // day worked); P6's Finish column prints the LAST WORKED DAY. Both name
+        // the same instant — measured against P6's own stored early_end_date on
+        // four real gate-passing exports, the engine's ef agrees on 577/577,
+        // 439/439, 408/408 and 194/194 activities with an offset histogram of
+        // exactly {0: n} — but they are different STRINGS, and a report that
+        // prints ef_date beside an opposing expert's P6 print looks one day out
+        // unless the convention is stated. Publishing the inclusive form here
+        // means a consumer never has to re-derive it (and never has to guess
+        // which convention it is looking at). Not a change to any computed
+        // value: both fields are derived from the same ef/lf.
+        n.ef_last_worked_date = (n.ef > 0)
+            ? numToDate(_retreatWithAlerts(n.ef, 1, nCal, [], 'ef last-worked ' + c))
+            : '';
+        n.lf_last_worked_date = (n.lf > 0)
+            ? numToDate(_retreatWithAlerts(n.lf, 1, nCal, [], 'lf last-worked ' + c))
+            : '';
+        // v2.9.42 — count over the window the selected float definition names,
+        // not always over the finish window. FT_FF is unchanged.
+        n.tf_finish_working_days = n.is_complete ? 0 : _countWorkDaysBetween(n.ef, n.lf, nCal);
+        n.tf_start_working_days = n.is_complete ? 0 : _countWorkDaysBetween(n.es, n.ls, nCal);
         n.tf_working_days = n.is_complete
             ? 0
-            : _countWorkDaysBetween(n.ef, n.lf, nCal);
+            : ((_floatType === 'FT_Start')
+                ? n.tf_start_working_days
+                : (_floatType === 'FT_Min')
+                    ? Math.min(n.tf_start_working_days, n.tf_finish_working_days)
+                    : n.tf_finish_working_days);
     }
 
     // Free Float: slack that doesn't delay any successor's earliest start.
@@ -2534,6 +2981,9 @@ function computeCPM(activities, relationships, opts) {
         let minSlack = Infinity;
         let bindingSuccCode = '';
         let bindingSuccType = '';
+        // v2.9.42 — the endpoints of the winning slack measurement.
+        let bindingPredAnchor = null;
+        let bindingSuccAnchor = null;
         for (const s of successors) {
             const sn = nodes[s.to_code];
             if (!sn) continue;
@@ -2555,7 +3005,10 @@ function computeCPM(activities, relationships, opts) {
             // day offset, then take the calendar-day delta to the successor's
             // anchor. The result is in calendar days; ff_working_days below
             // converts via _countWorkDaysBetween.
-            const succCal = (sn.clndr_id && calMap) ? calMap[sn.clndr_id] : null;
+            // v2.9.42 — walk the slack's lag on the SAME calendar the forward
+            // pass walked it on, or free float is measured against an anchor
+            // the schedule never used.
+            const succCal = lagCalFor(n, sn);
             const lag = s.lag_days || 0;
             // v2.9.18 A11-HIGH — alerts sink. Forward pass already fired
             // calendar-fallback / fractional-lag alerts for this rel; the
@@ -2593,6 +3046,11 @@ function computeCPM(activities, relationships, opts) {
                 minSlack = slack;
                 bindingSuccCode = s.to_code;
                 bindingSuccType = s.type;
+                // v2.9.42 — keep the two instants the slack was measured
+                // BETWEEN, so the working-day conversion below counts over the
+                // same window instead of re-anchoring on n.ef.
+                bindingPredAnchor = predAnchor;
+                bindingSuccAnchor = succAnchor;
             }
         }
         // v2.9.13 Bug F4-4 — Free Float is signed. Terminals already produce a
@@ -2616,8 +3074,34 @@ function computeCPM(activities, relationships, opts) {
         } else {
             ffCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
         }
-        n.ff_signed_working_days = _countWorkDaysBetween(n.ef, n.ef + ffSigned, ffCal);
-        n.ff_working_days = Math.max(0, _countWorkDaysBetween(n.ef, n.ef + n.ff, ffCal));
+        // v2.9.42 — free-float working-day conversion anchor. The slack above
+        // is a CALENDAR-day difference measured between predAnchor (which is
+        // advance(n.ef or n.es, lag) on the successor's calendar) and the
+        // successor's anchor. The conversion used to count working days over
+        // [n.ef, n.ef + slack] — a window that starts at the activity's early
+        // finish rather than at the instant the slack was measured from, and
+        // for SS/SF from a different FIELD entirely (the slack starts at n.es).
+        // Two measured consequences:
+        //   * FS with a lag: T4 duration 6, ES 2026-01-19, EF 2026-01-27, one
+        //     successor via FS+3 whose ES is 2026-02-02 returned ff 3 calendar
+        //     days, ff_working_days 3 against tf_working_days 1 — free float
+        //     EXCEEDING total float, which is impossible. Counting over
+        //     [predAnchor 2026-01-30, succAnchor 2026-02-02] gives 1, and
+        //     moving T4's EF one working day does land the +3 walk exactly on
+        //     the successor's ES, so 1 is the true free float.
+        //   * SS: A duration 2, ES Mon 2026-01-05, EF Wed 2026-01-07, SS+0
+        //     successor at ES Thu 2026-01-08 returned 2 where the slack was
+        //     measured from A.es and the true free float on that anchor is 3.
+        // Corroborated against P6's own stored free_float_hr_cnt without the
+        // engine in the loop: across 46 real exports whose free-float column is
+        // demonstrably fresh (14,123 rows), on the 313 rows whose binding link
+        // carries a lag the EF-anchored window reproduces P6 on 255 (81.5%) and
+        // this lag-anchored window on 286 (91.4%). On zero-lag FS rows the two
+        // windows coincide, which is why the defect hid.
+        const _ffFromNum = (bindingPredAnchor !== null) ? bindingPredAnchor : n.ef;
+        const _ffToNum = (bindingSuccAnchor !== null) ? bindingSuccAnchor : n.lf;
+        n.ff_signed_working_days = _countWorkDaysBetween(_ffFromNum, _ffToNum, ffCal);
+        n.ff_working_days = Math.max(0, n.ff_signed_working_days);
     }
 
     const criticalCodes = new Set();
@@ -2759,6 +3243,18 @@ function computeCPM(activities, relationships, opts) {
         relationship_count: Object.keys(succMap).reduce((acc, k) => acc + succMap[k].length, 0),
         data_date: dataDate || '',
         calendar_count: Object.keys(calMap).length,
+        // v2.9.42 — conventions a deliverable has to state. These were computed
+        // and never declared, so no report drawn from this engine disclosed
+        // which finish boundary, lag calendar or float definition produced its
+        // dates. Every one of the three is a live source of a one-day or
+        // one-definition argument with an opposing expert.
+        finish_boundary_convention: 'exclusive',
+        finish_boundary_note: 'ef_date / lf_date are EXCLUSIVE (the opening of ' +
+            'the first working day AFTER the last day worked). P6 prints the ' +
+            'LAST WORKED DAY. Both name the same instant; ef_last_worked_date ' +
+            'and lf_last_worked_date carry the inclusive form for reports.',
+        relationship_lag_calendar: _lagCalMode,
+        float_type: _floatType,
         computed_at: new Date().toISOString(),
     };
     const result = {
@@ -2770,6 +3266,12 @@ function computeCPM(activities, relationships, opts) {
         topoOrder: sortRes.order,
         topo_order: sortRes.order,
         alerts,
+        // v2.9.42 — every activity dropped by the TT_LOE / TT_WBS task-type
+        // rule, enumerated in input order. Programmatic companion to the
+        // 'task-type-excluded' ALERTs so a caller can reconcile its own
+        // activity count against the network the engine actually solved.
+        excluded_by_task_type: excludedByTaskType,
+        excludedByTaskType,
         manifest,
     };
 
@@ -2822,6 +3324,17 @@ const _MC = {
     // v2.9.18 A8-HIGH — task → clndr_id index so lag conversion can look up
     // the successor's calendar at TASKPRED parse time.
     taskClndrId: {},           // { task_id: clndr_id }
+    // v2.9.42 — SCHEDOPTIONS. P6 stores the scheduling settings that decide
+    // WHICH answer is correct — which calendar a relationship lag is walked on
+    // (sched_calendar_on_relationship_lag), which float definition the Total
+    // Float column reports (sched_float_type), retained logic vs progress
+    // override — in this table, in the same file as the schedule. A grep for
+    // SCHEDOPTIONS / sched_calendar_on_relationship_lag / sched_float_type /
+    // sched_retained_logic / sched_progress_override across the whole engine
+    // used to return ZERO hits: the settings were never read anywhere, so
+    // computeCPM could only ever be run on the caller's assumptions. Captured
+    // here so a caller can pass the file's OWN settings through instead.
+    schedOptions: {},          // first SCHEDOPTIONS row, verbatim
 };
 
 function parseXER(content) {
@@ -2830,6 +3343,25 @@ function parseXER(content) {
     _MC.hammocks = {};
     _MC.parseAlerts = [];
     _MC.taskIdsOrdered = [];
+    // v2.9.42 — cross-file state leak. calendarHoursPerDay and taskClndrId were
+    // reset only by the separate resetMC(); parseXER left them populated. Every
+    // forensic workflow parses two or three XERs in one process (baseline,
+    // previous period, current), so a second file whose TASK rows reference a
+    // clndr_id its own CALENDAR table does not declare silently inherited the
+    // FIRST file's day_hr_cnt. Measured: parse a file declaring clndr_id 1 at
+    // 24 h/day, then a file with no CALENDAR table whose task references
+    // clndr_id 1 — an 80-hour activity came back at 3.3333 days instead of 10
+    // (runCPM projectFinish 3.3333 vs 10). taskClndrId leaks on the same path
+    // and is worse: P6 task_id values are database-scoped and collide freely
+    // across exports, so a stale entry can bind a second file's relationship to
+    // the FIRST file's calendar for the lag divisor below. Trigger frequency on
+    // the 170-file real corpus is 0 (CALENDAR precedes TASK in every file and
+    // no TASK.clndr_id is missing from its own CALENDAR table), so this is a
+    // latent guard, not a live wrong-number path — but it is one hand-trimmed
+    // or activity-only export away from firing.
+    _MC.calendarHoursPerDay = {};
+    _MC.taskClndrId = {};
+    _MC.schedOptions = {};
     // v2.9.3 — track silently-dropped activities so callers can surface them.
     // Previously TT_LOE / TT_WBS / fully-completed (remaining<=0) rows were
     // discarded without leaving a trace; now every drop is enumerated below.
@@ -2874,6 +3406,14 @@ function parseXER(content) {
             // hardcoded /8). When the CALENDAR table is absent or day_hr_cnt
             // is missing, all conversions fall back to 8 with a one-time WARN
             // per unknown calendar at TASKPRED time.
+            // v2.9.42 — capture SCHEDOPTIONS verbatim (first row wins; a
+            // multi-project export carries one row per project and the engine
+            // solves one network at a time).
+            if (currentTable === 'SCHEDOPTIONS') {
+                if (Object.keys(_MC.schedOptions).length === 0) {
+                    _MC.schedOptions = Object.assign({}, row);
+                }
+            }
             if (currentTable === 'CALENDAR') {
                 const clndr_id = row.clndr_id;
                 if (clndr_id) {
@@ -2912,13 +3452,23 @@ function parseXER(content) {
                 // TT_Hammock is supported via two-pass resolution (see
                 // _resolveHammocks below); it is NOT dropped.
                 const isMilestone = (_taskType === 'TT_Mile' || _taskType === 'TT_FinMile');
-                // v2.9.12 T3.24 — six canonical P6 task_type tokens per the
-                // Oracle P6 Database Reference: TT_Task, TT_FinMile, TT_Mile,
-                // TT_LOE, TT_WBS, TT_Hammock. Anything outside this set is a
-                // P6 schema drift (newer P6 build, or hand-edited XER). Emit
-                // a WARN so opposing experts can see the unknown type was
-                // silently treated as TT_Task.
-                const _CANONICAL_TASK_TYPES = ['TT_Task', 'TT_FinMile', 'TT_Mile', 'TT_LOE', 'TT_WBS', 'TT_Hammock'];
+                // v2.9.12 T3.24 — canonical P6 task_type tokens per the
+                // Oracle P6 Database Reference: TT_Task, TT_Rsrc, TT_FinMile,
+                // TT_Mile, TT_LOE, TT_WBS, TT_Hammock. Anything outside this
+                // set is a P6 schema drift (newer P6 build, or hand-edited
+                // XER). Emit a WARN so opposing experts can see the unknown
+                // type was silently treated as TT_Task.
+                // v2.9.42 — TT_Rsrc (Resource Dependent) was missing from this
+                // list. It is a stock P6 activity type that P6 writes routinely:
+                // measured 72 TT_Rsrc activities across 10 real exports on the
+                // validation corpus, and parsing one of them emitted 4 WARNs
+                // reading 'not one of the canonical P6 tokens'. Because
+                // 'unrecognized-task-type' is a member of FATAL_STRICT_CONTEXTS,
+                // that WARN is also a latent strict-mode fatal on an ordinary
+                // clean file. TT_Rsrc is real work and keeps the TT_Task
+                // treatment it already received by falling through below —
+                // this change removes the false positive, not the handling.
+                const _CANONICAL_TASK_TYPES = ['TT_Task', 'TT_Rsrc', 'TT_FinMile', 'TT_Mile', 'TT_LOE', 'TT_WBS', 'TT_Hammock'];
                 if (_taskType && _CANONICAL_TASK_TYPES.indexOf(_taskType) === -1) {
                     _MC.parseAlerts.push({
                         severity: 'WARN',
@@ -3257,6 +3807,15 @@ function parseXER(content) {
         taskCount: Object.keys(_MC.tasks).length,
         relCount: validPreds.length,
         dropped_activities: droppedActivities,
+        // v2.9.42 — the file's own SCHEDOPTIONS row, plus the two settings that
+        // change computeCPM's answer, pre-extracted so a caller can forward them:
+        //   computeCPM(acts, rels, {
+        //       relationshipLagCalendar: p.sched_calendar_on_relationship_lag,
+        //       floatType: p.sched_float_type })
+        sched_options: _MC.schedOptions,
+        sched_calendar_on_relationship_lag:
+            _MC.schedOptions.sched_calendar_on_relationship_lag || '',
+        sched_float_type: _MC.schedOptions.sched_float_type || '',
         hammock_count: Object.keys(_MC.hammocks).length,
         // v2.9.12 T1.5 — expose parse-time alerts so callers that don't go
         // through runCPM can still see what was dropped.
@@ -3558,7 +4117,8 @@ function runCPM(opts) {
                 });
                 return;
             }
-            if (cstr.type === 'SNET') {
+            if (cstr.type === 'SNET' || cstr.type === 'SO') {
+                // v2.9.42 — SO carries the SNET half of Start On: push out only.
                 if (cOff > task.ES) task.ES = cOff;
             } else if (cstr.type === 'SNLT') {
                 // v2.9.12 T1.8 — SNLT: ES violation when pred logic pushed
@@ -3643,7 +4203,9 @@ function runCPM(opts) {
             const isEFType = (cstr.type === 'FNET' ||
                               cstr.type === 'MS_Finish' ||
                               cstr.type === 'MFO' ||
-                              cstr.type === 'FNLT');
+                              cstr.type === 'FNLT' ||
+                              // v2.9.42 — soft two-sided Finish On.
+                              cstr.type === 'FO');
             if (!isEFType) return;
             const cOff = _cstrDayOffset(cstr.date);
             if (cOff < 0) {
@@ -3658,7 +4220,8 @@ function runCPM(opts) {
                 });
                 return;
             }
-            if (cstr.type === 'FNET') {
+            if (cstr.type === 'FNET' || cstr.type === 'FO') {
+                // v2.9.42 — FO carries the FNET half of Finish On: push out only.
                 if (cOff > task.EF) task.EF = cOff;
             } else if (cstr.type === 'FNLT') {
                 // v2.9.12 T1.9 — FNLT: ALERT if pred logic pushed EF past
@@ -3798,7 +4361,9 @@ function runCPM(opts) {
             // clamping to match Section C's v2.9.12 T1.1 fix. Mandatory-start
             // on backward pass: LF = cstr.date + remaining so the post-clamp
             // LS recompute lands on cstr.date (LS pinned, TF=0).
-            const isStartMandatory = (cstr.type === 'MS_Start' || cstr.type === 'SO');
+            // v2.9.42 — SO dropped: Start On is soft and is handled through the
+            // SNLT-equivalent branch below, matching Section C.
+            const isStartMandatory = (cstr.type === 'MS_Start');
             if (isStartMandatory && cstr.date) {
                 const _cOff = _cstrDayOffset(cstr.date);
                 if (_cOff < 0) {
@@ -3818,7 +4383,10 @@ function runCPM(opts) {
             const isLFType = (cstr.type === 'FNLT' ||
                               cstr.type === 'MS_Finish' ||
                               cstr.type === 'MFO' ||
-                              cstr.type === 'SNLT');
+                              cstr.type === 'SNLT' ||
+                              // v2.9.42 — soft two-sided Start On / Finish On.
+                              cstr.type === 'SO' ||
+                              cstr.type === 'FO');
             if (!isLFType) return;
             const cOff = _cstrDayOffset(cstr.date);
             if (cOff < 0) {
@@ -3850,10 +4418,14 @@ function runCPM(opts) {
                 } else {
                     task.LF = cOff;
                 }
-            } else if (cstr.type === 'SNLT') {
+            } else if (cstr.type === 'SNLT' || cstr.type === 'SO') {
                 // LF must be <= constraint + duration (LS <= cOff).
+                // v2.9.42 — SO carries the SNLT half of Start On.
                 const lfFromSnlt = cOff + task.remaining;
                 if (lfFromSnlt < task.LF) task.LF = lfFromSnlt;
+            } else if (cstr.type === 'FO') {
+                // v2.9.42 — FO carries the FNLT half of Finish On.
+                if (cOff < task.LF) task.LF = cOff;
             }
         }
         _clampLFBackward(task.constraint);
@@ -4451,6 +5023,7 @@ function resetMC() {
     // v2.9.18 A8-HIGH — clear cal-aware lag conversion state on reset.
     _MC.calendarHoursPerDay = {};
     _MC.taskClndrId = {};
+    _MC.schedOptions = {};
 }
 
 // ============================================================================
@@ -8779,6 +9352,8 @@ const FATAL_STRICT_CONTEXTS = new Set([
     'hammock-negative-span',
     'hammocks-skipped-in-section-c',
     // Empty / degenerate
+    'missing-data-date',                // no parseable opts.dataDate while unstarted work exists → ES seeded at the 2020-01-01 epoch and addWorkDays falls back to ordinal 7-day arithmetic
+    'impossible-negative-float',        // negative total float with no imposed finish and no constraint anywhere — arithmetically impossible, therefore an engine artifact
     'empty-schedule',                   // no valid activities after filtering
     'section-d-ordinal-only',           // Section D used where calendar-aware Section C required
     'salvage-mode-not-forensic',        // computeCPMSalvaging refuses strict mode at entry (v2.9.32)

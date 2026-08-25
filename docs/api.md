@@ -91,8 +91,8 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
         early_start: '2026-01-05',       // Optional. Pin ES to this date (or later via predecessors).
         clndr_id: 'MF',                  // Optional. Calendar key in opts.calMap.
         actual_start: '2026-01-05',      // Optional. Marks activity as in-progress. A recorded actual start governs ES over the data-date floor and over predecessor-driven early start, per Oracle P6 / CPM forward-pass semantics.
-        actual_finish: '2026-01-09',     // Optional. Marks activity as complete.
-        is_complete: false,              // Optional. Sets ES=actual_start, EF=actual_finish.
+        actual_finish: '2026-01-12',     // Optional. Marks activity as complete. EXCLUSIVE BOUNDARY, not the last worked day — see below.
+        is_complete: false,              // Optional. Sets ES=actual_start, EF=actual_finish (verbatim; the engine does NOT re-normalise it).
         constraint: {                    // Optional. Primary P6 constraint.
             type: 'SNET',                //   One of: SNET | SNLT | FNET | FNLT | MS_Start | MS_Finish | MFO | SO | ALAP.
             date: '2026-01-10',          //   Anchor date for date-bearing constraints (omit for ALAP).
@@ -105,6 +105,27 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
     // ...
 ]
 ```
+
+> **`actual_finish` is an EF boundary, not the last worked day.**
+> The engine's early finish is **exclusive** everywhere (`docs/algorithm.md` § 3:
+> a 5-day Mon-Fri task starting Mon 2026-01-05 has `EF = 2026-01-12`, not
+> Fri 2026-01-09). A completed activity takes `EF = actual_finish` verbatim, so
+> `actual_finish` must be supplied in the **same** exclusive form: the start of
+> the first working day AFTER the last day worked. Primavera writes it that way
+> itself — in a real progressed export, a completed activity carrying
+> `act_end_date 2026-06-26 16:00` is stored by P6 with
+> `early_end_date 2026-06-29 08:00`, the same instant expressed as the next
+> opening. Passing the last worked day instead (`2026-01-09` above) makes every
+> **lagged** FS successor of completed work start one working day early, and the
+> error propagates down the chain. With lag 0 the data-date floor usually masks
+> it, which is why this is easy to get wrong and hard to notice.
+>
+> Measured: normalising `actual_finish` inside the engine instead (advancing it
+> one working day) was tried and **regressed** agreement against P6's own stored
+> dates — on a 786-activity real export `rate_lf` fell from 0.80662 to 0.80534
+> with no field improving — because callers that already follow this contract
+> would be shifted twice. The contract is the exclusive form; the engine does not
+> guess which form it was handed.
 
 **Relationships array:**
 

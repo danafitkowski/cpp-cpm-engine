@@ -46,7 +46,13 @@ EF = ES + duration                   # Calendar-aware: addWorkDays(ES, duration,
 
 The driving predecessor is the one whose contribution determined the ES. The engine records this as `node.driving_predecessor` for downstream path-explorer skills.
 
-**Calendar-aware variant.** The `+ duration` step is computed via `addWorkDays(ES, duration, calMap[clndr_id])` rather than naive integer addition. Lag is scheduled on the **successor's** calendar per P6 convention.
+**Calendar-aware variant.** The `+ duration` step is computed via `addWorkDays(ES, duration, calMap[clndr_id])` rather than naive integer addition. Lag is scheduled on the **successor's** calendar by default — but that is a measured default, **not** "P6 convention", and the previous wording claiming otherwise was wrong.
+
+P6 stores the choice in `SCHEDOPTIONS.sched_calendar_on_relationship_lag`, and across the validation corpus it reads `rcal_Predecessor` in **191** files and `rcal_Successor` in **4**. So the setting says predecessor almost everywhere. Switching the engine default to the predecessor calendar was tried and measured against P6's own stored dates on six real gate-passing multi-calendar exports, and it **regressed**: a 2,918-activity export fell `es` 0.96642 → 0.91090, `ls` 0.82968 → 0.72858 and `tf` 0.82625 → 0.74195; a 1,168-activity export fell `tf` 0.36216 → 0.15240; a 786-activity export gained 0.00255 on `es`/`ef` but lost 0.00763 on `tf`; three others were unchanged. Every one of those files specifies `rcal_Predecessor`. The likely reason is that the lag magnitude is already fixed in the predecessor's hours by the hour-to-day conversion, leaving the successor's availability to govern where the walk lands — that reasoning is a hypothesis, the measurements are not.
+
+The engine therefore keeps the measured-better walk as its default and exposes the setting rather than pretending it does not exist: pass `opts.relationshipLagCalendar` (`'predecessor'` | `'successor'`, or the raw P6 tokens `rcal_Predecessor` / `rcal_Successor`). `rcal_Project` and `rcal_24Hour` are **not implemented**; they raise a `lag-calendar-mode-unsupported` ALERT and compute on the default. A report drawn from a multi-calendar schedule should state which walk it used.
+
+One consequence of the walk not being its own inverse across two calendars is that a mixed-calendar network can produce **negative total float with no constraint and no imposed finish anywhere** — arithmetically impossible, and therefore an engine artifact rather than a schedule fact. The engine detects exactly that condition and raises `impossible-negative-float`, enumerating every affected activity; it is fatal in forensic strict mode. The guard is silent the moment any constraint or imposed finish exists, because negative float is then legitimate.
 
 **P6 EF convention.** `EF = ES + duration` is **exclusive** — i.e., EF is the start of the day after the last work day. A 5-day task on a Mon-Fri calendar starting Mon 2026-01-05 has EF = next Mon 2026-01-12, not Fri 2026-01-09. Verified against P6 native output and Python `compute_cpm` reference.
 
@@ -76,8 +82,26 @@ LS = min( LS,
 
 SS and SF successors constrain the predecessor's **start**, never its finish;
 an activity whose finish has no FS/FF successor keeps its finish float to the
-project end rather than dangling past it. Total float remains `LF - EF`
+project end rather than dangling past it. Total float defaults to `LF - EF`
 (finish float, P6 `sched_float_type = FT_FF`).
+
+**`sched_float_type` is per-schedule, not universal.** P6 stores it on
+SCHEDOPTIONS and it decides which float the Total Float column reports.
+Across the validation corpus: `FT_FF` 170 files, `FT_Min` 19, `FT_Total` 4,
+`FT_Start` 2 — so 25 of 195 real schedules were computed under something
+other than the finish definition. Pass the file's own value through as
+`opts.floatType` (`FT_FF` | `FT_Start` | `FT_Min`); anything else raises a
+`float-type-unsupported` ALERT and computes on the finish definition rather
+than guessing. `node.tf_start` and `node.tf_finish` are always published so
+both definitions are visible regardless of which one `tf` carries.
+
+How much it moves the number, measured rather than asserted: computing start
+float and finish float from P6's own stored ES/LS/EF/LF on each activity's
+decoded calendar across the 19 `FT_Min` files, the two are **equal on 99.60%**
+of unstarted activities, and P6's stored `total_float_hr_cnt` matches the
+finish definition on 99.46% — the same rate as the start and min-of-both
+definitions — because P6 keeps `LF = LS + duration` for ordinary tasks. The
+setting decides the residual half percent, not the headline.
 
 ---
 

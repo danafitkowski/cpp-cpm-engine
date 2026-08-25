@@ -5,17 +5,21 @@
 # Frozen Python reference implementation of compute_cpm — used only by the
 # cross-validation harness in cpm-engine.crossval.js. The production engine
 # is the JavaScript module cpm-engine.js at the repo root; this Python file
-# exists so external auditors (and CI) can reproduce the "925 / 925
-# bit-identical" headline reported in DAUBERT.md §2 (Methodology Tested).
-# Read that denominator narrowly: 925 is the number of comparisons the
-# harness EXECUTES, not the size of the comparison surface. The field guards
-# in cpm-engine.crossval.js skip rather than fail when either side omits a
-# field, so 64 of 989 comparisons are never counted — 61 on
-# ff_signed_working_days and 3 on ff_signed. 58 of the 64 are substantive:
-# this file leaves ff_signed_working_days unset on the has-successors path of
-# the free-float pass, where the JS engine emits a real number. The other 6
-# are null-vs-undefined artifacts on completed activities that NEITHER engine
-# populates. Agreement over the full surface is therefore 925 of 989.
+# exists so external auditors (and CI) can reproduce the bit-identical
+# headline reported in DAUBERT.md §2 (Methodology Tested).
+# Read the denominator narrowly: the harness prints an EXECUTED count, not the
+# size of the comparison surface, because the field guards in
+# cpm-engine.crossval.js skip rather than fail when either side omits a field.
+# v2.9.42 CLOSED the substantive half of that gap: this file now assigns
+# ff_signed_working_days on the has-successors path of the free-float pass,
+# where it previously emitted nothing while the JS engine emitted a real
+# number. That turned 58 silently-uncompared comparisons into executed ones,
+# taking the harness from 931 of 995 to 989 of 995. The 6 that remain are
+# null-vs-undefined artifacts on completed activities that NEITHER engine
+# populates (3 ff_signed, 3 ff_signed_working_days).
+# Why that mattered: the free-float working-day conversion carried a wrong
+# anchor in BOTH ports, and ff_signed_working_days — the field that would have
+# shown it — was one of the fields the harness was skipping.
 #
 # Source provenance: derived from the CPP suite's canonical Python CPM
 # engine (_cpp_common/scripts/cpm.py @ ENGINE_VERSION 2.8.0). Two changes
@@ -38,14 +42,12 @@ Public surface (consumed by cpm-engine.crossval.js):
     compute_cpm(activities, relationships, data_date='', cal_map=None)
     date_to_num(d)
 
-The math mirrors cpm-engine.js's computeCPM byte-for-byte on the 925
-comparisons the harness executes across the 45 fixtures in
-cpm-engine.crossval.js (as of v2.9.39). A further 64 field comparisons are
-skipped rather than compared by the harness field guards (61 on
-ff_signed_working_days, 3 on ff_signed), because this reference does not emit
-those fields on every branch. The full comparison surface is therefore 989, of
-which the 925 executed all agree. See DAUBERT.md §3 for verification
-methodology.
+The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
+the harness executes across the 45 fixtures in cpm-engine.crossval.js. As of
+v2.9.42 that is 989 of a 995-comparison surface; the 6 that are skipped rather
+than compared are activities where NEITHER engine emits the field (3 ff_signed,
+3 ff_signed_working_days on completed activities). See DAUBERT.md §3 for
+verification methodology.
 """
 import math
 from collections import defaultdict, deque
@@ -105,12 +107,12 @@ def _round_half_up_to(x, decimals=0):
 # list have since been ported and ARE cross-validated: free-float math (see
 # the v2.9.27 audit F24 paired fix below) and out-of-sequence enumeration
 # (the B4 parity port below, surfaced by crossval F48; compared at
-# alert_count / alert_severity_counts level). Free float is only PARTLY
-# ported: ff_signed_working_days is assigned solely on the no-successors
-# branch, and the completed-activity branch emits neither ff_signed nor
-# ff_signed_working_days. The crossval guards on those two fields are
-# skip-not-fail, so where Python emits nothing the field is silently not
-# compared and not counted rather than reported as a divergence.
+# alert_count / alert_severity_counts level). Free float is ported in full as
+# of v2.9.42: ff_signed_working_days is now assigned on the has-successors
+# branch too, so the 58 comparisons the skip-not-fail guards were silently
+# dropping are executed. Only the completed-activity branch still emits neither
+# ff_signed nor ff_signed_working_days, and neither does the JS engine, so
+# those 6 comparisons are absent on both sides rather than one.
 ENGINE_VERSION = '2.9.40'
 
 
@@ -119,8 +121,19 @@ ENGINE_VERSION = '2.9.40'
 # =============================================================================
 
 CONSTRAINT_TYPE_MAP = {
-    'CS_MSO':      'MS_Start',
-    'CS_MEO':      'MS_Finish',
+    # v2.9.42 PAIRED FIX — CS_MSO / CS_MEO are P6's "Start On" / "Finish On",
+    # NOT the mandatory pins. Both ports mapped them to MS_Start / MS_Finish —
+    # the identical canonical names CS_MANDSTART / CS_MANDFIN take — so neither
+    # engine could tell a Start On from a Mandatory Start, and both gave the hard
+    # "forced regardless of pred logic" treatment. Measured on the JS port:
+    # P (60 d) -FS+0-> X with {CS_MSO, 2026-01-05} returned X.es_date 2026-01-05
+    # while P.ef_date was 2026-03-30 — the successor scheduled SIXTY WORKING DAYS
+    # BEFORE ITS PREDECESSOR FINISHED. On corpus files P6 actually rescheduled,
+    # 5 of 26 CS_MSO activities carry an early_start AFTER the constraint date:
+    # P6 lets predecessor logic win on Start On. Start On / Finish On are
+    # two-sided SOFT constraints (SNET+SNLT / FNET+FNLT on the same date).
+    'CS_MSO':      'SO',
+    'CS_MEO':      'FO',
     'CS_MSOA':     'SNET',
     'CS_MSOB':     'SNLT',
     'CS_MEOA':     'FNET',
@@ -142,12 +155,14 @@ CONSTRAINT_TYPE_MAP = {
     'ALAP':        'ALAP',
     'MFO':         'MFO',
     'SO':          'SO',
+    'FO':          'FO',
     'CS_MSO_S':    'SNET',
     'CS_MSO_F':    'SNLT',
     'CS_MEO_S':    'FNET',
     'CS_MEO_F':    'FNLT',
-    'StartOn':              'MS_Start',
-    'FinishOn':             'MS_Finish',
+    # v2.9.42 PAIRED FIX — the GUI labels name Start On / Finish On.
+    'StartOn':              'SO',
+    'FinishOn':             'FO',
     'StartNoEarlierThan':   'SNET',
     'StartNoLaterThan':     'SNLT',
     'FinishNoEarlierThan':  'FNET',
@@ -155,7 +170,8 @@ CONSTRAINT_TYPE_MAP = {
 }
 
 CANONICAL_CONSTRAINT_TYPES = frozenset([
-    'SNET', 'SNLT', 'FNET', 'FNLT', 'MS_Start', 'MS_Finish', 'ALAP', 'MFO', 'SO',
+    'SNET', 'SNLT', 'FNET', 'FNLT', 'MS_Start', 'MS_Finish', 'ALAP', 'MFO',
+    'SO', 'FO',
 ])
 
 
@@ -687,7 +703,29 @@ def _apply_forward_es_constraint(code, max_es, cstr, label, alerts):
                 'context': 'constraint-violated',
                 'message': f'SNLT{tag} on {code} violated: ES={num_to_date(max_es)} is after constraint date {cstr["date"]}',
             })
-    elif ctype in ('MS_Start', 'SO'):
+    elif ctype == 'SO' and cd_num > 0:
+        # v2.9.42 PAIRED FIX — Start On is SNET + SNLT on the same date, NOT a
+        # hard pin: it pushes ES out to the date, never pulls ES back ahead of
+        # the driving logic, and reports violated when logic wins.
+        if cd_num > max_es:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-applied',
+                'message': f'Start On{tag} on {code} pushes ES from {num_to_date(max_es)} to {cstr["date"]}',
+            })
+            return cd_num
+        if max_es > cd_num:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'constraint-violated',
+                'message': (
+                    f'Start On{tag} on {code} violated: ES={num_to_date(max_es)} '
+                    f'is after constraint date {cstr["date"]}. Predecessor logic '
+                    f'governs; P6 does not pull a Start On activity back ahead of '
+                    f'its drivers.'
+                ),
+            })
+    elif ctype == 'MS_Start':
         if cd_num > 0:
             if max_es > cd_num:
                 alerts.append({
@@ -749,6 +787,24 @@ def _apply_forward_ef_constraint(code, ef, cstr, label, alerts, es=None):
                 'context': 'constraint-violated',
                 'message': f'FNLT{tag} on {code} violated: EF={num_to_date(ef)} is after constraint date {cstr["date"]}',
             })
+    elif ctype == 'FO' and cd_num > 0:
+        # v2.9.42 PAIRED FIX — Finish On is FNET + FNLT on the same date.
+        if cd_num > ef:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-applied',
+                'message': f'Finish On{tag} on {code} pushes EF from {num_to_date(ef)} to {cstr["date"]}',
+            })
+            return _guard_ef(cd_num)
+        if ef > cd_num:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'constraint-violated',
+                'message': (
+                    f'Finish On{tag} on {code} violated: EF={num_to_date(ef)} is '
+                    f'after constraint date {cstr["date"]}. Predecessor logic governs.'
+                ),
+            })
     elif ctype in ('MS_Finish', 'MFO'):
         if cd_num > 0:
             if ef > cd_num:
@@ -804,7 +860,20 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
             alerts=alerts, ctx=f'SNLT LF {code}')
         if lf_from_snlt < min_lf:
             return lf_from_snlt
-    elif ctype in ('MS_Start', 'SO') and cd_num > 0:
+    elif ctype == 'FO' and cd_num > 0:
+        # v2.9.42 PAIRED FIX — Finish On caps LF at the date (its FNLT half);
+        # it does NOT widen LF the way the mandatory pin does.
+        if cd_num < min_lf:
+            return cd_num
+    elif ctype == 'SO' and cd_num > 0:
+        # v2.9.42 PAIRED FIX — Start On caps LS at the date (its SNLT half):
+        # LF = date + duration, applied only when it TIGHTENS.
+        lf_from_so = _advance_workdays(
+            cd_num, duration_days, node_cal,
+            alerts=alerts, ctx=f'SO LF {code}')
+        if lf_from_so < min_lf:
+            return lf_from_so
+    elif ctype == 'MS_Start' and cd_num > 0:
         # v2.9.12 T1.1 — Mandatory Start hard-pin on backward pass.
         lf_from_ms = _advance_workdays(
             cd_num, duration_days, node_cal,
@@ -832,7 +901,9 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
 # =============================================================================
 
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
-                project_calendar='', schedule_mode='retained_logic'):
+                project_calendar='', schedule_mode='retained_logic',
+                relationship_lag_calendar='successor',
+                float_type='FT_FF'):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -843,7 +914,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             missing, 7-day ordinal fallback is used with an ALERT logged.
         relationships: list of dicts. Required: ``from_code``, ``to_code``,
             ``type`` (FS/SS/FF/SF), ``lag_days`` (float). Lag is scheduled on
-            the SUCCESSOR's calendar per P6 convention.
+            the calendar named by ``relationship_lag_calendar``
+            (P6 SCHEDOPTIONS.sched_calendar_on_relationship_lag).
+        relationship_lag_calendar: 'predecessor' | 'successor'. Default
+            'successor' — NOT the P6 setting, which is rcal_Predecessor in
+            191 of 195 real exports. 'predecessor' was measured against
+            P6's own stored dates on six real multi-calendar exports and
+            regressed (a 2,918-activity export fell es 0.96642->0.91090,
+            tf 0.82625->0.74195; a 1,168-activity export fell
+            tf 0.36216->0.15240), so the measured-better walk is the
+            default and the setting is exposed rather than assumed.
         data_date: YYYY-MM-DD string used as the floor for un-started activities.
         cal_map: dict ``{clndr_id: calendar_info}``.
 
@@ -908,11 +988,49 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             })
 
     nodes = {}
+    # v2.9.42 PAIRED FIX — TT_LOE / TT_WBS activities excluded from the network.
+    # Mirrors cpm-engine.js Section C `excludedByTaskType`.
+    excluded_by_task_type = []
     for a in activities:
         if a is None:
             continue
         code = a.get('code', '')
         if not code:
+            continue
+        # v2.9.42 PAIRED FIX — task-type exclusion. Section C had no task_type
+        # handling at all, so a level-of-effort bar could drive the critical
+        # path and set the project finish date. Measured on the JS port: a
+        # 60-day TT_LOE hung off A by SS+0 and feeding B by FS became the SOLE
+        # critical path and set project_finish to 2026-04-02, with zero alerts.
+        # P6 DERIVES an LOE's dates from its predecessors and successors and a
+        # WBS-summary's dates from its children; neither drives logic and
+        # neither appears on the longest path. Every excluded activity is
+        # enumerated — no truncation, no top-N.
+        _tt_raw = a.get('task_type')
+        if _tt_raw is None:
+            _tt_raw = a.get('taskType')
+        _tt = str(_tt_raw).strip() if _tt_raw else ''
+        if _tt in ('TT_LOE', 'TT_WBS'):
+            excluded_by_task_type.append({
+                'code': code,
+                'task_type': _tt,
+                'reason': 'level-of-effort' if _tt == 'TT_LOE' else 'wbs-summary',
+            })
+            alerts.append({
+                'severity': 'ALERT',
+                # Reuses Section D parseXER's existing 'task-dropped'
+                # context: identical policy, identical hazard, already a
+                # member of FATAL_STRICT_CONTEXTS on the JS side.
+                'context': 'task-dropped',
+                'message': (
+                    'Activity %s has task_type=%s (%s); excluded from the CPM '
+                    'network. P6 derives its dates from surrounding logic, so '
+                    'it must not drive the critical path or the project finish '
+                    'date. Relationships touching it are dropped with it.'
+                    % (code, _tt,
+                       'level of effort' if _tt == 'TT_LOE' else 'WBS summary')
+                ),
+            })
             continue
         dur_raw = a.get('duration_days')
         try:
@@ -1000,6 +1118,39 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             'driving_predecessor': None,
         }
 
+    # v2.9.42 PAIRED FIX — missing-data-date gate. Mirrors cpm-engine.js.
+    # dd_num is 0 when data_date is absent or unparseable, and the forward pass
+    # seeds max_es from it, so every unstarted source activity gets ES = 0.
+    # add_work_days then short-circuits on start_date <= 0 and returns
+    # start_date + n, silently switching the whole network from calendar
+    # arithmetic to ordinal 7-day arithmetic anchored on the 2020-01-01 epoch.
+    # Measured on the JS port before this gate existed:
+    # computeCPMForensicStrict([A 5 d, B 3 d], [A->B]) with no dataDate returned
+    # A.es_date = '' , A.ef_date = 2020-01-06, projectFinish = 2020-01-09 and
+    # alerts.length = 0. Fires only when the epoch seed is actually reachable.
+    if dd_num <= 0:
+        _epoch_seeded = sum(
+            1 for _n in nodes.values()
+            if not _n['is_complete'] and not _n['actual_start']
+        )
+        if _epoch_seeded > 0:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'missing-data-date',
+                'message': (
+                    'MISSING_DATA_DATE: data_date is %s; the forward pass seeds '
+                    'early start at offset 0 (the 2020-01-01 epoch) for the %d '
+                    '%s that are neither complete nor actually started, and '
+                    'add_work_days falls back to ORDINAL 7-day arithmetic below '
+                    'offset 0. Every date in this result is epoch-anchored and '
+                    'non-calendar. Supply data_date.'
+                    % (('%r which did not parse as YYYY-MM-DD' % (data_date,))
+                       if data_date else 'absent',
+                       _epoch_seeded,
+                       'activity' if _epoch_seeded == 1 else 'activities')
+                ),
+            })
+
     pred_map = defaultdict(list)
     succ_map = defaultdict(list)
     for r in relationships:
@@ -1030,6 +1181,81 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if cid and cal_map.get(cid) is not None:
             return cal_map.get(cid)
         return _project_cal
+
+    # v2.9.42 PAIRED FIX — SCHEDOPTIONS.sched_calendar_on_relationship_lag.
+    # The lag walk was hardcoded to the SUCCESSOR's calendar in both ports while
+    # docs/algorithm.md asserted that as "P6 convention". Scanning SCHEDOPTIONS
+    # across the validation corpus gives rcal_Predecessor 191 files and
+    # rcal_Successor 4, and the setting was never read anywhere in either
+    # engine. On a mixed-calendar network the hardcode both lands lagged links
+    # on the wrong day AND manufactures negative float, because the forward and
+    # backward walks stop being inverses when the anchor falls on a non-working
+    # day of the lag calendar. Measured on the JS port: predecessor on a 7-day
+    # calendar, duration 5 from 2026-01-05 (EF Sat 2026-01-10), successor on
+    # Mon-Fri with FS+2 gave successor ES 2026-01-13 where the predecessor's
+    # calendar gives 2026-01-12, and handed the predecessor lf 2026-01-09
+    # against ef 2026-01-10 — tf -1, flagged critical, with no constraint and no
+    # imposed deadline anywhere in the network. Activities in 58 of 189 corpus
+    # files reference more than one calendar.
+    _lag_cal_mode = str(relationship_lag_calendar or 'successor').strip()
+    _LAG_CAL_ALIASES = {
+        'rcal_Predecessor': 'predecessor',
+        'rcal_Successor': 'successor',
+        'rcal_Project': 'project',
+        'rcal_24Hour': '24hour',
+        'rcal_24hour': '24hour',
+        'pred': 'predecessor',
+        'succ': 'successor',
+    }
+    _lag_cal_mode = _LAG_CAL_ALIASES.get(_lag_cal_mode, _lag_cal_mode)
+    if _lag_cal_mode not in ('predecessor', 'successor'):
+        alerts.append({
+            'severity': 'ALERT',
+            'context': 'lag-calendar-mode-unsupported',
+            'message': (
+                'relationship_lag_calendar=%r is not implemented (supported: '
+                'predecessor | successor; P6 tokens rcal_Predecessor | '
+                'rcal_Successor). P6 behaviour for rcal_Project / rcal_24Hour '
+                'is uncaptured, so the engine computed with its measured-best '
+                'default, the successor calendar, rather than guessing. '
+                'Disclosed, not substituted silently.' % (relationship_lag_calendar,)
+            ),
+        })
+        _lag_cal_mode = 'successor'
+
+    # v2.9.42 PAIRED FIX — SCHEDOPTIONS.sched_float_type. P6 lets a schedule
+    # choose which float its Total Float column reports; both ports hardcoded the
+    # FINISH definition (LF - EF) and never read the setting. Corpus: FT_FF 170
+    # files, FT_Min 19, FT_Total 4, FT_Start 2. Magnitude, stated honestly:
+    # computing start float and finish float from P6's OWN stored ES/LS/EF/LF on
+    # each activity's decoded calendar across the 19 FT_Min files, the two are
+    # EQUAL on 99.60% of unstarted activities, so this is mostly a disclosure gap
+    # and the residual 0.5% is what the definition actually decides.
+    # Default FT_FF keeps every existing result byte-identical.
+    _float_type = str(float_type or 'FT_FF').strip()
+    _FLOAT_TYPE_ALIASES = {
+        'finish': 'FT_FF', 'FT_Finish': 'FT_FF',
+        'start': 'FT_Start', 'FT_start': 'FT_Start',
+        'min': 'FT_Min', 'FT_min': 'FT_Min', 'smallest': 'FT_Min',
+    }
+    _float_type = _FLOAT_TYPE_ALIASES.get(_float_type, _float_type)
+    if _float_type not in ('FT_FF', 'FT_Start', 'FT_Min'):
+        alerts.append({
+            'severity': 'ALERT',
+            'context': 'float-type-unsupported',
+            'message': (
+                'sched_float_type=%r is not one of the implemented definitions '
+                '(FT_FF = finish float LF-EF, P6 default; FT_Start = start float '
+                'LS-ES; FT_Min = smallest of the two). Total float was computed '
+                'on the FINISH definition. Disclosed, not substituted silently — '
+                'read SCHEDOPTIONS.sched_float_type from the source XER and pass '
+                'it through if it is one of the three.' % (float_type,)
+            ),
+        })
+        _float_type = 'FT_FF'
+
+    def _lag_cal_for(pred_node, succ_node):
+        return _cal_for(succ_node) if _lag_cal_mode == 'successor' else _cal_for(pred_node)
 
     # Forward Pass
     for code in order:
@@ -1086,19 +1312,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             t = p['type']
             lag = p['lag_days']
             this_anchor_ef = None  # FF/SF only; None otherwise
+            # v2.9.42 PAIRED FIX - the LAG walk runs on the relationship-lag
+            # calendar; the DURATION walk stays on this activity's own calendar.
+            lag_cal = _lag_cal_for(pnode, node)
             if t == 'FS':
                 anchor = pnode['ef']
-                drive = _advance_workdays(anchor, lag, node_cal,
+                drive = _advance_workdays(anchor, lag, lag_cal,
                                           alerts=alerts,
                                           ctx=f'FS lag {pnode["code"]}->{code}')
             elif t == 'SS':
                 anchor = pnode['es']
-                drive = _advance_workdays(anchor, lag, node_cal,
+                drive = _advance_workdays(anchor, lag, lag_cal,
                                           alerts=alerts,
                                           ctx=f'SS lag {pnode["code"]}->{code}')
             elif t == 'FF':
                 succ_ef_anchor = _advance_workdays(
-                    pnode['ef'], lag, node_cal,
+                    pnode['ef'], lag, lag_cal,
                     alerts=alerts, ctx=f'FF lag {pnode["code"]}->{code}')
                 drive = _retreat_workdays(
                     succ_ef_anchor, node['duration_days'], node_cal,
@@ -1106,7 +1335,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 this_anchor_ef = succ_ef_anchor
             elif t == 'SF':
                 succ_ef_anchor = _advance_workdays(
-                    pnode['es'], lag, node_cal,
+                    pnode['es'], lag, lag_cal,
                     alerts=alerts, ctx=f'SF lag {pnode["code"]}->{code}')
                 drive = _retreat_workdays(
                     succ_ef_anchor, node['duration_days'], node_cal,
@@ -1114,7 +1343,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 this_anchor_ef = succ_ef_anchor
             else:
                 anchor = pnode['ef']
-                drive = _advance_workdays(anchor, lag, node_cal,
+                drive = _advance_workdays(anchor, lag, lag_cal,
                                           alerts=alerts,
                                           ctx=f'FS-default lag {pnode["code"]}->{code}')
             # P6 forward-pass semantics: pred logic cannot override actual_start.
@@ -1149,6 +1378,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 }
                 # v2.9.14 F2.2 backport — capture FF/SF anchor of WINNING driver.
                 finish_anchor_ef = this_anchor_ef
+            elif drive == max_es and driving_pred is None:
+                # v2.9.42 PAIRED FIX - a predecessor whose drive EXACTLY EQUALS
+                # the current max_es could never become the recorded driver
+                # because the tie-break below required an incumbent. When max_es
+                # is still the data-date seed, that predecessor is a real driver
+                # and the node instead got the {'type': 'DATA_DATE'} sentinel.
+                # Measured on the JS port: A(2 d) -SS+0-> B(10 d) with data date
+                # 2026-01-05 returned B.driving_predecessor.type = 'DATA_DATE'
+                # and the longest-path walk returned LPM ['B'] with A absent.
+                # Attribution only: finish_anchor_ef is deliberately NOT captured
+                # here, so this branch cannot move a single date.
+                driving_pred = {
+                    'code': pnode['code'],
+                    'type': t,
+                    'lag_days': lag,
+                }
             elif (drive == max_es and driving_pred is not None
                   and driving_pred.get('type') not in ('CONSTRAINT', 'DATA_DATE')):
                 # v2.9.15 P2 (F14-2) backport — deterministic tie-break on
@@ -1262,17 +1507,55 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts, node['es'])
         node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts, node['es'])
 
+        # v2.9.42 PAIRED FIX — in-progress work with no remaining_duration.
+        # The retained-logic restart above applies ONLY when remaining_duration
+        # is finite and >= 0; otherwise EF falls through to
+        # advance(node['es'], duration_days) anchored on the ACTUAL START, which
+        # forecasts remaining work in the past. Measured on the JS port before
+        # this gate: A with actual_start 2025-07-01, duration_days 10, no
+        # remaining_duration, data date 2026-01-05 returned ES 2025-07-01,
+        # EF 2025-07-15 with ZERO non-INFO alerts. P6 never schedules remaining
+        # work before the data date. The engine does not invent a remaining
+        # duration; it discloses. Mirrors cpm-engine.js.
+        if has_actual_start and not node['is_complete'] and not _rem_provided:
+            _past_dated = (dd_num > 0 and node['ef'] < dd_num)
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'completion-data-incomplete',
+                'message': (
+                    'MISSING_REMAINING_DURATION on %s: activity has '
+                    'actual_start=%s and no actual_finish, but no '
+                    'remaining_duration was supplied, so EF was computed as '
+                    'actual_start + duration_days (%s d) = %s%s Supply '
+                    'remaining_duration for in-progress activities.'
+                    % (code, node['actual_start'], node['duration_days'],
+                       num_to_date(node['ef']),
+                       (' — which is BEFORE the data date %s. Remaining work '
+                        'cannot be forecast in the past; the float carried on '
+                        'this activity is fictitious.' % num_to_date(dd_num))
+                       if _past_dated else '.')
+                ),
+            })
+
         # B3 (P6 alignment wave 2026-08-11, capture 9b748cc, case 11) —
         # Mandatory Finish pins BOTH ends: P6 anchors EF at the mandatory
         # date and back-computes ES = EF - duration on the activity's own
         # calendar, overriding predecessor logic (feasible side only, never
         # on started work, floored at the data date). JS paired site:
         # cpm-engine.js B3 block after _checkFinalEFDeadline.
+        # v2.9.42 PAIRED FIX - 'FO' (the CS_MEO "Finish On" token) joins this
+        # block. Routing CS_MEO through the soft FNET half alone moved EF to the
+        # constraint date but left ES on the logic date, which on a
+        # ZERO-DURATION finish milestone is impossible: ES must equal EF.
+        # Measured on three real exports, every row that moved was a TT_FinMile
+        # carrying CS_MEO - e.g. P6 es 2026-07-24 / ef 2026-07-24 against engine
+        # es 2026-03-30 / ef 2026-07-24.
+        _FIN_PIN_TYPES = ('MS_Finish', 'MFO', 'FO')
         if not has_actual_start:
             _mfc = None
-            if cstr and cstr.get('type') in ('MS_Finish', 'MFO'):
+            if cstr and cstr.get('type') in _FIN_PIN_TYPES:
                 _mfc = cstr
-            elif cstr2 and cstr2.get('type') in ('MS_Finish', 'MFO'):
+            elif cstr2 and cstr2.get('type') in _FIN_PIN_TYPES:
                 _mfc = cstr2
             if _mfc and _mfc.get('date'):
                 _mf_num = date_to_num(_mfc['date'])
@@ -1388,7 +1671,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 if snode.get('is_complete'):
                     skipped_completed_succ += 1
                     continue
-                s_cal = cal_map.get(snode.get('clndr_id', '')) if snode.get('clndr_id') else None
+                # v2.9.42 PAIRED FIX - the backward lag walk must use the SAME
+                # calendar the forward walk used, or the two stop being
+                # inverses and manufacture float out of nothing. `node` is
+                # the predecessor here and `snode` the successor.
+                s_cal = _lag_cal_for(node, snode)
                 t = s['type']
                 lag = s['lag_days']
                 drive = None
@@ -1494,7 +1781,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             else:
                 node['remaining_late_start'] = node['ls']
             node['ls'] = node['remaining_late_start']
-        node['tf'] = _round_half_up_to(node['lf'] - node['ef'], 3)
+        # v2.9.42 PAIRED FIX — both float definitions published; `tf` takes the
+        # one sched_float_type selected. FT_FF leaves `tf` byte-identical.
+        node['tf_finish'] = _round_half_up_to(node['lf'] - node['ef'], 3)
+        node['tf_start'] = _round_half_up_to(node['ls'] - node['es'], 3)
+        if _float_type == 'FT_Start':
+            node['tf'] = node['tf_start']
+        elif _float_type == 'FT_Min':
+            node['tf'] = min(node['tf_start'], node['tf_finish'])
+        else:
+            node['tf'] = node['tf_finish']
 
     # v2.9.7 — ALAP post-pass per Oracle P6 docs. ALAP is a P6 constraint
     # type; AACE 29R-03 does not define ALAP (constraint effects on the
@@ -1537,32 +1833,105 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if n.get('restart') is not None:
             n['restart_date'] = num_to_date(n['restart'])
         n['lf_date'] = num_to_date(n['lf'])
+        # v2.9.42 PAIRED FIX - inclusive companions to the exclusive boundary
+        # dates. ef_date / lf_date are EXCLUSIVE (the opening of the day after
+        # the last day worked); P6's Finish column prints the LAST WORKED DAY.
+        # Both name the same instant - measured against P6's own stored
+        # early_end_date on four real gate-passing exports the JS engine's ef
+        # agrees on 577/577, 439/439, 408/408 and 194/194 activities with an
+        # offset histogram of exactly {0: n} - but they are different STRINGS,
+        # and a report printing ef_date beside an opposing expert's P6 print
+        # looks one day out unless the convention is stated. Derived from the
+        # same ef/lf; no computed value changes.
+        _bcal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+        n['ef_last_worked_date'] = (
+            num_to_date(_retreat_workdays(n['ef'], 1, _bcal, alerts=[],
+                                          ctx=f'ef last-worked {c}'))
+            if n['ef'] > 0 else '')
+        n['lf_last_worked_date'] = (
+            num_to_date(_retreat_workdays(n['lf'], 1, _bcal, alerts=[],
+                                          ctx=f'lf last-worked {c}'))
+            if n['lf'] > 0 else '')
         # v2.9.27 — audit R9 LOW PAIRED FIX. tf_working_days companion to
         # tf (calendar days). P6 reports float in working days on the
         # activity's own calendar; an expert quoting tf=13 against a
         # MonFri-cal activity will be impeached if P6 shows 10. Mirrors
         # JS cpm-engine.js:2270.
+        # v2.9.42 PAIRED FIX - count over the window the selected float
+        # definition names, not always over the finish window. FT_FF unchanged.
         if n['is_complete']:
+            n['tf_finish_working_days'] = 0
+            n['tf_start_working_days'] = 0
             n['tf_working_days'] = 0
         else:
             n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
-            n['tf_working_days'] = _count_work_days_between(n['ef'], n['lf'], n_cal)
+            n['tf_finish_working_days'] = _count_work_days_between(n['ef'], n['lf'], n_cal)
+            n['tf_start_working_days'] = _count_work_days_between(n['es'], n['ls'], n_cal)
+            if _float_type == 'FT_Start':
+                n['tf_working_days'] = n['tf_start_working_days']
+            elif _float_type == 'FT_Min':
+                n['tf_working_days'] = min(n['tf_start_working_days'],
+                                           n['tf_finish_working_days'])
+            else:
+                n['tf_working_days'] = n['tf_finish_working_days']
+
+    # v2.9.42 PAIRED FIX — impossible-negative-float invariant. In a CPM network
+    # with no imposed deadline and no date-bearing constraint anywhere, the
+    # backward pass is seeded from the network's own latest early finish, so
+    # TF >= 0 is an ARITHMETIC IDENTITY — a negative total float there cannot be
+    # a schedule fact and can only be an engine artifact. One such artifact is
+    # live and measured: on a mixed-calendar network the relationship-lag walk
+    # is not its own inverse when the anchor falls on a non-working day of the
+    # lag calendar (predecessor on a 7-day calendar, duration 5 from 2026-01-05,
+    # successor on Mon-Fri with FS+2, no constraint and no deadline anywhere,
+    # produced predecessor lf 2026-01-09 against ef 2026-01-10, tf -1, flagged
+    # critical). Negative float reads as "behind schedule" on an activity that
+    # is not. Deliberately conservative: silent the moment ANY constraint or an
+    # imposed project finish exists. Every affected activity is enumerated.
+    _any_constraint = any(
+        (n.get('constraint') or {}).get('type') or (n.get('constraint2') or {}).get('type')
+        for n in nodes.values()
+    )
+    # (this reference has no imposed-project-finish input, so the JS guard's
+    # `!_projectDeadlineNum` half is unconditionally true here.)
+    if not _any_constraint:
+        _impossible = [
+            '%s (tf %s d, ef %s, lf %s)' % (c, nodes[c]['tf'],
+                                            num_to_date(nodes[c]['ef']),
+                                            num_to_date(nodes[c]['lf']))
+            for c in order
+            if not nodes[c]['is_complete'] and nodes[c]['tf'] < 0
+        ]
+        if _impossible:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'impossible-negative-float',
+                'message': (
+                    'IMPOSSIBLE_NEGATIVE_FLOAT: %d %s negative total float in a '
+                    'network with NO imposed project finish and NO date-bearing '
+                    'constraint on any activity. With a maxEF-seeded backward '
+                    'pass that is arithmetically impossible, so this is an engine '
+                    'artifact, not a schedule fact — the known cause is the '
+                    'relationship-lag walk not being its own inverse across two '
+                    'calendars. Do not report these as behind schedule. '
+                    'Affected: %s.'
+                    % (len(_impossible),
+                       'activity carries' if len(_impossible) == 1 else 'activities carry',
+                       '; '.join(_impossible))
+                ),
+            })
 
     # v2.9.27 — audit F24 PAIRED FIX. Free Float computation backported.
     # JS computed ff + ff_working_days; Python emitted neither — F24 was
-    # documented as an intentional JS-only gap. That gap IS closed: ff and
-    # ff_working_days are set on every branch below and cross-validate with
-    # zero skips. The later ff_signed family (B5 P6-alignment wave, added
-    # after this note) is NOT fully closed — the has-successors branch sets
-    # ff_signed but never ff_signed_working_days, which the JS mirror does
-    # set. The crossval guards skip rather than fail when either side lacks
-    # a field, so 58 comparisons are silently not compared: JS emits a real
-    # number, this reference emits nothing. A further 6 skips (3 ff_signed +
-    # 3 ff_signed_working_days on the completed-activity branch) are engine
-    # parity, neither side emitting. 64 skips total, so the harness line
-    # "925 / 925" is executed/executed, not 925 of 989. An opposing expert
-    # can rely on this file for ff, ff_working_days and ff_signed, NOT for
-    # ff_signed_working_days.
+    # documented as an intentional JS-only gap. v2.9.42 closed the remainder:
+    # ff_signed_working_days is now assigned on the has-successors branch as
+    # well, so all four free-float fields cross-validate. Only the
+    # completed-activity branch still emits neither ff_signed nor
+    # ff_signed_working_days, and neither does the JS engine, so those 6
+    # comparisons are absent on both sides rather than one — the harness line
+    # is 989 / 989 executed against a 995-comparison surface. An opposing
+    # expert can now rely on this file for all four free-float fields on the
+    # has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.
     for c, n in nodes.items():
         if n['is_complete']:
@@ -1583,6 +1952,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         min_slack = float('inf')
         binding_succ_code = ''
         binding_succ_type = ''
+        # v2.9.42 PAIRED FIX — the endpoints of the winning slack measurement.
+        binding_pred_anchor = None
+        binding_succ_anchor = None
         for s in successors:
             sn = nodes.get(s['to_code'])
             if not sn:
@@ -1591,8 +1963,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # EXCLUDED from free float, mirroring backward propagation.
             if sn.get('is_complete'):
                 continue
-            succ_cal = (cal_map.get(sn.get('clndr_id', ''))
-                        if sn.get('clndr_id') else None)
+            # v2.9.42 PAIRED FIX - walk the slack's lag on the SAME calendar the
+            # forward pass walked it on, or free float is measured against an
+            # anchor the schedule never used.
+            succ_cal = _lag_cal_for(n, sn)
             lag = s.get('lag_days', 0) or 0
             # Suppress duplicate alerts — forward pass already fired them.
             _slack_sink = []
@@ -1628,6 +2002,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 min_slack = slack
                 binding_succ_code = s['to_code']
                 binding_succ_type = stype
+                # v2.9.42 PAIRED FIX — keep the two instants the slack was
+                # measured BETWEEN so the working-day conversion below counts
+                # over the same window instead of re-anchoring on n['ef'].
+                binding_pred_anchor = pred_anchor
+                binding_succ_anchor = succ_anchor
         # Free Float is SIGNED — no Math.max(0, …) clamp. Over-constrained
         # networks (FNLT, FS-leads) report negative FF as forensic signal.
         # B5 (P6 alignment wave) - published FF floors at ZERO (P6
@@ -1648,8 +2027,33 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         else:
             ff_cal = (cal_map.get(n.get('clndr_id', ''))
                       if n.get('clndr_id') else None)
-        n['ff_working_days'] = _count_work_days_between(
-            n['ef'], n['ef'] + ff, ff_cal)
+        # v2.9.42 PAIRED FIX — free-float working-day conversion anchor, and
+        # closure of the ff_signed_working_days parity gap on this branch.
+        # `min_slack` is a CALENDAR-day difference measured between pred_anchor
+        # (advance(n['ef'] or n['es'], lag) on the successor's calendar) and the
+        # successor's anchor. The conversion used to count working days over
+        # [n['ef'], n['ef'] + ff] — a window starting at the activity's early
+        # finish rather than at the instant the slack was measured from, and for
+        # SS/SF from a different FIELD entirely. Measured consequences (both
+        # reproduced on the JS port): an FS+3 case returned ff_working_days 3
+        # against tf_working_days 1 — free float exceeding total float, which is
+        # impossible — where the measured window gives 1; and an SS+0 case
+        # returned 2 where the true free float on the start anchor is 3.
+        # Checked against P6's own stored free_float_hr_cnt without the engine
+        # in the loop: over 46 real exports with a demonstrably fresh free-float
+        # column (14,123 rows), on the 313 rows whose binding link carries a lag
+        # the EF-anchored window reproduces P6 on 255 (81.5%) and this
+        # lag-anchored window on 286 (91.4%). Zero-lag FS rows are identical
+        # under both windows, which is why the defect hid.
+        # ff_signed_working_days is now emitted on this branch too; it was
+        # previously left unset here, which made the crossval field guard SKIP
+        # 61 comparisons rather than compare them — the reason both ports could
+        # carry the identical anchor error and stay green.
+        _ff_from = binding_pred_anchor if binding_pred_anchor is not None else n['ef']
+        _ff_to = binding_succ_anchor if binding_succ_anchor is not None else n['lf']
+        n['ff_signed_working_days'] = _count_work_days_between(
+            _ff_from, _ff_to, ff_cal)
+        n['ff_working_days'] = max(0, n['ff_signed_working_days'])
 
     critical = {c for c, n in nodes.items() if n['tf'] <= 0.0 and not n['is_complete']}
 
@@ -1733,6 +2137,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         'critical_codes': critical,
         'topo_order': order,
         'alerts': alerts,
+        # v2.9.42 PAIRED FIX — every activity dropped by the TT_LOE / TT_WBS
+        # rule, in input order. Mirrors JS result.excluded_by_task_type.
+        'excluded_by_task_type': excluded_by_task_type,
     }
 
 
