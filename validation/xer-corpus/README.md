@@ -4,7 +4,7 @@
 
 Closes ChatGPT third-pass directive item #6 — *"Build an anonymized XER test corpus."* Synthetic-only: no real client data is used or sanitized, so there is nothing to anonymize. Every XER is hand-curated by the generator script for a specific test condition.
 
-> **Audit cite.** Hostile counsel asks: "How many of your tests are toy cases versus ugly real schedules?" Answer: the 1,213-test unit suite plus the 46-fixture crossval (1009 checks executed, 6 field comparisons skipped on completed activities where neither engine emits a value) is internal. The 282-activity real-XER stress test is external evidence (see DAUBERT.md §2). This corpus is the bridge — 13 named scenarios covering the failure-mode space, each engine output captured, each XER independently consumable by any P6-compatible tool.
+> **Audit cite.** Hostile counsel asks: "How many of your tests are toy cases versus ugly real schedules?" Answer: the 1,216-test unit suite plus the 46-fixture crossval (1009 checks executed, 6 field comparisons skipped on completed activities where neither engine emits a value) is internal. The 282-activity real-XER stress test is external evidence (see DAUBERT.md §2). This corpus is the bridge — 13 named scenarios covering the failure-mode space, each engine output captured, each XER independently consumable by any P6-compatible tool.
 
 ---
 

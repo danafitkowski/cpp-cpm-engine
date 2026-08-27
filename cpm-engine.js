@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.41';
+const ENGINE_VERSION = '2.9.42';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -283,7 +283,18 @@ function _normalizeConstraint(c, alerts, _ctx) {
         }
         return null;
     }
-    const rawDate = c.date || c.cstr_date2 || c.cstr_date || '';
+    // Column order is load-bearing. parseXER pairs cstr_type with cstr_date
+    // and cstr_type2 with cstr_date2, and always sets .date, so its own path
+    // never reaches these fallbacks. A caller handing computeCPM a RAW P6
+    // TASK row does reach them, and until 2026-08-27 they resolved the
+    // PRIMARY date from cstr_date2 and the SECONDARY date from cstr_date:
+    // the same transposition parseXER was fixed for, left live on the public
+    // input contract. Measured across the author's exports: with cstr_type
+    // set the date is in cstr_date 6,394 times against 9 in cstr_date2; with
+    // cstr_type2 set it is in cstr_date2 3,270 times against 0 in cstr_date.
+    // The crossed column is kept as a LAST resort so a caller built against
+    // the old JSDoc still resolves, but it no longer wins.
+    const rawDate = c.date || c.cstr_date || c.cstr_date2 || '';
     // ALAP has no date.
     if (canonical === 'ALAP') return { type: 'ALAP', date: '' };
     const dateStr = String(rawDate).slice(0, 10);
@@ -320,8 +331,8 @@ function _normalizeConstraint(c, alerts, _ctx) {
 }
 
 // v2.9.7 — Secondary-constraint normalization. Per Oracle P6 Database
-// Reference, TASK supports cstr_type2 / cstr_date as a SECONDARY constraint
-// applied independently of the primary (cstr_type / cstr_date2). When both are
+// Reference, TASK supports cstr_type2 / cstr_date2 as a SECONDARY constraint
+// applied independently of the primary (cstr_type / cstr_date). When both are
 // present, P6 applies them sequentially in forward/backward passes — primary
 // first, then secondary tightens further (secondary "wins" on conflict because
 // it's the second clamp). Common pairing: SNET (cstr_type) + FNLT (cstr_type2).
@@ -347,7 +358,10 @@ function _normalizeConstraint2(c, alerts, _ctx) {
         }
         return null;
     }
-    const rawDate = c.date || c.cstr_date || '';
+    // Secondary pairs with cstr_date2. This never looked at cstr_date2 at
+    // all, so a raw TASK row carrying a secondary constraint resolved its
+    // date from the PRIMARY column. See the note in _normalizeConstraint.
+    const rawDate = c.date || c.cstr_date2 || c.cstr_date || '';
     if (canonical === 'ALAP') return { type: 'ALAP', date: '' };
     const dateStr = String(rawDate).slice(0, 10);
     if (!dateStr) {
@@ -1113,8 +1127,8 @@ function tarjanSCC(nodeCodes, succMap) {
 // activities: [{ code, duration_days, name?, actual_start?, actual_finish?,
 //                early_start?, early_finish?, is_complete?, is_fragnet?,
 //                clndr_id?, constraint?, constraint2? }]
-// constraint:  { type, date } — Primavera P6 cstr_type  / cstr_date2 (v2.9.3).
-// constraint2: { type, date } — Primavera P6 cstr_type2 / cstr_date  (v2.9.7).
+// constraint:  { type, date } — Primavera P6 cstr_type  / cstr_date  (v2.9.3).
+// constraint2: { type, date } — Primavera P6 cstr_type2 / cstr_date2 (v2.9.7).
 //   type ∈ {SNET, SNLT, FNET, FNLT, MS_Start, MS_Finish, ALAP, MFO, SO}
 //   date  = 'YYYY-MM-DD'
 // relationships: [{ from_code, to_code, type: 'FS'|'SS'|'FF'|'SF', lag_days }]
@@ -1756,7 +1770,7 @@ function computeCPM(activities, relationships, opts) {
             // instead of silently dropping. Backward-compat: callers that
             // construct activities without constraint fields are unaffected.
             constraint: _normalizeConstraint(a.constraint, alerts, code),
-            // v2.9.7 — Secondary constraint (cstr_type2 / cstr_date). Stored as
+            // v2.9.7 — Secondary constraint (cstr_type2 / cstr_date2). Stored as
             // an independent {type, date} record. Applied AFTER the primary in
             // forward/backward passes; tightens further (P6 spec).
             constraint2: _normalizeConstraint2(a.constraint2, alerts, code),
@@ -2225,8 +2239,8 @@ function computeCPM(activities, relationships, opts) {
         }
 
         // v2.9.3 — P6 constraint application (forward pass), v2.9.7 — secondary support.
-        // Clamps ES / EF using the activity's cstr_type / cstr_date2 (primary)
-        // and cstr_type2 / cstr_date (secondary). Per P6 spec, both apply
+        // Clamps ES / EF using the activity's cstr_type / cstr_date (primary)
+        // and cstr_type2 / cstr_date2 (secondary). Per P6 spec, both apply
         // independently; secondary tightens after primary so it "wins" on
         // conflict. See `CONSTRAINT_TYPE_MAP` for canonical short codes.
         // v2.9.12 T1.2 / T1.3 — recorded-actual-start precedence (P6
@@ -3358,7 +3372,7 @@ function computeCPM(activities, relationships, opts) {
         alerts,
         // v2.9.42 — every activity dropped by the TT_LOE / TT_WBS task-type
         // rule, enumerated in input order. Programmatic companion to the
-        // 'task-type-excluded' ALERTs so a caller can reconcile its own
+        // 'task-dropped' ALERTs so a caller can reconcile its own
         // activity count against the network the engine actually solved.
         excluded_by_task_type: excludedByTaskType,
         excludedByTaskType,
@@ -3715,7 +3729,7 @@ function parseXER(content) {
                         task_type: row.task_type || '',
                         clndr_id: row.clndr_id || '',
                         constraint,
-                        // v2.9.7 — secondary P6 constraint (cstr_type2 + cstr_date)
+                        // v2.9.7 — secondary P6 constraint (cstr_type2 + cstr_date2)
                         constraint2,
                         cstr_type_raw: cstrType,
                         cstr_date_raw: cstrDate,

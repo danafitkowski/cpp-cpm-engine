@@ -4850,7 +4850,9 @@ console.log('\n=== Section R-v297 — secondary cstr_type2 ===');
         'got ' + secondaryApplied.length);
 }
 
-// R-v297-3: parseXER reads cstr_type2 + cstr_date as secondary constraint.
+// R-v297-3: parseXER reads cstr_type2 + cstr_date2 as secondary constraint.
+// (The heading said cstr_date until 2026-08-27; the assertions underneath it
+// were already correct, so only the heading was wrong.)
 {
     E.resetMC();
     const xer = [
@@ -10054,6 +10056,61 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
     check('V2942-15: the back-compute keys off the constraint that held EF',
         rP.nodes.A.es_date === '2026-01-08' && rP.nodes.A.ef_date === '2026-01-15',
         'es=' + rP.nodes.A.es_date + ' ef=' + rP.nodes.A.ef_date);
+}
+
+// ---------------------------------------------------------------------------
+// R-v2942-1: the constraint-column fix reaches the PUBLIC INPUT CONTRACT,
+// not just parseXER.
+//
+// 1916c4f corrected parseXER to pair cstr_type with cstr_date and cstr_type2
+// with cstr_date2. It left both fallback resolvers crossed. parseXER always
+// sets `.date`, so its own path never reaches them, but a caller that hands
+// computeCPM a constraint object carrying the RAW P6 column names does:
+//
+//   _normalizeConstraint  resolved  c.date || c.cstr_date2 || c.cstr_date
+//   _normalizeConstraint2 resolved  c.date || c.cstr_date        (never date2)
+//
+// So the primary constraint took the SECONDARY column and the secondary took
+// the PRIMARY one, which is exactly the transposition the commit was for. The
+// JSDoc for the activities shape documented the crossed pairing too, pointing
+// a caller straight at it.
+//
+// Measured before the fix with the fixture below: the primary CS_MSO resolved
+// to 2026-04-01, the secondary's date, moving the early start 30 days.
+//
+// The crossed column is kept as a LAST fallback so a caller built against the
+// old JSDoc still resolves; it just no longer wins.
+// ---------------------------------------------------------------------------
+{
+    const rawish = {
+        code: 'A', duration_days: 5, early_start: '2026-01-05',
+        constraint:  { cstr_type:  'CS_MSO',  cstr_date: '2026-03-02',
+                       cstr_date2: '2026-04-01' },
+    };
+    const r = E.computeCPM([rawish], [], { data_date: '2026-01-05' });
+    check('R-v2942-1: primary constraint resolves from cstr_date, not cstr_date2',
+        r.nodes.A.constraint && r.nodes.A.constraint.date === '2026-03-02',
+        'got ' + JSON.stringify(r.nodes.A.constraint));
+    // Secondary: its own column wins over the primary's.
+    const rawish2 = {
+        code: 'A', duration_days: 5, early_start: '2026-01-05',
+        constraint2: { cstr_type2: 'CS_MEOB', cstr_date: '2026-03-02',
+                       cstr_date2: '2026-04-01' },
+    };
+    const r2 = E.computeCPM([rawish2], [], { data_date: '2026-01-05' });
+    check('R-v2942-1: secondary constraint resolves from cstr_date2, not cstr_date',
+        r2.nodes.A.constraint2 && r2.nodes.A.constraint2.date === '2026-04-01',
+        'got ' + JSON.stringify(r2.nodes.A.constraint2));
+    // Back-compat: a caller built against the OLD JSDoc supplied only the
+    // crossed column. It must still resolve rather than silently drop.
+    const legacy = {
+        code: 'A', duration_days: 5, early_start: '2026-01-05',
+        constraint: { cstr_type: 'CS_MSO', cstr_date2: '2026-03-02' },
+    };
+    const r3 = E.computeCPM([legacy], [], { data_date: '2026-01-05' });
+    check('R-v2942-1: legacy crossed-only input still resolves (last fallback)',
+        r3.nodes.A.constraint && r3.nodes.A.constraint.date === '2026-03-02',
+        'got ' + JSON.stringify(r3.nodes.A.constraint));
 }
 
 console.log('\n========================================');

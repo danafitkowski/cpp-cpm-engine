@@ -377,7 +377,7 @@ Build a structured Daubert / FRE 707 disclosure package.
 ```js
 const d = E.buildDaubertDisclosure(cpmResult, {
     activities, relationships,    // For topology hash
-    test_count: 1213,
+    test_count: 1216,
     validator_independence: '...',
     method_caveat: '...',
 });

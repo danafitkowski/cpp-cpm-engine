@@ -12,14 +12,11 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
-## Unreleased — engine math changed (not a tagged release)
+## v2.9.42 — 2026-08-27 — constraint pairing corrected; SS/SF late-finish conversion restored
 
-Everything below sits on `main` above `v2.9.41` and carries no tag of its own.
-Four commits touch `cpm-engine.js` since the tag: `1916c4f`, `7b68c2d`,
-`7a3790f` and `b375cb6`. The source comments for this work are already stamped
-`v2.9.42`, but `ENGINE_VERSION` and `package.json` still read `2.9.41`, so a
-build from `main` today reports a version whose bytes it does not carry. See
-"Release steps still owed" at the end of this entry.
+Four commits touch `cpm-engine.js` above `v2.9.41`: `1916c4f`, `7b68c2d`,
+`7a3790f` and `b375cb6`, plus the input-contract fix described under "Release
+steps closed" at the end of this entry.
 
 **Engine math changed.** The forward pass, the backward pass, free float,
 relationship-lag arithmetic and constraint handling all move, and `parseXER`
@@ -279,32 +276,32 @@ output on disk predates three of the four commits above, so it does not measure
 this tree. The figures need a fresh run against these bytes before they are
 published anywhere.
 
-### Release steps still owed
+### Release steps closed
 
-- **`ENGINE_VERSION` still reads `2.9.41`** in `cpm-engine.js` and
-  `package.json` while the tree no longer matches the bytes `v2.9.41` points at.
-  This is the same defect v2.9.40 exists for and needs a version bump before
-  anything ships. `python_reference/cpm.py` reads `2.9.40` and is a release
-  behind that again.
-- **The crossed schema survives in two fallback paths and in the public input
-  contract.** `_normalizeConstraint` resolves a primary date as
-  `c.date || c.cstr_date2 || c.cstr_date`, preferring the secondary column, and
-  `_normalizeConstraint2` resolves a secondary date as `c.date || c.cstr_date`
-  and never looks at `cstr_date2`. `parseXER` always sets `.date`, so its own
-  path is correct, but a caller that hands `computeCPM` a raw TASK row hits the
-  original transposition. The JSDoc for the `activities` shape still documents
-  the primary as `cstr_type / cstr_date2` and the secondary as
-  `cstr_type2 / cstr_date`, which points a caller straight at it. Five further
-  comment blocks in `cpm-engine.js` still state the crossed schema (the
-  `CONSTRAINT_TYPE_MAP` header, the `_normalizeConstraint2` header, the
-  `constraint2` node-build comment, the forward-pass constraint-application
-  comment and the `parseXER` task-record comment), as does the section comment
-  above R-v297-3 in `cpm-engine.test.js`, whose assertions underneath it are
-  correct.
-- **One comment names an alert context that is never emitted.** The
-  `excluded_by_task_type` comment describes `task-type-excluded` ALERTs; the
-  code emits `task-dropped`. A consumer filtering on the documented string
-  catches nothing.
+All three items this entry previously listed as owed are done.
+
+- **`ENGINE_VERSION` bumped to `2.9.42`** in `cpm-engine.js`, `package.json`,
+  `python_reference/cpm.py` (which was a further release behind at `2.9.40`)
+  and the `_cpp_common` SSOT.
+- **The crossed schema is gone from the fallback resolvers and the public input
+  contract.** `_normalizeConstraint` resolved a primary date as
+  `c.date || c.cstr_date2 || c.cstr_date`, preferring the SECONDARY column, and
+  `_normalizeConstraint2` resolved a secondary date as `c.date || c.cstr_date`
+  and never looked at `cstr_date2`. `parseXER` always sets `.date` so its own
+  path never reached them, but a caller handing `computeCPM` a constraint object
+  carrying the raw P6 column names did, and got exactly the transposition
+  `1916c4f` was for. Measured on a fixture with a primary Start-On at
+  `2026-03-02` and a secondary at `2026-04-01`, the primary resolved to
+  `2026-04-01` and moved the early start 30 days. Both now prefer their own
+  column and keep the crossed one as a last fallback, so a caller built against
+  the old JSDoc still resolves rather than silently dropping the constraint.
+  The JSDoc itself and six comment blocks that documented the crossed pairing
+  are corrected, as is the R-v297-3 section heading in the test file, whose
+  assertions underneath were already right. Three regression checks added, each
+  proven by planting its own defect.
+- **The `excluded_by_task_type` comment named an alert context that is never
+  emitted.** It described `task-type-excluded`; the code emits `task-dropped`.
+  A consumer filtering on the documented string caught nothing.
 
 ---
 

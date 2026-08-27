@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/cpp-cpm-engine.svg)](https://www.npmjs.com/package/cpp-cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 1213 passing](https://img.shields.io/badge/tests-1213%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![tests: 1216 passing](https://img.shields.io/badge/tests-1216%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: JS↔Python 1009/1015](https://img.shields.io/badge/JS%E2%86%94Python-1009%2F1015-brightgreen.svg)](DAUBERT.md#31-independent-verification)
 [![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2939-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
@@ -10,7 +10,7 @@
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
-**Open source. AACE-aligned. Daubert-disclosed. 1,213 JS unit tests, plus JS/Python parity on 1009 of 1015 enumerated cross-validation comparisons; the remaining 6 are not compared because neither engine emits the field on a completed activity (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+**Open source. AACE-aligned. Daubert-disclosed. 1,216 JS unit tests, plus JS/Python parity on 1009 of 1015 enumerated cross-validation comparisons; the remaining 6 are not compared because neither engine emits the field on a completed activity (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
 
 Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
@@ -212,13 +212,13 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.41.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.42.
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,213 unit tests and the cross-validation harness, in which 1009 of 1015 defined comparisons execute and are bit-identical with 0 failures across 46 fixtures (the remaining 6 are skipped rather than compared — 3 `ff_signed`, 3 `ff_signed_working_days`, all on completed activities where neither engine emits the field), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,216 unit tests and the cross-validation harness, in which 1009 of 1015 defined comparisons execute and are bit-identical with 0 failures across 46 fixtures (the remaining 6 are skipped rather than compared — 3 `ff_signed`, 3 `ff_signed_working_days`, all on completed activities where neither engine emits the field), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

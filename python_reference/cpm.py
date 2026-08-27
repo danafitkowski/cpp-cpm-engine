@@ -115,7 +115,7 @@ def _round_half_up_to(x, decimals=0):
 # dropping are executed. Only the completed-activity branch still emits neither
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those 6 comparisons are absent on both sides rather than one.
-ENGINE_VERSION = '2.9.40'
+ENGINE_VERSION = '2.9.42'
 
 
 # =============================================================================
@@ -178,7 +178,7 @@ CANONICAL_CONSTRAINT_TYPES = frozenset([
 
 
 def _normalize_constraint(c, alerts=None, ctx=None):
-    """Primary constraint normalization (cstr_type + cstr_date2).
+    """Primary constraint normalization (cstr_type + cstr_date).
 
     v2.9.12 T1.6 — when alerts is provided, emit a WARN for unrecognized
     tokens and incomplete (missing-date) constraints instead of silently
@@ -202,7 +202,10 @@ def _normalize_constraint(c, alerts=None, ctx=None):
                 ),
             })
         return None
-    raw_date = c.get('date') or c.get('cstr_date2') or c.get('cstr_date') or ''
+    # See cpm-engine.js _normalizeConstraint: these fallbacks carried the
+    # transposition parseXER was fixed for, on the public input contract.
+    # The crossed column is kept last so an old caller still resolves.
+    raw_date = c.get('date') or c.get('cstr_date') or c.get('cstr_date2') or ''
     if canonical == 'ALAP':
         return {'type': 'ALAP', 'date': ''}
     date_str = str(raw_date)[:10]
@@ -221,7 +224,7 @@ def _normalize_constraint(c, alerts=None, ctx=None):
 
 
 def _normalize_constraint2(c, alerts=None, ctx=None):
-    """Secondary constraint normalization (cstr_type2 + cstr_date).
+    """Secondary constraint normalization (cstr_type2 + cstr_date2).
 
     v2.9.12 T1.6 — optional alerts emission, mirroring primary.
     """
@@ -244,7 +247,8 @@ def _normalize_constraint2(c, alerts=None, ctx=None):
                 ),
             })
         return None
-    raw_date = c.get('date') or c.get('cstr_date') or ''
+    # Secondary pairs with cstr_date2; this never read it.
+    raw_date = c.get('date') or c.get('cstr_date2') or c.get('cstr_date') or ''
     if canonical == 'ALAP':
         return {'type': 'ALAP', 'date': ''}
     date_str = str(raw_date)[:10]
