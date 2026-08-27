@@ -246,6 +246,10 @@ let totalFails = 0;
 //
 // Nothing about which comparisons execute changes here. These are counters.
 let totalSkips = 0;
+// One-sided: one engine emitted a value and the other did not, so the field is
+// unverified. Mutual: neither emitted it, so there is nothing to compare.
+let skipsOneSided = 0;
+let skipsMutual = 0;
 const skipByField = Object.create(null);
 const checksByField = Object.create(null);
 const fixtureRows = [];
@@ -323,6 +327,20 @@ function compareFixture(name, payload, opts) {
         totalSkips += 1;
         skipByField[field] = (skipByField[field] || 0) + 1;
         skipsHere[field] = (skipsHere[field] || 0) + 1;
+        // WHICH side is missing decides what the skip means, and the two are
+        // not equivalent. If one engine emits a number and the other emits
+        // nothing, that field is UNVERIFIED: the ports may well disagree and
+        // the harness cannot tell. If neither emits it, there is nothing to
+        // verify and no gap to disclose.
+        //
+        // The published validation page carried that split as a hand-written
+        // "58 substantive / 6 mutual" pair inside its generator. It was true
+        // when written and survived a port fix that took the one-sided count
+        // to zero, so the page went on describing 58 unverified comparisons
+        // that no longer existed. Counting it here means the page can state a
+        // measured split instead of a remembered one.
+        if (present(a) !== present(b)) skipsOneSided += 1;
+        else skipsMutual += 1;
     }
     function recordFixture() {
         // F6.5 exists, so the id is not always F<digits>. A regex that stopped
@@ -1380,6 +1398,7 @@ if (EMIT_JSON) {
             surface: totalChecks + totalSkips,
         },
         skips_by_field: skipByField,
+        skips_by_kind: { one_sided: skipsOneSided, mutual: skipsMutual },
         checks_by_field: checksByField,
         rows: fixtureRows,
     };

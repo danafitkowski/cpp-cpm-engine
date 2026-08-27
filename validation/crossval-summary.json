@@ -1,6 +1,6 @@
 {
   "engine_version": "2.9.41",
-  "generated_utc": "2026-08-27T11:19:53.574Z",
+  "generated_utc": "2026-08-27T12:00:28.440Z",
   "fixtures": {
     "total": 46,
     "passed": 46,
@@ -16,6 +16,10 @@
   "skips_by_field": {
     "ff_signed": 3,
     "ff_signed_working_days": 3
+  },
+  "skips_by_kind": {
+    "one_sided": 0,
+    "mutual": 6
   },
   "checks_by_field": {
     "project_finish_num": 44,
