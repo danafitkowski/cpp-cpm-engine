@@ -74,6 +74,16 @@ const HISTORIC_OK_PATTERNS = [
     // "Engine math is **unchanged** from v2.9.39", so the closing asterisks sit
     // between the keyword and "from".
     /\b(?:unchanged|identical|byte-identical)\**\s+(?:from|to)\s+\**v?2\.9\.\d+/i,
+    // The MIRROR of the line above, for a release where engine math DID move.
+    // A supersession disclosure has to name the version a reader may already
+    // have issued from: "a result computed on v2.9.41 or earlier can differ".
+    // That sentence is the input to the re-check step in PROCEDURE.md, so it is
+    // the disclosure, not drift. v2.9.41 got away with "unchanged from v2.9.40",
+    // which the pattern above covers; v2.9.42 is the first release since this
+    // gate was written whose math actually moved, so the opposite phrasing had
+    // never been needed. Narrow: requires the whole comparative phrase, so a
+    // bare stale reference still fails.
+    /computed on v?2\.9\.\d+ or earlier can differ/i,
     /\bthe\s+v2\.9\.\d+\s+packet\b/i,
     /\bsince\s+(?:the\s+)?(?:prior|previous)\s+(?:pinned\s+)?release\b/i,
     // Dated-measurement narration: coverage figures and citation-withdrawal

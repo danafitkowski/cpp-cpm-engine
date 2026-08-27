@@ -72,7 +72,7 @@ npm install --no-save  # only pulls c8 devDep; runtime is still zero-dep
 npm run coverage
 ```
 
-The output should match the coverage baseline in §2.1 within rounding: 93.43% statements (9,084 / 9,722), 83.12% branches (1,961 / 2,359), 93.96% functions (109 / 116), 93.43% lines, measured 2026-08-27 on the working tree rather than on a tagged release: the constraint-pairing and SS/SF backward-pass fixes above v2.9.41 both changed the shipped bytes, so this is the coverage of the code you are reading, not of the v2.9.41 tag. Drift beyond that documents itself.
+The output should match the coverage baseline in §2.1 within rounding: 93.43% statements (9,084 / 9,722), 83.12% branches (1,961 / 2,359), 93.96% functions (109 / 116), 93.43% lines, measured 2026-08-27 on the v2.9.42 bytes. v2.9.42 is the release that carries the constraint-pairing and SS/SF backward-pass fixes, so this is the coverage of the code the tag ships. Drift beyond that documents itself.
 
 ---
 
@@ -110,11 +110,11 @@ Anyone can verify a published attestation:
 # attestations/latest.json is gitignored, and a witness you generate locally with
 # `npm run verify` is unsigned — verifying it returns HTTP 404 (no attestation for
 # its digest). Verify the CI-signed witness that ships in the tree instead:
-gh attestation verify release-evidence/v2.9.41/witness-v2.9.41.json --owner danafitkowski
+gh attestation verify release-evidence/v2.9.42/witness-v2.9.42.json --owner danafitkowski
 
 # Equivalent public route — note the release asset is named `latest.json`,
 # not `attestations-latest.json`:
-#   gh release download v2.9.41 --repo danafitkowski/cpp-cpm-engine --pattern 'latest.json'
+#   gh release download v2.9.42 --repo danafitkowski/cpp-cpm-engine --pattern 'latest.json'
 #   gh attestation verify latest.json --owner danafitkowski
 ```
 
@@ -184,7 +184,7 @@ Every `computeCPM` result carries a `manifest` block:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.41',                   // Synchronized with package.json (bump per release)
+    engine_version: '2.9.42',                   // Synchronized with package.json (bump per release)
     method_id: 'computeCPM',                    // 'computeTIA', 'computeCPMSalvaging', etc.
     activity_count: 282,
     relationship_count: 421,
@@ -251,7 +251,7 @@ The engine and the validation suite were developed by the same author (Dana Fitk
 ## Disclosure format version
 
 `disclosure_format_version: 1.0`
-`engine_version: 2.9.41`
+`engine_version: 2.9.42`
 `generated_at:` (will be filled in by `buildDaubertDisclosure()` at runtime; this static document was first written 2026-05-24. Its cross-validation figures were re-measured 2026-08-27 by running `npm run crossval` at HEAD: 46 fixtures, 1009 of 1015 enumerated comparisons executed, 6 skipped, 0 failures. That is a figure refresh against the working tree, not a new tagged release — the engine version is unchanged at v2.9.41. The last tagged refresh was v2.9.41 (released 2026-08-19), which retired the F20/F21/F27 alert-parity carve-outs after the 2026-08-16 external audit showed the out-of-sequence ALERT has been emitted by the Python reference since v2.9.27, growing executed cross-validation from 925 to 931 checks on a 995-comparison surface. v2.9.40 is the P6 23.12 alignment wave: a 13-case comparison matrix captured from Primavera P6 Professional 23.12 standalone on 2026-08-11 via an automated import plus single-F9 round trip, five divergence families (working-day float units, open-end late-date seeding, mandatory-finish semantics, retained logic on out-of-sequence progress, free-float conventions) corrected against that capture, and cross-validation grown from 43 fixtures / 747 checks to 45 fixtures / 925 checks. The matrix reads 13 / 13 PASS, and disclosure requires the qualifier: the first and only capture scored 6 / 13, the engine was then changed against that capture's answers, and no held-out P6 case exists, so the matrix is a calibration record rather than an independent hold-out test. v2.9.38 (2026-07-04) corrected the attestation SHA chain to pin the shipped engine bytes and rewrote §E to the fields the engine actually emits (`method_caveat` on `computeKinematicDelay`, `methodology` on `computeBayesianUpdate`), removing the `methodology_status` and `woet_classifier` surfaces the engine never carried. v2.9.33 fixed the fatal-tier audit findings v2.9.32 left open (VERIFY_RELEASE.md test-count contradictions, missing release-evidence packets, SHA-sidecar wording, attestation script not wiring the new gates) plus the medium-tier residuals (jurisdictions bottom guarantee section, "no silent wrong-answer paths" absolute language, dead-context test strengthening, structured override fields with backward compat, README competitor-table removal, machine-readable SOP-checklist binding). Prior milestones preserved: v2.9.33 audit-response wave + version-drift regression gate + computeCPMSalvaging strict-mode refusal; v2.9.31 Section Q Forensic Strict Mode public API + 33 strict-mode unit tests; v2.9.27 audit closeout + crossval 444→747; v2.9.12 Round 9 engine math fix wave; v2.9.11 Round 7 independent-verification infrastructure tag; v2.9.9 full hammock SS/FF/SF semantics; v2.9.10 Round 7-8 independent-verification stack (public CI, Sigstore attestation, one-command local reproduction).)
 
 ---
@@ -333,7 +333,7 @@ own calendar), which is what P6's float columns mean; the raw calendar-day
 
 **Semantics.** Forward-pass clamps emit `{severity:'WARN', context:'constraint-applied'}`; impossibility-of-satisfaction cases emit `{severity:'ALERT', context:'constraint-violated'}`. Hammock-cycle topology emits `{severity:'ALERT', context:'hammock-cycle'}`. Hammock negative-span emits `{severity:'ALERT', context:'hammock-negative-span'}`. No silent-wrong-answer paths — every constraint that affects ES/EF/LS/LF, and every hammock anomaly, appears in `result.alerts`.
 
-**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.41'` to confirm the constraint module version.
+**Disclosure.** Opposing experts can audit every constraint applied during a run by filtering `result.alerts` on the contexts above. Pair with `result.manifest.engine_version === '2.9.42'` to confirm the constraint module version.
 
 **v2.9.12 — Round 9 engine math fix wave.** The audit memo identified ~30 substantive math defects across constraint handling, calendar arithmetic, in-progress + actuals, and JS/Python parity. T1.1 added MS_Start hard-pin on backward LF clamp (was JS+Python silent gap). T1.2-T1.3 emit `constraint-noop` WARN and suppress ES-side constraint clamps when an `actual_start` is present (P6 forward-pass semantics: a recorded actual start governs ES; both engines). T1.4 added Section D actual_start pinning with one-time `actual-start-not-anchored` WARN when `projectStart` is missing. T1.5 surfaces TT_LOE/TT_WBS/completed/zero-remaining drops + dangling-relationship drops + non-finite-lag rejections as INFO/ALERT alerts. T1.6 emits `constraint-unrecognized` / `constraint-incomplete` WARN on unknown tokens / missing dates. T1.7 added `CS_MANSTART` / `CS_MANFINISH` aliases. T1.8-T1.10 added Section D SNLT/FNLT/MS_Start violated+applied alerts symmetric with Section C. T2.11 rewrote Free Float on the binding-link's calendar so coincident lag-walked-forward pairs produce 0 slack. T2.12 made `_countWorkDaysBetween` signed (preserves negative-float forensic signal). T2.13 removed the `Math.max(0, ...)` FF clamp. T2.14 added `dateToNum` rollover guard (Feb 30 → 0 instead of silent rewrite to Mar 2). T2.15 rejects non-finite `lag_hr_cnt` from parseXER. T2.16 emits `invalid-calendar-falling-back` WARN when work_days is empty/invalid. T2.17 updated SUB_DAY_LAG_ROUNDED message to disclose V8 Math.round direction-bias. T3.18 added `remaining_duration` for P6 retained-logic EF anchoring. T3.19 pins LS=ES on backward pass when actual_start is present (in-progress, both engines). T3.20 guards `EF >= ES` in Section C EF-side helpers. T3.21 enumerates every unstarted predecessor + catches premature-start OoS. T3.22 emits `hammock-orphan` ALERT when no anchors resolve. T3.23 adds `duration_working_days` to hammocks. T3.24 emits `unrecognized-task-type` WARN. T4.25-T4.26 backport R8A-1 (MISSING_ACTUAL_START ES derivation) and ALAP-secondary-slot guard to the Python reference, rotating the SHA-256 pin. T4.27 was already in place on the JS side from T1.3.
 
@@ -477,7 +477,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 ### What strict mode does NOT do
 
 - It does not validate that the analyst's overrides are *correct*. It enforces that the analyst documented the override in writing. Whether the rationale is defensible is the analyst's burden under Daubert / FRE 702.
-- It does not guarantee P6 equivalence on the strict-mode-passing path. The P6 comparison evidence that does exist ships at [`validation/p6-comparison/`](validation/p6-comparison/), where the matrix reads **13 / 13** on the in-scope cases (two further cases are excluded as out of scope and documented in [`validation/engine-limitations/`](validation/engine-limitations/)). Those cases run plain `computeCPM`, not strict mode, and the 13 / 13 is fitted rather than held out: the single native P6 capture first scored 6 / 13, the engine was then corrected against those same pinned P6 answers, and the matrix was regenerated. No post-fix independent capture exists yet. The fix sequence is recorded in [`release-evidence/v2.9.41/validation-summary.md`](release-evidence/v2.9.41/validation-summary.md).
+- It does not guarantee P6 equivalence on the strict-mode-passing path. The P6 comparison evidence that does exist ships at [`validation/p6-comparison/`](validation/p6-comparison/), where the matrix reads **13 / 13** on the in-scope cases (two further cases are excluded as out of scope and documented in [`validation/engine-limitations/`](validation/engine-limitations/)). Those cases run plain `computeCPM`, not strict mode, and the 13 / 13 is fitted rather than held out: the single native P6 capture first scored 6 / 13, the engine was then corrected against those same pinned P6 answers, and the matrix was regenerated. No post-fix independent capture exists yet. The fix sequence is recorded in [`release-evidence/v2.9.42/validation-summary.md`](release-evidence/v2.9.42/validation-summary.md).
 - It does not extend to the `computeCPMSalvaging` path. Salvage mode is the inverse posture (best-effort triage of corrupt input) and refuses strict mode by design.
 - It is not retroactive. If you ran `computeCPM` without `forensic_strict: true` and want to validate after the fact, re-run with the flag set.
 
@@ -485,7 +485,7 @@ The original `result.alerts` array is **not** mutated — every alert remains vi
 
 Strict mode shipped with 33 dedicated unit tests in v2.9.31, covering: API surface (8 tests); clean input pass-through; convenience wrapper; throw on each fatal context family; override with valid rationale; override with empty / whitespace / non-string rationale (each throws); unrelated override key (ignored); runCPM strict-mode refusal; default-off behavior; truthy-not-true non-activation. See `cpm-engine.test.js` SECTION R-v2.9.31 (the section anchor in the test file preserves the release that introduced these tests).
 
-Those 33 strict-mode tests are still part of the engine's unit-test suite in the current v2.9.41 release (1,216 total tests including strict-mode coverage).
+Those 33 strict-mode tests are still part of the engine's unit-test suite in the current v2.9.42 release (1,216 total tests including strict-mode coverage).
 
 ---
 
