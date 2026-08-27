@@ -1,4 +1,5 @@
 // Gate: no real client / employer / project name may ship in this PUBLIC repo.
+// client-name-ok-file: this IS the client-name guard; its header states the rules it enforces, so it necessarily spells out the shapes it blocks.
 //
 // Why this exists: a confidential forensic client name shipped in
 // schemas/sop-checklist.schema.json from v2.9.34 (2026-05-24) until it was
