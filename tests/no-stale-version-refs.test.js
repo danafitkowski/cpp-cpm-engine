@@ -589,6 +589,39 @@ if (!fs.existsSync(pyRefFull)) {
     }
     const actualHash = crypto.createHash('sha256').update(pyBytes).digest('hex');
     const actualBytes = pyBytes.length;
+
+    // The pin describes the COMMITTED bytes, so it can only be validated after
+    // the commit that changes them. That is a real trap: edit cpm.py, run the
+    // gate, watch it pass against the OLD bytes still in HEAD, commit, and the
+    // gate turns red on the very next run. It happened cutting v2.9.42, and it
+    // failed the release workflow on all nine matrix legs.
+    //
+    // So when the working tree differs from HEAD, check the pin against the
+    // bytes the next commit will publish and fail NOW, while it is one edit to
+    // fix rather than a re-tag.
+    if (fs.existsSync(pyRefFull)) {
+        const diskBytes = fs.readFileSync(pyRefFull);
+        const diskHash = crypto.createHash('sha256').update(diskBytes).digest('hex');
+        if (diskHash !== actualHash) {
+            const pinnedInReadme = (fs.readFileSync(pyReadmeFull, 'utf-8')
+                .match(/^cpm\.py\s+SHA-256:\s+([0-9a-f]{64})\s*$/m) || [])[1];
+            if (pinnedInReadme && pinnedInReadme !== diskHash) {
+                console.error('');
+                console.error('FAIL: python_reference/cpm.py is MODIFIED and its pin does not');
+                console.error('describe the modified bytes.');
+                console.error('  committed : ' + actualHash.slice(0, 16) + '...  (' + actualBytes + ' bytes)');
+                console.error('  working   : ' + diskHash.slice(0, 16) + '...  (' + diskBytes.length + ' bytes)');
+                console.error('  README pin: ' + pinnedInReadme.slice(0, 16) + '...');
+                console.error('');
+                console.error('The pin describes COMMITTED bytes, so committing as-is would make it');
+                console.error('false and turn this gate red on the next run. Rotate the pin and the');
+                console.error('Expected-output figures in python_reference/README.md to the working');
+                console.error('values above, then commit both together.');
+                console.error('');
+                process.exit(1);
+            }
+        }
+    }
     const readmeLines = fs.readFileSync(pyReadmeFull, 'utf-8').split('\n');
 
     // (a) The declared pin: "cpm.py  SHA-256:  <hex>"

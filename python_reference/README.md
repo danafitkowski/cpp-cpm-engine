@@ -37,7 +37,7 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  d4ec56846a0a37110695b7a64b29e4933c41bb643ea4264d6c1639d083ba5122
+cpm.py  SHA-256:  76cff49530497bd1c6b9a68cb68a3fa6996660d50249708176a86aa0616a77b0
 
 (post-v2.9.39 - bumped from da792b52... by c279a5c: embedded coverage-gap
 disclosure strings in the module header only, no math change. Prior:
@@ -156,8 +156,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 116446
-  sha-256:  d4ec56846a0a37110695b7a64b29e4933c41bb643ea4264d6c1639d083ba5122
+  bytes: 116747
+  sha-256:  76cff49530497bd1c6b9a68cb68a3fa6996660d50249708176a86aa0616a77b0
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
