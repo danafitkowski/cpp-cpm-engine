@@ -20,6 +20,7 @@ rem ============================================================================
 set "P6DIR=C:\Program Files\Oracle\Primavera P6\P6 Professional\23.12.1"
 set "HERE=%~dp0"
 set "ACTIONS=%HERE%db-import-actions.xml"
+set "IMPORTXER=%HERE%cases-import.xer"
 set "LOG=%HERE%p6-import-log.txt"
 set "ALIAS=Forensic"
 
@@ -41,8 +42,30 @@ if not exist "%P6DIR%\Primavera.CacheService.exe" (
     echo          %P6DIR%
     exit /b 91
 )
+if not exist "%IMPORTXER%" (
+    echo  [ABORT] Import XER not found: %IMPORTXER%
+    exit /b 92
+)
+
+rem -- Write the action script HERE, with THIS checkout's path.
+rem    P6 takes only an absolute path for importFile, so a committed action
+rem    script would carry whichever machine generated it. That is how the
+rem    author's own directory ended up in a public repository, and it also
+rem    meant this harness could not run anywhere else without hand-editing
+rem    the XML. Generating it at run time fixes both.
+> "%ACTIONS%" echo ^<actions^>
+>>"%ACTIONS%" echo   ^<action^>
+>>"%ACTIONS%" echo     ^<type^>import^</type^>
+>>"%ACTIONS%" echo     ^<importFormat^>XER^</importFormat^>
+>>"%ACTIONS%" echo     ^<importType^>PROJECT^</importType^>
+>>"%ACTIONS%" echo     ^<importAction^>CREATE^</importAction^>
+>>"%ACTIONS%" echo     ^<importTo^>XVA^</importTo^>
+>>"%ACTIONS%" echo     ^<importFile^>%IMPORTXER%^</importFile^>
+>>"%ACTIONS%" echo   ^</action^>
+>>"%ACTIONS%" echo ^</actions^>
+
 if not exist "%ACTIONS%" (
-    echo  [ABORT] Action script not found: %ACTIONS%
+    echo  [ABORT] Could not write the action script: %ACTIONS%
     exit /b 92
 )
 

@@ -6017,19 +6017,26 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
 //          fixtures' alert_count + severity_counts comparisons now execute. The two
 //          prong strings had drifted apart (prong 1 said 45, prong 3 still said
 //          43) and this gate pinned both, so it pinned the contradiction. Both
-//          now read 45. The "× N checks" product phrasing is also retired: it
-//          read as fixtures times checks, and the "925 / 925" ratio is an
-//          executed-comparison count, not agreement over the 989-comparison
-//          enumerated surface.
+//          now read the same count. The "× N checks" product phrasing is also
+//          retired: it read as fixtures times checks, and the "925 / 925" ratio
+//          is an executed-comparison count, not agreement over the
+//          989-comparison enumerated surface.
+// 2026-08-27: re-measured by `npm run crossval` — 46 fixtures, 1009 of 1015
+//          executed, 6 skipped (3 ff_signed, 3 ff_signed_working_days), 0
+//          failures. The ff_signed_working_days port into python_reference/cpm.py
+//          closed all 58 one-sided skips, so every remaining skip is a completed
+//          activity (F10.A, F20.B, F43.A) on which NEITHER engine emits the
+//          field. Both prong strings refreshed to those measured figures.
 // Test enforces that the disclosure references the CURRENT count and that no
 // earlier count strings persist in the source.
 {
     const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
-    check('R-v298-B10: Daubert disclosure references 45 fixtures (current count)',
-        src.indexOf('45 fixtures + 282-activity') >= 0);
-    check('R-v298-B10: Daubert disclosure references 45 fixtures / 931 checks, no stale 925',
-        src.indexOf('45 cross-validation fixtures. The harness defines 995 node-field') >= 0
-        && src.indexOf('925 / 925') < 0);
+    check('R-v298-B10: Daubert disclosure references 46 fixtures (current count)',
+        src.indexOf('46 fixtures + 282-activity') >= 0);
+    check('R-v298-B10: Daubert disclosure references 46 fixtures / 1009 checks, no stale 925 or 931',
+        src.indexOf('46 cross-validation fixtures. The harness defines 1015 node-field') >= 0
+        && src.indexOf('925 / 925') < 0
+        && src.indexOf('931 / 931') < 0);
     check('R-v298-B10: no remaining "× 747 checks" reference (stale pre-alignment-wave)',
         src.indexOf('× 747 checks') < 0);
     check('R-v298-B10: no remaining "13 fixtures" reference in source',
@@ -6038,6 +6045,11 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         src.indexOf('16 fixtures') === -1);
     check('R-v298-B10: no remaining "25 fixtures" reference in source',
         src.indexOf('25 fixtures') === -1);
+    // NOTE: the stale-string list below is deliberately NOT extended for
+    // "45 fixtures + 282". The positive assertions above already fail if the
+    // disclosure regresses (they require the 46-fixture / 1015-comparison
+    // wording and forbid both the 925/925 and 931/931 bare ratios), and every
+    // added check() moves JS_UNIT_TEST_COUNT in engine_version.py.
     check('R-v298-B10: no remaining "40 fixtures + 282" reference (stale)',
         src.indexOf('40 fixtures + 282') === -1);
     check('R-v298-B10: no remaining "× 416 checks" reference (stale)',

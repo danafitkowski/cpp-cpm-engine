@@ -1,203 +1,171 @@
 {
   "engine_version": "2.9.41",
-  "generated_utc": "2026-08-21T17:16:41.338Z",
+  "generated_utc": "2026-08-27T11:19:53.574Z",
   "fixtures": {
-    "total": 45,
-    "passed": 45,
+    "total": 46,
+    "passed": 46,
     "failed": 0
   },
   "checks": {
-    "executed": 931,
+    "executed": 1009,
     "failed": 0,
-    "passed": 931,
-    "skipped": 64,
-    "surface": 995
+    "passed": 1009,
+    "skipped": 6,
+    "surface": 1015
   },
   "skips_by_field": {
-    "ff_signed_working_days": 61,
-    "ff_signed": 3
+    "ff_signed": 3,
+    "ff_signed_working_days": 3
   },
   "checks_by_field": {
-    "project_finish_num": 43,
-    "project_finish": 43,
-    "critical_codes": 43,
-    "topo_order": 43,
-    "alert_count": 43,
-    "alert_severity_counts": 43,
-    "node <id>": 671,
+    "project_finish_num": 44,
+    "project_finish": 44,
+    "critical_codes": 44,
+    "topo_order": 44,
+    "alert_count": 44,
+    "alert_severity_counts": 44,
+    "node <id>": 743,
     "threw (both engines)": 2
   },
   "rows": [
     {
       "id": "F1",
       "name": "F1 — A→B→C linear, no cal",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F2",
       "name": "F2 — A→B→C linear, MonFri",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F3",
       "name": "F3 — A→B→C + A→X (off-CP), MonFri",
-      "checks": 32,
+      "checks": 34,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F4",
       "name": "F4 — Mixed FS/SS/FF/SF + lags",
-      "checks": 37,
+      "checks": 41,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed_working_days": 4
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F5",
       "name": "F5 — MonFri + holidays",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F6",
       "name": "F6 — 7-day calendar (no weekends)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F6.5",
       "name": "F6.5 — SF + FS mix",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F7",
       "name": "F7 — Diamond network",
-      "checks": 37,
+      "checks": 41,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed_working_days": 4
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F8",
       "name": "F8 — Numeric codes interleaved with alpha codes",
-      "checks": 44,
+      "checks": 48,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed_working_days": 4
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F9",
       "name": "F9 — FS-3 lead",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F10",
       "name": "F10 — Completed + uncompleted mix",
-      "checks": 24,
+      "checks": 25,
       "fails": 0,
-      "skips": 3,
+      "skips": 2,
       "skips_by_field": {
         "ff_signed": 1,
-        "ff_signed_working_days": 2
+        "ff_signed_working_days": 1
       }
     },
     {
       "id": "F11",
       "name": "F11 — MonFri + 7-day calendars mixed",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F12",
       "name": "F12 — early_start pin ahead of logic",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F13",
       "name": "F13 — SNET primary constraint",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F14",
       "name": "F14 — MS_Start + FNLT combo",
-      "checks": 26,
+      "checks": 27,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F15",
       "name": "F15 — ALAP consumes float",
-      "checks": 31,
+      "checks": 34,
       "fails": 0,
-      "skips": 3,
-      "skips_by_field": {
-        "ff_signed_working_days": 3
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F16",
       "name": "F16 — SNLT primary (forward ALERT + backward LF clamp)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F17",
@@ -210,53 +178,45 @@
     {
       "id": "F18",
       "name": "F18 — MS_Finish LF pin (forward warn + backward clamp)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F19",
       "name": "F19 — Secondary constraint pair (SNET + FNLT window)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F20",
       "name": "F20 — Out-of-sequence (completed B before A starts)",
-      "checks": 17,
+      "checks": 18,
       "fails": 0,
-      "skips": 3,
+      "skips": 2,
       "skips_by_field": {
-        "ff_signed_working_days": 2,
-        "ff_signed": 1
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
       }
     },
     {
       "id": "F21",
       "name": "F21 — ALAP slide suppressed by actual_start",
-      "checks": 31,
+      "checks": 34,
       "fails": 0,
-      "skips": 3,
-      "skips_by_field": {
-        "ff_signed_working_days": 3
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F22",
       "name": "F22 — Calendar fallback (missing clndr_id triggers ALERT)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F23",
@@ -269,62 +229,50 @@
     {
       "id": "F24",
       "name": "F24 — Free-float parity DOCUMENTED GAP (no FF in Python ref)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F26",
       "name": "F26 — Calendar fallback, 3 distinct missing clndr_ids",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F27",
       "name": "F27 — actual_start AFTER data_date pins ES (P6 forward-pass semantics)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F28",
       "name": "F28 — ALAP primary + FNLT secondary compound",
-      "checks": 31,
+      "checks": 34,
       "fails": 0,
-      "skips": 3,
-      "skips_by_field": {
-        "ff_signed_working_days": 3
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F29",
       "name": "F29 — Mixed FF + SS predecessors converge on same successor",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F30",
       "name": "F30 — Negative lag FS-2 (no calendar, ordinal arithmetic)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F31",
@@ -345,12 +293,10 @@
     {
       "id": "F33",
       "name": "F33 — MS_Start primary pins LS=ES, TF=0 (v2.9.12 T1.1)",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F34",
@@ -406,22 +352,18 @@
     {
       "id": "F44",
       "name": "F44 — ALAP on secondary slot (v2.9.12 T4.26)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F45",
       "name": "F45 — in-progress retained-logic LF=EF pin (F1-Bug1/F1-Bug2)",
-      "checks": 25,
+      "checks": 27,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F46",
@@ -442,22 +384,26 @@
     {
       "id": "F48",
       "name": "F48 - out-of-sequence retained logic: remaining restarts behind pred (case 10)",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F49",
       "name": "F49 - out-of-sequence progress_override: remaining continues from data date",
-      "checks": 19,
+      "checks": 20,
       "fails": 0,
-      "skips": 1,
-      "skips_by_field": {
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F50",
+      "name": "F50 — special_workdays: a forced-ON Saturday and a forced-OFF Monday",
+      "checks": 20,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
     }
   ]
 }

@@ -314,7 +314,7 @@ FRE 702 attacks come in two flavors:
 
 2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
-Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,134 unit tests, 931 of 995 enumerated crossval comparisons bit-identical, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
+Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,213 unit tests, 1009 of 1015 enumerated crossval comparisons bit-identical, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
 
 Following this SOP does not guarantee admissibility. It documents a defensible application discipline. Whether the opinion itself is defensible remains the analyst's burden under FRE 702.
 

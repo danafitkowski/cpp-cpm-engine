@@ -12,14 +12,14 @@
 // --json to write validation/crossval-summary.json, which is what the public
 // validation page renders its tables from; before that file existed the tables
 // were transcribed by hand and drifted to 925 of 989 under a 931 of 995 headline.
-// On the current 45 fixtures (105 node comparison groups) 64 of the 995
-// possible comparisons are skipped: 61 ff_signed_working_days and 3 ff_signed.
+// On the current 46 fixtures (107 node comparison groups) 6 of the 1015
+// possible comparisons are skipped: 3 ff_signed and 3 ff_signed_working_days.
 // Those two figures are no longer maintained here; the run computes them.
-// 58 of the 64 are substantive — the Python reference never assigns
-// ff_signed_working_days on the has-successors path, so it emits null where JS
-// emits a real number; the other 6 fall on activities where neither engine
-// assigns the field. Agreement over the full comparison surface is therefore
-// 931 of 995, not 931 of 931.
+// NONE of the 6 is substantive any more. The Python reference now assigns
+// ff_signed_working_days on the has-successors path, which closed the 58
+// one-sided skips; all 6 that remain fall on completed activities (F10.A,
+// F20.B, F43.A) where neither engine assigns the field. Agreement over the
+// full comparison surface is therefore 1009 of 1015, not 1009 of 1009.
 
 'use strict';
 
@@ -391,13 +391,14 @@ function compareFixture(name, payload, opts) {
         eqGuarded('node ' + code + '.ff_working_days', 'ff_working_days',
             a.ff_working_days, b.ff_working_days, true);
         // B5 (P6 alignment wave) — the published ff floors at 0; the signed
-        // forensic value moved to ff_signed. NOT in lockstep: on the current
-        // fixtures ff_signed is compared on 102 of the 105 node groups but
-        // ff_signed_working_days on only 44. The Python reference assigns
-        // ff_signed_working_days only in the no-successors branch, so it is
-        // absent on 58 nodes where the JS engine emits a real number; on a
-        // further 3 nodes (completed activities) neither side emits either
-        // field. The two guards below silently skip those 64 comparisons:
+        // forensic value moved to ff_signed. Now in lockstep: on the current
+        // fixtures ff_signed and ff_signed_working_days are each compared on
+        // 104 of the 107 node groups. The Python reference used to assign
+        // ff_signed_working_days only in the no-successors branch, so it was
+        // absent on 58 nodes where the JS engine emitted a real number; that
+        // port closed, and the only nodes left uncompared are the 3 completed
+        // activities where neither side emits either field. The two guards
+        // below silently skip those 6 comparisons:
         // they are not failed, and they are not counted in the Checks total
         // printed at the end of the run. Since 2026-08-21 they ARE counted as
         // skips, which is what lets the published agreement figure be stated

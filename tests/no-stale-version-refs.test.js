@@ -651,55 +651,127 @@ console.log(
 );
 
 // ---------------------------------------------------------------------------
-// Gate 3: no bare "925/925" (executed-over-executed) in prose.
+// Gate 3: no bare executed-over-executed ratio ("N / N") in prose.
 //
-// The harness PRINTS "925 / 925" because its denominator is the executed
-// count, not the 989-comparison surface. Quoting that ratio bare in prose
+// The harness PRINTS "N / N" because its denominator is the executed count,
+// not the enumerated comparison surface. Quoting that ratio bare in prose
 // reads as 100% coverage. Docs must carry the executed/defined form.
+//
+// This gate used to hard-code the ratio of the day (`\b925\s*/\s*925\b`) and
+// the surface of the day (`\b989\b`). That made it die silently the moment
+// the harness moved: at 931/931, and again at 1009/1009, the pattern could
+// not match anything, so the scan printed "0 undisclosed occurrence(s)" while
+// covering nothing at all. Both figures are now READ FROM THE HARNESS OUTPUT
+// (validation/crossval-summary.json, written by `npm run crossval --json`),
+// so the gate rotates itself with every recount and cannot be outrun again.
+//
+// It is deliberately scoped to the CURRENT ratio rather than to the shape
+// "any N / N". The shape catches "1134 / 1134 passing" for unit tests, which
+// is a genuine pass count and not an executed-over-executed coverage figure,
+// and it also fires inside frozen release-evidence packets whose text must
+// not be edited. Scoping to the live ratio keeps the gate on the claim that
+// can still mislead: today's coverage figure quoted without today's surface.
 //
 // Files that legitimately reproduce the harness banner verbatim are exempt:
 // they are transcripts of tool output, and editing them would falsify the
 // transcript. Everything else must disclose the surface.
 // ---------------------------------------------------------------------------
-const BARE_RATIO_RE = /\b925\s*\/\s*925\b/;
-const RATIO_SCANNED = [
-    'README.md',
-    'CONTRIBUTING.md',
-    'DAUBERT.md',
-    'VERIFY_RELEASE.md',
-    'FORENSIC_USE_SOP.md',
-    'SECURITY.md',
-    'docs/api.md',
-    'docs/algorithm.md',
-    'docs/examples.md',
-    'docs/citations.md',
-    'docs/jurisdictions.md',
-];
-// release-evidence/ was NOT walked when this gate was written, and the live
-// v2.9.39 exhibit carried the undisclosed ratio three times as a result — the
-// one folder a court actually receives. Walk it, and every future version
-// folder, by discovery rather than by list, so a new release cannot be missed.
-for (const dir of ['release-evidence']) {
-    const base = path.join(repoRoot, dir);
-    if (!fs.existsSync(base)) continue;
-    const walk = (d) => {
+const CROSSVAL_SUMMARY_REL = 'validation/crossval-summary.json';
+const _cvSummaryPath = path.join(repoRoot, CROSSVAL_SUMMARY_REL);
+if (!fs.existsSync(_cvSummaryPath)) {
+    console.error('');
+    console.error(`FAIL: ${CROSSVAL_SUMMARY_REL} is missing.`);
+    console.error('Gate 3 derives the live crossval ratio from it. Without the file the');
+    console.error('gate would pass vacuously, which is the exact failure it was rebuilt to');
+    console.error('eliminate. Regenerate it with: node cpm-engine.crossval.js --json');
+    console.error('');
+    process.exit(1);
+}
+const _cvSummary = JSON.parse(fs.readFileSync(_cvSummaryPath, 'utf-8'));
+const CV_EXECUTED = _cvSummary.checks.executed;
+const CV_SURFACE = _cvSummary.checks.surface;
+
+// A MISSING summary was refused above. A STALE one was not, and that is the
+// same vacuous pass wearing a different hat: set the file back to 931/995 and
+// a genuine bare "1009 / 1009" walks straight through, because the gate builds
+// its pattern from the stale number and that pattern matches nothing. It is
+// not a hypothetical. `npm run crossval` is `node cpm-engine.crossval.js` with
+// NO --json, so nothing in test:all or verify ever rewrites this file; it only
+// moves when a human remembers the flag. That is how it came to sit at 931/995
+// while the harness had been printing 1009/1009 for days.
+//
+// So the figures are checked against a live run rather than trusted. Costs a
+// few seconds, and it is the only thing standing between this gate and the
+// silent death it was already rebuilt once to escape.
+{
+    const live = require('child_process').execSync(
+        `node ${JSON.stringify(path.join(repoRoot, 'cpm-engine.crossval.js'))}`,
+        { cwd: repoRoot, encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 });
+    const m = live.match(/Surface:\s+(\d+) of (\d+)/);
+    if (!m) {
+        console.error('');
+        console.error('FAIL: the crossval harness no longer prints a Surface: line,');
+        console.error('so Gate 3 cannot confirm its summary is current.');
+        console.error('');
+        process.exit(1);
+    }
+    const liveExecuted = Number(m[1]);
+    const liveSurface = Number(m[2]);
+    if (liveExecuted !== CV_EXECUTED || liveSurface !== CV_SURFACE) {
+        console.error('');
+        console.error(`FAIL: ${CROSSVAL_SUMMARY_REL} is STALE.`);
+        console.error(`  it records  ${CV_EXECUTED} of ${CV_SURFACE}`);
+        console.error(`  the harness reports ${liveExecuted} of ${liveSurface}`);
+        console.error('Gate 3 builds its search pattern from that file, so a stale value');
+        console.error('makes the gate scan for a ratio nobody writes any more and report');
+        console.error('a clean run over nothing. Regenerate it:');
+        console.error('  node cpm-engine.crossval.js --json');
+        console.error('');
+        process.exit(1);
+    }
+}
+const BARE_RATIO_RE = new RegExp(`\\b${CV_EXECUTED}\\s*\\/\\s*${CV_EXECUTED}\\b`);
+// The surface figure that has to appear near the bare ratio for it to count
+// as disclosed rather than merely printed.
+const SURFACE_FIGURE_RE = new RegExp(`\\b${CV_SURFACE}\\b`);
+// DISCOVERED, not listed. The previous hand-maintained list of eleven paths
+// missed METHODOLOGY.md, docs/cross-exam-prep.md, python_reference/README.md,
+// python_reference/cpm.py, validation/p6-comparison/README.md,
+// validation/xer-corpus/README.md, cpm-engine.crossval.js and cpm-engine.js —
+// every one of which quotes a crossval figure. A gate whose COVERAGE is a list
+// someone has to remember to extend is only half a gate, however well its
+// NUMBER rotates.
+const RATIO_SCANNED = [];
+{
+    const SKIP_DIRS = new Set([
+        'node_modules', '.git', 'coverage', '.nyc_output', 'attestations',
+    ]);
+    const SCANNABLE = /\.(md|js|py)$/;
+    const walkAll = (d) => {
         for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+            if (e.name.startsWith('.') && e.name !== '.github') continue;
             const abs = path.join(d, e.name);
-            if (e.isDirectory()) walk(abs);
-            else if (e.name.endsWith('.md')) {
-                RATIO_SCANNED.push(path.relative(repoRoot, abs).split(path.sep).join('/'));
+            if (e.isDirectory()) {
+                if (SKIP_DIRS.has(e.name)) continue;
+                walkAll(abs);
+            } else if (SCANNABLE.test(e.name)) {
+                RATIO_SCANNED.push(
+                    path.relative(repoRoot, abs).split(path.sep).join('/'));
             }
         }
     };
-    walk(base);
+    walkAll(repoRoot);
 }
+// release-evidence/ is reached by the walk above. It was missed entirely when
+// this gate was first written, and the live v2.9.39 exhibit carried the
+// undisclosed ratio three times as a result — the one folder a court actually
+// receives.
 // Lines that ARE the harness banner (or explicitly quote/explain it) keep the
 // bare ratio by design. Keep this list narrow.
 const RATIO_OK_PATTERNS = [
-    /comparisons executed/,          // the full banner line, disclosure attached
-    /^\s*Checks:\s+925 \/ 925/,      // verbatim harness transcript line
+    /comparisons executed/,             // the full banner line, disclosure attached
+    /^\s*Checks:\s+\d+\s*\/\s*\d+/,     // verbatim harness transcript line
     /denominator is (the )?(checks run|the executed count)/i,
-    /harness (prints|reports).*989/i,  // must carry the real surface, not merely say 'the harness prints'
 ];
 const ratioFailures = [];
 for (const rel of RATIO_SCANNED) {
@@ -709,17 +781,19 @@ for (const rel of RATIO_SCANNED) {
     lines.forEach((line, idx) => {
         if (!BARE_RATIO_RE.test(line)) return;
         if (RATIO_OK_PATTERNS.some(p => p.test(line))) return;
-        // The surface disclosure is allowed to sit on the next line or two —
-        // the verdict block in VERIFY_RELEASE.md is wrapped that way.
-        const window = lines.slice(idx, idx + 3).join(' ');
-        if (/\b989\b/.test(window)) return;
+        // The surface disclosure is allowed to sit a couple of lines either
+        // way — the verdict block in VERIFY_RELEASE.md is wrapped that way,
+        // and CHANGELOG entries state the surface before quoting the ratio.
+        const window = lines.slice(Math.max(0, idx - 2), idx + 3).join(' ');
+        if (SURFACE_FIGURE_RE.test(window)) return;
         ratioFailures.push({ file: rel, line: idx + 1, excerpt: line.trim().slice(0, 200) });
     });
 }
 
 console.log(
-    `no-stale-version-refs.test.js: bare-925/925 scan — ${RATIO_SCANNED.length} docs, ` +
-    `${ratioFailures.length} undisclosed occurrence(s)`
+    `no-stale-version-refs.test.js: bare-${CV_EXECUTED}/${CV_EXECUTED} scan ` +
+    `(live ratio read from ${CROSSVAL_SUMMARY_REL}, surface ${CV_SURFACE}) — ` +
+    `${RATIO_SCANNED.length} docs, ${ratioFailures.length} undisclosed occurrence(s)`
 );
 
 if (pinFailures.length > 0) {
@@ -740,9 +814,10 @@ if (pinFailures.length > 0) {
 
 if (ratioFailures.length > 0) {
     console.error('');
-    console.error('FAIL: bare "925/925" found in prose.');
-    console.error('That ratio is executed-over-executed. 925 of 989 defined comparisons');
-    console.error('execute; 64 are skipped (61 ff_signed_working_days, 3 ff_signed).');
+    console.error('FAIL: bare "N / N" crossval ratio found in prose.');
+    console.error('That ratio is executed-over-executed: the harness denominator is the');
+    console.error('count of comparisons it ran, not the enumerated comparison surface, so');
+    console.error('a guarded skip shrinks both halves and never shows up as a shortfall.');
     console.error('');
     for (const f of ratioFailures) {
         console.error(`  ${f.file}:${f.line}`);
@@ -750,8 +825,9 @@ if (ratioFailures.length > 0) {
     }
     console.error('');
     console.error('Fix by writing the executed/defined form, e.g.');
-    console.error('  "925 of 989 defined comparisons executed and bit-identical, 0 failures,');
-    console.error('   across 45 fixtures; 64 comparisons are skipped rather than compared".');
+    console.error('  "1009 of 1015 defined comparisons executed and bit-identical, 0 failures,');
+    console.error('   across 46 fixtures; 6 comparisons are skipped rather than compared".');
+    console.error('Run `npm run crossval` for the current figures — do not retype old ones.');
     console.error('');
     process.exit(1);
 }

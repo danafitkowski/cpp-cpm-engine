@@ -14,7 +14,9 @@
 # ff_signed_working_days on the has-successors path of the free-float pass,
 # where it previously emitted nothing while the JS engine emitted a real
 # number. That turned 58 silently-uncompared comparisons into executed ones,
-# taking the harness from 931 of 995 to 989 of 995. The 6 that remain are
+# taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
+# fixture then grew the surface again, and as measured 2026-08-27 the harness
+# stands at 1009 of 1015 across 46 fixtures. The 6 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
 # populates (3 ff_signed, 3 ff_signed_working_days).
 # Why that mattered: the free-float working-day conversion carried a wrong
@@ -43,11 +45,11 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 45 fixtures in cpm-engine.crossval.js. As of
-v2.9.42 that is 989 of a 995-comparison surface; the 6 that are skipped rather
-than compared are activities where NEITHER engine emits the field (3 ff_signed,
-3 ff_signed_working_days on completed activities). See DAUBERT.md §3 for
-verification methodology.
+the harness executes across the 46 fixtures in cpm-engine.crossval.js. As
+measured 2026-08-27 that is 1009 of a 1015-comparison surface; the 6 that are
+skipped rather than compared are activities where NEITHER engine emits the
+field (3 ff_signed, 3 ff_signed_working_days on completed activities). See
+DAUBERT.md §3 for verification methodology.
 """
 import math
 from collections import defaultdict, deque
@@ -2027,7 +2029,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those 6
     # comparisons are absent on both sides rather than one — the harness line
-    # is 989 / 989 executed against a 995-comparison surface. An opposing
+    # is 1009 / 1009 executed against a 1015-comparison surface. An opposing
     # expert can now rely on this file for all four free-float fields on the
     # has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.

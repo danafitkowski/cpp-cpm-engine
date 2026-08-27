@@ -12,6 +12,302 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## Unreleased — engine math changed (not a tagged release)
+
+Everything below sits on `main` above `v2.9.41` and carries no tag of its own.
+Four commits touch `cpm-engine.js` since the tag: `1916c4f`, `7b68c2d`,
+`7a3790f` and `b375cb6`. The source comments for this work are already stamped
+`v2.9.42`, but `ENGINE_VERSION` and `package.json` still read `2.9.41`, so a
+build from `main` today reports a version whose bytes it does not carry. See
+"Release steps still owed" at the end of this entry.
+
+**Engine math changed.** The forward pass, the backward pass, free float,
+relationship-lag arithmetic and constraint handling all move, and `parseXER`
+now reads the constraint date columns differently. A result computed on
+`v2.9.41` or earlier can differ from a result computed on `main`, so a
+deliverable already issued from a tagged build is inside the supersession window
+and needs the re-check step in PROCEDURE.md.
+
+Two of these are corrections to calculations that were plainly wrong, and they
+are described first.
+
+### Constraint pairing: the primary constraint took the secondary date column (`1916c4f`)
+
+`parseXER` read the primary constraint TYPE from `cstr_type` but its DATE from
+`cstr_date2`, and read the secondary type from `cstr_type2` with its date from
+`cstr_date`. The two pairs now stay together: `cstr_type` with `cstr_date`,
+`cstr_type2` with `cstr_date2`.
+
+Most real schedules carry a primary constraint and no secondary one. Under the
+transposition the primary date came back empty, `_normalizeConstraint` dropped
+the constraint with a `constraint-incomplete` WARN, and the network was
+scheduled as though it carried no constraints at all. Where a secondary
+constraint did exist the two dates were swapped instead, which pinned a start
+constraint to the finish date.
+
+The count that settles which column is which is recorded in the fix comment in
+`parseXER`, measured across the author's `.xer` files: with `cstr_type` set the
+date is in `cstr_date` 6,394 times against 9 in `cstr_date2`, and with
+`cstr_type2` set the date is in `cstr_date2` 3,270 times against 0 in
+`cstr_date`.
+
+The unit suite could not see this. Seventeen fixture headers declared
+`cstr_type` alongside `cstr_date2`, so the fixtures fed the parser the shape the
+defect expected, and two assertions in section R-v297-3 asserted the crossed
+pairing outright and labelled it the XER convention. Fixture VALUES are
+unchanged; only the `%F` header column names and those two expectations moved.
+Two guards now fail if either constraint carries the other's date, even when the
+two dates coincide.
+
+### Backward pass: an SS or SF successor bounds late finish again (`7b68c2d`)
+
+An activity whose successors are all SS or SF kept the backward-pass seed as its
+late finish, so `TF = LF - EF` was measured to project end. Those activities
+reported float they did not have and dropped off the critical path.
+
+A bound on late start is equally a bound on late finish, one duration later. The
+tightest SS/SF start bound is now advanced by the activity's own duration on its
+own calendar and folded into the same `min()` as every other drive. It is
+applied after the seed fallback and only when it tightens, so a start bound that
+falls later than the seed can never push LF outward. The tightened LS is still
+clamped directly as well, because advance and retreat are not exact inverses
+when either endpoint lands on a non-working day.
+
+The B2 alignment wave released in v2.9.39 had removed that conversion and
+applied SS/SF bounds to LS only. The two P6 capture cases it was fitted to
+(case 02 SS, case 04 SF) cannot tell the two rules apart: in both, the SS/SF
+predecessor is the last activity in the network, so its EF equals the maximum EF
+and its total float is zero whichever rule applies. That is why every existing
+SS/SF test passed before and after. The new regression blocks put the SS/SF
+predecessor mid-network (`A --SS0--> B --FS0--> C`), where the rules disagree,
+and one of them asserts that a start bound later than the seed does not push LF
+outward.
+
+### Constraint types: CS_MSO and CS_MEO are Start On and Finish On (`7a3790f`)
+
+`CS_MSO` and `CS_MEO` mapped to `MS_Start` and `MS_Finish`, the same canonical
+tokens `CS_MANDSTART` and `CS_MANDFIN` take, so the engine could not tell a
+Start On from a Mandatory Start and gave both the hard pin that overrides
+predecessor logic. On a `P (60 d) -FS+0-> X` network with `{CS_MSO, 2026-01-05}`
+the engine returned `X.es_date` sixty working days before `P.ef_date`, with only
+a `constraint-violated` ALERT to show for it.
+
+They now map to two new soft canonical types, `SO` and `FO`, each a two-sided
+soft constraint on the same date: `SO` carries the SNET half forward and the
+SNLT half backward, `FO` carries FNET forward and FNLT backward. They push a
+date out and never pull it in ahead of the driving logic, and when logic wins
+the constraint reports as violated. `StartOn` and `FinishOn`, the GUI labels,
+move with them. Only `MS_Start`, `MS_Finish` and `MFO` keep mandatory treatment:
+`SO` is dropped from `_isMandatoryConstraint`, from the primary and secondary
+mandatory-start guards and from Section D's `isStartMandatory`.
+
+`FO` also joins the finish-pin back-compute list, so a Finish On that holds EF
+shifts ES to `EF - duration` instead of stretching the activity. On a
+zero-duration finish milestone the previous routing left ES on the logic date
+and EF on the constraint date, which cannot both be true.
+
+### The file's own scheduling settings are read instead of assumed (`7a3790f`)
+
+`parseXER` now captures the first `SCHEDOPTIONS` row verbatim and returns it as
+`sched_options`, with `sched_calendar_on_relationship_lag` and
+`sched_float_type` pre-extracted. Before this, a search for `SCHEDOPTIONS` over
+the whole engine returned nothing: the settings that decide which answer is
+correct sat in the same file as the schedule and were never read.
+
+- **Relationship-lag calendar.** `computeCPM` takes
+  `opts.relationshipLagCalendar` (`predecessor` | `successor`, plus the P6
+  `rcal_Predecessor` / `rcal_Successor` tokens). The lag walk now runs on the
+  chosen calendar in the forward pass, in the backward pass and in the free-float
+  slack measurement, which keeps the three consistent with each other. The
+  duration walk still runs on the activity's own calendar, which is a different
+  question. **The default stays `successor`.** Switching the default to
+  `predecessor` was tried and measured against P6's stored dates on real
+  multi-calendar exports and it regressed, so the file's setting is now
+  honoured when a caller passes it rather than being assumed either way.
+  `rcal_Project` and `rcal_24Hour` are unimplemented and raise
+  `lag-calendar-mode-unsupported` rather than being guessed at.
+- **Float definition.** `computeCPM` takes `opts.floatType` (`FT_FF` |
+  `FT_Start` | `FT_Min`). `node.tf_finish` (`LF - EF`) and `node.tf_start`
+  (`LS - ES`) are now both always published, and `node.tf` takes whichever
+  definition was selected. The default `FT_FF` is the engine's historical
+  hardcode, so `tf` is unchanged for every caller that does not pass the option.
+  An unrecognised value raises `float-type-unsupported` and falls back to
+  `FT_FF`. `tf_working_days` counts over the window the selected definition
+  names, with `tf_finish_working_days` and `tf_start_working_days` published
+  alongside.
+
+### Free float is converted over the window the slack was measured on (`7a3790f`)
+
+The free-float slack is a calendar-day difference between a predecessor anchor
+and a successor anchor, but the working-day conversion counted over
+`[n.ef, n.ef + slack]`. That window starts at the activity's early finish rather
+than at the instant the slack was measured from, and for SS and SF links it
+starts from a different field entirely, because that slack is measured from
+`n.es`. The engine now keeps both endpoints of the winning measurement
+(`bindingPredAnchor`, `bindingSuccAnchor`) and counts over them.
+
+The defect could make free float exceed total float, which is impossible: a
+six-day activity with one `FS+3` successor returned `ff_working_days` 3 against
+`tf_working_days` 1. On zero-lag FS links the two windows coincide, which is why
+it stayed hidden.
+
+### Section C applies the task-type rule Section D already applied (`7a3790f`)
+
+Section C had no `task_type` field on its node record and nothing between the
+node build and `criticalCodes` excluded `TT_LOE` or `TT_WBS`, so a
+level-of-effort bar could become the sole critical path and set the project
+finish date with no alert. Section D's `parseXER` has dropped both since v2.9.3,
+so the two ingestion routes disagreed. Section C now applies the same policy and
+raises one ALERT per excluded activity on Section D's existing `task-dropped`
+context, which is already a member of `FATAL_STRICT_CONTEXTS`, so a court-grade
+run stops on an LOE bar instead of letting it drive. Every excluded activity is
+returned in `excluded_by_task_type` in input order. Nothing is truncated and
+there is no top-N.
+
+### Inputs that used to give a quiet wrong answer now raise an alert (`7a3790f`)
+
+- **Missing data date.** With no parseable `opts.dataDate` the forward pass
+  seeds early start at offset 0 and `addWorkDays` short-circuits below that
+  offset, switching the whole network from calendar arithmetic to ordinal
+  seven-day arithmetic anchored on the 2020-01-01 epoch.
+  `computeCPMForensicStrict` returned epoch-anchored dates and an empty alert
+  list, reporting a clean run from the function the documentation nominates for
+  expert testimony. `missing-data-date` now fires, and only when the epoch seed
+  is actually reachable, so an all-actuals as-built is not flagged for a date it
+  does not use. It is a member of `FATAL_STRICT_CONTEXTS`.
+- **In-progress work with no remaining duration.** The retained-logic restart
+  applies only when `remaining_duration` is finite, so without it EF fell
+  through to `actual_start + duration_days` and could forecast remaining work
+  months before the data date, silently. The engine does not invent a remaining
+  duration, which would be fabricating an input. It raises
+  `completion-data-incomplete`, already a strict-mode fatal.
+- **Impossible negative float.** With no imposed project finish and no
+  date-bearing constraint anywhere, a maxEF-seeded backward pass makes `TF >= 0`
+  an arithmetic identity, so a negative total float there is an engine artifact
+  and not a schedule fact. `impossible-negative-float` enumerates every affected
+  activity and stays silent the moment any constraint or imposed finish exists,
+  because negative float is then legitimate. The known cause is the
+  relationship-lag walk not being its own inverse across two calendars. It is a
+  member of `FATAL_STRICT_CONTEXTS`.
+- **`TT_Rsrc` false positive removed.** `TT_Rsrc` (Resource Dependent) was
+  missing from the canonical P6 task-type list, so ordinary clean files raised
+  `unrecognized-task-type`, which is itself a strict-mode fatal. It is real work
+  and keeps the `TT_Task` treatment it already had; only the false warning is
+  gone.
+
+### Attribution and parse state (`7a3790f`)
+
+- **`driving_predecessor` on a tied data-date floor.** A predecessor whose drive
+  exactly equalled the current `maxES` could never be recorded as the driver,
+  because the tie-break required an incumbent. When `maxES` was still the
+  data-date seed, the node was stamped with the `DATA_DATE` sentinel instead,
+  and because the longest-path walk stops at any sentinel with no `code` field,
+  `computeCPMWithStrategies` truncated the LPM path there. This branch sets
+  attribution only: it deliberately does not capture `finishAnchorEF`, so it
+  cannot move a date.
+- **`parseXER` cross-file state leak.** `calendarHoursPerDay` and `taskClndrId`
+  were cleared only by `resetMC()`, not by `parseXER`, so a second file parsed
+  in the same process could inherit the first file's `day_hr_cnt` and, worse,
+  bind its relationships to the first file's calendar, since P6 `task_id` values
+  are database-scoped and collide freely across exports. Every forensic workflow
+  parses two or three files in one process. `parseXER` now clears both, plus the
+  new `schedOptions`.
+
+### Calendar exception dates and the finish-pin selection (`b375cb6`)
+
+This commit's message records the client-name scrub only; it also changes engine
+math, which is why both items are recorded here.
+
+- **Forced-ON exception dates.** Calendars now carry `special_workdays`, the
+  forced-ON exception dates P6 uses for a worked Saturday or a shift added to a
+  normally idle day. The engine dropped them and treated every such date as
+  non-working, while the upstream XER parser has honoured them since 2.8.0.
+  Precedence follows that parser: an explicit holiday wins, then an explicit
+  special workday, then the weekly pattern. A calendar carrying one is no longer
+  eligible for the O(1) Mon-Fri fast path, because the modular walk cannot add
+  the extra worked day back in.
+- **`FNET` joins the finish-pin back-compute, and the pin is selected by which
+  date held EF.** `_applyForwardEFConstraint` returns EF only and never moves
+  ES, so a binding `FNET` stretched the activity instead of shifting it. On a
+  zero-duration finish milestone that is impossible, since ES must equal EF. The
+  selection loop now picks the constraint slot whose date actually held EF
+  rather than the first slot carrying a finish-pin type, so a soft primary
+  cannot shadow a mandatory secondary and skip the back-compute.
+
+### New output fields
+
+None of these change a computed value.
+
+- `node.ef_last_worked_date` and `node.lf_last_worked_date`: the inclusive form
+  of the exclusive `ef_date` / `lf_date` boundary, so a report never has to
+  re-derive it or guess which convention it is reading.
+- `node.tf_finish`, `node.tf_start`, `node.tf_finish_working_days`,
+  `node.tf_start_working_days`.
+- `manifest.finish_boundary_convention`, `manifest.finish_boundary_note`,
+  `manifest.relationship_lag_calendar`, `manifest.float_type`: the finish
+  boundary, the lag calendar and the float definition, each of which was
+  computed and never declared. Each is a live source of a one-day or
+  one-definition argument with an opposing expert.
+- `result.excluded_by_task_type` (and the `excludedByTaskType` alias).
+- `parseXER` returns `sched_options`, `sched_calendar_on_relationship_lag` and
+  `sched_float_type`.
+
+### Documented rather than changed
+
+`actual_finish` is an EF boundary, not the last worked day. The engine's early
+finish is exclusive everywhere, so an `actual_finish` supplied as the last
+worked day makes a lagged FS successor of completed work start one working day
+early. The arithmetic is unchanged and stays exclusive; what changed is that
+`docs/api.md` now states the input contract, its example uses the exclusive
+form, and the engine publishes the inclusive companion fields above.
+
+### Test state
+
+Measured on this tree by `npm run test:all`:
+
+- Unit self-tests: **1213 / 0**.
+- Cross-validation: **46 fixtures, 1009 of 1009 comparisons executed, 0 failed**;
+  1009 of a 1015-comparison surface, with 6 guarded comparisons skipped (3
+  `ff_signed`, 3 `ff_signed_working_days`).
+- All gates PASS: cites, client-names, truncation, version-refs, SOP, reissue,
+  crypto, p6-comparison, corpus-dag.
+
+The P6 oracle agreement figures quoted in the commit messages for these changes
+are deliberately not restated here. That harness lives outside this repository
+because its corpus manifest and per-file results carry client names, and its
+output on disk predates three of the four commits above, so it does not measure
+this tree. The figures need a fresh run against these bytes before they are
+published anywhere.
+
+### Release steps still owed
+
+- **`ENGINE_VERSION` still reads `2.9.41`** in `cpm-engine.js` and
+  `package.json` while the tree no longer matches the bytes `v2.9.41` points at.
+  This is the same defect v2.9.40 exists for and needs a version bump before
+  anything ships. `python_reference/cpm.py` reads `2.9.40` and is a release
+  behind that again.
+- **The crossed schema survives in two fallback paths and in the public input
+  contract.** `_normalizeConstraint` resolves a primary date as
+  `c.date || c.cstr_date2 || c.cstr_date`, preferring the secondary column, and
+  `_normalizeConstraint2` resolves a secondary date as `c.date || c.cstr_date`
+  and never looks at `cstr_date2`. `parseXER` always sets `.date`, so its own
+  path is correct, but a caller that hands `computeCPM` a raw TASK row hits the
+  original transposition. The JSDoc for the `activities` shape still documents
+  the primary as `cstr_type / cstr_date2` and the secondary as
+  `cstr_type2 / cstr_date`, which points a caller straight at it. Five further
+  comment blocks in `cpm-engine.js` still state the crossed schema (the
+  `CONSTRAINT_TYPE_MAP` header, the `_normalizeConstraint2` header, the
+  `constraint2` node-build comment, the forward-pass constraint-application
+  comment and the `parseXER` task-record comment), as does the section comment
+  above R-v297-3 in `cpm-engine.test.js`, whose assertions underneath it are
+  correct.
+- **One comment names an alert context that is never emitted.** The
+  `excluded_by_task_type` comment describes `task-type-excluded` ALERTs; the
+  code emits `task-dropped`. A consumer filtering on the documented string
+  catches nothing.
+
+---
+
 ## v2.9.41 — 2026-08-19 — alert-parity carve-outs retired; citation withdrawal released; validation-doc corrections
 
 **Engine math is unchanged.** No forward-pass, backward-pass or Section D
@@ -2022,9 +2318,9 @@ Hardcore audit identified ~30 engine math defects across constraint handling, ca
 ### T1 — Constraint handling
 
 - **T1.1 — MS_Start backward LF clamp.** `_applyBackwardLFConstraint` previously only honored MS_Finish / MFO / FNLT / SNLT on the backward pass. MS_Start / SO were silently ignored, allowing LS to drift later than the pinned ES — breaking the P6 invariant that MS_Start is always on the critical path. Both engines now emit `LF = cstr.date + duration` so the post-clamp LS recompute lands on cstr.date and TF = 0.
-- **T1.2 — `constraint-noop` WARN on actual_start suppression.** When an activity has an `actual_start`, that recorded actual governs ES under Oracle P6 / CPM forward-pass semantics; ES-side constraints (SNET, MS_Start, SO) cannot override it. Both engines now emit a `constraint-noop` WARN per suppressed constraint so the forensic record shows what was skipped. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the Unreleased entry at the top of this file.]
+- **T1.2 — `constraint-noop` WARN on actual_start suppression.** When an activity has an `actual_start`, that recorded actual governs ES under Oracle P6 / CPM forward-pass semantics; ES-side constraints (SNET, MS_Start, SO) cannot override it. Both engines now emit a `constraint-noop` WARN per suppressed constraint so the forensic record shows what was skipped. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the citation-withdrawal section under v2.9.41.]
 - **T1.3 — Section C ES-side constraint gate.** Section C's forward pass now gates `_applyForwardESConstraint` calls on `!hasActualStart`, matching Python reference behavior. Was a JS-only divergence.
-- **T1.4 — Section D Monte Carlo pins ES to actual_start.** `runCPM` previously ignored `task.actual_start` entirely — predecessor logic overrode the recorded actual start. Section D now pins `task.ES = actual_start_offset` (relative to `opts.projectStart`) when present, suppresses ES-side constraint clamps with `constraint-noop` WARN, and emits a one-time `actual-start-not-anchored` WARN if `projectStart` was missing. [Citation corrected 2026-08-19: this entry originally described the recorded actual start as "the historical fact", the characterisation withdrawn with "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the Unreleased entry at the top of this file.]
+- **T1.4 — Section D Monte Carlo pins ES to actual_start.** `runCPM` previously ignored `task.actual_start` entirely — predecessor logic overrode the recorded actual start. Section D now pins `task.ES = actual_start_offset` (relative to `opts.projectStart`) when present, suppresses ES-side constraint clamps with `constraint-noop` WARN, and emits a one-time `actual-start-not-anchored` WARN if `projectStart` was missing. [Citation corrected 2026-08-19: this entry originally described the recorded actual start as "the historical fact", the characterisation withdrawn with "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the citation-withdrawal section under v2.9.41.]
 - **T1.5 — `task-dropped` + `relationship-dropped` INFO alerts.** TT_LOE / TT_WBS / completed / zero-remaining activity drops + dangling-relationship drops in `parseXER` were silent. v2.9.12 surfaces every drop as an INFO alert propagated to `result.alerts` (via a new `_MC.parseAlerts` collector). Non-finite `lag_hr_cnt` (e.g. `Infinity`) is now rejected with an ALERT instead of propagating to `projectFinish: Infinity`.
 - **T1.6 — `constraint-unrecognized` / `constraint-incomplete` WARN.** `_normalizeConstraint` previously returned null silently on unknown tokens and empty dates. Both engines now emit a WARN identifying the activity and the offending token / missing date.
 - **T1.7 — `CS_MANSTART` / `CS_MANFINISH` aliases.** Older P6 R8.x XER variants emit these tokens without the "D" of "MANDATORY". Added to `CONSTRAINT_TYPE_MAP` in both engines as aliases for `MS_Start` / `MS_Finish`.
@@ -2266,7 +2562,7 @@ No code-path changes; documentation and one source comment only. 584 tests + 13 
 Round-3a audit fix wave. v2.9.3 added a Section C constraint-clamping path but never wired the XER reader to populate `task.constraint`, so every constrained XER silently lost its constraint mid-pipeline. v2.9.3's in-progress ES pin used the wrong pin order — `data_date` floored ES before `actual_start` was considered, so any schedule updated after work began clamped ES to data_date instead of the recorded historical start. Both gaps closed here. Two T2 follow-ups also shipped: finish-milestones are no longer silently dropped, and FF/SF anchor retreat now uses target (original) duration rather than progressed remaining.
 
 - **parseXER reads `cstr_type` / `cstr_date2` (T1 #1).** The Section C constraint code added in v2.9.3 was unreachable from real XER files — `parseXER()` populated no constraint field. The XER reader now extracts `cstr_type` and `cstr_date2` (and `cstr_date` as fallback) into a normalized `constraint = {type, date}` on each task. `CS_MSOA` / `CS_MSOB` / `CS_MEOA` / `CS_MEOB` are remapped per the Oracle P6 Database Reference (TASK.cstr_type column) — v2.9.3 had them as mandatory variants, but per the P6 spec they are deadline-style soft constraints (SNET / SNLT / FNET / FNLT respectively). `ALAP` constraint now honored.
-- **Actual-start ES pin order corrected (T1 #2).** v2.9.3 computed `maxES = Math.max(node.es, ddNum)` first and only then applied `actual_start` via `Math.max`. When `data_date > actual_start` (the common case — schedule updated days after work began), ES was pinned to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins over the data_date floor (Oracle P6 / CPM forward-pass semantics: a recorded actual start governs the early start); only when no `actual_start` is recorded does the data_date floor apply. Predecessor-driven ES also cannot push past `actual_start` (the post-pass OoS detector still flags retained-logic anomalies); `driving_predecessor` is still surfaced for forensic traceability even when actual_start dominates. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the Unreleased entry at the top of this file.]
+- **Actual-start ES pin order corrected (T1 #2).** v2.9.3 computed `maxES = Math.max(node.es, ddNum)` first and only then applied `actual_start` via `Math.max`. When `data_date > actual_start` (the common case — schedule updated days after work began), ES was pinned to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins over the data_date floor (Oracle P6 / CPM forward-pass semantics: a recorded actual start governs the early start); only when no `actual_start` is recorded does the data_date floor apply. Predecessor-driven ES also cannot push past `actual_start` (the post-pass OoS detector still flags retained-logic anomalies); `driving_predecessor` is still surfaced for forensic traceability even when actual_start dominates. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the citation-withdrawal section under v2.9.41.]
 - **ALAP forward-pass support added.** Activities with `constraint.type === 'ALAP'` (or `CS_ALAP` from XER) now slide ES/EF to LS/LF in a post-backward-pass sweep (consuming float). Skipped when the activity has `actual_start` or `is_complete` (a recorded actual start governs ES). Emits `WARN constraint-applied` recording the float consumed.
 - **TT_Hammock dropped (T1 #3, Option B — documented gap).** Implementing real hammock semantics (duration computed from `last_predecessor.EF − first_successor.ES` then re-running CPM) was non-trivial and out of scope for v2.9.5. TT_Hammock activities now appear in `dropped_activities` with `reason: 'hammock-unsupported'`. Caller is informed; no silent corruption. DAUBERT.md §8 documents the gap as a known limitation.
 - **Finish milestones retained (T2 #1).** `parseXER` previously dropped any row with `remaining <= 0`. Finish milestones (`TT_FinMile`) and start milestones (`TT_Mile`) legitimately have zero duration; the v2.9.4 rule silently removed the project's terminal/CP endpoint from the network. v2.9.5 retains milestones with `remaining = 0` and only drops zero-remaining rows that are not milestones. The dropped reason is also split: `'completed'` (has `act_end_date`) vs `'zero-remaining'` (no actual finish).

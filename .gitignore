@@ -90,3 +90,6 @@ validation/p6-oracle/out/
 validation/p6-oracle/__pycache__/
 validation/p6-oracle/*.csv
 validation/p6-oracle/*.local.json
+
+# Generated at run time by run-p6-import.cmd with this checkout path.
+validation/p6-comparison/db-import-actions.xml

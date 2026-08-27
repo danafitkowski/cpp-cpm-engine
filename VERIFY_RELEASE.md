@@ -4,6 +4,22 @@ This document is the **courtroom-exhibit-form** of the engine release verificati
 
 > **Status:** v2.9.41, a disclosure and parity-coverage release: engine math is unchanged from v2.9.40 (the three F20/F21/F27 alert-parity carve-outs were retired, growing executed cross-validation from 925 of 989 to 931 of 995, and the fabricated actual-start-pinning citation withdrawal shipped). v2.9.40 was the P6 23.12 alignment wave. Engine math changed there from v2.9.38 and is no longer byte-identical to v2.9.27, v2.9.28, v2.9.29. Five behaviors moved in `cpm-engine.js` and `python_reference/cpm.py` (commits `264de84`, `bf442d5`, `05dc8b4`, all 2026-08-11): open-end backward seeding now takes the project-finish instant on each activity's own calendar rather than a scalar max-EF; SS and SF successors bound the predecessor's `LS` only and no longer re-add its duration to bound `LF`; `MS_Finish` / `MFO` pins both ends, with `ES` back-computed from the `EF` pin on the activity's own calendar; under the default `retained_logic` mode the remaining work of an in-progress activity restarts at max(data date, driving predecessor logic); and published free float floors at zero, with the signed forensic value carried in `ff_signed` / `ff_signed_working_days`. See [DAUBERT.md §8](DAUBERT.md#8-constraint-handling-v2912). The Sigstore witness chain is regenerated on each tagged release.
 
+> **This packet describes the v2.9.41 TAG, not the current working tree.** Every
+> figure below was measured at commit `af9808f` and is what the Sigstore witness
+> attests, so none of them moves without a new tagged release. The tree has since
+> moved past that tag: two engine math defects were fixed, a transposed
+> constraint-date column read and a missing SS/SF late-finish conversion in the
+> backward pass, and cross-validation now stands at 1009 of 1015 across 46
+> fixtures rather than the 931 of 995 across 45 recorded here.
+>
+> So [DAUBERT.md](DAUBERT.md) and this file state different certification figures
+> on purpose. DAUBERT.md §2 discloses the working tree, which is the code a reader
+> who clones today actually receives. This file discloses the signed release. If
+> you are verifying a downloaded release asset, the figures here are the ones that
+> must match. If you are auditing the code at HEAD, use DAUBERT.md and expect the
+> larger surface. Neither is the wrong number; they are answers to different
+> questions, and quoting one against the other proves nothing.
+
 ---
 
 ## What this file proves
