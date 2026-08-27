@@ -772,9 +772,24 @@ const RATIO_OK_PATTERNS = [
     /comparisons executed/,             // the full banner line, disclosure attached
     /^\s*Checks:\s+\d+\s*\/\s*\d+/,     // verbatim harness transcript line
     /denominator is (the )?(checks run|the executed count)/i,
+    // Prose that exists to say the tally is NOT coverage is the disclosure this
+    // gate wants, not the claim it hunts. The engine's own Daubert string says
+    // "it counts only executed comparisons in its denominator, so its N / N
+    // tally cannot express the following gaps" and then enumerates them.
+    // Both word orders appear in the engine's own disclosure string:
+    // "counts executed comparisons only" and "counts only executed comparisons".
+    /counts (only )?executed comparisons( only)?/i,
+    /tally cannot express/i,
 ];
+
+// This file necessarily contains the pattern it searches for: its own comments
+// quote the ratios that killed earlier versions of the gate. Scanning itself
+// would make every explanation of a past failure a new failure. Excluded by
+// path rather than by marker so the exclusion is one line and visible here.
+const RATIO_SELF = 'tests/no-stale-version-refs.test.js';
 const ratioFailures = [];
 for (const rel of RATIO_SCANNED) {
+    if (rel === RATIO_SELF) continue;
     const full = path.join(repoRoot, rel);
     if (!fs.existsSync(full)) continue;
     const lines = fs.readFileSync(full, 'utf-8').split('\n');
