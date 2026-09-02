@@ -1605,6 +1605,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             if max_es > _ef_anchor:
                 _ef_anchor = max_es
             if schedule_mode == 'retained_logic':
+                # F4 (retained-logic P6 semantics wave 2026-09-02) — an
+                # actual_start recorded AFTER the data date does NOT floor
+                # the restart anchor: restart = snap_fwd(max(data_date,
+                # restart drives)). Measured on the oracle corpus (the
+                # spec's future-actual-start rows): P6 keeps the stored
+                # restart at the data date even when the recorded actual
+                # start (and a since-started start constraint) sits days
+                # after it. ES display stays pinned to actual_start (display
+                # convention, unchanged); progress_override keeps its
+                # documented max(actual_start, data_date) anchor
+                # (unmeasured, deliberately untouched).
+                if dd_num > 0 and act_start_num > dd_num:
+                    _ef_anchor = dd_num
                 if _restart_max_drive > _ef_anchor:
                     _ef_anchor = _restart_max_drive
                 # D3 (retained-logic P6 semantics wave 2026-09-02) — snap the
@@ -2365,29 +2378,49 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
 # Three grammar cases beyond the common form, measured on a private oracle
 # corpus of real P6 22.x-24.x exports (51 calendars; after these fixes every
 # one decodes with hours/day matching its own day_hr_cnt field):
-#   1. Slot pairs serialized finish-first: (f|HH:MM|s|HH:MM). Observed ONLY
-#      on a corrupt record class P6 itself refuses (see fallback below).
+#   1. Slot pairs serialized finish-first: (f|HH:MM|s|HH:MM). A legitimate
+#      export variant on legal-typed records (census 2026-09-02: proven
+#      GENUINE by stored dates on two default base calendars); corrupt only
+#      in combination with an illegal clndr_type (see predicate below).
 #   2. f|00:00 means midnight END of shift (1440 min), not 0 — '7x24' shift
 #      calendars otherwise decode to negative day lengths.
 #   3. s|00:00|f|00:00 is a full 24-hour working day — '24 Hours x 7 Days'
 #      calendars otherwise decode as never-working.
 #
-# P6-FALLBACK EMULATION (forensic finding, not a repair): when a record's
-# DaysOfWeek block carries one or more finish-first slot pairs, P6's own
-# scheduler demonstrably does NOT honour the record — measured on four
-# independent real exports carrying such a record: every one of 130
-# unambiguous not-started spans on the assigned calendar walks Mon-Fri, zero
-# forecast stamps land on the declared working Saturday, statutory holidays
-# are worked, and every finish stamp closes at the DEFAULT calendar's
-# closing time. P6 fell back to its internal Standard calendar: Mon-Fri,
-# 8 h/day, NO exceptions. The decoder emulates exactly that fallback and
-# reports `corrupt_fallback: True` so the caller can emit the forensic
-# ALERT (decode_calendar_record below does, mirroring JS parseXER). The
-# detection predicate is precisely "finish-first slot pair inside the
-# DaysOfWeek block": every corpus calendar that decodes cleanly is
-# serialized start-first and can never trigger it. The record's DECLARED
-# pattern is still decoded (via fix 1) and returned in `declared` for
-# disclosure.
+# P6-FALLBACK EMULATION (forensic finding, not a repair): when a record
+# trips the corrupt-record predicate below, P6's own scheduler demonstrably
+# does NOT honour the record — measured on four independent real exports
+# carrying such a record: every one of 130 unambiguous not-started spans on
+# the assigned calendar walks Mon-Fri, zero forecast stamps land on the
+# declared working Saturday, statutory holidays are worked, and every
+# finish stamp closes at the DEFAULT calendar's closing time. P6 fell back
+# to its internal Standard calendar: Mon-Fri, 8 h/day, NO exceptions. The
+# decoder emulates exactly that fallback and reports
+# `corrupt_fallback: True` so the caller can emit the forensic ALERT
+# (decode_calendar_record below does, mirroring JS parseXER). The record's
+# DECLARED pattern is still decoded (via fix 1) and returned in `declared`
+# for disclosure.
+#
+# CORRUPT-RECORD PREDICATE (census-corrected 2026-09-02): a record is
+# corrupt iff (a) its DaysOfWeek block contains at least one finish-first
+# slot pair AND (b) its CALENDAR.clndr_type is NOT a legal P6 token
+# (CA_Base / CA_Rsrc / CA_Project). A stored-date census over every
+# finish-first record in the operating corpus (38 instances, 7 distinct
+# records) proved that finish-first serialization ALONE is a legitimate
+# export variant: two finish-first default base calendars were adjudicated
+# GENUINE by P6's own stored dates (declared-exclusive span walks, the
+# records' own holiday exceptions honoured, 17:00 closes), while the one
+# proven-corrupt record — and only it, corpus-wide — carries the illegal
+# type token 'CT_Project' where every legitimate project calendar in the
+# same corpus (224 rows, including 141 from the same P6 vintages) says
+# 'CA_Project'. The mangled type field is the corruption itself: P6 cannot
+# bind the record and schedules its activities on the project default
+# instead. Conjunct (b) therefore separates the classes perfectly on the
+# corpus (11/11 corrupt instances corrupt, 27/27 genuine or indeterminate
+# instances genuine) and is the conservative choice for unseen records: a
+# record failing only one conjunct keeps decoding as declared. A caller
+# that does not supply `clndr_type` (or supplies a blank one) fails (b) by
+# definition, preserving the fallback for type-less invocations.
 # =============================================================================
 
 _D7_SLOT_ANY = re.compile(
@@ -2480,7 +2513,10 @@ def _d7_serial_to_date_string(raw_val):
     return dt.strftime('%Y-%m-%d')
 
 
-def decode_clndr_data(clndr_data):
+_D7_LEGAL_CLNDR_TYPES = ('CA_Base', 'CA_Rsrc', 'CA_Project')
+
+
+def decode_clndr_data(clndr_data, clndr_type=None):
     """Decode a P6 CALENDAR.clndr_data blob. Mirrors JS decodeClndrData."""
     out = {
         'decode_ok': False,
@@ -2529,13 +2565,17 @@ def decode_clndr_data(clndr_data):
     work_days = [i for i in range(7) if week_minutes[i] > 0]
     week_hours = [mn / 60 for mn in week_minutes]
 
-    if finish_first_in_week:
-        # P6-fallback emulation (see header). Mon-Fri, 8 h/day, NO
-        # exceptions — P6's internal Standard calendar, as demonstrated by
-        # P6's own stored dates. hours 8 is what the measured record class
-        # carries in day_hr_cnt too; a corrupt record declaring different
-        # hours would still fall back to 8 (INFERRED for that case — the
-        # corpus only demonstrates the 8-hour fallback).
+    _legal_clndr_type = (
+        str('' if clndr_type is None else clndr_type).strip()
+        in _D7_LEGAL_CLNDR_TYPES)
+    if finish_first_in_week and not _legal_clndr_type:
+        # P6-fallback emulation (see header): finish-first slot pairs AND
+        # an illegal clndr_type token. Mon-Fri, 8 h/day, NO exceptions —
+        # P6's internal Standard calendar, as demonstrated by P6's own
+        # stored dates. hours 8 is what the measured record class carries
+        # in day_hr_cnt too; a corrupt record declaring different hours
+        # would still fall back to 8 (INFERRED for that case — the corpus
+        # only demonstrates the 8-hour fallback).
         out['corrupt_fallback'] = True
         out['decode_ok'] = False
         out['work_days'] = [1, 2, 3, 4, 5]
@@ -2558,7 +2598,8 @@ def decode_clndr_data(clndr_data):
     return out
 
 
-def decode_calendar_record(clndr_id, clndr_name, clndr_data, alerts=None):
+def decode_calendar_record(clndr_id, clndr_name, clndr_data, alerts=None,
+                           clndr_type=None):
     """Decode one CALENDAR row into engine calendar_info, mirroring the JS
     parseXER integration (cpm-engine.js Section D, D7 block).
 
@@ -2566,14 +2607,16 @@ def decode_calendar_record(clndr_id, clndr_name, clndr_data, alerts=None):
     ({work_days, holidays, special_workdays, hours_per_day, p6_fallback?}),
     or None when clndr_data is empty/undecodable (pre-D7 behaviour for
     minimal exports — no entry, no alert). A record that trips the
-    corrupt-record predicate gets the P6 Standard-calendar fallback plus the
-    forensic `calendar-corrupt-p6-fallback` ALERT appended to `alerts`
-    (lockstep with the JS parseAlerts surface; parse-time, so computeCPM's
+    corrupt-record predicate (finish-first slot pairs AND an illegal
+    clndr_type token — pass the row's clndr_type; see decode_clndr_data)
+    gets the P6 Standard-calendar fallback plus the forensic
+    `calendar-corrupt-p6-fallback` ALERT appended to `alerts` (lockstep
+    with the JS parseAlerts surface; parse-time, so computeCPM's
     crossval-compared alert surface is untouched in both engines).
     """
     if not clndr_data:
         return None
-    dec = decode_clndr_data(clndr_data)
+    dec = decode_clndr_data(clndr_data, clndr_type)
     if dec['corrupt_fallback']:
         cal = {
             'work_days': list(dec['work_days']),
@@ -2595,12 +2638,15 @@ def decode_calendar_record(clndr_id, clndr_name, clndr_data, alerts=None):
                 'context': 'calendar-corrupt-p6-fallback',
                 'message': 'FORENSIC FINDING: calendar ' + str(clndr_id) +
                     ' (' + (clndr_name or 'unnamed') + ') carries a ' +
-                    'corrupt clndr_data record — its weekly shift slots are ' +
-                    "serialized finish-first ((f|HH:MM|s|HH:MM)), a form P6's " +
-                    'own scheduler rejects. P6 demonstrably scheduled the ' +
-                    'activities assigned to such a record on its internal ' +
-                    'default Standard calendar (Mon-Fri, 8 h/day, NO ' +
-                    'exceptions), not on the declared pattern (' +
+                    "corrupt CALENDAR record — its clndr_type field holds '" +
+                    ('' if clndr_type is None else str(clndr_type)) +
+                    "', not a legal P6 calendar-type " +
+                    'token (CA_Base / CA_Rsrc / CA_Project), and its weekly ' +
+                    'shift slots are serialized finish-first ' +
+                    '((f|HH:MM|s|HH:MM)). P6 cannot bind such a record and ' +
+                    'demonstrably scheduled the activities assigned to it on ' +
+                    'its internal default Standard calendar (Mon-Fri, 8 h/day, ' +
+                    'NO exceptions), not on the declared pattern (' +
                     str(len(decl_wd)) + ' working day(s)/week at ' +
                     ('%g' % decl_max) +
                     ' h/day). The engine emulates that fallback so its dates ' +

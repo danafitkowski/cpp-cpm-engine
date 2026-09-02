@@ -12,7 +12,7 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
-## v2.9.43 — 2026-09-02 — retained-logic P6 semantics: SS/SF drive from restart; restart snapped and always defined; corrupt-calendar P6 fallback
+## v2.9.43 — 2026-09-02 — retained-logic P6 semantics: SS/SF drive from restart; restart snapped, always defined, not floored by a future actual start; corrupt-calendar P6 fallback (two-conjunct predicate)
 
 **Engine math changed.** The retained-logic forward pass, free-float slack
 anchors and `parseXER`'s calendar decode all move, so a deliverable already
@@ -23,12 +23,38 @@ Every change in this wave was derived from P6's own stored `restart_date` /
 `reend_date` (in-progress rows) and `early_start_date` / `early_end_date`
 (not-started rows) measured on a private oracle corpus of real progressed
 P6 exports — 380 in-progress rows and 148 not-started probe rows across the
-files that pass an oracle-validity gate. Under the rule implemented here the
-engine reproduces all 380 stored restart AND reend values and all 148
-not-started values exactly; before this wave it was wrong on 96 of the 380
-and 137 of the 148. No client-identifying material from that corpus enters
-this repository; fixtures replicate the discriminating topologies under
-neutral names with real value shapes.
+files that pass an oracle-validity gate. The measured results, stated
+precisely:
+
+- The RULE this wave implements is exact at minute resolution: replayed on
+  the corpus's own hour-accurate calendars it reproduces all 380 stored
+  restart and reend instants and all 148 not-started probe instants
+  (that is the specification's 380/380 figure — a property of the rule,
+  not of this engine's output).
+- This ENGINE is day-granular, so it realizes the rule at day level:
+  after the wave it matches 375/380 stored restarts, 368/380 stored reends
+  and 140/148 not-started probe starts on the gated corpus. The entire
+  shortfall is sub-day quantization — P6 hands remaining work off mid-day
+  (16:00 finish-to-start handoffs, fractional-day remaining durations
+  landing mid-morning) and a day-granular engine cannot represent the
+  intra-day instant; every residual row is off by exactly one working
+  day with the OTHER bar of the same activity exact, and no residual
+  mechanism beyond that exists in the gated set.
+- The TRUE pre-wave engine (v2.9.42, measured by running the actual old
+  tree through the identical harness) already scored 370/380 restarts,
+  365/380 reends and 135/148 probe starts — the "wrong on 96/380 and
+  137/148" figures quoted in earlier drafts of this entry belong to a
+  data-date-anchor MODEL of the engine, not to the engine itself, and are
+  withdrawn. The wave's honest engine-level delta is therefore modest
+  (+5 restarts, +3 reends, +5 probe starts, with 19 row-graded values
+  fixed and ZERO rows regressed old-to-new), while its real value is the
+  rule now being exact where the engine was previously wrong in KIND
+  (drives from historical actual starts, completed-pred pushes, unsnapped
+  anchors, future-actual-start floors, corrupt-calendar decodes).
+
+No client-identifying material from that corpus enters this repository;
+fixtures replicate the discriminating topologies under neutral names with
+real value shapes.
 
 ### D1 — SS/SF drives from a started predecessor read its restart
 
@@ -69,6 +95,34 @@ source. The activity's OWN legacy EF (actual_start + full duration) and the
 `completion-data-incomplete` ALERT are unchanged — the engine still refuses
 to invent a remaining duration.
 
+### F4 — a future actual_start does not floor the restart anchor
+
+Under `retained_logic`, an actual_start recorded AFTER the data date no
+longer floors the restart anchor: `restart = snap_fwd(max(data_date,
+restart drives))`. Measured on the corpus's future-actual-start rows — P6
+keeps the stored restart at the data date even when the recorded actual
+start (and a since-started start constraint) sits days after it; the
+engine previously anchored at the future actual start and pushed restart,
+reend and every downstream drive late by the gap. ES display stays pinned
+to the recorded actual_start (unchanged display convention);
+`progress_override` keeps its documented `max(actual_start, data_date)`
+anchor untouched.
+
+### F6 — hammock duration_working_days is now calendar-aware (disclosure)
+
+A dormant v2.9.12 branch is resurrected by this wave as a side effect of
+D7: hammock `duration_working_days` was designed to count on the hammock's
+own calendar via `_MC.calMap[h.clndr_id]`, but `_MC.calMap` was never
+populated before D7 decoded `CALENDAR.clndr_data`, so every hammock
+silently fell back to the ordinal (calendar-day) span count. After D7, any
+hammock whose calendar record decodes now reports calendar-aware working
+days (weekends and the calendar's own holidays excluded); hammocks whose
+calendar has no decodable record keep the ordinal fallback. This is a
+behaviour change on parsed XER files with hammocks and decodable
+calendars, pinned by an explicit test (RL-16: a two-week Mon-Fri hammock
+with one holiday reports 7 working days where it previously reported the
+10-day ordinal span).
+
 ### D7 — clndr_data decoder + P6 Standard-calendar fallback emulation (forensic)
 
 `decodeClndrData` (exported, with `getCalMap()`) decodes CALENDAR
@@ -78,17 +132,29 @@ measured on the corpus: finish-first slot pairs `(f|HH:MM|s|HH:MM)`,
 full 24-hour day. After the fixes all 51 corpus calendars decode with
 hours/day matching their own `day_hr_cnt`.
 
-When a record's DaysOfWeek block carries a finish-first slot pair — a form
-P6's own scheduler rejects — the engine emulates what P6 demonstrably did
-on four independent real exports carrying such a record (130/130 Mon-Fri
-forecast spans, zero Saturday stamps, statutory holidays worked, closes at
-the default calendar's closing time): it schedules on P6's internal
-Standard calendar (Mon-Fri, 8 h/day, no exceptions) and emits a new
-parse-time forensic ALERT, `calendar-corrupt-p6-fallback`, naming the
-corrupt record. The predicate cannot trigger on any record that decodes
-cleanly today (every clean corpus record is serialized start-first). The
-alert lives on the parse surface in both engines, so the computeCPM
-crossval alert-count parity surface is untouched.
+When a record's DaysOfWeek block carries a finish-first slot pair AND its
+`CALENDAR.clndr_type` is not a legal P6 token (CA_Base / CA_Rsrc /
+CA_Project), the engine emulates what P6 demonstrably did on four
+independent real exports carrying such a record (130/130 Mon-Fri forecast
+spans, zero Saturday stamps, statutory holidays worked, closes at the
+default calendar's closing time): it schedules on P6's internal Standard
+calendar (Mon-Fri, 8 h/day, no exceptions) and emits a new parse-time
+forensic ALERT, `calendar-corrupt-p6-fallback`, citing the observed
+illegal type token. Both conjuncts are required — a stored-date census
+over every finish-first record in the operating corpus (38 instances, 7
+distinct records) proved finish-first serialization alone is a legitimate
+export variant (two finish-first default base calendars adjudicated
+GENUINE by P6's own stored dates, their declared weeks and their own
+holiday lists honoured), while the one proven-corrupt record — and only
+it, corpus-wide — carries the illegal token `CT_Project`. The mangled type
+field is the corruption: P6 cannot bind the record and schedules its
+activities on the project default instead. Legal-typed finish-first
+records decode as their genuine declared week; the predicate cannot
+trigger on any record that decodes cleanly today. A caller invoking
+`decodeClndrData` without a clndr_type keeps the fallback behaviour (the
+legality conjunct fails by definition). The alert lives on the parse
+surface in both engines, so the computeCPM crossval alert-count parity
+surface is untouched.
 
 ### Python reference
 
@@ -101,14 +167,17 @@ activities that neither engine populates).
 
 ### Tests
 
-40 new checks (RL-1..RL-13) pin the wave: each D-delta proven with a
-planted-defect fixture that failed before the change, the D7 decoder
-grammar cases, the corrupt-record predicate, the end-to-end fallback ALERT
-through `runCPM`, and the clean-decode regression. The full prior suite
-passes unmodified — zero golden expectations moved (no committed test
-exercised the changed topologies). `validation/p6-comparison` remains 13/13
-against the 2026-08-11 P6 capture; no captured case contains a topology
-this wave moves. Also fixed in passing: a committed SyntaxError in
+57 new checks (RL-1..RL-16) pin the wave: each D-delta and F4 proven with
+a planted-defect fixture that failed before the change, the D7 decoder
+grammar cases, the two-conjunct corrupt-record predicate (corrupt fixture
+plants the illegal type token; a genuine legal-typed finish-first fixture
+must decode as its declared week with no alert), the end-to-end fallback
+ALERT through `runCPM`, the clean-decode regression, and the resurrected
+calendar-aware hammock working-day count (F6). The full prior suite passes
+unmodified — zero golden expectations moved (no committed test exercised
+the changed topologies). `validation/p6-comparison` remains 13/13 against
+the 2026-08-11 P6 capture; no captured case contains a topology this wave
+moves. Also fixed in passing: a committed SyntaxError in
 `validation/p6-comparison/generate-cases.js` (unescaped apostrophe) that
 made the generator unrunnable at HEAD.
 

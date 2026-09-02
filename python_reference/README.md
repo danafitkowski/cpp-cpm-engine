@@ -40,21 +40,29 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  7249f3ed0e116735b2d80286dbeec437c71c19336eeb30ca2a911dea3bc0edfd
+cpm.py  SHA-256:  83c6db6f61b36d8c8c22fee59d37bfeb36d3d8bc131a3716793e930327301ed5
 
 (v2.9.43 retained-logic P6 semantics wave 2026-09-02 - bumped from
-76cff495...: SS/SF drives from a started incomplete predecessor read its
-RESTART rather than its historical actual start (D1); completed
-predecessors no longer feed the restart drives of a started successor (D2);
-the in-progress restart anchor snaps forward on the activity calendar (D3);
-a started activity with no remaining_duration gets a defined restart =
-snap_fwd(max(data date, actual start)) as an SS/SF drive source (D5); and
-the clndr_data decoder with P6 Standard-calendar fallback emulation +
-calendar-corrupt-p6-fallback forensic ALERT is ported (D7). Derived from
-P6's own stored restart/reend dates on a private oracle corpus of real
-progressed exports: 380/380 in-progress rows and 148/148 not-started probe
-rows exact under the implemented rule; SF and the D2 not-started branch
-remain INFERRED (no discriminating corpus instance). Prior:
+76cff495... (and re-rotated within the unpushed wave from 7249f3ed... by
+the F4 + calendar-predicate fixups): SS/SF drives from a started
+incomplete predecessor read its RESTART rather than its historical actual
+start (D1); completed predecessors no longer feed the restart drives of a
+started successor (D2); the in-progress restart anchor snaps forward on
+the activity calendar (D3); an actual start recorded after the data date
+no longer floors the restart anchor (F4); a started activity with no
+remaining_duration gets a defined restart = snap_fwd(max(data date,
+actual start)) as an SS/SF drive source (D5); and the clndr_data decoder
+with P6 Standard-calendar fallback emulation + calendar-corrupt-p6-
+fallback forensic ALERT is ported (D7 - fallback predicate: finish-first
+slot pairs AND an illegal clndr_type token; legal-typed finish-first
+records decode as their genuine declared week). Derived from P6's own
+stored restart/reend dates on a private oracle corpus of real progressed
+exports: the implemented rule reproduces 380/380 in-progress rows and
+148/148 not-started probe rows at minute resolution; this day-granular
+engine realizes 375/380 restarts, 368/380 reends and 140/148 probe starts
+at day level (residuals are all sub-day quantization, bounded at one
+working day); SF and the D2 not-started branch remain INFERRED (no
+discriminating corpus instance). Prior:
 post-v2.9.39 - bumped from da792b52... by c279a5c: embedded coverage-gap
 disclosure strings in the module header only, no math change. Prior:
 v2.9.39 release 2026-08-11 from 89fb6f05...: ENGINE_VERSION sync
@@ -172,8 +180,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 134039
-  sha-256:  7249f3ed0e116735b2d80286dbeec437c71c19336eeb30ca2a911dea3bc0edfd
+  bytes: 136967
+  sha-256:  83c6db6f61b36d8c8c22fee59d37bfeb36d3d8bc131a3716793e930327301ed5
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

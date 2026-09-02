@@ -10391,14 +10391,17 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
         'week_hours=' + JSON.stringify(d.week_hours));
 }
 
-// RL-11 (D7b) — the corrupt finish-first record class: slot pairs inside
-// DaysOfWeek serialized (f|HH:MM|s|HH:MM). P6 itself rejects the record and
-// demonstrably schedules on its internal Standard calendar (Mon-Fri, 8 h, NO
-// exceptions): measured 130/130 Mon-Fri spans, 0 Saturday forecast stamps,
-// statutory holidays worked, across four independent exports. Synthetic
-// fixture structurally equivalent to the real record (neutral name; same
-// two-shift 08-12 / 13-17 Mon-Sat declaration; derived from a real
-// progressed export in the private oracle corpus).
+// RL-11 (D7b) — the corrupt record class: slot pairs inside DaysOfWeek
+// serialized (f|HH:MM|s|HH:MM) AND an illegal clndr_type token (the census
+// discriminator — the one proven-corrupt corpus record, and only it, carries
+// 'CT_Project' where legal records say CA_Base / CA_Rsrc / CA_Project). P6
+// cannot bind such a record and demonstrably schedules on its internal
+// Standard calendar (Mon-Fri, 8 h, NO exceptions): measured 130/130 Mon-Fri
+// spans, 0 Saturday forecast stamps, statutory holidays worked, across four
+// independent exports. Synthetic fixture structurally equivalent to the real
+// record (neutral name; same two-shift 08-12 / 13-17 Mon-Sat declaration and
+// the same mangled type token; derived from a real progressed export in the
+// private oracle corpus).
 const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
     '(0||1()())' +
     '(0||2()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
@@ -10409,9 +10412,11 @@ const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
     '(0||7()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
     '))(0||Exceptions())(0||VIEW(ShowTotal|Y)())))';
 {
-    const d = E.decodeClndrData(_RL_CORRUPT);
-    check('RL-11: finish-first record triggers the P6-fallback emulation',
+    const d = E.decodeClndrData(_RL_CORRUPT, 'CT_Project');
+    check('RL-11: finish-first + illegal clndr_type triggers the P6-fallback emulation',
         d.corrupt_fallback === true);
+    check('RL-11: type-less invocation also falls back (conjunct (b) fails by definition)',
+        E.decodeClndrData(_RL_CORRUPT).corrupt_fallback === true);
     check('RL-11: fallback = P6 internal Standard (Mon-Fri)',
         JSON.stringify(d.work_days) === JSON.stringify([1, 2, 3, 4, 5]),
         'got ' + JSON.stringify(d.work_days));
@@ -10431,8 +10436,8 @@ const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
     E.resetMC();
     const xer = [
         '%T CALENDAR',
-        '%F clndr_id\tclndr_name\tday_hr_cnt\tclndr_data',
-        '%R 6001\tSix Day Site Works\t8\t' + _RL_CORRUPT,
+        '%F clndr_id\tclndr_name\tclndr_type\tday_hr_cnt\tclndr_data',
+        '%R 6001\tSix Day Site Works\tCT_Project\t8\t' + _RL_CORRUPT,
         '%T TASK',
         '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tclndr_id',
         '%R 1\tA\tA\tTT_Task\t80\t80\t6001',
@@ -10458,6 +10463,10 @@ const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
         corruptAlerts[0].severity === 'ALERT' &&
         /corrupt/i.test(corruptAlerts[0].message) &&
         /internal default|Standard calendar/i.test(corruptAlerts[0].message),
+        'msg=' + (corruptAlerts[0] && corruptAlerts[0].message));
+    check('RL-12: ALERT cites the observed illegal clndr_type token',
+        corruptAlerts.length === 1 &&
+        corruptAlerts[0].message.indexOf("'CT_Project'") >= 0,
         'msg=' + (corruptAlerts[0] && corruptAlerts[0].message));
 }
 
@@ -10497,6 +10506,173 @@ const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
     check('RL-13: clean calendars raise NO corrupt-fallback alert',
         !r.alerts.some(a => a.context === 'calendar-corrupt-p6-fallback'),
         'alerts=' + JSON.stringify(r.alerts.map(a => a.context)));
+}
+
+// RL-14 (D7b census correction) — a WELL-FORMED finish-first record with a
+// LEGAL clndr_type decodes as a GENUINE week, exceptions honoured, NO
+// fallback and NO alert. The stored-date census (2026-09-02) adjudicated two
+// finish-first default base calendars GENUINE: P6 scheduled their activities
+// on the declared finish-first-serialized week, honouring the records' own
+// holiday exceptions (declared-exclusive span walks; a task lands 7 working
+// days later than the Mon-Fri fallback would put it, straddling the record's
+// holiday list). Fixture replicates that class under a neutral name: the
+// same finish-first two-shift Mon-Sat DaysOfWeek bytes as _RL_CORRUPT but
+// clndr_type CA_Base and a holiday exception (serial 46272 = 2026-09-07).
+const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
+    '(0||1()())' +
+    '(0||2()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||3()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||4()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||5()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||6()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||7()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '))(0||Exceptions()((0||0(d|46272)())))))';
+{
+    const d = E.decodeClndrData(_RL_FF_GENUINE, 'CA_Base');
+    check('RL-14: legal-typed finish-first record does NOT trip the fallback',
+        d.corrupt_fallback === false,
+        'corrupt_fallback=' + d.corrupt_fallback);
+    check('RL-14: record decodes as its GENUINE declared week (Mon-Sat)',
+        d.decode_ok === true &&
+        JSON.stringify(d.work_days) === JSON.stringify([1, 2, 3, 4, 5, 6]),
+        'work_days=' + JSON.stringify(d.work_days));
+    check('RL-14: finish-first slot pairs decode to the declared 8-hour day',
+        d.week_hours && close(d.week_hours[1], 8) && close(d.week_hours[6], 8),
+        'week_hours=' + JSON.stringify(d.week_hours));
+    check('RL-14: the record\'s OWN holiday exceptions are honoured, not discarded',
+        d.holidays.indexOf('2026-09-07') >= 0,
+        'holidays=' + JSON.stringify(d.holidays));
+    // The other two legal tokens classify GENUINE too (census: every genuine
+    // finish-first record is CA_Base or CA_Rsrc; CA_Project is legal).
+    check('RL-14: CA_Rsrc and CA_Project also classify GENUINE',
+        E.decodeClndrData(_RL_FF_GENUINE, 'CA_Rsrc').corrupt_fallback === false &&
+        E.decodeClndrData(_RL_FF_GENUINE, 'CA_Project').corrupt_fallback === false);
+    // End-to-end: parseXER + runCPM on a legal-typed finish-first record —
+    // genuine calMap entry, no corrupt-fallback ALERT anywhere.
+    E.resetMC();
+    const xer = [
+        '%T CALENDAR',
+        '%F clndr_id\tclndr_name\tclndr_type\tday_hr_cnt\tclndr_data',
+        '%R 6101\tStandard Six Day\tCA_Base\t8\t' + _RL_FF_GENUINE,
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tclndr_id',
+        '%R 1\tA\tA\tTT_Task\t80\t80\t6101',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const cm = E.getCalMap();
+    check('RL-14: parsed calMap carries the GENUINE Mon-Sat week + holiday',
+        cm && cm['6101'] && !cm['6101'].p6_fallback &&
+        JSON.stringify(cm['6101'].work_days) === JSON.stringify([1, 2, 3, 4, 5, 6]) &&
+        cm['6101'].holidays.indexOf('2026-09-07') >= 0,
+        'calMap=' + JSON.stringify(cm && cm['6101']));
+    const r = E.runCPM({});
+    check('RL-14: NO corrupt-fallback ALERT on the genuine finish-first record',
+        !r.alerts.some(a => a.context === 'calendar-corrupt-p6-fallback'),
+        'alerts=' + JSON.stringify(r.alerts.map(a => a.context)));
+}
+
+// RL-15 (F4) — an actual_start recorded AFTER the data date does not floor
+// the restart anchor: restart = snap_fwd(max(data_date, restart drives)).
+// Derived from a real progressed export in the private oracle corpus:
+// activity with actual_start two days after the data date (2026-06-03 vs dd
+// 2026-06-01) and a since-started start constraint at the same date; P6
+// stores restart = the data date 2026-06-01, NOT the future actual start.
+// ES display stays pinned to the recorded actual start.
+{
+    const r = E.computeCPM(
+        [{ code: 'X', duration_days: 20, actual_start: '2026-06-03',
+           remaining_duration: 5, clndr_id: 'MF',
+           constraint: { type: 'SNET', date: '2026-06-03' } }],
+        [],
+        { dataDate: '2026-06-01', calMap: _RL_MF, projectStart: '2026-06-01' }
+    );
+    check('RL-15: future actual_start does NOT floor restart (dd 2026-06-01 wins)',
+        r.nodes.X.restart_date === '2026-06-01',
+        'X.restart=' + r.nodes.X.restart_date);
+    check('RL-15: reend = dd anchor + rem (boundary 2026-06-08)',
+        r.nodes.X.ef_date === '2026-06-08',
+        'X.ef=' + r.nodes.X.ef_date);
+    check('RL-15: ES display stays pinned to the actual start (2026-06-03)',
+        r.nodes.X.es_date === '2026-06-03',
+        'X.es=' + r.nodes.X.es_date);
+    // Restart drives still floor the anchor above the data date: a
+    // not-started pred finishing 2026-06-04 pushes the restart of a
+    // future-actual-start successor to the drive, not back to the dd.
+    const r2 = E.computeCPM(
+        [{ code: 'P', duration_days: 3, clndr_id: 'MF' },
+         { code: 'Y', duration_days: 10, actual_start: '2026-06-04',
+           remaining_duration: 2, clndr_id: 'MF' }],
+        [{ from_code: 'P', to_code: 'Y', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-06-01', calMap: _RL_MF }
+    );
+    check('RL-15: restart drives still fold above the dd anchor (2026-06-04)',
+        r2.nodes.Y.restart_date === '2026-06-04',
+        'Y.restart=' + r2.nodes.Y.restart_date);
+    // progress_override regression: keeps its documented
+    // max(actual_start, data_date) anchor — F4 is retained_logic only.
+    const r3 = E.computeCPM(
+        [{ code: 'X', duration_days: 20, actual_start: '2026-06-03',
+           remaining_duration: 5, clndr_id: 'MF' }],
+        [],
+        { dataDate: '2026-06-01', calMap: _RL_MF,
+          scheduleMode: 'progress_override' }
+    );
+    check('RL-15: progress_override keeps the max(actual_start, dd) anchor',
+        r3.nodes.X.restart_date === '2026-06-03',
+        'X.restart=' + r3.nodes.X.restart_date);
+}
+
+// RL-16 (F6) — hammock duration_working_days on the hammock's OWN calendar.
+// The T3.23 calendar-aware branch (_MC.calMap[h.clndr_id]) was dormant until
+// D7 populated _MC.calMap from CALENDAR.clndr_data; this pins the resurrected
+// path: a hammock spanning two Mon-Fri weeks (10 calendar days) with one
+// holiday inside reports 7 working days (8 weekday spans minus the holiday
+// 2026-01-13, serial 46035), while an identical hammock whose calendar has no
+// decodable record keeps the ordinal-day fallback of 10.
+{
+    E.resetMC();
+    const std = '(0||CalendarData()((0||DaysOfWeek()(' +
+        '(0||1()())' +
+        '(0||2()((0||0(s|08:00|f|16:00)())))' +
+        '(0||3()((0||0(s|08:00|f|16:00)())))' +
+        '(0||4()((0||0(s|08:00|f|16:00)())))' +
+        '(0||5()((0||0(s|08:00|f|16:00)())))' +
+        '(0||6()((0||0(s|08:00|f|16:00)())))' +
+        '(0||7()())))(0||Exceptions()((0||0(d|46035)())))))';
+    const xer = [
+        '%T CALENDAR',
+        '%F clndr_id\tclndr_name\tclndr_type\tday_hr_cnt\tclndr_data',
+        '%R 7001\tSite Five Day\tCA_Base\t8\t' + std,
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tclndr_id',
+        '%R 1\tS\tS\tTT_Task\t40\t40\t7001',
+        '%R 2\tEA\tEA\tTT_Task\t40\t40\t7001',
+        '%R 3\tH\tH\tTT_Hammock\t0\t0\t7001',
+        '%R 4\tH2\tH2\tTT_Hammock\t0\t0\t7999',   // no CALENDAR record
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',   // S -> EA
+        '%R 1\t3\tPR_SS\t0',   // S ->(SS) H
+        '%R 3\t2\tPR_FF\t0',   // H ->(FF) EA
+        '%R 1\t4\tPR_SS\t0',   // S ->(SS) H2
+        '%R 4\t2\tPR_FF\t0',   // H2 ->(FF) EA
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    E.runCPM({ projectStart: '2026-01-05' });   // Monday
+    const hams = E.getHammocks();
+    const H = hams['3'];
+    const H2 = hams['4'];
+    check('RL-16: hammock resolves over the S..EA span (10 relative days)',
+        H && H.resolved && close(H.EF - H.ES, 10),
+        H ? 'ES=' + H.ES + ' EF=' + H.EF : 'no hammock');
+    check('RL-16: duration_working_days is CALENDAR-AWARE (7 = 8 weekdays - 1 holiday)',
+        H && H.duration_working_days === 7,
+        H ? 'dwd=' + H.duration_working_days : 'no hammock');
+    check('RL-16: no decodable calendar record -> ordinal-day fallback (10)',
+        H2 && H2.duration_working_days === 10,
+        H2 ? 'dwd=' + H2.duration_working_days : 'no hammock');
 }
 
 console.log('\n========================================');
