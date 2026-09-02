@@ -4,7 +4,7 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![tests: 1273 passing](https://img.shields.io/badge/tests-1273%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: JS↔Python 1009/1015](https://img.shields.io/badge/JS%E2%86%94Python-1009%2F1015-brightgreen.svg)](DAUBERT.md#31-independent-verification)
-[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2939-baseline)
+[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2083%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2940-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
@@ -20,12 +20,18 @@ Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a fo
 
 ## Quick start
 
+**The npm package lags this repository.** npm `latest` is 2.9.19, published 2026-05-17 — that is the number the npm badge above renders, and nothing has been published to npm since, while 22 tagged releases have shipped here. `npm install cpp-cpm-engine` therefore does **not** give you the engine described by DAUBERT.md, by the [`release-evidence/`](release-evidence/) packets, or by any version reference in these docs. Install from the git tag:
+
 ```bash
-npm install cpp-cpm-engine
+git clone https://github.com/danafitkowski/cpp-cpm-engine.git
+cd cpp-cpm-engine
+git checkout v2.9.43
 ```
 
+The engine has zero runtime dependencies, so a clone is all it needs. This is the same install path [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md) gives an opposing expert.
+
 ```js
-const E = require('cpp-cpm-engine');
+const E = require('./cpm-engine.js');
 
 const result = E.computeCPM(
     [

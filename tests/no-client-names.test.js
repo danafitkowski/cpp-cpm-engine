@@ -1,5 +1,26 @@
 // Gate: no real client / employer / project name may ship in this PUBLIC repo.
-// client-name-ok-file: this IS the client-name guard; its header states the rules it enforces, so it necessarily spells out the shapes it blocks.
+//
+// THIS FILE IS NOT EXEMPT FROM ITSELF, and carries no file-level suppression.
+// Both exemptions were removed on 2026-09-02:
+//
+//   - a `client-name-ok-file:` marker, added 2026-08-27 so this header could
+//     spell out the shapes it blocks, which told the canonical scanner
+//     (_cpp_common/scripts/client_names.py) to skip every line of this file;
+//   - a self-exemption in the walk below, which skipped the two structural
+//     rules whenever the file being scanned was this one.
+//
+// What they covered: a REAL client export name, quoted as the worked example
+// inside namesAnExport() below by the same 2026-08-25 wave that scrubbed that
+// name from the rest of the tree, which then shipped in the v2.9.42 and
+// v2.9.43 tag trees.
+// In fairness to the rules, neither would have matched that line anyway — it
+// carried the name without the `.xer` extension — so the exemptions are not
+// the whole story. They are the reason nobody was ever going to be told.
+//
+// The example is now the synthetic "ABC-01 Depot REV-XY2", which the .xer rule
+// flags exactly as it flagged the real one, and this header states its rules
+// using placeholder shapes the rules themselves do not match. If an edit here
+// seems to need a real name, that is the signal the edit is wrong.
 //
 // Why this exists: a confidential forensic client name shipped in
 // schemas/sop-checklist.schema.json from v2.9.34 (2026-05-24) until it was
@@ -20,18 +41,18 @@
 // package.json's `files`, so all three were publishing to npm.
 //
 // None of them could ever have been caught here. The tokeniser needs
-// [a-z0-9]{4,}, so a code like `CON-05` yields NO token at all — both halves
-// are too short — and codes that do tokenise only match if somebody remembered
-// to add them. You cannot enumerate the project codes of clients you have not
-// worked for yet.
+// [a-z0-9]{4,}, so a package code shaped like `ABC-01` yields NO token at all
+// — both halves are too short — and codes that do tokenise only match if
+// somebody remembered to add them. You cannot enumerate the project codes of
+// clients you have not worked for yet.
 //
 // So there are now two rules that do not depend on knowing the name:
 //
-//   1. NO .xer FILENAME may appear in tracked source. The tell is the
+//   1. No `.xer` FILENAME may appear in tracked source. The tell is the
 //      extension, not the words around it.
-//   2. NO ABSOLUTE PATH under a user home directory (C:\Users\x, /home/x,
-//      /Users/x). Those name the author's machine even when they name no
-//      client.
+//   2. No ABSOLUTE PATH under a user home directory (Windows `<drive>:/Users/
+//      <you>`, POSIX `/home/<you>` or `/Users/<you>`). Those name the author's
+//      machine even when they name no client.
 //
 // Both accept a per-line `client-name-ok: <reason>` escape, the same
 // convention _cpp_common/scripts/client_names.py uses, for the rare line whose
@@ -110,8 +131,9 @@ function namesAnExport(line) {
       const i = stem.lastIndexOf(sep);
       if (i !== -1) stem = stem.slice(i + 1);
     }
-    // A real export name is one to three words ("CON-05 Mill REV-TB1"). Cap
-    // the window so surrounding prose cannot supply the uppercase.
+    // A real export name is one to three words — shaped like the synthetic
+    // "ABC-01 Depot REV-XY2", a package code plus an area plus a revision tag.
+    // Cap the window so surrounding prose cannot supply the uppercase.
     stem = stem.trim().split(/\s+/).slice(-4).join(' ');
     if (!stem) continue;
     let probe = stem;
@@ -134,8 +156,6 @@ const leaks = [];
 for (const f of walk(root)) {
   let text;
   try { text = fs.readFileSync(f, 'utf8'); } catch { continue; }
-  // This gate's own source necessarily contains the patterns it matches on.
-  const isSelf = path.resolve(f) === path.resolve(__filename);
   text.split(/\r?\n/).forEach((ln, i) => {
     const where = `${path.relative(root, f)}:${i + 1}`;
     const shown = ln.trim().slice(0, 100);
@@ -148,7 +168,6 @@ for (const f of walk(root)) {
         return;
       }
     }
-    if (isSelf) return;
     const stem = namesAnExport(ln);
     if (stem) {
       leaks.push(`${where}  [names a .xer export: '${stem}']  ${shown}`);

@@ -180,6 +180,17 @@ const HISTORIC_OK_PATTERNS = [
     /for the v2\.9\.\d+ baseline\b/i,
     // "fully computed as of v2.9.X" / "as of v2.9.X via" narration
     /\bas of v2\.9\.\d+\b/i,
+    // npm-lag disclosure. Publishing to npm stopped at 2.9.19 (2026-05-17)
+    // while this repository kept tagging releases, so README's quick start has
+    // to NAME the version npm serves in order to warn a reader off it. A line
+    // that says "the npm package lags this repository" is a disclosure ABOUT a
+    // stale artifact, which is the opposite of the stale current-state claim
+    // this gate exists to catch — the defect was the README asserting the
+    // npm install yields the current engine, and this sentence is the
+    // correction. Deliberately narrow: it requires both the npm subject and
+    // the explicit lag phrasing on the same line, so a bare stale reference,
+    // or a future edit that softens the warning, still fails.
+    /\bnpm\b[^\n]*\blags this repository\b/i,
 ];
 
 const VERSION_RE = /\bv?2\.9\.(\d+)\b/g;
@@ -212,6 +223,22 @@ function isHistoric(line) {
     if (!isHistoric(historic)) {
         console.error('FAIL: isHistoric() no longer exempts plain release history; '
             + 'the gate would flag every changelog line.');
+        process.exit(1);
+    }
+    // Fires-proof for the npm-lag exemption: the disclosure sentence must be
+    // exempt, and a line that merely mentions npm next to a stale version —
+    // the shape of the defect this replaced — must still fail.
+    const npmLag = '**The npm package lags this repository.** npm `latest` is '
+        + '2.9.19, published 2026-05-17.';
+    const npmStale = 'npm install cpp-cpm-engine  # engine_version 2.9.19';
+    if (!isHistoric(npmLag)) {
+        console.error('FAIL: isHistoric() no longer exempts the npm-lag disclosure; '
+            + 'README cannot name the version npm actually serves.');
+        process.exit(1);
+    }
+    if (isHistoric(npmStale)) {
+        console.error('FAIL: isHistoric() exempts a bare stale npm version reference — '
+            + 'the npm-lag pattern is too broad.');
         process.exit(1);
     }
 }
