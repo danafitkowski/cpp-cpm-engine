@@ -12,6 +12,108 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.43 — 2026-09-02 — retained-logic P6 semantics: SS/SF drive from restart; restart snapped and always defined; corrupt-calendar P6 fallback
+
+**Engine math changed.** The retained-logic forward pass, free-float slack
+anchors and `parseXER`'s calendar decode all move, so a deliverable already
+issued from a tagged build is inside the supersession window and needs the
+re-check step in PROCEDURE.md.
+
+Every change in this wave was derived from P6's own stored `restart_date` /
+`reend_date` (in-progress rows) and `early_start_date` / `early_end_date`
+(not-started rows) measured on a private oracle corpus of real progressed
+P6 exports — 380 in-progress rows and 148 not-started probe rows across the
+files that pass an oracle-validity gate. Under the rule implemented here the
+engine reproduces all 380 stored restart AND reend values and all 148
+not-started values exactly; before this wave it was wrong on 96 of the 380
+and 137 of the 148. No client-identifying material from that corpus enters
+this repository; fixtures replicate the discriminating topologies under
+neutral names with real value shapes.
+
+### D1 — SS/SF drives from a started predecessor read its restart
+
+`startDriveSrcFor(pred)`: under `retained_logic`, an SS drive (and an SF
+anchor) from a STARTED, incomplete predecessor now reads the predecessor's
+`restart` — where its remaining work begins — never its historical actual
+start. Applies in the main pred loop (not-started successors) and in the
+restart-drive accumulator (started successors), and the SS/SF free-float
+slack measurement uses the same anchor so a driving started SS predecessor
+no longer reports phantom positive float. Measured for SS (the
+discriminating corpus exhibit stores restart = the predecessor's restart,
+seven weeks after its recorded actual start); INFERRED for SF by symmetry —
+the corpus carries no discriminating SF instance. `progress_override` keeps
+the historical-es drive everywhere (unmeasured; deliberately untouched).
+
+### D2 — completed predecessors do not drive a started successor's restart
+
+The restart-drive accumulator now skips completed predecessors entirely.
+Measured: a predecessor whose actual finish lands AFTER the data date
+leaves the started successor's stored restart at the data date — P6 treats
+finished work as history. For a NOT-started successor the completed
+predecessor's actual finish (+lag) keeps driving ES (P6-documented
+behaviour; the corpus is silent either way — marked INFERRED).
+
+### D3 — the in-progress restart anchor snaps forward on the activity calendar
+
+`max(actual_start, data_date)` (and the folded restart drives) now snap
+forward to the next working instant of the activity's own calendar, the
+same treatment the not-started data-date floor already received. P6's
+stored restarts sit on working instants corpus-wide. A weekend data date
+previously undercounted the remaining bar by the non-worked anchor day.
+
+### D5 — a started activity with no remaining_duration gets a defined restart
+
+`restart = snap_fwd(max(data_date, actual_start))`, stamped under
+retained_logic only, so SS/SF successors of such a predecessor have a drive
+source. The activity's OWN legacy EF (actual_start + full duration) and the
+`completion-data-incomplete` ALERT are unchanged — the engine still refuses
+to invent a remaining duration.
+
+### D7 — clndr_data decoder + P6 Standard-calendar fallback emulation (forensic)
+
+`decodeClndrData` (exported, with `getCalMap()`) decodes CALENDAR
+`clndr_data` blobs into day-level calendars, closing three grammar gaps
+measured on the corpus: finish-first slot pairs `(f|HH:MM|s|HH:MM)`,
+`f|00:00` as a midnight shift END (1440 min), and `s|00:00|f|00:00` as a
+full 24-hour day. After the fixes all 51 corpus calendars decode with
+hours/day matching their own `day_hr_cnt`.
+
+When a record's DaysOfWeek block carries a finish-first slot pair — a form
+P6's own scheduler rejects — the engine emulates what P6 demonstrably did
+on four independent real exports carrying such a record (130/130 Mon-Fri
+forecast spans, zero Saturday stamps, statutory holidays worked, closes at
+the default calendar's closing time): it schedules on P6's internal
+Standard calendar (Mon-Fri, 8 h/day, no exceptions) and emits a new
+parse-time forensic ALERT, `calendar-corrupt-p6-fallback`, naming the
+corrupt record. The predicate cannot trigger on any record that decodes
+cleanly today (every clean corpus record is serialized start-first). The
+alert lives on the parse surface in both engines, so the computeCPM
+crossval alert-count parity surface is untouched.
+
+### Python reference
+
+`python_reference/cpm.py` receives the byte-semantic twin of every change
+above (D1/D2/D3/D5 in `compute_cpm`; D7 as `decode_clndr_data` /
+`decode_calendar_record`), and the SHA-256 pin in `python_reference/README.md`
+is rotated. Crossval: 46 fixtures, 0 failed; 1009 of the 1015-comparison
+surface executed (the 6 skips are null-vs-undefined artifacts on completed
+activities that neither engine populates).
+
+### Tests
+
+40 new checks (RL-1..RL-13) pin the wave: each D-delta proven with a
+planted-defect fixture that failed before the change, the D7 decoder
+grammar cases, the corrupt-record predicate, the end-to-end fallback ALERT
+through `runCPM`, and the clean-decode regression. The full prior suite
+passes unmodified — zero golden expectations moved (no committed test
+exercised the changed topologies). `validation/p6-comparison` remains 13/13
+against the 2026-08-11 P6 capture; no captured case contains a topology
+this wave moves. Also fixed in passing: a committed SyntaxError in
+`validation/p6-comparison/generate-cases.js` (unescaped apostrophe) that
+made the generator unrunnable at HEAD.
+
+---
+
 ## v2.9.42 — 2026-08-27 — constraint pairing corrected; SS/SF late-finish conversion restored
 
 Four commits touch `cpm-engine.js` above `v2.9.41`: `1916c4f`, `7b68c2d`,

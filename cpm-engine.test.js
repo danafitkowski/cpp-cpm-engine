@@ -10113,6 +10113,392 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
         'got ' + JSON.stringify(r3.nodes.A.constraint));
 }
 
+// ===========================================================================
+// Retained-logic P6 semantics wave (2026-09-02) — deltas D1/D2/D3/D5/D7.
+//
+// Every fixture below is derived from a real progressed export in the private
+// oracle corpus: neutral activity codes/names, REAL value shapes (dates, lags,
+// remaining hours, calendar patterns). The measured rule (380/380 in-progress
+// rows exact, 148/148 not-started probe rows) is:
+//
+//   restart(X) = snap_forward_actcal( max( data_date,
+//       for each INCOMPLETE pred P:
+//           FS: reend(P)+lag, SS: restart(P)+lag,
+//           FF: retreat(reend(P)+lag, rem(X)), SF: retreat(restart(P)+lag, rem(X)) ))
+//   reend(X) = restart(X) + rem(X)          (rigid bar)
+//   COMPLETED preds contribute NOTHING to a started successor's restart.
+//
+// In engine terms: node.restart = restart, node.ef (exclusive boundary) = reend.
+// ===========================================================================
+console.log('\n=== Retained-logic P6 semantics wave (D1/D2/D3/D5/D7) ===');
+
+const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
+
+// RL-1 (D1, started successor) — SS from a STARTED, incomplete predecessor
+// drives the successor's remaining work via the predecessor's RESTART, never
+// its historical actual start. Derived from a real progressed export in the
+// private oracle corpus: successor started 2026-05-25, rem=0, data date
+// 2026-06-22, SS pred whose own restart is pushed to 2026-07-14 by upstream
+// logic; P6 stored restart = reend = 2026-07-14 (not the actual start, not
+// the data date).
+{
+    const r = E.computeCPM(
+        [{ code: 'G', duration_days: 16, clndr_id: 'MF' },                 // not started
+         { code: 'P', duration_days: 25, actual_start: '2026-05-25',
+           remaining_duration: 10, clndr_id: 'MF' },                       // started, incomplete
+         { code: 'X', duration_days: 20, actual_start: '2026-05-25',
+           remaining_duration: 0, clndr_id: 'MF' }],                       // started, rem=0
+        [{ from_code: 'G', to_code: 'P', type: 'FS', lag_days: 0 },
+         { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 0 }],
+        { dataDate: '2026-06-22', calMap: _RL_MF }
+    );
+    check('RL-1: FS chain pushes started pred P.restart to 2026-07-14',
+        r.nodes.P.restart_date === '2026-07-14',
+        'P.restart=' + r.nodes.P.restart_date);
+    check('RL-1: SS successor X restarts at pred RESTART (2026-07-14), not act_start/dd',
+        r.nodes.X.restart_date === '2026-07-14',
+        'X.restart=' + r.nodes.X.restart_date);
+    check('RL-1: X rem=0 keeps restart = reend (rigid bar)',
+        r.nodes.X.ef_date === '2026-07-14',
+        'X.ef=' + r.nodes.X.ef_date);
+    check('RL-1: X.es stays pinned to the actual start (display pin unchanged)',
+        r.nodes.X.es_date === '2026-05-25',
+        'X.es=' + r.nodes.X.es_date);
+}
+
+// RL-2 (spec §2 FF pull-back) — an FF driver pulls the WHOLE remaining bar
+// (restart) back by the remaining duration; it does not stretch the bar.
+// Derived from a real progressed export in the private oracle corpus:
+// activity started 2026-04-28, rem 80 h (10 d), data date 2026-08-17, FF
+// predecessor finishing at the 2026-12-15 boundary; P6 stored restart
+// 2026-12-01 / reend 2026-12-14 17:00 (exclusive boundary 2026-12-15) — a
+// pull of over three months past the data date.
+{
+    const r = E.computeCPM(
+        [{ code: 'P', duration_days: 10, clndr_id: 'MF',
+           constraint: { type: 'SNET', date: '2026-12-01' } },
+         { code: 'X', duration_days: 60, actual_start: '2026-04-28',
+           remaining_duration: 10, clndr_id: 'MF' }],
+        [{ from_code: 'P', to_code: 'X', type: 'FF', lag_days: 0 }],
+        { dataDate: '2026-08-17', calMap: _RL_MF }
+    );
+    check('RL-2: FF pred lands EF at the 2026-12-15 boundary',
+        r.nodes.P.ef_date === '2026-12-15',
+        'P.ef=' + r.nodes.P.ef_date);
+    check('RL-2: FF pull-back sets restart = retreat(anchor, rem) = 2026-12-01',
+        r.nodes.X.restart_date === '2026-12-01',
+        'X.restart=' + r.nodes.X.restart_date);
+    check('RL-2: rigid bar — reend = restart + rem (boundary 2026-12-15)',
+        r.nodes.X.ef_date === '2026-12-15',
+        'X.ef=' + r.nodes.X.ef_date);
+}
+
+// RL-3 (D2) — a COMPLETED predecessor contributes NOTHING to the restart of
+// a STARTED successor, even when its actual finish falls AFTER the data date.
+// Derived from a real progressed export in the private oracle corpus: pred
+// actual finish 2026-08-01 (after dd 2026-07-31); successor started
+// 2026-07-31 with 16 h (2 d) remaining on a calendar holding 2026-08-03 as a
+// holiday; P6 stored restart = the data date 2026-07-31, reend boundary
+// 2026-08-05 — NOT restarted behind the post-dd actual finish.
+{
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: ['2026-08-03'] } };
+    const r = E.computeCPM(
+        [{ code: 'C', duration_days: 5, actual_start: '2026-07-27',
+           actual_finish: '2026-08-01', is_complete: true, clndr_id: 'MF' },
+         { code: 'X', duration_days: 2, actual_start: '2026-07-31',
+           remaining_duration: 2, clndr_id: 'MF' }],
+        [{ from_code: 'C', to_code: 'X', type: 'FS', lag_days: 0 }],
+        { dataDate: '2026-07-31', calMap: cal }
+    );
+    check('RL-3: completed pred with act_end > dd does NOT push started successor restart',
+        r.nodes.X.restart_date === '2026-07-31',
+        'X.restart=' + r.nodes.X.restart_date);
+    check('RL-3: reend = restart + rem on the activity calendar (boundary 2026-08-05)',
+        r.nodes.X.ef_date === '2026-08-05',
+        'X.ef=' + r.nodes.X.ef_date);
+}
+
+// RL-4 (D3) — the in-progress restart anchor snaps FORWARD on the ACTIVITY
+// calendar, the way the not-started data-date floor already does. Weekend
+// data date, Mon-Fri activity: restart lands on Monday and the remaining bar
+// counts full working days from there. (Day-level equivalent of the
+// hour-level snap measured corpus-wide: zero snap-forward failures across
+// all 51 corpus calendars.)
+{
+    const r = E.computeCPM(
+        [{ code: 'X', duration_days: 10, actual_start: '2026-07-20',
+           remaining_duration: 2, clndr_id: 'MF' }],
+        [],
+        { dataDate: '2026-08-01', calMap: _RL_MF }   // Saturday
+    );
+    check('RL-4: restart anchor snapped forward to Monday 2026-08-03',
+        r.nodes.X.restart_date === '2026-08-03',
+        'X.restart=' + r.nodes.X.restart_date);
+    check('RL-4: reend = snapped restart + rem (boundary 2026-08-05)',
+        r.nodes.X.ef_date === '2026-08-05',
+        'X.ef=' + r.nodes.X.ef_date);
+}
+
+// RL-5 (D5) — a started predecessor with NO remaining_duration still exposes
+// a defined restart = max(data_date, actual_start) snapped forward on the
+// activity calendar, as an SS/SF drive source. Its own legacy EF path and the
+// completion-data-incomplete ALERT are unchanged.
+{
+    const r = E.computeCPM(
+        [{ code: 'P', duration_days: 20, actual_start: '2026-05-25',
+           clndr_id: 'MF' },                                   // started, NO rem
+         { code: 'X', duration_days: 10, clndr_id: 'MF' }],    // not started
+        [{ from_code: 'P', to_code: 'X', type: 'SS', lag_days: 3 }],
+        { dataDate: '2026-06-22', calMap: _RL_MF }
+    );
+    check('RL-5: no-rem started pred carries restart = max(dd, act_start) = 2026-06-22',
+        r.nodes.P.restart_date === '2026-06-22',
+        'P.restart=' + r.nodes.P.restart_date);
+    check('RL-5: SS+3 successor is driven from the D5 restart (2026-06-25), not act_start',
+        r.nodes.X.es_date === '2026-06-25',
+        'X.es=' + r.nodes.X.es_date);
+    check('RL-5: legacy no-rem EF path still alerts completion-data-incomplete',
+        r.alerts.some(a => a.context === 'completion-data-incomplete' &&
+                           a.message.indexOf('MISSING_REMAINING_DURATION') >= 0));
+}
+
+// RL-6 (D1, not-started successor) — SS from a STARTED, incomplete pred into
+// a NOT-started successor drives via the pred's restart (+lag), never its
+// historical actual start. Derived from the not-started probe set of a real
+// progressed export in the private oracle corpus (137/148 rows pushed beyond
+// the data date by exactly this drive form).
+{
+    const r = E.computeCPM(
+        [{ code: 'P', duration_days: 40, actual_start: '2026-05-25',
+           remaining_duration: 20, clndr_id: 'MF' },
+         { code: 'X', duration_days: 10, clndr_id: 'MF' }],
+        [{ from_code: 'P', to_code: 'X', type: 'SS', lag_days: 5 }],
+        { dataDate: '2026-06-22', calMap: _RL_MF }
+    );
+    check('RL-6: started pred restart = data date 2026-06-22',
+        r.nodes.P.restart_date === '2026-06-22');
+    check('RL-6: not-started SS successor ES = advance(pred.restart, 5) = 2026-06-29',
+        r.nodes.X.es_date === '2026-06-29',
+        'X.es=' + r.nodes.X.es_date);
+    check('RL-6: successor EF - ES = duration (rigid bar, 2026-07-13)',
+        r.nodes.X.ef_date === '2026-07-13',
+        'X.ef=' + r.nodes.X.ef_date);
+    // Free-float consistency: P drives X through the SAME anchor the forward
+    // pass used (its restart), so the driving pred carries zero free float.
+    check('RL-6: driving SS pred free float measured from restart anchor (ff=0)',
+        r.nodes.P.ff === 0,
+        'P.ff=' + r.nodes.P.ff);
+}
+
+// RL-7 (D4 verification) — relationshipLagCalendar='rcal_Predecessor' walks
+// the SS lag on the PREDECESSOR's calendar from the predecessor's restart.
+// (Corpus-wide SCHEDOPTIONS setting; the engine's measured-best default stays
+// 'successor' and callers holding the SCHEDOPTIONS row pass this through.)
+{
+    const cal = {
+        S7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [] },
+        MF: { work_days: [1, 2, 3, 4, 5], holidays: [] },
+    };
+    const acts = [
+        { code: 'P', duration_days: 40, actual_start: '2026-05-25',
+          remaining_duration: 10, clndr_id: 'S7' },
+        { code: 'X', duration_days: 10, clndr_id: 'MF' },
+    ];
+    const rels = [{ from_code: 'P', to_code: 'X', type: 'SS', lag_days: 5 }];
+    const rPred = E.computeCPM(acts, rels,
+        { dataDate: '2026-06-22', calMap: cal,
+          relationshipLagCalendar: 'rcal_Predecessor' });
+    check('RL-7: rcal_Predecessor — SS lag walks pred 7-day calendar from restart (2026-06-27)',
+        rPred.nodes.X.es_date === '2026-06-27',
+        'X.es=' + rPred.nodes.X.es_date);
+    const rSucc = E.computeCPM(acts, rels,
+        { dataDate: '2026-06-22', calMap: cal });
+    check('RL-7: default successor mode — same lag walks MF calendar (2026-06-29)',
+        rSucc.nodes.X.es_date === '2026-06-29',
+        'X.es=' + rSucc.nodes.X.es_date);
+}
+
+// ===========================================================================
+// D7 — clndr_data decode (three grammar gaps) + P6-fallback emulation for
+// the corrupt finish-first record class.
+// ===========================================================================
+
+// RL-8 (D7a regression) — the STANDARD start-first format decodes exactly as
+// before: weekly pattern, off-day exceptions (holidays), working exceptions
+// (special workdays). Serial 46272 = 2026-09-07; serial 46023 = 2026-01-01.
+{
+    const std = '(0||CalendarData()(' +
+        '(0||DaysOfWeek()(' +
+        '(0||1()())' +
+        '(0||2()((0||0(s|08:00|f|16:00)())))' +
+        '(0||3()((0||0(s|08:00|f|16:00)())))' +
+        '(0||4()((0||0(s|08:00|f|16:00)())))' +
+        '(0||5()((0||0(s|08:00|f|16:00)())))' +
+        '(0||6()((0||0(s|08:00|f|16:00)())))' +
+        '(0||7()())))' +
+        '(0||VIEW(ShowTotal|N)())' +
+        '(0||Exceptions()(' +
+        '(0||0(d|46272)())' +
+        '(0||1(d|46023)((0||0(s|08:00|f|17:00)())))' +
+        '))))';
+    const d = E.decodeClndrData(std);
+    check('RL-8: standard format decode_ok', d.decode_ok === true);
+    check('RL-8: standard format is NOT flagged as corrupt', d.corrupt_fallback === false);
+    check('RL-8: work_days = Mon-Fri',
+        JSON.stringify(d.work_days) === JSON.stringify([1, 2, 3, 4, 5]),
+        'got ' + JSON.stringify(d.work_days));
+    check('RL-8: off-day exception decoded as holiday 2026-09-07',
+        d.holidays.indexOf('2026-09-07') >= 0,
+        'holidays=' + JSON.stringify(d.holidays));
+    check('RL-8: working exception decoded as special workday 2026-01-01',
+        d.special_workdays.indexOf('2026-01-01') >= 0,
+        'special=' + JSON.stringify(d.special_workdays));
+}
+
+// RL-9 (D7a gap 3) — s|00:00|f|00:00 is a FULL 24-hour working day, not a
+// never-working day ('24 Hours x 7 Days' calendar class).
+{
+    let days = '';
+    for (let p6d = 1; p6d <= 7; p6d++) {
+        days += '(0||' + p6d + '()((0||0(s|00:00|f|00:00)())))';
+    }
+    const raw = '(0||CalendarData()((0||DaysOfWeek()(' + days +
+        '))(0||Exceptions())))';
+    const d = E.decodeClndrData(raw);
+    check('RL-9: 24x7 calendar decodes all seven days working',
+        JSON.stringify(d.work_days) === JSON.stringify([0, 1, 2, 3, 4, 5, 6]),
+        'got ' + JSON.stringify(d.work_days));
+    check('RL-9: 24x7 day is 24 hours',
+        d.week_hours && close(d.week_hours[1], 24),
+        'week_hours=' + JSON.stringify(d.week_hours));
+    check('RL-9: 24x7 is NOT flagged as corrupt', d.corrupt_fallback === false);
+}
+
+// RL-10 (D7a gap 2) — f|00:00 means midnight END of shift (1440 min), not 0
+// ('7x24' shift-calendar class: a day worked 08:00 -> midnight is 16 h).
+{
+    const raw = '(0||CalendarData()((0||DaysOfWeek()(' +
+        '(0||1()())' +
+        '(0||2()((0||0(s|08:00|f|00:00)())))' +
+        '(0||3()())(0||4()())(0||5()())(0||6()())(0||7()())' +
+        '))(0||Exceptions())))';
+    const d = E.decodeClndrData(raw);
+    check('RL-10: f|00:00 shift decodes as a working Monday',
+        d.work_days.indexOf(1) >= 0,
+        'work_days=' + JSON.stringify(d.work_days));
+    check('RL-10: 08:00->midnight day is 16 hours',
+        d.week_hours && close(d.week_hours[1], 16),
+        'week_hours=' + JSON.stringify(d.week_hours));
+}
+
+// RL-11 (D7b) — the corrupt finish-first record class: slot pairs inside
+// DaysOfWeek serialized (f|HH:MM|s|HH:MM). P6 itself rejects the record and
+// demonstrably schedules on its internal Standard calendar (Mon-Fri, 8 h, NO
+// exceptions): measured 130/130 Mon-Fri spans, 0 Saturday forecast stamps,
+// statutory holidays worked, across four independent exports. Synthetic
+// fixture structurally equivalent to the real record (neutral name; same
+// two-shift 08-12 / 13-17 Mon-Sat declaration; derived from a real
+// progressed export in the private oracle corpus).
+const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
+    '(0||1()())' +
+    '(0||2()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||3()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||4()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||5()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||6()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '(0||7()((0||0(f|12:00|s|08:00)())(0||1(f|17:00|s|13:00)())))' +
+    '))(0||Exceptions())(0||VIEW(ShowTotal|Y)())))';
+{
+    const d = E.decodeClndrData(_RL_CORRUPT);
+    check('RL-11: finish-first record triggers the P6-fallback emulation',
+        d.corrupt_fallback === true);
+    check('RL-11: fallback = P6 internal Standard (Mon-Fri)',
+        JSON.stringify(d.work_days) === JSON.stringify([1, 2, 3, 4, 5]),
+        'got ' + JSON.stringify(d.work_days));
+    check('RL-11: fallback carries NO exceptions',
+        d.holidays.length === 0 && d.special_workdays.length === 0);
+    check('RL-11: declared pattern still characterized (Mon-Sat, 8 h/day)',
+        d.declared &&
+        JSON.stringify(d.declared.work_days) === JSON.stringify([1, 2, 3, 4, 5, 6]) &&
+        close(d.declared.week_hours[6], 8),
+        'declared=' + JSON.stringify(d.declared));
+}
+
+// RL-12 (D7b end-to-end, planted defect) — parseXER on an XER carrying the
+// corrupt record: the fallback calendar lands in the parsed calMap and the
+// forensic ALERT fires through runCPM.
+{
+    E.resetMC();
+    const xer = [
+        '%T CALENDAR',
+        '%F clndr_id\tclndr_name\tday_hr_cnt\tclndr_data',
+        '%R 6001\tSix Day Site Works\t8\t' + _RL_CORRUPT,
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tclndr_id',
+        '%R 1\tA\tA\tTT_Task\t80\t80\t6001',
+        '%R 2\tB\tB\tTT_Task\t80\t80\t6001',
+        '%T TASKPRED',
+        '%F pred_task_id\ttask_id\tpred_type\tlag_hr_cnt',
+        '%R 1\t2\tPR_FS\t0',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const cm = E.getCalMap();
+    check('RL-12: parsed calMap carries the fallback Mon-Fri calendar',
+        cm && cm['6001'] &&
+        JSON.stringify(cm['6001'].work_days) === JSON.stringify([1, 2, 3, 4, 5]),
+        'calMap=' + JSON.stringify(cm && cm['6001']));
+    const r = E.runCPM({});
+    const corruptAlerts = r.alerts.filter(a => a.context === 'calendar-corrupt-p6-fallback');
+    check('RL-12: calendar-corrupt-p6-fallback ALERT fires (forensic finding)',
+        corruptAlerts.length === 1,
+        'count=' + corruptAlerts.length);
+    check('RL-12: ALERT names the record corrupt and the P6 internal default',
+        corruptAlerts.length === 1 &&
+        corruptAlerts[0].severity === 'ALERT' &&
+        /corrupt/i.test(corruptAlerts[0].message) &&
+        /internal default|Standard calendar/i.test(corruptAlerts[0].message),
+        'msg=' + (corruptAlerts[0] && corruptAlerts[0].message));
+}
+
+// RL-13 (D7 regression) — a clean standard calendar parsed from an XER
+// decodes into the calMap with NO corrupt-fallback alert, and an EMPTY
+// clndr_data still yields no entry and no alert (pre-D7 behavior preserved).
+{
+    E.resetMC();
+    const std = '(0||CalendarData()((0||DaysOfWeek()(' +
+        '(0||1()())' +
+        '(0||2()((0||0(s|08:00|f|16:00)())))' +
+        '(0||3()((0||0(s|08:00|f|16:00)())))' +
+        '(0||4()((0||0(s|08:00|f|16:00)())))' +
+        '(0||5()((0||0(s|08:00|f|16:00)())))' +
+        '(0||6()((0||0(s|08:00|f|16:00)())))' +
+        '(0||7()())))(0||Exceptions()((0||0(d|46272)())))))';
+    const xer = [
+        '%T CALENDAR',
+        '%F clndr_id\tclndr_name\tday_hr_cnt\tclndr_data',
+        '%R 5001\tStandard Five Day\t8\t' + std,
+        '%R 5002\tBlank Data\t8\t',
+        '%T TASK',
+        '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tclndr_id',
+        '%R 1\tA\tA\tTT_Task\t40\t40\t5001',
+        '',
+    ].join('\n');
+    E.parseXER(xer);
+    const cm = E.getCalMap();
+    check('RL-13: standard record decodes into calMap (Mon-Fri + holiday)',
+        cm && cm['5001'] &&
+        JSON.stringify(cm['5001'].work_days) === JSON.stringify([1, 2, 3, 4, 5]) &&
+        cm['5001'].holidays.indexOf('2026-09-07') >= 0,
+        'calMap=' + JSON.stringify(cm && cm['5001']));
+    check('RL-13: empty clndr_data yields no calMap entry',
+        !(cm && cm['5002']));
+    const r = E.runCPM({});
+    check('RL-13: clean calendars raise NO corrupt-fallback alert',
+        !r.alerts.some(a => a.context === 'calendar-corrupt-p6-fallback'),
+        'alerts=' + JSON.stringify(r.alerts.map(a => a.context)));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

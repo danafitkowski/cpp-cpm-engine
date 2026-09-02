@@ -32,7 +32,11 @@
 #   2. Surfaces not used by the crossval harness (compute_cpm_salvaging,
 #      compute_lpm, compute_cpm_with_strategies, compute_float_burndown,
 #      _tarjan_scc, SVG render) have been stripped. The remaining surface
-#      matches what cpm-engine.crossval.js imports: compute_cpm + date_to_num.
+#      matches what cpm-engine.crossval.js imports — compute_cpm +
+#      date_to_num — plus, as of v2.9.43, the D7 clndr_data decoder
+#      (decode_clndr_data / decode_calendar_record), the Python parity twin
+#      of the JS parseXER-side calendar decode and its
+#      calendar-corrupt-p6-fallback forensic ALERT.
 #
 # This file is pinned by SHA-256 — see python_reference/README.md and the
 # hash printed by cpm-engine.crossval.js at startup. Any drift between this
@@ -52,6 +56,7 @@ field (3 ff_signed, 3 ff_signed_working_days on completed activities). See
 DAUBERT.md §3 for verification methodology.
 """
 import math
+import re
 from collections import defaultdict, deque
 from datetime import date, datetime, timedelta
 
@@ -115,7 +120,7 @@ def _round_half_up_to(x, decimals=0):
 # dropping are executed. Only the completed-activity branch still emits neither
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those 6 comparisons are absent on both sides rather than one.
-ENGINE_VERSION = '2.9.42'
+ENGINE_VERSION = '2.9.43'
 
 
 # =============================================================================
@@ -1332,6 +1337,28 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     def _lag_cal_for(pred_node, succ_node):
         return _cal_for(succ_node) if _lag_cal_mode == 'successor' else _cal_for(pred_node)
 
+    # D1 (retained-logic P6 semantics wave 2026-09-02) — the START-side drive
+    # source of a predecessor. For a STARTED, incomplete predecessor under
+    # retained logic, SS drives (and SF anchors) read the predecessor's
+    # RESTART — where its remaining work begins — never its historical actual
+    # start. Measured against P6's own stored restart/reend dates on a
+    # private oracle corpus of real progressed exports (380/380 in-progress
+    # rows and 148/148 not-started probe rows exact with this rule; the
+    # discriminating SS-from-started-pred exhibit stores restart = the pred's
+    # restart, months after the recorded actual start). For a not-started
+    # predecessor es IS the forecast remaining start, and for a completed
+    # predecessor es is the historical actual — both unchanged. Every started
+    # incomplete node carries `restart` by the time its successors are
+    # processed (topological order): the remaining-duration path stamps it,
+    # and the no-remaining legacy path stamps the D5 definition below.
+    # progress_override is deliberately untouched (unmeasured; design
+    # contract) — it keeps the historical-es drive source.
+    def _start_drive_src_for(pnode):
+        if (schedule_mode == 'retained_logic' and not pnode['is_complete']
+                and pnode.get('restart') is not None):
+            return pnode['restart']
+        return pnode['es']
+
     # Forward Pass
     for code in order:
         node = nodes[code]
@@ -1396,7 +1423,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                                           alerts=alerts,
                                           ctx=f'FS lag {pnode["code"]}->{code}')
             elif t == 'SS':
-                anchor = pnode['es']
+                # D1 — SS drives from the predecessor's remaining-start
+                # reference (restart for a started incomplete pred; es
+                # otherwise). See _start_drive_src_for.
+                anchor = _start_drive_src_for(pnode)
                 drive = _advance_workdays(anchor, lag, lag_cal,
                                           alerts=alerts,
                                           ctx=f'SS lag {pnode["code"]}->{code}')
@@ -1409,8 +1439,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     alerts=alerts, ctx=f'FF duration {code}')
                 this_anchor_ef = succ_ef_anchor
             elif t == 'SF':
+                # D1 — SF anchors from the predecessor's remaining-start
+                # reference, same as SS. INFERRED for SF specifically: the
+                # corpus carries no discriminating SF instance; adopted by
+                # symmetry with the measured SS rule.
                 succ_ef_anchor = _advance_workdays(
-                    pnode['es'], lag, lag_cal,
+                    _start_drive_src_for(pnode), lag, lag_cal,
                     alerts=alerts, ctx=f'SF lag {pnode["code"]}->{code}')
                 drive = _retreat_workdays(
                     succ_ef_anchor, node['duration_days'], node_cal,
@@ -1433,16 +1467,29 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     }
                 # B4 - restart drive (retained logic): FS/SS drives are
                 # already in restart form; FF/SF re-derive from the anchor
-                # with REMAINING duration (INFERRED; case 10 is FS).
-                _r_drive = drive
-                _rd = node.get('remaining_duration')
-                if (t in ('FF', 'SF') and this_anchor_ef is not None
-                        and _rd is not None and math.isfinite(_rd) and _rd >= 0):
-                    _r_drive = _retreat_workdays(
-                        this_anchor_ef, _rd, node_cal,
-                        alerts=alerts, ctx=f'restart {t} rem {code}')
-                if _r_drive > _restart_max_drive:
-                    _restart_max_drive = _r_drive
+                # with REMAINING duration (FF measured on the oracle corpus
+                # — the whole-bar pull-back reproduces P6's stored restart
+                # exactly; SF stays INFERRED, no discriminating instance).
+                # D2 (retained-logic P6 semantics wave 2026-09-02) — a
+                # COMPLETED predecessor contributes NOTHING to the restart
+                # of a STARTED successor. Measured: a pred whose actual
+                # finish lands AFTER the data date leaves the started
+                # successor's stored restart at the data date — P6 treats
+                # finished work as history, never as a driver of remaining
+                # work. For a NOT-started successor the completed pred's
+                # actual finish (+lag) keeps driving ES in the main path
+                # below (P6's documented behaviour; the corpus carries no
+                # discriminating instance either way — INFERRED).
+                if not pnode['is_complete']:
+                    _r_drive = drive
+                    _rd = node.get('remaining_duration')
+                    if (t in ('FF', 'SF') and this_anchor_ef is not None
+                            and _rd is not None and math.isfinite(_rd) and _rd >= 0):
+                        _r_drive = _retreat_workdays(
+                            this_anchor_ef, _rd, node_cal,
+                            alerts=alerts, ctx=f'restart {t} rem {code}')
+                    if _r_drive > _restart_max_drive:
+                        _restart_max_drive = _r_drive
                 continue
             if drive > max_es:
                 max_es = drive
@@ -1557,8 +1604,27 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             _ef_anchor = max(act_start_num, dd_num) if dd_num > 0 else act_start_num
             if max_es > _ef_anchor:
                 _ef_anchor = max_es
-            if schedule_mode == 'retained_logic' and _restart_max_drive > _ef_anchor:
-                _ef_anchor = _restart_max_drive
+            if schedule_mode == 'retained_logic':
+                if _restart_max_drive > _ef_anchor:
+                    _ef_anchor = _restart_max_drive
+                # D3 (retained-logic P6 semantics wave 2026-09-02) — snap the
+                # restart anchor FORWARD on the ACTIVITY calendar, the same
+                # treatment the not-started data-date floor already gets
+                # above. Without this a weekend/holiday data date left
+                # `restart` (and the remaining-bar walk that starts from it)
+                # anchored on a non-working day, undercounting the remaining
+                # bar by the non-worked anchor day. Measured corpus-wide:
+                # P6's stored restart always sits on a working instant of the
+                # activity's own calendar (zero snap-forward failures across
+                # all 51 corpus calendars). progress_override keeps its
+                # documented unsnapped max(actual_start, data date) anchor —
+                # unmeasured, deliberately untouched.
+                if node_cal:
+                    _snapped = _advance_workdays(
+                        _ef_anchor, 0, node_cal,
+                        alerts=alerts, ctx=f'restart-snap {code}')
+                    if _snapped != _ef_anchor:
+                        _ef_anchor = _snapped
             node['restart'] = _ef_anchor
             node['ef'] = _advance_workdays(
                 _ef_anchor, _rem_dur, node_cal,
@@ -1593,6 +1659,25 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # work before the data date. The engine does not invent a remaining
         # duration; it discloses. Mirrors cpm-engine.js.
         if has_actual_start and not node['is_complete'] and not _rem_provided:
+            # D5 (retained-logic P6 semantics wave 2026-09-02) — a started
+            # predecessor with NO remaining_duration still needs a defined
+            # restart as the SS/SF drive source for its successors (see
+            # _start_drive_src_for): restart = max(data date, actual start)
+            # snapped forward on the activity's own calendar. This node's OWN
+            # legacy EF (actual_start + full duration) and the
+            # completion-data-incomplete ALERT below are unchanged — the
+            # engine still does not invent a remaining duration. Stamped for
+            # retained_logic only; progress_override is untouched
+            # (unmeasured; design contract).
+            if schedule_mode == 'retained_logic':
+                _d5_anchor = dd_num if (dd_num > 0 and dd_num > act_start_num) else act_start_num
+                if node_cal:
+                    _d5_snapped = _advance_workdays(
+                        _d5_anchor, 0, node_cal,
+                        alerts=alerts, ctx=f'restart-snap {code}')
+                    if _d5_snapped != _d5_anchor:
+                        _d5_anchor = _d5_snapped
+                node['restart'] = _d5_anchor
             _past_dated = (dd_num > 0 and node['ef'] < dd_num)
             alerts.append({
                 'severity': 'ALERT',
@@ -2081,12 +2166,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                                 if (sn.get('actual_start') and not sn['is_complete']
                                     and sn.get('restart') is not None)
                                 else sn['es'])
+            # D1 (retained-logic P6 semantics wave 2026-09-02) — the
+            # PREDECESSOR side of an SS/SF slack measurement uses the same
+            # remaining-start reference the forward pass drove with
+            # (_start_drive_src_for: restart for a started incomplete pred,
+            # es otherwise). Same v2.9.42 principle as the lag calendar two
+            # lines up: free float must be measured against the anchor the
+            # schedule actually used, or a started SS-driving predecessor
+            # reports phantom positive float against its own historical
+            # actual start.
+            _n_start_anchor = _start_drive_src_for(n)
             if stype == 'FS':
                 pred_anchor = _advance_workdays(n['ef'], lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack FS')
                 succ_anchor = _sn_start_anchor
             elif stype == 'SS':
-                pred_anchor = _advance_workdays(n['es'], lag, succ_cal,
+                pred_anchor = _advance_workdays(_n_start_anchor, lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack SS')
                 succ_anchor = _sn_start_anchor
             elif stype == 'FF':
@@ -2094,7 +2189,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     alerts=_slack_sink, ctx='FF-slack FF')
                 succ_anchor = sn['ef']
             elif stype == 'SF':
-                pred_anchor = _advance_workdays(n['es'], lag, succ_cal,
+                pred_anchor = _advance_workdays(_n_start_anchor, lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack SF')
                 succ_anchor = sn['ef']
             else:
@@ -2245,6 +2340,284 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # rule, in input order. Mirrors JS result.excluded_by_task_type.
         'excluded_by_task_type': excluded_by_task_type,
     }
+
+
+# =============================================================================
+# D7 (retained-logic P6 semantics wave 2026-09-02) — CALENDAR.clndr_data
+# decoder. Python parity port of cpm-engine.js decodeClndrData. P6 serializes
+# each calendar's weekly shift pattern and dated exceptions into the
+# clndr_data blob:
+#
+#   (0||CalendarData()(
+#      (0||DaysOfWeek()(
+#         (0||1()())                                  <- day 1 = Sunday, off
+#         (0||2()((0||0(s|08:00|f|16:00)())))         <- Monday, one shift
+#         ...))
+#      (0||Exceptions()(
+#         (0||0(d|40179)())                           <- serial, no shift = OFF
+#         (0||0(d|45868)((0||0(s|08:00|f|17:00)())))  <- serial + shift = ON
+#         ...))))
+#
+# Exception date values are Excel serials on the 1899-12-30 epoch. Output is
+# the engine's day-level calendar shape ({work_days, holidays,
+# special_workdays}) plus decoded per-day hours for characterization.
+#
+# Three grammar cases beyond the common form, measured on a private oracle
+# corpus of real P6 22.x-24.x exports (51 calendars; after these fixes every
+# one decodes with hours/day matching its own day_hr_cnt field):
+#   1. Slot pairs serialized finish-first: (f|HH:MM|s|HH:MM). Observed ONLY
+#      on a corrupt record class P6 itself refuses (see fallback below).
+#   2. f|00:00 means midnight END of shift (1440 min), not 0 — '7x24' shift
+#      calendars otherwise decode to negative day lengths.
+#   3. s|00:00|f|00:00 is a full 24-hour working day — '24 Hours x 7 Days'
+#      calendars otherwise decode as never-working.
+#
+# P6-FALLBACK EMULATION (forensic finding, not a repair): when a record's
+# DaysOfWeek block carries one or more finish-first slot pairs, P6's own
+# scheduler demonstrably does NOT honour the record — measured on four
+# independent real exports carrying such a record: every one of 130
+# unambiguous not-started spans on the assigned calendar walks Mon-Fri, zero
+# forecast stamps land on the declared working Saturday, statutory holidays
+# are worked, and every finish stamp closes at the DEFAULT calendar's
+# closing time. P6 fell back to its internal Standard calendar: Mon-Fri,
+# 8 h/day, NO exceptions. The decoder emulates exactly that fallback and
+# reports `corrupt_fallback: True` so the caller can emit the forensic
+# ALERT (decode_calendar_record below does, mirroring JS parseXER). The
+# detection predicate is precisely "finish-first slot pair inside the
+# DaysOfWeek block": every corpus calendar that decodes cleanly is
+# serialized start-first and can never trigger it. The record's DECLARED
+# pattern is still decoded (via fix 1) and returned in `declared` for
+# disclosure.
+# =============================================================================
+
+_D7_SLOT_ANY = re.compile(
+    r'(?:s\|(\d{1,2}:\d{2})\|f\|(\d{1,2}:\d{2}))'
+    r'|(?:f\|(\d{1,2}:\d{2})\|s\|(\d{1,2}:\d{2}))')
+_D7_FINISH_FIRST = re.compile(r'f\|\d{1,2}:\d{2}\|s\|\d{1,2}:\d{2}')
+_D7_DAY_SEG = re.compile(r'^\(0\|\|([1-7])\(\)')
+_D7_EXC_DATE = re.compile(r'd\|(\d{3,7}|\d{4}-\d{2}-\d{2})\b')
+_D7_ISO_DATE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+
+def _d7_block_after(text, anchor):
+    """Contents of the parenthesised block that follows `anchor`."""
+    i = text.find(anchor)
+    if i < 0:
+        return None
+    j = text.find('(', i + len(anchor))
+    if j < 0:
+        return None
+    if text[j:j + 2] == '()':
+        j = text.find('(', j + 2)
+        if j < 0:
+            return None
+    depth = 0
+    for k in range(j, len(text)):
+        ch = text[k]
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+            if depth == 0:
+                return text[j + 1:k]
+    return None
+
+
+def _d7_segments_of(block):
+    """Split a block into its top-level (...) segments."""
+    segs = []
+    depth = 0
+    start = -1
+    for k, ch in enumerate(block):
+        if ch == '(':
+            if depth == 0:
+                start = k
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+            if depth == 0 and start >= 0:
+                segs.append(block[start:k + 1])
+                start = -1
+    return segs
+
+
+def _d7_hhmm(s):
+    p = s.split(':')
+    return int(p[0]) * 60 + int(p[1])
+
+
+def _d7_slots_of(seg):
+    slots = []
+    for m in _D7_SLOT_ANY.finditer(seg):
+        if m.group(1) is not None:
+            s = _d7_hhmm(m.group(1))
+            f = _d7_hhmm(m.group(2))
+        else:
+            f = _d7_hhmm(m.group(3))
+            s = _d7_hhmm(m.group(4))
+        if f == 0:
+            f = 1440   # fix 2 (and, with s=0, fix 3: full 24h day)
+        if f > s:
+            slots.append((s, f))
+    return slots
+
+
+def _d7_serial_to_date_string(raw_val):
+    v = str(raw_val).strip()
+    if _D7_ISO_DATE.match(v):
+        try:
+            date(int(v[0:4]), int(v[5:7]), int(v[8:10]))
+        except ValueError:
+            return ''
+        return v
+    try:
+        serial = int(v, 10)
+    except ValueError:
+        return ''
+    dt = date(1899, 12, 30) + timedelta(days=serial)
+    if dt.year < 1970 or dt.year > 2099:   # same guard as the oracle harness
+        return ''
+    return dt.strftime('%Y-%m-%d')
+
+
+def decode_clndr_data(clndr_data):
+    """Decode a P6 CALENDAR.clndr_data blob. Mirrors JS decodeClndrData."""
+    out = {
+        'decode_ok': False,
+        'corrupt_fallback': False,
+        'work_days': [],
+        'holidays': [],
+        'special_workdays': [],
+        'week_hours': [0, 0, 0, 0, 0, 0, 0],   # hours/day, index 0=Sun..6=Sat
+        'hours_per_day': None,
+        'declared': None,
+    }
+    raw = '' if clndr_data is None else str(clndr_data)
+    if not raw or '(' not in raw:
+        return out
+
+    week_minutes = [0, 0, 0, 0, 0, 0, 0]
+    finish_first_in_week = False
+    dow_block = _d7_block_after(raw, 'DaysOfWeek')
+    if dow_block is not None:
+        for seg in _d7_segments_of(dow_block):
+            m = _D7_DAY_SEG.match(seg)
+            if not m:
+                continue
+            js_dow = (int(m.group(1)) - 1) % 7   # P6 1=Sun..7=Sat -> 0=Sun..6=Sat
+            if _D7_FINISH_FIRST.search(seg):
+                finish_first_in_week = True
+            mins = 0
+            for sl in _d7_slots_of(seg):
+                mins += sl[1] - sl[0]
+            week_minutes[js_dow] = mins
+    holidays = []
+    specials = []
+    exc_block = _d7_block_after(raw, 'Exceptions')
+    if exc_block is not None:
+        for seg in _d7_segments_of(exc_block):
+            dm = _D7_EXC_DATE.search(seg)
+            if not dm:
+                continue
+            ds = _d7_serial_to_date_string(dm.group(1))
+            if not ds:
+                continue
+            if len(_d7_slots_of(seg)) > 0:
+                specials.append(ds)
+            else:
+                holidays.append(ds)
+    work_days = [i for i in range(7) if week_minutes[i] > 0]
+    week_hours = [mn / 60 for mn in week_minutes]
+
+    if finish_first_in_week:
+        # P6-fallback emulation (see header). Mon-Fri, 8 h/day, NO
+        # exceptions — P6's internal Standard calendar, as demonstrated by
+        # P6's own stored dates. hours 8 is what the measured record class
+        # carries in day_hr_cnt too; a corrupt record declaring different
+        # hours would still fall back to 8 (INFERRED for that case — the
+        # corpus only demonstrates the 8-hour fallback).
+        out['corrupt_fallback'] = True
+        out['decode_ok'] = False
+        out['work_days'] = [1, 2, 3, 4, 5]
+        out['week_hours'] = [0, 8, 8, 8, 8, 8, 0]
+        out['hours_per_day'] = 8
+        out['declared'] = {
+            'work_days': work_days,
+            'week_hours': week_hours,
+            'holidays': holidays,
+            'special_workdays': specials,
+        }
+        return out
+    out['work_days'] = work_days
+    out['week_hours'] = week_hours
+    out['holidays'] = holidays
+    out['special_workdays'] = specials
+    out['decode_ok'] = len(work_days) > 0
+    if work_days:
+        out['hours_per_day'] = max(week_hours[d] for d in work_days)
+    return out
+
+
+def decode_calendar_record(clndr_id, clndr_name, clndr_data, alerts=None):
+    """Decode one CALENDAR row into engine calendar_info, mirroring the JS
+    parseXER integration (cpm-engine.js Section D, D7 block).
+
+    Returns a calendar_info dict directly usable in compute_cpm's cal_map
+    ({work_days, holidays, special_workdays, hours_per_day, p6_fallback?}),
+    or None when clndr_data is empty/undecodable (pre-D7 behaviour for
+    minimal exports — no entry, no alert). A record that trips the
+    corrupt-record predicate gets the P6 Standard-calendar fallback plus the
+    forensic `calendar-corrupt-p6-fallback` ALERT appended to `alerts`
+    (lockstep with the JS parseAlerts surface; parse-time, so computeCPM's
+    crossval-compared alert surface is untouched in both engines).
+    """
+    if not clndr_data:
+        return None
+    dec = decode_clndr_data(clndr_data)
+    if dec['corrupt_fallback']:
+        cal = {
+            'work_days': list(dec['work_days']),
+            'holidays': [],
+            'special_workdays': [],
+            'hours_per_day': 8,
+            'p6_fallback': True,
+        }
+        if isinstance(alerts, list):
+            decl = dec.get('declared') or {}
+            decl_wd = decl.get('work_days') or []
+            decl_hrs = decl.get('week_hours') or []
+            decl_max = 0
+            for d in decl_wd:
+                if d < len(decl_hrs) and decl_hrs[d] > decl_max:
+                    decl_max = decl_hrs[d]
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'calendar-corrupt-p6-fallback',
+                'message': 'FORENSIC FINDING: calendar ' + str(clndr_id) +
+                    ' (' + (clndr_name or 'unnamed') + ') carries a ' +
+                    'corrupt clndr_data record — its weekly shift slots are ' +
+                    "serialized finish-first ((f|HH:MM|s|HH:MM)), a form P6's " +
+                    'own scheduler rejects. P6 demonstrably scheduled the ' +
+                    'activities assigned to such a record on its internal ' +
+                    'default Standard calendar (Mon-Fri, 8 h/day, NO ' +
+                    'exceptions), not on the declared pattern (' +
+                    str(len(decl_wd)) + ' working day(s)/week at ' +
+                    ('%g' % decl_max) +
+                    ' h/day). The engine emulates that fallback so its dates ' +
+                    'match what P6 actually computed. The source record ' +
+                    'should be repaired in the P6 database; dates computed ' +
+                    'on the declared pattern would diverge from every P6 ' +
+                    'reschedule of this file.',
+            })
+        return cal
+    if dec['decode_ok']:
+        return {
+            'work_days': list(dec['work_days']),
+            'holidays': list(dec['holidays']),
+            'special_workdays': list(dec['special_workdays']),
+            'hours_per_day': dec['hours_per_day'],
+        }
+    return None
 
 
 # =============================================================================
@@ -2431,6 +2804,8 @@ def compute_topology_hash(activities, relationships):
 __all__ = [
     'compute_cpm',
     'compute_topology_hash',
+    'decode_clndr_data',
+    'decode_calendar_record',
     'date_to_num',
     'num_to_date',
     'add_work_days',

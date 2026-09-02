@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.42';
+const ENGINE_VERSION = '2.9.43';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2044,6 +2044,30 @@ function computeCPM(activities, relationships, opts) {
         return (_lagCalMode === 'successor') ? calFor(succNode) : calFor(predNode);
     }
 
+    // D1 (retained-logic P6 semantics wave 2026-09-02) — the START-side drive
+    // source of a predecessor. For a STARTED, incomplete predecessor under
+    // retained logic, SS drives (and SF anchors) read the predecessor's
+    // RESTART — where its remaining work begins — never its historical actual
+    // start. Measured against P6's own stored restart/reend dates on a
+    // private oracle corpus of real progressed exports (380/380 in-progress
+    // rows and 148/148 not-started probe rows exact with this rule; the
+    // discriminating SS-from-started-pred exhibit stores restart = the pred's
+    // restart, months after the recorded actual start). For a not-started
+    // predecessor es IS the forecast remaining start, and for a completed
+    // predecessor es is the historical actual — both unchanged. Every started
+    // incomplete node carries `restart` by the time its successors are
+    // processed (topological order): the remaining-duration path stamps it,
+    // and the no-remaining legacy path stamps the D5 definition below.
+    // progress_override is deliberately untouched (unmeasured; design
+    // contract) — it keeps the historical-es drive source.
+    function startDriveSrcFor(pnode) {
+        if (_scheduleMode === 'retained_logic' && !pnode.is_complete &&
+            pnode.restart !== undefined) {
+            return pnode.restart;
+        }
+        return pnode.es;
+    }
+
     // Forward pass.
     for (const code of sortRes.order) {
         const node = nodes[code];
@@ -2132,7 +2156,10 @@ function computeCPM(activities, relationships, opts) {
                 drive = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
                     'FS lag ' + pnode.code + '->' + code);
             } else if (p.type === 'SS') {
-                drive = _advanceWithAlerts(pnode.es, lag, lagCal, alerts,
+                // D1 — SS drives from the predecessor's remaining-start
+                // reference (restart for a started incomplete pred; es
+                // otherwise). See startDriveSrcFor.
+                drive = _advanceWithAlerts(startDriveSrcFor(pnode), lag, lagCal, alerts,
                     'SS lag ' + pnode.code + '->' + code);
             } else if (p.type === 'FF') {
                 const ffAnchor = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
@@ -2141,7 +2168,11 @@ function computeCPM(activities, relationships, opts) {
                     'FF duration ' + code);
                 thisAnchorEF = ffAnchor;
             } else if (p.type === 'SF') {
-                const sfAnchor = _advanceWithAlerts(pnode.es, lag, lagCal, alerts,
+                // D1 — SF anchors from the predecessor's remaining-start
+                // reference, same as SS. INFERRED for SF specifically: the
+                // corpus carries no discriminating SF instance; adopted by
+                // symmetry with the measured SS rule.
+                const sfAnchor = _advanceWithAlerts(startDriveSrcFor(pnode), lag, lagCal, alerts,
                     'SF lag ' + pnode.code + '->' + code);
                 drive = _retreatWithAlerts(sfAnchor, node.duration_days, nodeCal, alerts,
                     'SF duration ' + code);
@@ -2174,14 +2205,30 @@ function computeCPM(activities, relationships, opts) {
                 }
                 // B4 — restart drive (retained logic). FS/SS drives are
                 // already in restart form; FF/SF re-derive from the anchor
-                // with REMAINING duration (INFERRED, see accumulator note).
-                let _rDrive = drive;
-                if ((p.type === 'FF' || p.type === 'SF') && thisAnchorEF !== null &&
-                    Number.isFinite(node.remaining_duration) && node.remaining_duration >= 0) {
-                    _rDrive = _retreatWithAlerts(thisAnchorEF, node.remaining_duration,
-                        nodeCal, alerts, 'restart ' + p.type + ' rem ' + code);
+                // with REMAINING duration (FF measured on the oracle corpus
+                // — the whole-bar pull-back reproduces P6's stored restart
+                // exactly; SF stays INFERRED, no discriminating instance).
+                // D2 (retained-logic P6 semantics wave 2026-09-02) — a
+                // COMPLETED predecessor contributes NOTHING to the restart
+                // of a STARTED successor. Measured: a pred whose actual
+                // finish lands AFTER the data date leaves the started
+                // successor's stored restart at the data date — P6 treats
+                // finished work as history, never as a driver of remaining
+                // work. The shadow (attribution-only) accumulator above is
+                // unchanged: it records what "would have driven". For a
+                // NOT-started successor the completed pred's actual finish
+                // (+lag) keeps driving ES in the main path below (P6's
+                // documented behaviour; the corpus carries no discriminating
+                // instance either way — INFERRED).
+                if (!pnode.is_complete) {
+                    let _rDrive = drive;
+                    if ((p.type === 'FF' || p.type === 'SF') && thisAnchorEF !== null &&
+                        Number.isFinite(node.remaining_duration) && node.remaining_duration >= 0) {
+                        _rDrive = _retreatWithAlerts(thisAnchorEF, node.remaining_duration,
+                            nodeCal, alerts, 'restart ' + p.type + ' rem ' + code);
+                    }
+                    if (_rDrive > _restartMaxDrive) _restartMaxDrive = _rDrive;
                 }
-                if (_rDrive > _restartMaxDrive) _restartMaxDrive = _rDrive;
                 continue;
             }
             if (drive > maxES) {
@@ -2368,8 +2415,27 @@ function computeCPM(activities, relationships, opts) {
             // data date is progress-override behavior, which the engine
             // previously produced regardless of mode.
             let efAnchor = (ddNum > 0 && ddNum > maxES) ? ddNum : maxES;
-            if (_scheduleMode === 'retained_logic' && _restartMaxDrive > efAnchor) {
-                efAnchor = _restartMaxDrive;
+            if (_scheduleMode === 'retained_logic') {
+                if (_restartMaxDrive > efAnchor) {
+                    efAnchor = _restartMaxDrive;
+                }
+                // D3 (retained-logic P6 semantics wave 2026-09-02) — snap the
+                // restart anchor FORWARD on the ACTIVITY calendar, the same
+                // treatment the not-started data-date floor already gets
+                // above. Without this a weekend/holiday data date left
+                // `restart` (and the remaining-bar walk that starts from it)
+                // anchored on a non-working day, undercounting the remaining
+                // bar by the non-worked anchor day. Measured corpus-wide:
+                // P6's stored restart always sits on a working instant of the
+                // activity's own calendar (zero snap-forward failures across
+                // all 51 corpus calendars). progress_override keeps its
+                // documented unsnapped max(actual_start, data date) anchor —
+                // unmeasured, deliberately untouched.
+                if (nodeCal) {
+                    const _snapped = _advanceWithAlerts(efAnchor, 0, nodeCal, alerts,
+                        'restart-snap ' + code);
+                    if (_snapped !== efAnchor) efAnchor = _snapped;
+                }
             }
             node.restart = efAnchor;
             node.ef = _advanceWithAlerts(efAnchor, _remRaw, nodeCal, alerts,
@@ -2439,6 +2505,25 @@ function computeCPM(activities, relationships, opts) {
         // already a member of FATAL_STRICT_CONTEXTS, so a court-grade run stops
         // here instead of publishing a past-dated forecast finish.
         if (hasActualStart && !node.is_complete && !_hasRem) {
+            // D5 (retained-logic P6 semantics wave 2026-09-02) — a started
+            // predecessor with NO remaining_duration still needs a defined
+            // restart as the SS/SF drive source for its successors (see
+            // startDriveSrcFor): restart = max(data date, actual start)
+            // snapped forward on the activity's own calendar. This node's OWN
+            // legacy EF (actual_start + full duration) and the
+            // completion-data-incomplete ALERT below are unchanged — the
+            // engine still does not invent a remaining duration. Stamped for
+            // retained_logic only; progress_override is untouched
+            // (unmeasured; design contract).
+            if (_scheduleMode === 'retained_logic') {
+                let _d5Anchor = (ddNum > 0 && ddNum > actStartNum) ? ddNum : actStartNum;
+                if (nodeCal) {
+                    const _d5Snapped = _advanceWithAlerts(_d5Anchor, 0, nodeCal, alerts,
+                        'restart-snap ' + code);
+                    if (_d5Snapped !== _d5Anchor) _d5Anchor = _d5Snapped;
+                }
+                node.restart = _d5Anchor;
+            }
             alerts.push({
                 severity: 'ALERT',
                 context: 'completion-data-incomplete',
@@ -3128,18 +3213,28 @@ function computeCPM(activities, relationships, opts) {
             // A's free float is 0, not negative-to-the-actual.
             const _snStartAnchor = (sn.actual_start && !sn.is_complete &&
                 sn.restart !== undefined) ? sn.restart : sn.es;
+            // D1 (retained-logic P6 semantics wave 2026-09-02) — the
+            // PREDECESSOR side of an SS/SF slack measurement uses the same
+            // remaining-start reference the forward pass drove with
+            // (startDriveSrcFor: restart for a started incomplete pred, es
+            // otherwise). Same v2.9.42 principle as the lag calendar two
+            // lines up: free float must be measured against the anchor the
+            // schedule actually used, or a started SS-driving predecessor
+            // reports phantom positive float against its own historical
+            // actual start.
+            const _nStartAnchor = startDriveSrcFor(n);
             let predAnchor, succAnchor;
             if (s.type === 'FS') {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FS');
                 succAnchor = _snStartAnchor;
             } else if (s.type === 'SS') {
-                predAnchor = _advanceWithAlerts(n.es, lag, succCal, _slackAlertSink, 'FF-slack SS');
+                predAnchor = _advanceWithAlerts(_nStartAnchor, lag, succCal, _slackAlertSink, 'FF-slack SS');
                 succAnchor = _snStartAnchor;
             } else if (s.type === 'FF') {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FF');
                 succAnchor = sn.ef;
             } else if (s.type === 'SF') {
-                predAnchor = _advanceWithAlerts(n.es, lag, succCal, _slackAlertSink, 'FF-slack SF');
+                predAnchor = _advanceWithAlerts(_nStartAnchor, lag, succCal, _slackAlertSink, 'FF-slack SF');
                 succAnchor = sn.ef;
             } else {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack default');
@@ -3397,6 +3492,202 @@ function computeCPM(activities, relationships, opts) {
 // including the v14 SF forward-pass fix (predTask.ES, not predTask.EF).
 // ============================================================================
 
+// ============================================================================
+// D7 (retained-logic P6 semantics wave 2026-09-02) — CALENDAR.clndr_data
+// decoder. P6 serializes each calendar's weekly shift pattern and dated
+// exceptions into the clndr_data blob:
+//
+//   (0||CalendarData()(
+//      (0||DaysOfWeek()(
+//         (0||1()())                                  <- day 1 = Sunday, off
+//         (0||2()((0||0(s|08:00|f|16:00)())))         <- Monday, one shift
+//         ...))
+//      (0||Exceptions()(
+//         (0||0(d|40179)())                           <- serial, no shift = OFF
+//         (0||0(d|45868)((0||0(s|08:00|f|17:00)())))  <- serial + shift = ON
+//         ...))))
+//
+// Exception date values are Excel serials on the 1899-12-30 epoch. Output is
+// the engine's day-level calendar shape ({work_days, holidays,
+// special_workdays}) plus decoded per-day hours for characterization.
+//
+// Three grammar cases beyond the common form, measured on a private oracle
+// corpus of real P6 22.x-24.x exports (51 calendars; after these fixes every
+// one decodes with hours/day matching its own day_hr_cnt field):
+//   1. Slot pairs serialized finish-first: (f|HH:MM|s|HH:MM). Observed ONLY
+//      on a corrupt record class P6 itself refuses (see fallback below).
+//   2. f|00:00 means midnight END of shift (1440 min), not 0 — '7x24' shift
+//      calendars otherwise decode to negative day lengths.
+//   3. s|00:00|f|00:00 is a full 24-hour working day — '24 Hours x 7 Days'
+//      calendars otherwise decode as never-working.
+//
+// P6-FALLBACK EMULATION (forensic finding, not a repair): when a record's
+// DaysOfWeek block carries one or more finish-first slot pairs, P6's own
+// scheduler demonstrably does NOT honour the record — measured on four
+// independent real exports carrying such a record: every one of 130
+// unambiguous not-started spans on the assigned calendar walks Mon-Fri, zero
+// forecast stamps land on the declared working Saturday, statutory holidays
+// are worked, and every finish stamp closes at the DEFAULT calendar's
+// closing time. P6 fell back to its internal Standard calendar: Mon-Fri,
+// 8 h/day, NO exceptions. The decoder emulates exactly that fallback and
+// reports `corrupt_fallback: true` so the caller can emit the forensic
+// ALERT (parseXER below does). The detection predicate is precisely
+// "finish-first slot pair inside the DaysOfWeek block": every corpus
+// calendar that decodes cleanly is serialized start-first and can never
+// trigger it. The record's DECLARED pattern is still decoded (via fix 1)
+// and returned in `declared` for disclosure.
+function decodeClndrData(clndrData) {
+    const out = {
+        decode_ok: false,
+        corrupt_fallback: false,
+        work_days: [],
+        holidays: [],
+        special_workdays: [],
+        week_hours: [0, 0, 0, 0, 0, 0, 0],   // hours per day, index 0=Sun..6=Sat
+        hours_per_day: null,
+        declared: null,
+    };
+    const raw = (clndrData === null || clndrData === undefined) ? '' : String(clndrData);
+    if (!raw || raw.indexOf('(') === -1) return out;
+
+    // Contents of the parenthesised block that follows `anchor`.
+    function blockAfter(text, anchor) {
+        const i = text.indexOf(anchor);
+        if (i < 0) return null;
+        let j = text.indexOf('(', i + anchor.length);
+        if (j < 0) return null;
+        if (text.substr(j, 2) === '()') {
+            j = text.indexOf('(', j + 2);
+            if (j < 0) return null;
+        }
+        let depth = 0;
+        for (let k = j; k < text.length; k++) {
+            if (text[k] === '(') depth += 1;
+            else if (text[k] === ')') {
+                depth -= 1;
+                if (depth === 0) return text.substring(j + 1, k);
+            }
+        }
+        return null;
+    }
+    // Split a block into its top-level (...) segments.
+    function segmentsOf(block) {
+        const segs = [];
+        let depth = 0;
+        let start = -1;
+        for (let k = 0; k < block.length; k++) {
+            const ch = block[k];
+            if (ch === '(') {
+                if (depth === 0) start = k;
+                depth += 1;
+            } else if (ch === ')') {
+                depth -= 1;
+                if (depth === 0 && start >= 0) {
+                    segs.push(block.substring(start, k + 1));
+                    start = -1;
+                }
+            }
+        }
+        return segs;
+    }
+    function hhmm(s) {
+        const p = s.split(':');
+        return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+    }
+    const SLOT_ANY =
+        /(?:s\|(\d{1,2}:\d{2})\|f\|(\d{1,2}:\d{2}))|(?:f\|(\d{1,2}:\d{2})\|s\|(\d{1,2}:\d{2}))/g;
+    const FINISH_FIRST = /f\|\d{1,2}:\d{2}\|s\|\d{1,2}:\d{2}/;
+    function slotsOf(seg) {
+        const slots = [];
+        SLOT_ANY.lastIndex = 0;
+        let m;
+        while ((m = SLOT_ANY.exec(seg)) !== null) {
+            let s, f;
+            if (m[1] !== undefined) { s = hhmm(m[1]); f = hhmm(m[2]); }
+            else { f = hhmm(m[3]); s = hhmm(m[4]); }
+            if (f === 0) f = 1440;   // fix 2 (and, with s=0, fix 3: full 24h day)
+            if (f > s) slots.push([s, f]);
+        }
+        return slots;
+    }
+    function serialToDateString(rawVal) {
+        const v = String(rawVal).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+            const dt = new Date(v + 'T00:00:00Z');
+            return Number.isNaN(dt.getTime()) ? '' : v;
+        }
+        const serial = parseInt(v, 10);
+        if (!Number.isFinite(serial)) return '';
+        const dt = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+        const y = dt.getUTCFullYear();
+        if (y < 1970 || y > 2099) return '';   // same guard as the oracle harness
+        return y + '-' + _pad2(dt.getUTCMonth() + 1) + '-' + _pad2(dt.getUTCDate());
+    }
+
+    const weekMinutes = [0, 0, 0, 0, 0, 0, 0];
+    let finishFirstInWeek = false;
+    const dowBlock = blockAfter(raw, 'DaysOfWeek');
+    if (dowBlock) {
+        for (const seg of segmentsOf(dowBlock)) {
+            const m = seg.match(/^\(0\|\|([1-7])\(\)/);
+            if (!m) continue;
+            const jsDow = (parseInt(m[1], 10) - 1) % 7;   // P6 1=Sun..7=Sat -> 0=Sun..6=Sat
+            if (FINISH_FIRST.test(seg)) finishFirstInWeek = true;
+            let mins = 0;
+            for (const sl of slotsOf(seg)) mins += sl[1] - sl[0];
+            weekMinutes[jsDow] = mins;
+        }
+    }
+    const holidays = [];
+    const specials = [];
+    const excBlock = blockAfter(raw, 'Exceptions');
+    if (excBlock) {
+        for (const seg of segmentsOf(excBlock)) {
+            const dm = seg.match(/d\|(\d{3,7}|\d{4}-\d{2}-\d{2})\b/);
+            if (!dm) continue;
+            const ds = serialToDateString(dm[1]);
+            if (!ds) continue;
+            if (slotsOf(seg).length > 0) specials.push(ds);
+            else holidays.push(ds);
+        }
+    }
+    const workDays = [];
+    for (let i = 0; i < 7; i++) if (weekMinutes[i] > 0) workDays.push(i);
+    const weekHours = weekMinutes.map((mn) => mn / 60);
+
+    if (finishFirstInWeek) {
+        // P6-fallback emulation (see header). Mon-Fri, 8 h/day, NO
+        // exceptions — P6's internal Standard calendar, as demonstrated by
+        // P6's own stored dates. hours 8 is what the measured record class
+        // carries in day_hr_cnt too; a corrupt record declaring different
+        // hours would still fall back to 8 (INFERRED for that case — the
+        // corpus only demonstrates the 8-hour fallback).
+        out.corrupt_fallback = true;
+        out.decode_ok = false;
+        out.work_days = [1, 2, 3, 4, 5];
+        out.week_hours = [0, 8, 8, 8, 8, 8, 0];
+        out.hours_per_day = 8;
+        out.declared = {
+            work_days: workDays,
+            week_hours: weekHours,
+            holidays: holidays,
+            special_workdays: specials,
+        };
+        return out;
+    }
+    out.work_days = workDays;
+    out.week_hours = weekHours;
+    out.holidays = holidays;
+    out.special_workdays = specials;
+    out.decode_ok = workDays.length > 0;
+    if (workDays.length > 0) {
+        let maxH = 0;
+        for (const d of workDays) if (weekHours[d] > maxH) maxH = weekHours[d];
+        out.hours_per_day = maxH;
+    }
+    return out;
+}
+
 const _MC = {
     tasks: {},        // { taskId: {...} }
     predecessors: [], // [{ predTaskId, taskId, type, lag }]
@@ -3439,6 +3730,13 @@ const _MC = {
     // computeCPM could only ever be run on the caller's assumptions. Captured
     // here so a caller can pass the file's OWN settings through instead.
     schedOptions: {},          // first SCHEDOPTIONS row, verbatim
+    // D7 (retained-logic P6 semantics wave 2026-09-02) — day-level calendars
+    // decoded from CALENDAR.clndr_data (see decodeClndrData). Shape per
+    // entry: { work_days, holidays, special_workdays, hours_per_day,
+    // p6_fallback? } — directly usable as computeCPM's opts.calMap. Also
+    // consumed by _resolveHammocks for duration_working_days. null until a
+    // parse populates it (resetMC restores null).
+    calMap: null,              // { clndr_id: calendarInfo } | null
 };
 
 function parseXER(content) {
@@ -3466,6 +3764,9 @@ function parseXER(content) {
     _MC.calendarHoursPerDay = {};
     _MC.taskClndrId = {};
     _MC.schedOptions = {};
+    // D7 — decoded calendars reset per parse (same cross-file-leak rationale
+    // as calendarHoursPerDay above).
+    _MC.calMap = {};
     // v2.9.3 — track silently-dropped activities so callers can surface them.
     // Previously TT_LOE / TT_WBS / fully-completed (remaining<=0) rows were
     // discarded without leaving a trace; now every drop is enumerated below.
@@ -3524,6 +3825,58 @@ function parseXER(content) {
                     const _hpd = parseFloat(row.day_hr_cnt);
                     if (Number.isFinite(_hpd) && _hpd > 0) {
                         _MC.calendarHoursPerDay[clndr_id] = _hpd;
+                    }
+                    // D7 — decode clndr_data into the day-level calMap.
+                    // Empty/absent clndr_data yields no entry and no alert
+                    // (pre-D7 behaviour for minimal exports). A record that
+                    // trips the corrupt-record predicate gets the P6
+                    // Standard-calendar fallback plus a forensic ALERT.
+                    if (row.clndr_data) {
+                        const _dec = decodeClndrData(row.clndr_data);
+                        if (_dec.corrupt_fallback) {
+                            _MC.calMap[clndr_id] = {
+                                work_days: _dec.work_days.slice(),
+                                holidays: [],
+                                special_workdays: [],
+                                hours_per_day: 8,
+                                p6_fallback: true,
+                            };
+                            // P6's fallback is its internal Standard calendar
+                            // (8 h/day); override the record's own day_hr_cnt
+                            // so hour->day conversions match the emulation.
+                            _MC.calendarHoursPerDay[clndr_id] = 8;
+                            const _declWd = (_dec.declared && _dec.declared.work_days) || [];
+                            const _declHrs = (_dec.declared && _dec.declared.week_hours) || [];
+                            let _declMax = 0;
+                            for (const _d of _declWd) {
+                                if (_declHrs[_d] > _declMax) _declMax = _declHrs[_d];
+                            }
+                            _MC.parseAlerts.push({
+                                severity: 'ALERT',
+                                context: 'calendar-corrupt-p6-fallback',
+                                message: 'FORENSIC FINDING: calendar ' + clndr_id +
+                                    ' (' + (row.clndr_name || 'unnamed') + ') carries a ' +
+                                    'corrupt clndr_data record — its weekly shift slots are ' +
+                                    'serialized finish-first ((f|HH:MM|s|HH:MM)), a form P6\'s ' +
+                                    'own scheduler rejects. P6 demonstrably scheduled the ' +
+                                    'activities assigned to such a record on its internal ' +
+                                    'default Standard calendar (Mon-Fri, 8 h/day, NO ' +
+                                    'exceptions), not on the declared pattern (' +
+                                    _declWd.length + ' working day(s)/week at ' + _declMax +
+                                    ' h/day). The engine emulates that fallback so its dates ' +
+                                    'match what P6 actually computed. The source record ' +
+                                    'should be repaired in the P6 database; dates computed ' +
+                                    'on the declared pattern would diverge from every P6 ' +
+                                    'reschedule of this file.',
+                            });
+                        } else if (_dec.decode_ok) {
+                            _MC.calMap[clndr_id] = {
+                                work_days: _dec.work_days.slice(),
+                                holidays: _dec.holidays.slice(),
+                                special_workdays: _dec.special_workdays.slice(),
+                                hours_per_day: _dec.hours_per_day,
+                            };
+                        }
                     }
                 }
             }
@@ -5115,6 +5468,9 @@ function _resolveHammocks(projectFinish, log, alerts, projectStart) {
 function getTasks() { return _MC.tasks; }
 function getRelationships() { return _MC.predecessors; }
 function getHammocks() { return _MC.hammocks; }
+// D7 — calendars decoded from the last parseXER (see decodeClndrData);
+// directly usable as computeCPM's opts.calMap. null before any parse.
+function getCalMap() { return _MC.calMap; }
 function resetMC() {
     _MC.tasks = {};
     _MC.predecessors = [];
@@ -9684,6 +10040,8 @@ const _api = {
     computeCPM,
     // Section D
     parseXER, runCPM, getTasks, getRelationships, getHammocks, resetMC,
+    // D7 — clndr_data decode + parsed day-level calendars
+    decodeClndrData, getCalMap,
     // Section F
     computeCPMSalvaging,
     // Section G

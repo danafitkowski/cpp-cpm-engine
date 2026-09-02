@@ -32,14 +32,30 @@ have been applied:
 2. Surfaces NOT used by the cross-validation harness have been removed:
    `compute_cpm_salvaging`, `compute_lpm`, `compute_cpm_with_strategies`,
    `compute_float_burndown`, `_tarjan_scc`, the SVG renderer. What remains
-   matches what `cpm-engine.crossval.js` imports — `compute_cpm` + `date_to_num`.
+   matches what `cpm-engine.crossval.js` imports — `compute_cpm` +
+   `date_to_num` — plus, as of v2.9.43, the D7 clndr_data decoder
+   (`decode_clndr_data` / `decode_calendar_record`), the Python parity twin
+   of the JS parseXER-side calendar decode.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  76cff49530497bd1c6b9a68cb68a3fa6996660d50249708176a86aa0616a77b0
+cpm.py  SHA-256:  7249f3ed0e116735b2d80286dbeec437c71c19336eeb30ca2a911dea3bc0edfd
 
-(post-v2.9.39 - bumped from da792b52... by c279a5c: embedded coverage-gap
+(v2.9.43 retained-logic P6 semantics wave 2026-09-02 - bumped from
+76cff495...: SS/SF drives from a started incomplete predecessor read its
+RESTART rather than its historical actual start (D1); completed
+predecessors no longer feed the restart drives of a started successor (D2);
+the in-progress restart anchor snaps forward on the activity calendar (D3);
+a started activity with no remaining_duration gets a defined restart =
+snap_fwd(max(data date, actual start)) as an SS/SF drive source (D5); and
+the clndr_data decoder with P6 Standard-calendar fallback emulation +
+calendar-corrupt-p6-fallback forensic ALERT is ported (D7). Derived from
+P6's own stored restart/reend dates on a private oracle corpus of real
+progressed exports: 380/380 in-progress rows and 148/148 not-started probe
+rows exact under the implemented rule; SF and the D2 not-started branch
+remain INFERRED (no discriminating corpus instance). Prior:
+post-v2.9.39 - bumped from da792b52... by c279a5c: embedded coverage-gap
 disclosure strings in the module header only, no math change. Prior:
 v2.9.39 release 2026-08-11 from 89fb6f05...: ENGINE_VERSION sync
 2.9.34 -> 2.9.39 only, no math change. Prior: P6 alignment wave B4+B5
@@ -156,8 +172,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 116747
-  sha-256:  76cff49530497bd1c6b9a68cb68a3fa6996660d50249708176a86aa0616a77b0
+  bytes: 134039
+  sha-256:  7249f3ed0e116735b2d80286dbeec437c71c19336eeb30ca2a911dea3bc0edfd
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
