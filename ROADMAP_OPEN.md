@@ -71,6 +71,15 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 2. **Cross-exam-prep responses** in [`docs/cross-exam-prep.md`](docs/cross-exam-prep.md) are keyed to the Q# column. ACCEPTED-LIMITATION items always have a Q#.
 3. **OPEN items** make the engine's roadmap visible to opposing counsel and to the trier of fact. That visibility is the forensic-discipline posture — better than silently leaving items out.
 
+## Status at v2.9.43 (reviewed 2026-09-07)
+
+No audit item changed status between v2.9.39 and v2.9.43; the two releases since v2.9.39 moved the validation surface, not the register:
+
+- **v2.9.42, v2.9.43 (retained-logic wave, 2026-09-02).** Progress-override and retained-logic scheduling aligned to P6 semantics on an empirical rule set (380 of 380 observed P6 outcomes reproduced in the private oracle harness). Cross-validation at v2.9.42 reads 1,009 of 1,015 field comparisons executed, 6 not compared, 0 failures, across 46 fixtures (`validation.html` on the practice site records the run). JS unit tests 1,273.
+- **Reported-figures fix (2026-09-03).** Five defects in the figures that reach a deliverable face were fixed and deployed on the hosted server; no engine math changed.
+- **Item 6 stays as recorded:** 13 / 13 is fitted to the one 2026-08-11 capture. The independent held-out capture (about one hour in P6) remains Dana's action and is the only thing that turns the matrix from fitted to blind.
+- **Item 8 stays OPEN:** no real-XER corpus consent has been sought; the private oracle harness covers the same ground for engine development but cannot be published, so the public item is neither closed nor superseded.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.39. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.43. Update on every release that closes or opens an audit item.
