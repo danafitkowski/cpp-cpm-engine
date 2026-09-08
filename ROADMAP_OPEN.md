@@ -26,7 +26,7 @@
 | 5 | Version-refs gate silently skips missing release-evidence | CLOSED v2.9.33 | — | Now WARN-by-default + FATAL when `CHECK_RELEASE_EVIDENCE=1` |
 | 6 | P6 comparison framework has no analyst captures | CLOSED v2.9.39 (fitted) | Q3 | One P6 23.12 capture covering all 13 cases landed 2026-08-11 (commit `9b748cc`) and scored 6 PASS / 7 FAIL; five divergence families were fixed against it in commits `23ffeca`, `264de84`, `bf442d5`, `05dc8b4` and the regenerated matrix now reads 13 / 13. Fitted to that one capture, no held-out case, so an independent second capture stays OPEN. |
 | 7 | Cases 14/15 in P6 matrix not P6-comparable | CLOSED v2.9.33 | Q11 | Moved to `validation/engine-limitations/` |
-| 8 | Synthetic XER corpus — no real-world XERs | **OPEN — Dana's action** | Q4, Q5 | `validation/real-xer-corpus/` placeholder created; awaits consent + sourcing |
+| 8 | Synthetic XER corpus — no real-world XERs | CLOSED v2.9.43 (superseded) | Q4, Q5 | Closed 2026-09-08 as superseded by the maintainer's private P6 oracle harness, which exercises real project exports under confidentiality and cannot be published. No owner consent will be sought for a public corpus; the public validation surface remains the synthetic corpus plus the P6 comparison matrix. |
 | 9 | Clean baseline emits 23 alerts | **ACCEPTED-LIMITATION** | Q6 | Parser logs every event (INFO/WARN/ALERT) by forensic-discipline design; case READMEs explain breakdown. **v2.9.34** — full per-alert triage at `validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md` (single root cause: corpus harness does not pass `cal_map`; 9 forward + 14 backward variants of the same fallback). |
 | 10 | 1k-activity scale stress is trivial FS chain | CLOSED v2.9.34 | Q7 | New case `13-large-1000-dag-branching` — 10-phase diamond cascade, 5-way fan-out + 5-way fan-in at every phase boundary, 1020 activities / 1059 relationships. Topology regression at `tests/corpus-dag-fixture.test.js`. |
 | 11 | docs/jurisdictions.md bottom guarantee wrong | CLOSED v2.9.33 | — | Both top + bottom now describe ISO date strings correctly |
@@ -60,7 +60,7 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 ## Validation surface roadmap
 
 - **P6 comparison matrix population** — Dana's action; cases 1-13 are populated from a single capture taken on 2026-08-11 against Primavera P6 Professional 23.12, and the matrix now stands 13 / 13 PASS. That result is fitted, not blind: the first capture scored 6/13 and five divergence families were then corrected against P6's pinned answers, so the remaining action is one independent held-out capture. (#6 / Q3) Engineering scaffolding shipped in v2.9.34 — `scripts/validate-p6-comparison.js` validates populated CSVs against schema + engine-column accuracy; `docs/p6-comparison-schema.md` documents the format.
-- **Real-XER corpus** — Dana's action; sanitization + consent process for 5-10 real project schedules. (#8 / Q4, Q5)
+- **Real-XER corpus** — closed 2026-09-08, superseded by the private oracle harness (see #8). No public corpus is planned.
 - **1k-10k DAG fixtures** — first 1k DAG fixture shipped v2.9.34 (`13-large-1000-dag-branching`, 10-phase diamond cascade with branching + merging). Expansion toward 10k DAG with parametric topology is a future engineering item.
 - **MPXJ Java-bridge crossval** — engineering roadmap; second-implementation external verification beyond JS↔Python parity. (DAUBERT §10)
 - **AACE TCM Forum submission** — Dana's action; formal peer review path. (DAUBERT §3 / §10)
@@ -78,7 +78,7 @@ No audit item changed status between v2.9.39 and v2.9.43; the two releases since
 - **v2.9.42, v2.9.43 (retained-logic wave, 2026-09-02).** Progress-override and retained-logic scheduling aligned to P6 semantics on an empirical rule set (380 of 380 observed P6 outcomes reproduced in the private oracle harness). Cross-validation at v2.9.42 reads 1,009 of 1,015 field comparisons executed, 6 not compared, 0 failures, across 46 fixtures (`validation.html` on the practice site records the run). JS unit tests 1,273.
 - **Reported-figures fix (2026-09-03).** Five defects in the figures that reach a deliverable face were fixed and deployed on the hosted server; no engine math changed.
 - **Item 6 stays as recorded:** 13 / 13 is fitted to the one 2026-08-11 capture. The independent held-out capture (about one hour in P6) remains Dana's action and is the only thing that turns the matrix from fitted to blind.
-- **Item 8 stays OPEN:** no real-XER corpus consent has been sought; the private oracle harness covers the same ground for engine development but cannot be published, so the public item is neither closed nor superseded.
+- **Item 8 closed 2026-09-08** as superseded by the private oracle harness; no public corpus is planned.
 
 ## Document version
 
