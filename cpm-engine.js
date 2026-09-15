@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.43';
+const ENGINE_VERSION = '2.9.44';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -999,6 +999,109 @@ function _retreatWithAlerts(endNum, nDays, calendarInfo, alerts, ctx) {
     return subtractWorkDays(endNum, nDays, calendarInfo);
 }
 
+// ----------------------------------------------------------------------------
+// v2.9.44 — finish INSTANTS for cross-calendar logic (paired with cpm.py).
+//
+// The engine carries an early finish as a BOUNDARY: the opening of the next
+// working day on the FINISHING activity's own calendar (Monday for a Friday
+// finish on Mon-Fri). P6 carries it as an INSTANT: the close of the last
+// worked period (Friday 17:00). The two name the same moment only when the
+// successor shares the calendar. A seven-day successor of that Friday finish
+// starts on Saturday in P6; a successor whose calendar works the
+// predecessor's holiday starts on the holiday; a successor with a blackout
+// starts after the blackout. Measured on a 2,898-activity real export with
+// five active calendars, every residual root divergence between the engine
+// and P6's stored early dates was one of these shapes once the dates the
+// file's own logic cannot produce were pinned.
+//
+// The day-number representation stays: an instant is the calendar day whose
+// opening it is (Friday 17:00 = Saturday's opening = Saturday's day number).
+// Nodes carry both: `ef` / `ef_date` remain the boundary on the activity's
+// own calendar (what every existing consumer reads), `ef_instant` is what
+// successors are driven from.
+// ----------------------------------------------------------------------------
+
+function _instantOf(dtStr) {
+    // Day-number instant of a P6 date-time string: 'YYYY-MM-DD' (or a morning
+    // time) is the opening of that day; a time at or after 12:00 is the close
+    // of that day, i.e. the opening of the next calendar day.
+    if (dtStr === null || dtStr === undefined) return 0;
+    const s = String(dtStr).trim();
+    const n = dateToNum(s);
+    if (n <= 0) return n;
+    if (s.length >= 13 && (s[10] === ' ' || s[10] === 'T') && /^\d{2}$/.test(s.slice(11, 13))) {
+        if (parseInt(s.slice(11, 13), 10) >= 12) return n + 1;
+    }
+    return n;
+}
+
+function _boundaryToInstant(boundaryNum, calendarInfo, alerts, ctx) {
+    // Instant (opening of the calendar day after the last worked day) for a
+    // working-day boundary on calendarInfo. No calendar: the boundary itself.
+    if (boundaryNum <= 0 || !calendarInfo) return boundaryNum;
+    return _retreatWithAlerts(boundaryNum, 1, calendarInfo, alerts, ctx) + 1;
+}
+
+function _lagFromInstant(instant, lag, lagCal, alerts, ctx) {
+    // Consume `lag` working days on lagCal starting at `instant`; returns an
+    // instant. P6 semantics: a positive lag is working time counted from the
+    // predecessor's finish instant on the lag calendar (Friday 17:00 + 1 day
+    // on Mon-Fri is Monday 17:00), a negative lag is working time retreated
+    // from it (Friday 17:00 - 1 day is Friday 08:00), zero leaves the instant
+    // alone. Without a calendar the single ordinal-arithmetic call (and its
+    // ALERT) is the same one the pre-instant walk made.
+    if (instant <= 0 || !lagCal) {
+        return _advanceWithAlerts(instant, lag, lagCal, alerts, ctx);
+    }
+    const _lagRaw = Number(lag);
+    const n = _roundHalfUp(Number.isFinite(_lagRaw) ? _lagRaw : 0);
+    if (n === 0) return instant;
+    if (n > 0) {
+        const start = _advanceWithAlerts(instant, 0, lagCal, alerts, ctx);
+        const boundary = _advanceWithAlerts(start, lag, lagCal, alerts, ctx);
+        return _boundaryToInstant(boundary, lagCal, alerts, ctx);
+    }
+    return _advanceWithAlerts(instant, lag, lagCal, alerts, ctx);
+}
+
+function _snapFwd(num, calendarInfo, alerts, ctx) {
+    // First working day of calendarInfo at or after num (no-op without a
+    // calendar, so the no-calendar path emits no extra ALERT).
+    if (num <= 0 || !calendarInfo) return num;
+    return _advanceWithAlerts(num, 0, calendarInfo, alerts, ctx);
+}
+
+function _snapBwd(num, calendarInfo, alerts, ctx) {
+    // Last working day of calendarInfo at or before num (no-op without a
+    // calendar).
+    if (num <= 0 || !calendarInfo) return num;
+    return _retreatWithAlerts(num, 0, calendarInfo, alerts, ctx);
+}
+
+function _lagBackFromInstant(instant, lag, lagCal, alerts, ctx) {
+    // Backward mirror of _lagFromInstant: the instant `lag` working days of
+    // lagCal BEFORE `instant` (a positive lag retreats, a negative lag - a
+    // lead - advances by the forward rule, zero leaves the instant alone).
+    // Without a calendar the single ordinal-arithmetic call (and its ALERT)
+    // is the same one the pre-instant walk made.
+    if (instant <= 0 || !lagCal) {
+        return _retreatWithAlerts(instant, lag, lagCal, alerts, ctx);
+    }
+    const _lagRaw = Number(lag);
+    const n = _roundHalfUp(Number.isFinite(_lagRaw) ? _lagRaw : 0);
+    if (n === 0) return instant;
+    if (n > 0) return _retreatWithAlerts(instant, lag, lagCal, alerts, ctx);
+    return _lagFromInstant(instant, -lag, lagCal, alerts, ctx);
+}
+
+function _finishInstant(pnode) {
+    // The instant a successor is driven from: the node's finish instant when
+    // the forward pass (or a timed actual finish) stamped one, else its boundary.
+    const inst = pnode.ef_instant;
+    if (Number.isFinite(inst) && inst > 0) return inst;
+    return pnode.ef;
+}
+
 // ============================================================================
 // SECTION B — Topological sort (Kahn's) + Tarjan SCC for cycle isolation
 // ============================================================================
@@ -1469,7 +1572,10 @@ function computeCPM(activities, relationships, opts) {
     // avoids rebuilding new Set(holidays). Caller's calMap is not mutated.
     const rawCalMap = opts.calMap || opts.cal_map || {};
     const calMap = _preResolveCalendars(rawCalMap, alerts);
-    const ddNum = dataDate ? dateToNum(dataDate) : 0;
+    // v2.9.44 — the data date is an INSTANT too: 'YYYY-MM-DD 17:00' (the
+    // close of that day) floors remaining work on the NEXT day, exactly as P6
+    // does; a date-only or morning value is the opening of that day, unchanged.
+    const ddNum = dataDate ? _instantOf(dataDate) : 0;
 
     // Build node map.
     // We track insertion order in a separate array because JavaScript's
@@ -1665,6 +1771,18 @@ function computeCPM(activities, relationships, opts) {
         _alertOnSilentDateCoerce(actualFinish, 'actual_finish', code);
         let es = a.early_start ? dateToNum(a.early_start) : 0;
         let ef = a.early_finish ? dateToNum(a.early_finish) : 0;
+        // v2.9.44 — a completed predecessor drives its successors from its
+        // actual-finish INSTANT. The P6 string carries the time ('2027-03-05
+        // 17:00' is the close of Friday, so a Mon-Fri successor starts Monday
+        // and a seven-day one Saturday); a date-only value has no instant and
+        // keeps the legacy reading, the finish day itself. The node keeps the
+        // date part for display, as before.
+        let efInstant = 0;
+        if (isComplete && actualFinish) {
+            efInstant = _instantOf(actualFinish);
+        } else if (isComplete) {
+            efInstant = ef;
+        }
         if (isComplete && actualFinish) {
             ef = dateToNum(actualFinish);
             // v2.9.13 F1-Bug3 — Forensic data-quality check: actual_finish
@@ -1762,9 +1880,15 @@ function computeCPM(activities, relationships, opts) {
             tf: 0,
             is_complete: isComplete,
             is_fragnet: !!a.is_fragnet,
-            actual_start: actualStart,
-            actual_finish: actualFinish,
+            actual_start: String(actualStart).trim().slice(0, 10),
+            actual_finish: String(actualFinish).trim().slice(0, 10),
             clndr_id: a.clndr_id || '',
+            // v2.9.44 — finish instant (stamped by the forward pass for
+            // incomplete nodes) and the P6 task type, which decides whether a
+            // zero-duration node sits at its driving instant (TT_FinMile) or
+            // at its own calendar's next working start (everything else).
+            ef_instant: efInstant,
+            task_type: _tt,
             // v2.9.12 T1.6 — thread `alerts` + activity code so unrecognized
             // tokens / incomplete dates emit a forensically-visible WARN
             // instead of silently dropping. Backward-compat: callers that
@@ -2136,6 +2260,9 @@ function computeCPM(activities, relationships, opts) {
         // duration rather than full duration (INFERRED — no P6 capture of
         // an FF/SF-into-in-progress combination exists yet; case 10 is FS).
         let _restartMaxDrive = 0;
+        // v2.9.44 — [snapped drive, instant] per relationship, so a finish
+        // milestone can sit at the instant that actually drove it.
+        const _driveInstants = [];
         // v2.9.12 F2.2 — FF/SF finish-anchor identity. Round-tripping
         // retreat→advance through duration drifts off the anchor whenever
         // the anchor lies on a non-workday under nodeCal. Capture the
@@ -2152,34 +2279,53 @@ function computeCPM(activities, relationships, opts) {
             // (see lagCalFor); the DURATION walk stays on this activity's own
             // calendar, which is a different question.
             const lagCal = lagCalFor(pnode, node);
+            // v2.9.44 — every drive is computed as an INSTANT (the
+            // predecessor's finish or start instant, the lag consumed as
+            // working time on the lag calendar from that instant) and then
+            // snapped onto THIS activity's own calendar, which is where P6
+            // puts an early start. Before this, the predecessor's boundary
+            // was handed over as-is and the lag walk snapped onto the LAG
+            // calendar, so a successor could start on a day its own calendar
+            // does not work, and a seven-day successor of a Friday finish
+            // started on Monday instead of Saturday.
             if (p.type === 'FS') {
-                drive = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
-                    'FS lag ' + pnode.code + '->' + code);
+                const _ctx = 'FS lag ' + pnode.code + '->' + code;
+                const driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
+                _driveInstants.push([drive, driveInstant]);
             } else if (p.type === 'SS') {
                 // D1 — SS drives from the predecessor's remaining-start
                 // reference (restart for a started incomplete pred; es
                 // otherwise). See startDriveSrcFor.
-                drive = _advanceWithAlerts(startDriveSrcFor(pnode), lag, lagCal, alerts,
-                    'SS lag ' + pnode.code + '->' + code);
+                const _ctx = 'SS lag ' + pnode.code + '->' + code;
+                const driveInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
+                drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
+                _driveInstants.push([drive, driveInstant]);
             } else if (p.type === 'FF') {
-                const ffAnchor = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
-                    'FF lag ' + pnode.code + '->' + code);
+                const _ctx = 'FF lag ' + pnode.code + '->' + code;
+                const anchorInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                const ffAnchor = _snapFwd(anchorInstant, nodeCal, alerts, _ctx);
                 drive = _retreatWithAlerts(ffAnchor, node.duration_days, nodeCal, alerts,
                     'FF duration ' + code);
                 thisAnchorEF = ffAnchor;
+                _driveInstants.push([ffAnchor, anchorInstant]);
             } else if (p.type === 'SF') {
                 // D1 — SF anchors from the predecessor's remaining-start
                 // reference, same as SS. INFERRED for SF specifically: the
                 // corpus carries no discriminating SF instance; adopted by
                 // symmetry with the measured SS rule.
-                const sfAnchor = _advanceWithAlerts(startDriveSrcFor(pnode), lag, lagCal, alerts,
-                    'SF lag ' + pnode.code + '->' + code);
+                const _ctx = 'SF lag ' + pnode.code + '->' + code;
+                const anchorInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
+                const sfAnchor = _snapFwd(anchorInstant, nodeCal, alerts, _ctx);
                 drive = _retreatWithAlerts(sfAnchor, node.duration_days, nodeCal, alerts,
                     'SF duration ' + code);
                 thisAnchorEF = sfAnchor;
+                _driveInstants.push([sfAnchor, anchorInstant]);
             } else {
-                drive = _advanceWithAlerts(pnode.ef, lag, lagCal, alerts,
-                    'FS-default lag ' + pnode.code + '->' + code);
+                const _ctx = 'FS-default lag ' + pnode.code + '->' + code;
+                const driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
+                _driveInstants.push([drive, driveInstant]);
             }
             // v2.9.5 — when this node has an actual_start, predecessor logic
             // cannot push ES later. We still track the driving_predecessor for
@@ -2622,6 +2768,36 @@ function computeCPM(activities, relationships, opts) {
             }
         }
 
+        // v2.9.44 — the finish INSTANT successors are driven from. A bar
+        // (remaining bar for started work) closes at the end of its last
+        // worked day: the instant is the opening of the following calendar
+        // day, whatever this activity's calendar says about that day. A
+        // zero-duration node sits at its own snapped day, except a finish
+        // milestone (TT_FinMile), which P6 places AT the instant that drove
+        // it (Friday 17:00 when its predecessor finished Friday), so a
+        // seven-day successor of the milestone starts Saturday; when nothing
+        // but the data date drove it, that instant is the data date itself.
+        const _barDays = (hasActualStart && !node.is_complete && _hasRem)
+            ? _remRaw : node.duration_days;
+        if (_barDays > 0) {
+            node.ef_instant = _boundaryToInstant(node.ef, nodeCal, alerts,
+                'finish instant ' + code);
+        } else {
+            node.ef_instant = node.ef;
+            if (node.task_type === 'TT_FinMile' && !hasActualStart && node.ef === node.es) {
+                let _best = null;
+                for (const _di of _driveInstants) {
+                    if (_di[0] === node.ef && (_best === null || _di[1] > _best)) _best = _di[1];
+                }
+                if (_best !== null) {
+                    node.ef_instant = _best;
+                } else if (ddNum > 0 && node.ef === _snapFwd(ddNum, nodeCal, alerts,
+                        'finish instant ' + code)) {
+                    node.ef_instant = ddNum;
+                }
+            }
+        }
+
         // v2.9.15 P2 (F14-4) — DATA_DATE-driven driver. When no pred and no
         // constraint won, but maxES === ddNum AND the activity has predecessors
         // (i.e. ddNum genuinely floored ES past where the preds would have put
@@ -2738,6 +2914,26 @@ function computeCPM(activities, relationships, opts) {
             'seed-LF ' + n.code);
     }
 
+    // v2.9.44 — a successor's late-finish INSTANT: the close of its last
+    // late-worked day (the boundary retreated to that day, plus one calendar
+    // day), or the late finish itself for a zero-duration node. Mirrors the
+    // forward ef_instant so FF / SF backward bounds retreat from the same
+    // kind of instant the forward pass advanced from.
+    function _lfInstantOf(snode) {
+        const _sr = snode.remaining_duration;
+        let _sBar;
+        if (snode.actual_start && !snode.is_complete && Number.isFinite(_sr) && _sr >= 0) {
+            _sBar = _sr;
+        } else {
+            _sBar = snode.duration_days;
+        }
+        if (_sBar > 0) {
+            return _boundaryToInstant(snode.lf, calFor(snode), alerts,
+                'late finish instant ' + snode.code);
+        }
+        return snode.lf;
+    }
+
     // Backward pass — initialize.
     for (let __i = 0; __i < _orderLen; __i++) {
         const n = nodes[_order[__i]];
@@ -2817,21 +3013,40 @@ function computeCPM(activities, relationships, opts) {
                 let drive = null;
                 let lsBound = null;
                 const lag = s.lag_days;
+                // v2.9.44 — the backward walk mirrors the forward one in
+                // INSTANTS: the successor's late start is the instant it
+                // must not start after (its late finish instant is the close
+                // of its last late-worked day), the lag is retreated as
+                // working time on the lag calendar from that instant, and
+                // the result becomes THIS activity's bound on its own
+                // calendar - the boundary after its latest workable day for
+                // a finish bound (FS / FF), its latest workable day for a
+                // start bound (SS / SF). Without this mirror the forward
+                // instants left the two walks non-inverse: a Mon-Fri
+                // predecessor of a seven-day successor was handed a Saturday
+                // late finish against its Monday early-finish boundary and
+                // reported two days of negative float in a network with no
+                // constraint.
                 if (s.type === 'FS') {
-                    drive = _retreatWithAlerts(snode.ls, lag, sCal, alerts,
-                        'backward FS lag ' + code + '->' + snode.code);
+                    const _ctx = 'backward FS lag ' + code + '->' + snode.code;
+                    const _inst = _lagBackFromInstant(snode.ls, lag, sCal, alerts, _ctx);
+                    drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'SS') {
-                    lsBound = _retreatWithAlerts(snode.ls, lag, sCal, alerts,
-                        'backward SS lag ' + code + '->' + snode.code);
+                    const _ctx = 'backward SS lag ' + code + '->' + snode.code;
+                    const _inst = _lagBackFromInstant(snode.ls, lag, sCal, alerts, _ctx);
+                    lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'FF') {
-                    drive = _retreatWithAlerts(snode.lf, lag, sCal, alerts,
-                        'backward FF lag ' + code + '->' + snode.code);
+                    const _ctx = 'backward FF lag ' + code + '->' + snode.code;
+                    const _inst = _lagBackFromInstant(_lfInstantOf(snode), lag, sCal, alerts, _ctx);
+                    drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'SF') {
-                    lsBound = _retreatWithAlerts(snode.lf, lag, sCal, alerts,
-                        'backward SF lag ' + code + '->' + snode.code);
+                    const _ctx = 'backward SF lag ' + code + '->' + snode.code;
+                    const _inst = _lagBackFromInstant(_lfInstantOf(snode), lag, sCal, alerts, _ctx);
+                    lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else {
-                    drive = _retreatWithAlerts(snode.ls, lag, sCal, alerts,
-                        'backward default ' + code + '->' + snode.code);
+                    const _ctx = 'backward default ' + code + '->' + snode.code;
+                    const _inst = _lagBackFromInstant(snode.ls, lag, sCal, alerts, _ctx);
+                    drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 }
                 if (drive !== null && (minLF === null || drive < minLF)) minLF = drive;
                 if (lsBound !== null && (_minLSBound === null || lsBound < _minLSBound)) {
@@ -3059,6 +3274,13 @@ function computeCPM(activities, relationships, opts) {
             n.es = n.ls;
             n.ef = n.lf;
             n.tf = 0;
+            // v2.9.44 — the finish instant slides with the finish.
+            const _alapCal = n.clndr_id ? calMap[n.clndr_id] : null;
+            if (n.ef > n.es) {
+                n.ef_instant = _boundaryToInstant(n.ef, _alapCal, alerts, 'finish instant ' + c);
+            } else {
+                n.ef_instant = n.ef;
+            }
             // v2.9.23 — audit LOW R9. The ALAP slide shifts THIS activity's
             // ES/EF forward without re-running the forward pass through its
             // successors. If A is ALAP and A→B (FS+0), B.ES was set when A.EF
@@ -3097,6 +3319,10 @@ function computeCPM(activities, relationships, opts) {
         const n = nodes[c];
         n.es_date = numToDate(n.es);
         n.ef_date = numToDate(n.ef);
+        // v2.9.44 — the finish instant beside the boundary: the calendar day
+        // whose opening the finish is (Saturday for a Friday 17:00 finish).
+        if (!(Number.isFinite(n.ef_instant) && n.ef_instant > 0)) n.ef_instant = n.ef;
+        n.ef_instant_date = numToDate(n.ef_instant);
         // B4 — for in-progress activities the DISPLAY late start is the
         // recorded actual start; the remaining-work
         // late calculus is exposed separately, mirroring P6's grid

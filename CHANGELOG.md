@@ -12,6 +12,77 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.44 — 2026-09-15 — cross-calendar finish instants: successors driven from the predecessor's finish instant on their own calendar; backward pass mirrored
+
+**Engine math changed.** The forward and backward passes both move on any
+network whose relationships cross calendars, so a deliverable already issued
+from a tagged build is inside the supersession window and needs the re-check
+step in PROCEDURE.md.
+
+What P6 does: an early finish is an INSTANT, the close of the last working
+period of the activity's own calendar (Friday 17:00 on Mon-Fri). A successor
+starts at the first working instant of ITS OWN calendar at or after that
+instant plus lag, the lag consumed as working time on the relationship-lag
+calendar from the instant.
+
+What the engine did: it carried a finish as the opening of the next working
+day on the FINISHING activity's calendar (Monday for a Friday finish), handed
+that boundary to the successor as-is, walked the lag on the lag calendar from
+it, and never snapped the result onto the successor's calendar. Measured on a
+2,898-activity real export with five active calendars (a Mon-Fri design
+calendar, a 680-exception blackout calendar, an installation calendar, a
+seven-day calendar and the project calendar), once the 40 activities whose
+stored dates the file's own logic cannot produce were pinned, every one of
+the 25 residual root divergences from P6's stored early dates was one of:
+
+- a successor starting on a day its own calendar does not work (a
+  blackout-calendar successor inside its blackout, engine 2027-08-05 against
+  P6 2027-09-15, early finish equal because the duration walk skipped the
+  blackout anyway; a Mon-Fri successor of a seven-day predecessor on a Sunday);
+- a seven-day successor of a Friday finish starting Monday, two days after
+  P6's Saturday (20 of the export's 109 seven-day activities);
+- a successor whose calendar works the predecessor calendar's holiday
+  starting the day after it (Victoria Day and New Year's Day between the
+  design and installation calendars);
+- a completed predecessor's successors starting on its finish day.
+
+Changes, paired in `cpm-engine.js` and the Python reference:
+
+- `ef_instant` / `ef_instant_date` on every node: the calendar day whose
+  opening the finish is (Saturday for a Friday 17:00 finish). `ef` /
+  `ef_date` stay the boundary on the activity's own calendar.
+- FS / SS / FF / SF drives are computed as instants (`_lagFromInstant`) and
+  snapped onto the successor's calendar (`_snapFwd`); FF / SF anchors likewise.
+- A positive lag is working time on the lag calendar counted FROM the
+  instant (Thursday 17:00 + one Mon-Fri day is Friday 17:00; Friday 17:00 +
+  one is Monday 17:00); a negative lag retreats from it.
+- A finish milestone (`task_type` TT_FinMile) sits at the instant that drove
+  it; a start milestone at its own calendar's next working start; a
+  zero-duration node without a task type keeps the snapped instant.
+- A completed predecessor's instant comes from the TIME of its actual finish
+  ('2027-03-05 17:00' is the close of Friday); a date-only value keeps the
+  legacy reading. The node keeps the date part for display.
+- The data date is an instant too: 'YYYY-MM-DD 17:00' floors remaining work
+  on the next day.
+- The backward pass mirrors it (`_lagBackFromInstant`, `_snapBwd`,
+  `_lfInstantOf`): a successor's late start is the instant the predecessor
+  must finish before, and the bound is expressed on the predecessor's own
+  calendar. Without this mirror the new forward instants manufactured
+  negative float on cross-calendar links (a Mon-Fri predecessor of a
+  seven-day successor was handed a Saturday late finish against its Monday
+  early-finish boundary, tf -2, no constraint anywhere); with it, forward
+  and backward walks are inverses again and the V2942-7 fixture that used
+  to manufacture tf -1 now reports the two seven-day days of float P6 does.
+
+Same-calendar networks are byte-identical to v2.9.43 (every crossval fixture
+except the mixed-calendar F11 was unchanged; F11 now agrees between the
+engines on the instant reading). Tests: XC-1..XC-10 in `cpm-engine.test.js`
+(1,288 checks green), `test_cross_calendar_finish_instants_2026_09_15.py` on
+the Python side (21 pins); crossval 153/153 and 86/86. Three existing
+expectations that pinned the boundary walker's under-count were updated with
+their derivation (V2942-7 successor-walk date and negative-float checks, RL-7
+Saturday start of a Mon-Fri activity).
+
 ## v2.9.43 — 2026-09-02 — retained-logic P6 semantics: SS/SF drive from restart; restart snapped, always defined, not floored by a future actual start; corrupt-calendar P6 fallback (two-conjunct predicate)
 
 **Engine math changed.** The retained-logic forward pass, free-float slack
