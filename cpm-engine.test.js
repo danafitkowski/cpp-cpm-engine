@@ -9612,24 +9612,32 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
     const succ = E.computeCPM(acts, rels, base);
     const pred = E.computeCPM(acts, rels,
         Object.assign({}, base, { relationshipLagCalendar: 'rcal_Predecessor' }));
+    // v2.9.44 (finish instants): P finishes Friday 01-09 16:00. Sixteen hours
+    // of the SUCCESSOR calendar's working time from that instant is Monday
+    // and Tuesday, so S starts Wednesday 01-14 (the boundary walker used to
+    // land it on Tuesday, having consumed only Monday). The predecessor walk
+    // consumes Saturday and Sunday and lands Monday 01-12 as before.
     check('V2942-7: the lag calendar is selectable and actually changes the walk',
-        succ.nodes.S.es_date === '2026-01-13' && pred.nodes.S.es_date === '2026-01-12',
+        succ.nodes.S.es_date === '2026-01-14' && pred.nodes.S.es_date === '2026-01-12',
         'successor ' + succ.nodes.S.es_date + ' / predecessor ' + pred.nodes.S.es_date);
     check('V2942-7: the manifest declares which lag calendar produced the dates',
         succ.manifest.relationship_lag_calendar === 'successor' &&
         pred.manifest.relationship_lag_calendar === 'predecessor',
         succ.manifest.relationship_lag_calendar + ' / ' + pred.manifest.relationship_lag_calendar);
-    // The same network manufactures negative float under the successor walk:
-    // P gets lf 2026-01-09 against ef 2026-01-10, tf -1, in a network with NO
-    // constraint and NO imposed finish — arithmetically impossible, so an
-    // engine artifact. Pre-fix it was published silently.
-    check('V2942-7: impossible negative float is detected and enumerated',
-        succ.nodes.P.tf < 0 &&
-        succ.alerts.some(a => a.context === 'impossible-negative-float' &&
-                              a.message.indexOf('P (tf -1') !== -1),
+    // Before v2.9.44 the same network manufactured negative float under the
+    // successor walk (P lf 2026-01-09 against ef 2026-01-10, tf -1, with no
+    // constraint anywhere) because the forward lag walk under-counted at the
+    // non-working anchor while the backward walk did not. With drives taken
+    // from P's finish INSTANT the two walks are inverses again: S cannot
+    // start before Wednesday, so P has the two seven-day days (Saturday and
+    // Sunday) of float P6 also reports, and the impossible-negative-float
+    // guard has nothing to enumerate. The guard itself is unchanged.
+    check('V2942-7: the successor walk no longer manufactures negative float (P keeps its weekend float)',
+        succ.nodes.P.tf === 2 &&
+        !succ.alerts.some(a => a.context === 'impossible-negative-float'),
         'P.tf=' + succ.nodes.P.tf + ' alerts=' +
             JSON.stringify(succ.alerts.map(a => a.context)));
-    check('V2942-7: the predecessor walk removes the manufactured negative float',
+    check('V2942-7: the predecessor walk carries no manufactured negative float either',
         pred.nodes.P.tf === 0 &&
         !pred.alerts.some(a => a.context === 'impossible-negative-float'),
         'P.tf=' + pred.nodes.P.tf);
@@ -9643,8 +9651,8 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
         !constrained.alerts.some(a => a.context === 'impossible-negative-float'));
     let threw = null;
     try { E.computeCPMForensicStrict(acts, rels, base); } catch (e) { threw = e; }
-    check('V2942-7: impossible negative float is fatal in forensic strict mode',
-        threw !== null && threw.context === 'impossible-negative-float',
+    check('V2942-7: forensic strict mode has no impossible negative float left to refuse here',
+        threw === null,
         threw ? threw.context : 'no throw');
 }
 
@@ -10308,9 +10316,27 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
     const rPred = E.computeCPM(acts, rels,
         { dataDate: '2026-06-22', calMap: cal,
           relationshipLagCalendar: 'rcal_Predecessor' });
-    check('RL-7: rcal_Predecessor — SS lag walks pred 7-day calendar from restart (2026-06-27)',
-        rPred.nodes.X.es_date === '2026-06-27',
+    // v2.9.44 (finish instants): the five-day walk on P's seven-day calendar
+    // from the Monday 06-22 restart still lands on Saturday 06-27, but X is
+    // on a Mon-Fri calendar and cannot start on a Saturday: its early start
+    // is Monday 06-29, the first working day of ITS calendar at or after
+    // the instant. (The value pinned here before, 06-27, put a Mon-Fri
+    // activity's start on a day it does not work.)
+    check('RL-7: rcal_Predecessor — SS lag walks pred 7-day calendar from restart, X snaps to its own Monday (2026-06-29)',
+        rPred.nodes.X.es_date === '2026-06-29',
         'X.es=' + rPred.nodes.X.es_date);
+    // With a seven-day lag the two calendars still separate: seven seven-day
+    // days from Monday 06-22 is Monday 06-29 on P's calendar, seven Mon-Fri
+    // days is Wednesday 07-01 on X's.
+    const rels7 = [{ from_code: 'P', to_code: 'X', type: 'SS', lag_days: 7 }];
+    const rPred7 = E.computeCPM(acts, rels7,
+        { dataDate: '2026-06-22', calMap: cal,
+          relationshipLagCalendar: 'rcal_Predecessor' });
+    const rSucc7 = E.computeCPM(acts, rels7,
+        { dataDate: '2026-06-22', calMap: cal });
+    check('RL-7: a seven-day SS lag still discriminates the lag calendar (pred 06-29 / succ 07-01)',
+        rPred7.nodes.X.es_date === '2026-06-29' && rSucc7.nodes.X.es_date === '2026-07-01',
+        'pred ' + rPred7.nodes.X.es_date + ' / succ ' + rSucc7.nodes.X.es_date);
     const rSucc = E.computeCPM(acts, rels,
         { dataDate: '2026-06-22', calMap: cal });
     check('RL-7: default successor mode — same lag walks MF calendar (2026-06-29)',
@@ -10673,6 +10699,137 @@ const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
     check('RL-16: no decodable calendar record -> ordinal-day fallback (10)',
         H2 && H2.duration_working_days === 10,
         H2 ? 'dwd=' + H2.duration_working_days : 'no hammock');
+}
+
+// ===========================================================================
+// XC — v2.9.44 cross-calendar finish INSTANTS (paired with the Python pins in
+// _cpp_common/tests/test_cross_calendar_finish_instants_2026_09_15.py).
+// P6 hands a successor the predecessor's finish INSTANT (Friday 17:00), and
+// the successor starts at the first working instant of ITS OWN calendar at or
+// after instant + lag. The engine handed over the predecessor's boundary
+// (Monday) and never snapped onto the successor's calendar.
+// ===========================================================================
+{
+    const XC_MF = { work_days: [1, 2, 3, 4, 5], holidays: [], special_workdays: [] };
+    const XC_D7 = { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], special_workdays: [] };
+    const xcCal = { MF: XC_MF, D7: XC_D7 };
+    const xcRun = (acts, rels, dd, extra) => E.computeCPM(acts, rels, Object.assign(
+        { dataDate: dd || '2027-03-01', calMap: xcCal,
+          relationshipLagCalendar: 'rcal_Predecessor' }, extra || {}));
+
+    // XC-1 — FS+0 from a Friday finish into a seven-day successor: Saturday.
+    let r = xcRun([{ code: 'A', duration_days: 5, clndr_id: 'MF' },
+                   { code: 'B', duration_days: 3, clndr_id: 'D7' }],
+                  [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }]);
+    check('XC-1: A keeps its own-calendar boundary (2027-03-08) and exposes the instant (03-06)',
+        r.nodes.A.ef_date === '2027-03-08' && r.nodes.A.ef_instant_date === '2027-03-06',
+        r.nodes.A.ef_date + ' / ' + r.nodes.A.ef_instant_date);
+    check('XC-1: seven-day successor of a Friday finish starts Saturday 2027-03-06 (was Monday)',
+        r.nodes.B.es_date === '2027-03-06' && r.nodes.B.ef_date === '2027-03-09',
+        r.nodes.B.es_date + ' / ' + r.nodes.B.ef_date);
+
+    // XC-2 — FS+0 from a Saturday finish (seven-day) into Mon-Fri: Monday, not Sunday.
+    r = xcRun([{ code: 'A', duration_days: 6, clndr_id: 'D7' },
+               { code: 'B', duration_days: 2, clndr_id: 'MF' }],
+              [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }]);
+    check('XC-2: Mon-Fri successor of a Saturday finish starts Monday 2027-03-08 (was Sunday)',
+        r.nodes.B.es_date === '2027-03-08' && r.nodes.B.ef_date === '2027-03-10',
+        r.nodes.B.es_date + ' / ' + r.nodes.B.ef_date);
+
+    // XC-3 — positive lag is working time on the lag calendar FROM the instant.
+    r = xcRun([{ code: 'A', duration_days: 4, clndr_id: 'MF' },
+               { code: 'B', duration_days: 2, clndr_id: 'D7' }],
+              [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 1 }]);
+    check('XC-3: Thursday 17:00 + one Mon-Fri day is Friday 17:00, seven-day successor starts Saturday 03-06',
+        r.nodes.B.es_date === '2027-03-06', r.nodes.B.es_date);
+
+    // XC-4 — FF+0 across calendars: both finish Friday 17:00.
+    r = xcRun([{ code: 'A', duration_days: 5, clndr_id: 'MF' },
+               { code: 'B', duration_days: 3, clndr_id: 'D7' }],
+              [{ from_code: 'A', to_code: 'B', type: 'FF', lag_days: 0 }]);
+    check('XC-4: seven-day FF successor ends Friday (boundary 03-06) and works Wed-Fri (es 03-03)',
+        r.nodes.B.ef_date === '2027-03-06' && r.nodes.B.es_date === '2027-03-03',
+        r.nodes.B.es_date + ' / ' + r.nodes.B.ef_date);
+
+    // XC-5 — a finish milestone hands its successor the driving instant; a
+    // start milestone hands its own calendar's start.
+    const mkMs = (tt) => xcRun(
+        [{ code: 'A', duration_days: 5, clndr_id: 'MF' },
+         { code: 'M', duration_days: 0, clndr_id: 'MF', task_type: tt },
+         { code: 'B', duration_days: 2, clndr_id: 'D7' }],
+        [{ from_code: 'A', to_code: 'M', type: 'FS', lag_days: 0 },
+         { from_code: 'M', to_code: 'B', type: 'FS', lag_days: 0 }]);
+    const fin = mkMs('TT_FinMile'), sta = mkMs('TT_Mile');
+    check('XC-5: TT_FinMile sits at Friday 17:00 (instant 03-06, display 03-08); its seven-day successor starts Saturday',
+        fin.nodes.M.ef_date === '2027-03-08' && fin.nodes.M.ef_instant_date === '2027-03-06' &&
+        fin.nodes.B.es_date === '2027-03-06',
+        fin.nodes.M.ef_instant_date + ' / ' + fin.nodes.B.es_date);
+    check('XC-5: TT_Mile starts Monday on its own calendar and so does its successor',
+        sta.nodes.M.ef_instant_date === '2027-03-08' && sta.nodes.B.es_date === '2027-03-08',
+        sta.nodes.M.ef_instant_date + ' / ' + sta.nodes.B.es_date);
+
+    // XC-6 — the predecessor's holiday is a working day on the successor's calendar.
+    const XC_MFH = { work_days: [1, 2, 3, 4, 5], holidays: ['2027-05-24'], special_workdays: [] };
+    r = E.computeCPM([{ code: 'A', duration_days: 5, clndr_id: 'MFH' },
+                      { code: 'B', duration_days: 2, clndr_id: 'MF' }],
+                     [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }],
+                     { dataDate: '2027-05-17', calMap: { MF: XC_MF, MFH: XC_MFH },
+                       relationshipLagCalendar: 'rcal_Predecessor' });
+    check('XC-6: successor starts on the predecessor calendar holiday it does not observe (2027-05-24)',
+        r.nodes.A.ef_date === '2027-05-25' && r.nodes.B.es_date === '2027-05-24',
+        r.nodes.A.ef_date + ' / ' + r.nodes.B.es_date);
+
+    // XC-7 — a completed predecessor's finish TIME sets its instant.
+    r = xcRun([{ code: 'A', duration_days: 5, clndr_id: 'MF', actual_start: '2027-03-01',
+                 actual_finish: '2027-03-05 17:00', is_complete: true },
+               { code: 'B', duration_days: 2, clndr_id: 'MF' },
+               { code: 'C', duration_days: 2, clndr_id: 'D7' }],
+              [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+               { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 }]);
+    check('XC-7: completed at Friday 17:00 - Mon-Fri successor Monday, seven-day successor Saturday, date kept for display',
+        r.nodes.A.actual_finish === '2027-03-05' && r.nodes.B.es_date === '2027-03-08' &&
+        r.nodes.C.es_date === '2027-03-06',
+        r.nodes.A.actual_finish + ' / ' + r.nodes.B.es_date + ' / ' + r.nodes.C.es_date);
+    r = xcRun([{ code: 'A', duration_days: 5, clndr_id: 'MF', actual_start: '2027-03-01',
+                 actual_finish: '2027-03-05', is_complete: true },
+               { code: 'B', duration_days: 2, clndr_id: 'MF' }],
+              [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }]);
+    check('XC-7: a date-only actual finish keeps the legacy reading (successor 2027-03-05)',
+        r.nodes.B.es_date === '2027-03-05', r.nodes.B.es_date);
+
+    // XC-8 — the data date is an instant too.
+    r = xcRun([{ code: 'A', duration_days: 2, clndr_id: 'MF' }], [], '2026-08-28 17:00');
+    const r8b = xcRun([{ code: 'A', duration_days: 2, clndr_id: 'MF' }], [], '2026-08-28 08:00');
+    check('XC-8: a Friday 17:00 data date floors remaining work on Monday 08-31; 08:00 keeps Friday',
+        r.nodes.A.es_date === '2026-08-31' && r8b.nodes.A.es_date === '2026-08-28',
+        r.nodes.A.es_date + ' / ' + r8b.nodes.A.es_date);
+
+    // XC-9 — the backward pass mirrors the instants: a driving chain across
+    // calendars has zero float and no manufactured negative float.
+    r = E.computeCPM([{ code: 'A', duration_days: 5, clndr_id: 'MF' },
+                      { code: 'B', duration_days: 5, clndr_id: 'D7' },
+                      { code: 'C', duration_days: 3, clndr_id: 'MF' }],
+                     [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+                      { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 }],
+                     { dataDate: '2026-01-05', calMap: xcCal });
+    check('XC-9: Mon-Fri -> seven-day -> Mon-Fri chain: B Sat 01-10..Thu 01-15, C 01-15..01-20',
+        r.nodes.B.es_date === '2026-01-10' && r.nodes.B.ef_date === '2026-01-15' &&
+        r.nodes.C.es_date === '2026-01-15' && r.nodes.C.ef_date === '2026-01-20',
+        r.nodes.B.es_date + '..' + r.nodes.B.ef_date + ' / ' + r.nodes.C.es_date + '..' + r.nodes.C.ef_date);
+    check('XC-9: every activity on the chain has zero float (A lf 01-12, B lf 01-15)',
+        r.nodes.A.lf_date === '2026-01-12' && r.nodes.B.lf_date === '2026-01-15' &&
+        r.nodes.A.tf === 0 && r.nodes.B.tf === 0 && r.nodes.C.tf === 0 &&
+        !r.alerts.some(a => a.context === 'impossible-negative-float'),
+        JSON.stringify([r.nodes.A.tf, r.nodes.B.tf, r.nodes.C.tf]));
+
+    // XC-10 — FF across calendars: zero float on both.
+    r = E.computeCPM([{ code: 'A', duration_days: 5, clndr_id: 'MF' },
+                      { code: 'B', duration_days: 3, clndr_id: 'D7' }],
+                     [{ from_code: 'A', to_code: 'B', type: 'FF', lag_days: 0 }],
+                     { dataDate: '2026-01-05', calMap: xcCal });
+    check('XC-10: FF across calendars - A lf 01-12 equals its ef, both tf 0',
+        r.nodes.A.lf_date === '2026-01-12' && r.nodes.A.tf === 0 && r.nodes.B.tf === 0,
+        r.nodes.A.lf_date + ' tf ' + r.nodes.A.tf + '/' + r.nodes.B.tf);
 }
 
 console.log('\n========================================');
