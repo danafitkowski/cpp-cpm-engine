@@ -16,7 +16,7 @@ fitted to capture 9b748cc (2026-08-11), not independently validated: the SF succ
 4. F9 to schedule.
 5. NOTE: SF behavior in P6 can vary with retained-logic vs progress-override settings. Use retained-logic.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-01-12`
 

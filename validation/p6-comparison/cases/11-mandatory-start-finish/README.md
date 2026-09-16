@@ -16,7 +16,7 @@ A.ES = MS_Start = 2026-01-12 (pinned, ignoring dataDate floor). A.LS = MS_Start 
 4. F9 — both dates should be hard-pinned.
 5. Verify the mandatory constraints pin LS/LF in the backward pass.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-01-30`
 

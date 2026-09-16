@@ -36,12 +36,34 @@ have been applied:
    `date_to_num` — plus, as of v2.9.43, the D7 clndr_data decoder
    (`decode_clndr_data` / `decode_calendar_record`), the Python parity twin
    of the JS parseXER-side calendar decode.
+3. v2.9.44 (cross-calendar finish instants) is applied here exactly as to
+   the canonical engine, by the same patch: successors are driven from the
+   predecessor's finish INSTANT and snapped onto their own calendar, lags
+   are working time on the lag calendar from that instant, and the backward
+   pass mirrors it. See CHANGELOG.md v2.9.44.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  83c6db6f61b36d8c8c22fee59d37bfeb36d3d8bc131a3716793e930327301ed5
+cpm.py  SHA-256:  a3ebb418739c36c4af6a9088a229cc81d3cae58d8f45efad8620e4d9b50799d1
 
+(v2.9.44 cross-calendar finish instants 2026-09-15 - bumped from
+83c6db6f...: a successor is driven from its predecessor's finish INSTANT
+(the close of the last worked period, Friday 17:00 = the opening of
+Saturday) and snapped onto its OWN calendar; a positive lag is working
+time on the relationship-lag calendar counted from that instant; a finish
+milestone (task_type TT_FinMile) sits at the instant that drove it; a
+completed predecessor's instant comes from the time of its actual finish;
+the data date honours its time of day; the backward pass mirrors it
+(_lag_back_from_instant / _snap_bwd / _lf_instant_of), so forward and
+backward walks are inverses on cross-calendar links. Nodes carry
+ef_instant / ef_instant_date beside the boundary ef. Applied to this
+reference by the same patch as the canonical engine; the 46-fixture
+harness stays at 1009 of 1015 executed and bit-identical. Measured on a
+2,898-activity five-calendar real export: every residual root divergence
+from P6's stored early dates was one of these shapes once the 40 rows
+whose stored dates the file's own logic cannot produce were pinned.
+Prior:
 (v2.9.43 retained-logic P6 semantics wave 2026-09-02 - bumped from
 76cff495... (and re-rotated within the unpushed wave from 7249f3ed... by
 the F4 + calendar-predicate fixups): SS/SF drives from a started
@@ -180,8 +202,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 136967
-  sha-256:  83c6db6f61b36d8c8c22fee59d37bfeb36d3d8bc131a3716793e930327301ed5
+  bytes: 150186
+  sha-256:  a3ebb418739c36c4af6a9088a229cc81d3cae58d8f45efad8620e4d9b50799d1
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

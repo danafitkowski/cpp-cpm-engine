@@ -16,7 +16,7 @@ P6-captured 2026-08-11 (capture 9b748cc). This case FAILED that capture. The cap
 4. F9 to schedule.
 5. Capture columns and compare.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-01-19`
 

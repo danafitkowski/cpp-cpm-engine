@@ -16,7 +16,7 @@ fitted to capture 9b748cc (2026-08-11), not independently validated: constraint 
 4. F9 — schedule should show negative TF on A and B.
 5. Capture ES/EF/LS/LF/TF; TF should be NEGATIVE.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-01-21`
 

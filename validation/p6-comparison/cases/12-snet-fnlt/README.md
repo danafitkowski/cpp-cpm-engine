@@ -16,7 +16,7 @@ A has SNET = 2026-01-20. A.ES is pinned forward to Jan 20. A duration 5 wd → A
 4. F9 — A.ES forced to Jan 20; B.LF pinned to Feb 13.
 5. Capture and compare.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-02-03`
 

@@ -17,7 +17,7 @@ fitted to capture 9b748cc (2026-08-11), not independently validated: RETAINED LO
 5. Data date = 2026-01-12. Retained logic mode.
 6. P6 should flag the out-of-sequence relationship; engine emits ALERT.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-01-29`
 
