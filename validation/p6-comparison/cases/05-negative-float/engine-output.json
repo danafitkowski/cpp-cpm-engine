@@ -14,14 +14,23 @@
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
+      "ef_instant": 2206,
+      "task_type": "",
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": null,
       "_seedLF": 2212,
+      "tf_finish": -9,
+      "tf_start": -11,
       "es_date": "2026-01-05",
       "ef_date": "2026-01-15",
+      "ef_instant_date": "2026-01-15",
       "ls_date": "2025-12-25",
       "lf_date": "2026-01-06",
+      "ef_last_worked_date": "2026-01-14",
+      "lf_last_worked_date": "2026-01-05",
+      "tf_finish_working_days": -7,
+      "tf_start_working_days": -7,
       "tf_working_days": -7,
       "ff_signed": 0,
       "ff": 0,
@@ -42,6 +51,8 @@
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
+      "ef_instant": 2212,
+      "task_type": "",
       "constraint": {
         "type": "FNLT",
         "date": "2026-01-12"
@@ -53,10 +64,17 @@
         "lag_days": 0
       },
       "_seedLF": 2212,
+      "tf_finish": -9,
+      "tf_start": -9,
       "es_date": "2026-01-15",
       "ef_date": "2026-01-21",
+      "ef_instant_date": "2026-01-21",
       "ls_date": "2026-01-06",
       "lf_date": "2026-01-12",
+      "ef_last_worked_date": "2026-01-20",
+      "lf_last_worked_date": "2026-01-09",
+      "tf_finish_working_days": -7,
+      "tf_start_working_days": -7,
       "tf_working_days": -7,
       "ff_signed": -9,
       "ff_signed_working_days": -7,
@@ -86,13 +104,19 @@
       "message": "FNLT on B violated: EF=2026-01-21 is after constraint date 2026-01-12"
     }
   ],
+  "excluded_by_task_type": [],
+  "excludedByTaskType": [],
   "manifest": {
-    "engine_version": "2.9.38",
+    "engine_version": "2.9.44",
     "method_id": "computeCPM",
     "activity_count": 2,
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-11T18:13:30.429Z"
+    "finish_boundary_convention": "exclusive",
+    "finish_boundary_note": "ef_date / lf_date are EXCLUSIVE (the opening of the first working day AFTER the last day worked). P6 prints the LAST WORKED DAY. Both name the same instant; ef_last_worked_date and lf_last_worked_date carry the inclusive form for reports.",
+    "relationship_lag_calendar": "successor",
+    "float_type": "FT_FF",
+    "computed_at": "2026-09-16T02:15:31.667Z"
   }
 }

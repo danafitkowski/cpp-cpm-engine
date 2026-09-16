@@ -14,21 +14,30 @@
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
+      "ef_instant": 2208,
+      "task_type": "",
       "constraint": {
-        "type": "MS_Start",
+        "type": "SO",
         "date": "2026-01-12"
       },
       "constraint2": null,
       "driving_predecessor": {
         "type": "CONSTRAINT",
-        "constraint_type": "MS_Start",
+        "constraint_type": "SO",
         "date": "2026-01-12"
       },
       "_seedLF": 2221,
+      "tf_finish": 0,
+      "tf_start": 0,
       "es_date": "2026-01-12",
       "ef_date": "2026-01-19",
+      "ef_instant_date": "2026-01-17",
       "ls_date": "2026-01-12",
       "lf_date": "2026-01-19",
+      "ef_last_worked_date": "2026-01-16",
+      "lf_last_worked_date": "2026-01-16",
+      "tf_finish_working_days": 0,
+      "tf_start_working_days": 0,
       "tf_working_days": 0,
       "ff_signed": 7,
       "ff": 7,
@@ -49,8 +58,10 @@
       "actual_start": "",
       "actual_finish": "",
       "clndr_id": "MONFRI",
+      "ef_instant": 2221,
+      "task_type": "",
       "constraint": {
-        "type": "MS_Finish",
+        "type": "FO",
         "date": "2026-01-30"
       },
       "constraint2": null,
@@ -59,10 +70,17 @@
         "date": "2026-01-30"
       },
       "_seedLF": 2221,
+      "tf_finish": 0,
+      "tf_start": 0,
       "es_date": "2026-01-26",
       "ef_date": "2026-01-30",
+      "ef_instant_date": "2026-01-30",
       "ls_date": "2026-01-26",
       "lf_date": "2026-01-30",
+      "ef_last_worked_date": "2026-01-29",
+      "lf_last_worked_date": "2026-01-29",
+      "tf_finish_working_days": 0,
+      "tf_start_working_days": 0,
       "tf_working_days": 0,
       "ff_signed": 0,
       "ff_signed_working_days": 0,
@@ -89,21 +107,27 @@
     {
       "severity": "WARN",
       "context": "constraint-applied",
-      "message": "Mandatory Start on A pins ES to 2026-01-12"
+      "message": "Start On on A pushes ES from 2026-01-05 to 2026-01-12"
     },
     {
       "severity": "WARN",
       "context": "constraint-applied",
-      "message": "Mandatory Finish on B pins EF to 2026-01-30"
+      "message": "Finish On on B pushes EF from 2026-01-23 to 2026-01-30"
     }
   ],
+  "excluded_by_task_type": [],
+  "excludedByTaskType": [],
   "manifest": {
-    "engine_version": "2.9.38",
+    "engine_version": "2.9.44",
     "method_id": "computeCPM",
     "activity_count": 2,
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 1,
-    "computed_at": "2026-08-11T18:13:30.441Z"
+    "finish_boundary_convention": "exclusive",
+    "finish_boundary_note": "ef_date / lf_date are EXCLUSIVE (the opening of the first working day AFTER the last day worked). P6 prints the LAST WORKED DAY. Both name the same instant; ef_last_worked_date and lf_last_worked_date carry the inclusive form for reports.",
+    "relationship_lag_calendar": "successor",
+    "float_type": "FT_FF",
+    "computed_at": "2026-09-16T02:15:31.680Z"
   }
 }

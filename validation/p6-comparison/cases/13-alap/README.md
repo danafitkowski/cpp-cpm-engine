@@ -16,7 +16,7 @@ A → B → C chain. C has FNLT = Feb 28. B has secondary ALAP constraint. B sho
 4. C "Finish On or Before" 2026-02-28.
 5. F9 — verify B slides to its latest valid position.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-01-22`
 

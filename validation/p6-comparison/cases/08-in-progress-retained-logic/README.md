@@ -17,7 +17,7 @@ A original duration 10 wd, started Tue Jan 6 2026 (1 wd late). remaining_duratio
 5. Schedule under RETAINED LOGIC mode (NOT progress override).
 6. Capture B's projected ES/EF.
 
-## Engine output (produced by engine v2.9.38)
+## Engine output (produced by engine v2.9.44)
 
 Project finish: `2026-01-28`
 

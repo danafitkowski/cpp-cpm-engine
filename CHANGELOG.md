@@ -78,7 +78,10 @@ Same-calendar networks are byte-identical to v2.9.43 (every crossval fixture
 except the mixed-calendar F11 was unchanged; F11 now agrees between the
 engines on the instant reading). Tests: XC-1..XC-10 in `cpm-engine.test.js`
 (1,288 checks green), `test_cross_calendar_finish_instants_2026_09_15.py` on
-the Python side (21 pins); crossval 153/153 and 86/86. Three existing
+the Python side (21 pins); the in-suite smoke crossvals 153/153 and 86/86; the
+public harness 46 fixtures, 1009 of 1015 comparisons executed and bit-identical
+(the 6 mutual skips unchanged); coverage re-measured on these bytes 2026-09-15:
+93.79% statements, 83.32% branches, 94.69% functions. Three existing
 expectations that pinned the boundary walker's under-count were updated with
 their derivation (V2942-7 successor-walk date and negative-float checks, RL-7
 Saturday start of a Mon-Fri activity).

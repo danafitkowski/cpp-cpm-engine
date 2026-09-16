@@ -37,6 +37,11 @@
 #      (decode_clndr_data / decode_calendar_record), the Python parity twin
 #      of the JS parseXER-side calendar decode and its
 #      calendar-corrupt-p6-fallback forensic ALERT.
+#   3. v2.9.44 (cross-calendar finish instants) is applied to this reference
+#      exactly as to the canonical engine: successors are driven from the
+#      predecessor's finish INSTANT and snapped onto their own calendar,
+#      lags are working time on the lag calendar from that instant, and the
+#      backward pass mirrors it. See CHANGELOG.md v2.9.44.
 #
 # This file is pinned by SHA-256 — see python_reference/README.md and the
 # hash printed by cpm-engine.crossval.js at startup. Any drift between this
@@ -120,7 +125,7 @@ def _round_half_up_to(x, decimals=0):
 # dropping are executed. Only the completed-activity branch still emits neither
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those 6 comparisons are absent on both sides rather than one.
-ENGINE_VERSION = '2.9.43'
+ENGINE_VERSION = '2.9.44'
 
 
 # =============================================================================
@@ -750,6 +755,123 @@ def _retreat_workdays(end_num, n_days, calendar_info, *, alerts, ctx):
 
 
 # =============================================================================
+# v2.9.44 — finish INSTANTS for cross-calendar logic (mirrors cpm-engine.js)
+# =============================================================================
+#
+# The engine carries an early finish as a BOUNDARY: the opening of the next
+# working day on the FINISHING activity's own calendar (Monday for a Friday
+# finish on Mon-Fri). P6 carries it as an INSTANT: the close of the last worked
+# period (Friday 17:00). The two name the same moment only when the successor
+# shares the calendar. A seven-day successor of that Friday finish starts on
+# Saturday in P6; a successor whose calendar works the predecessor's holiday
+# starts on the holiday; a successor with a blackout starts after the blackout.
+# Measured on a 2,898-activity real export with five active calendars, every
+# residual root divergence between the engine and P6's stored early dates was
+# one of these shapes once the dates the file's own logic cannot produce were
+# pinned (see test_cross_calendar_finish_instants_2026_09_15.py).
+#
+# The day-number representation stays: an instant is the calendar day whose
+# opening it is (Friday 17:00 = Saturday's opening = Saturday's day number).
+# Nodes carry both: `ef` / `ef_date` remain the boundary on the activity's own
+# calendar (what every existing consumer reads), `ef_instant` is what
+# successors are driven from.
+
+def _instant_of(dt_str):
+    """Day-number instant of a P6 date-time string.
+
+    'YYYY-MM-DD' (or a morning time) is the opening of that day; a time at or
+    after 12:00 is the close of that day, i.e. the opening of the next
+    calendar day. P6 writes finishes as 'YYYY-MM-DD 17:00' / '16:00' and
+    starts as '08:00' / '07:00', so noon separates the two shapes.
+    """
+    if dt_str is None:
+        return 0
+    s = str(dt_str).strip()
+    n = date_to_num(s)
+    if n <= 0:
+        return n
+    if len(s) >= 13 and s[10] in (' ', 'T') and s[11:13].isdigit():
+        if int(s[11:13]) >= 12:
+            return n + 1
+    return n
+
+
+def _boundary_to_instant(boundary_num, calendar_info, *, alerts, ctx):
+    """Instant (opening of the calendar day after the last worked day) for a
+    working-day boundary on `calendar_info`. No calendar: the boundary itself.
+    """
+    if boundary_num <= 0 or not calendar_info:
+        return boundary_num
+    last_worked = _retreat_workdays(boundary_num, 1, calendar_info,
+                                    alerts=alerts, ctx=ctx)
+    return last_worked + 1
+
+
+def _lag_from_instant(instant, lag, lag_cal, *, alerts, ctx):
+    """Consume `lag` working days on `lag_cal` starting at `instant`; returns
+    an instant. P6 semantics: a positive lag is working time counted from the
+    predecessor's finish instant on the lag calendar (Friday 17:00 + 1 day on
+    Mon-Fri is Monday 17:00), a negative lag is working time retreated from
+    it (Friday 17:00 - 1 day is Friday 08:00), zero leaves the instant alone.
+    Without a calendar the single ordinal-arithmetic call (and its ALERT) is
+    the same one the pre-instant walk made.
+    """
+    if instant <= 0 or not lag_cal:
+        # Same single call, same ALERT, as the pre-instant walk made here.
+        return _advance_workdays(instant, lag, lag_cal, alerts=alerts, ctx=ctx)
+    n = _round_half_up(lag)
+    if n == 0:
+        return instant
+    if n > 0:
+        start = _advance_workdays(instant, 0, lag_cal, alerts=alerts, ctx=ctx)
+        boundary = _advance_workdays(start, lag, lag_cal, alerts=alerts, ctx=ctx)
+        return _boundary_to_instant(boundary, lag_cal, alerts=alerts, ctx=ctx)
+    return _advance_workdays(instant, lag, lag_cal, alerts=alerts, ctx=ctx)
+
+
+def _snap_fwd(num, calendar_info, *, alerts, ctx):
+    """First working day of `calendar_info` at or after `num` (no-op without
+    a calendar, so the no-calendar path emits no extra ALERT)."""
+    if num <= 0 or not calendar_info:
+        return num
+    return _advance_workdays(num, 0, calendar_info, alerts=alerts, ctx=ctx)
+
+
+def _snap_bwd(num, calendar_info, *, alerts, ctx):
+    """Last working day of `calendar_info` at or before `num` (no-op without
+    a calendar)."""
+    if num <= 0 or not calendar_info:
+        return num
+    return _retreat_workdays(num, 0, calendar_info, alerts=alerts, ctx=ctx)
+
+
+def _lag_back_from_instant(instant, lag, lag_cal, *, alerts, ctx):
+    """Backward mirror of _lag_from_instant: the instant `lag` working days of
+    `lag_cal` BEFORE `instant` (a positive lag retreats, a negative lag - a
+    lead - advances by the forward rule, zero leaves the instant alone).
+    Without a calendar the single ordinal-arithmetic call (and its ALERT) is
+    the same one the pre-instant walk made.
+    """
+    if instant <= 0 or not lag_cal:
+        return _retreat_workdays(instant, lag, lag_cal, alerts=alerts, ctx=ctx)
+    n = _round_half_up(lag)
+    if n == 0:
+        return instant
+    if n > 0:
+        return _retreat_workdays(instant, lag, lag_cal, alerts=alerts, ctx=ctx)
+    return _lag_from_instant(instant, -lag, lag_cal, alerts=alerts, ctx=ctx)
+
+
+def _finish_instant(pnode):
+    """The instant a successor is driven from: the node's finish instant when
+    the forward pass (or a timed actual finish) stamped one, else its boundary."""
+    inst = pnode.get('ef_instant')
+    if inst is not None and inst > 0:
+        return inst
+    return pnode['ef']
+
+
+# =============================================================================
 # Constraint clamp helpers (mirrors cpm-engine.js v2.9.7)
 # =============================================================================
 
@@ -1014,7 +1136,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     Raises:
         ValueError: if the network contains a cycle.
     """
-    dd_num = date_to_num(data_date) if data_date else 0
+    # v2.9.44 — the data date is an INSTANT too: 'YYYY-MM-DD 17:00' (the close
+    # of that day) floors remaining work on the NEXT day, exactly as P6 does;
+    # a date-only or morning value is the opening of that day, unchanged.
+    dd_num = _instant_of(data_date) if data_date else 0
     cal_map = cal_map or {}
     alerts = []
     # B4 (P6 alignment wave 2026-08-11): both P6 scheduling modes
@@ -1132,8 +1257,21 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         is_complete = bool(a.get('is_complete', False)) or bool(actual_finish)
         es = date_to_num(a.get('early_start', '')) if a.get('early_start') else 0
         ef = date_to_num(a.get('early_finish', '')) if a.get('early_finish') else 0
+        # v2.9.44 — a completed predecessor drives its successors from its
+        # actual-finish INSTANT. The P6 string carries the time ('2027-03-05
+        # 17:00' is the close of Friday, so a Mon-Fri successor starts Monday
+        # and a seven-day one Saturday); a date-only value has no instant and
+        # keeps the legacy reading, the finish day itself. The node keeps the
+        # date part for display, as before.
+        ef_instant = 0
         if is_complete and actual_finish:
             ef = date_to_num(actual_finish)
+            ef_instant = _instant_of(actual_finish)
+        elif is_complete:
+            ef_instant = ef
+        actual_start = str(actual_start).strip()[:10]
+        actual_finish = str(actual_finish).strip()[:10]
+        if is_complete and actual_finish:
             if actual_start:
                 es = date_to_num(actual_start)
             else:
@@ -1196,6 +1334,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # v2.9.14 F14 backport — driving_predecessor populated by the
             # forward pass; init None.
             'driving_predecessor': None,
+            # v2.9.44 — finish instant (stamped by the forward pass for
+            # incomplete nodes) and the P6 task type, which decides whether a
+            # zero-duration node sits at its driving instant (TT_FinMile) or
+            # at its own calendar's next working start (everything else).
+            'ef_instant': ef_instant,
+            'task_type': _tt,
         }
 
     # v2.9.42 PAIRED FIX — missing-data-date gate. Mirrors cpm-engine.js.
@@ -1407,6 +1551,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # Out: dict {code, type, lag_days} or None.
         driving_pred = None
         _restart_max_drive = 0
+        # v2.9.44 — (snapped drive, instant) per relationship, so a finish
+        # milestone can sit at the instant that actually drove it.
+        _drive_instants = []
         for p in preds:
             pnode = nodes.get(p['from_code'])
             if not pnode:
@@ -1417,44 +1564,60 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # v2.9.42 PAIRED FIX - the LAG walk runs on the relationship-lag
             # calendar; the DURATION walk stays on this activity's own calendar.
             lag_cal = _lag_cal_for(pnode, node)
+            # v2.9.44 — every drive is computed as an INSTANT (the
+            # predecessor's finish or start instant, the lag consumed as
+            # working time on the lag calendar from that instant) and then
+            # snapped onto THIS activity's own calendar, which is where P6
+            # puts an early start. Before this, the predecessor's boundary
+            # was handed over as-is and the lag walk snapped onto the LAG
+            # calendar, so a successor could start on a day its own calendar
+            # does not work, and a seven-day successor of a Friday finish
+            # started on Monday instead of Saturday.
             if t == 'FS':
-                anchor = pnode['ef']
-                drive = _advance_workdays(anchor, lag, lag_cal,
-                                          alerts=alerts,
-                                          ctx=f'FS lag {pnode["code"]}->{code}')
+                _ctx = f'FS lag {pnode["code"]}->{code}'
+                drive_instant = _lag_from_instant(
+                    _finish_instant(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
+                drive = _snap_fwd(drive_instant, node_cal, alerts=alerts, ctx=_ctx)
+                _drive_instants.append((drive, drive_instant))
             elif t == 'SS':
                 # D1 — SS drives from the predecessor's remaining-start
                 # reference (restart for a started incomplete pred; es
                 # otherwise). See _start_drive_src_for.
-                anchor = _start_drive_src_for(pnode)
-                drive = _advance_workdays(anchor, lag, lag_cal,
-                                          alerts=alerts,
-                                          ctx=f'SS lag {pnode["code"]}->{code}')
+                _ctx = f'SS lag {pnode["code"]}->{code}'
+                drive_instant = _lag_from_instant(
+                    _start_drive_src_for(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
+                drive = _snap_fwd(drive_instant, node_cal, alerts=alerts, ctx=_ctx)
+                _drive_instants.append((drive, drive_instant))
             elif t == 'FF':
-                succ_ef_anchor = _advance_workdays(
-                    pnode['ef'], lag, lag_cal,
-                    alerts=alerts, ctx=f'FF lag {pnode["code"]}->{code}')
+                _ctx = f'FF lag {pnode["code"]}->{code}'
+                anchor_instant = _lag_from_instant(
+                    _finish_instant(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
+                succ_ef_anchor = _snap_fwd(anchor_instant, node_cal, alerts=alerts, ctx=_ctx)
                 drive = _retreat_workdays(
                     succ_ef_anchor, node['duration_days'], node_cal,
                     alerts=alerts, ctx=f'FF duration {code}')
                 this_anchor_ef = succ_ef_anchor
+                _drive_instants.append((succ_ef_anchor, anchor_instant))
             elif t == 'SF':
                 # D1 — SF anchors from the predecessor's remaining-start
                 # reference, same as SS. INFERRED for SF specifically: the
                 # corpus carries no discriminating SF instance; adopted by
                 # symmetry with the measured SS rule.
-                succ_ef_anchor = _advance_workdays(
-                    _start_drive_src_for(pnode), lag, lag_cal,
-                    alerts=alerts, ctx=f'SF lag {pnode["code"]}->{code}')
+                _ctx = f'SF lag {pnode["code"]}->{code}'
+                anchor_instant = _lag_from_instant(
+                    _start_drive_src_for(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
+                succ_ef_anchor = _snap_fwd(anchor_instant, node_cal, alerts=alerts, ctx=_ctx)
                 drive = _retreat_workdays(
                     succ_ef_anchor, node['duration_days'], node_cal,
                     alerts=alerts, ctx=f'SF duration {code}')
                 this_anchor_ef = succ_ef_anchor
+                _drive_instants.append((succ_ef_anchor, anchor_instant))
             else:
-                anchor = pnode['ef']
-                drive = _advance_workdays(anchor, lag, lag_cal,
-                                          alerts=alerts,
-                                          ctx=f'FS-default lag {pnode["code"]}->{code}')
+                _ctx = f'FS-default lag {pnode["code"]}->{code}'
+                drive_instant = _lag_from_instant(
+                    _finish_instant(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
+                drive = _snap_fwd(drive_instant, node_cal, alerts=alerts, ctx=_ctx)
+                _drive_instants.append((drive, drive_instant))
             # P6 forward-pass semantics: pred logic cannot override actual_start.
             if has_actual_start:
                 if drive > max_es and driving_pred is None:
@@ -1770,6 +1933,33 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     node['es'] = _bes
                     driving_pred = {'type': 'CONSTRAINT', 'date': _mfc['date']}
 
+        # v2.9.44 — the finish INSTANT successors are driven from. A bar
+        # (remaining bar for started work) closes at the end of its last
+        # worked day: the instant is the opening of the following calendar
+        # day, whatever this activity's calendar says about that day. A
+        # zero-duration node sits at its own snapped day, except a finish
+        # milestone (TT_FinMile), which P6 places AT the instant that drove
+        # it (Friday 17:00 when its predecessor finished Friday), so a
+        # seven-day successor of the milestone starts Saturday; when nothing
+        # but the data date drove it, that instant is the data date itself.
+        if has_actual_start and not node['is_complete'] and _rem_provided:
+            _bar_days = _rem_dur
+        else:
+            _bar_days = node['duration_days']
+        if _bar_days > 0:
+            node['ef_instant'] = _boundary_to_instant(
+                node['ef'], node_cal, alerts=alerts, ctx=f'finish instant {code}')
+        else:
+            node['ef_instant'] = node['ef']
+            if (node.get('task_type') == 'TT_FinMile' and not has_actual_start
+                    and node['ef'] == node['es']):
+                _cands = [inst for (v, inst) in _drive_instants if v == node['ef']]
+                if _cands:
+                    node['ef_instant'] = max(_cands)
+                elif dd_num > 0 and node['ef'] == _snap_fwd(
+                        dd_num, node_cal, alerts=alerts, ctx=f'finish instant {code}'):
+                    node['ef_instant'] = dd_num
+
         # v2.9.15 P2 (F14-4) backport — DATA_DATE-driven driver. When no pred
         # and no constraint won, but max_es == dd_num AND the activity has preds,
         # set driving_predecessor to a {type:'DATA_DATE', date} sentinel.
@@ -1822,6 +2012,24 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 return max_ef
         return _advance_workdays(_num_from_date(d), 1, n_cal,
                                  alerts=alerts, ctx=f'seed-LF {n["code"]}')
+
+    # v2.9.44 — a successor's late-finish INSTANT: the close of its last
+    # late-worked day (the boundary retreated to that day, plus one calendar
+    # day), or the late finish itself for a zero-duration node. Mirrors the
+    # forward ef_instant so FF / SF backward bounds retreat from the same
+    # kind of instant the forward pass advanced from.
+    def _lf_instant_of(snode):
+        _sr = snode.get('remaining_duration')
+        if (snode.get('actual_start') and not snode['is_complete']
+                and _sr is not None and math.isfinite(_sr) and _sr >= 0):
+            _s_bar = _sr
+        else:
+            _s_bar = snode['duration_days']
+        if _s_bar > 0:
+            return _boundary_to_instant(
+                snode['lf'], _cal_for(snode),
+                alerts=alerts, ctx=f'late finish instant {snode["code"]}')
+        return snode['lf']
 
     # Backward Pass
     for n in nodes.values():
@@ -1882,26 +2090,44 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 lag = s['lag_days']
                 drive = None
                 ls_bound = None
+                # v2.9.44 — the backward walk mirrors the forward one in
+                # INSTANTS: the successor's late start is the instant it
+                # must not start after (its late finish instant is the close
+                # of its last late-worked day), the lag is retreated as
+                # working time on the lag calendar from that instant, and the
+                # result becomes THIS activity's bound on its own calendar -
+                # the boundary after its latest workable day for a finish
+                # bound (FS / FF), its latest workable day for a start bound
+                # (SS / SF). Without this mirror the forward instants left the
+                # two walks non-inverse: a Mon-Fri predecessor of a seven-day
+                # successor was handed a Saturday late finish against its
+                # Monday early-finish boundary and reported two days of
+                # negative float in a network with no constraint.
                 if t == 'FS':
-                    drive = _retreat_workdays(
-                        snode['ls'], lag, s_cal,
-                        alerts=alerts, ctx=f'backward FS lag {code}->{snode["code"]}')
+                    _ctx = f'backward FS lag {code}->{snode["code"]}'
+                    _inst = _lag_back_from_instant(snode['ls'], lag, s_cal,
+                                                   alerts=alerts, ctx=_ctx)
+                    drive = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
                 elif t == 'SS':
-                    ls_bound = _retreat_workdays(
-                        snode['ls'], lag, s_cal,
-                        alerts=alerts, ctx=f'backward SS lag {code}->{snode["code"]}')
+                    _ctx = f'backward SS lag {code}->{snode["code"]}'
+                    _inst = _lag_back_from_instant(snode['ls'], lag, s_cal,
+                                                   alerts=alerts, ctx=_ctx)
+                    ls_bound = _snap_bwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
                 elif t == 'FF':
-                    drive = _retreat_workdays(
-                        snode['lf'], lag, s_cal,
-                        alerts=alerts, ctx=f'backward FF lag {code}->{snode["code"]}')
+                    _ctx = f'backward FF lag {code}->{snode["code"]}'
+                    _inst = _lag_back_from_instant(_lf_instant_of(snode), lag, s_cal,
+                                                   alerts=alerts, ctx=_ctx)
+                    drive = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
                 elif t == 'SF':
-                    ls_bound = _retreat_workdays(
-                        snode['lf'], lag, s_cal,
-                        alerts=alerts, ctx=f'backward SF lag {code}->{snode["code"]}')
+                    _ctx = f'backward SF lag {code}->{snode["code"]}'
+                    _inst = _lag_back_from_instant(_lf_instant_of(snode), lag, s_cal,
+                                                   alerts=alerts, ctx=_ctx)
+                    ls_bound = _snap_bwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
                 else:
-                    drive = _retreat_workdays(
-                        snode['ls'], lag, s_cal,
-                        alerts=alerts, ctx=f'backward default {code}->{snode["code"]}')
+                    _ctx = f'backward default {code}->{snode["code"]}'
+                    _inst = _lag_back_from_instant(snode['ls'], lag, s_cal,
+                                                   alerts=alerts, ctx=_ctx)
+                    drive = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
                 if drive is not None and (min_lf is None or drive < min_lf):
                     min_lf = drive
                 if ls_bound is not None and (min_ls_bound is None or ls_bound < min_ls_bound):
@@ -2020,10 +2246,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             n['ef'] = n['lf']
             # Round 6 — int 0 for JSON cross-engine parity (was 0.0).
             n['tf'] = 0
+            # v2.9.44 — the finish instant slides with the finish.
+            _alap_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+            if n['ef'] > n['es']:
+                n['ef_instant'] = _boundary_to_instant(
+                    n['ef'], _alap_cal, alerts=alerts, ctx=f'finish instant {c}')
+            else:
+                n['ef_instant'] = n['ef']
 
     for n in nodes.values():
         n['es_date'] = num_to_date(n['es'])
         n['ef_date'] = num_to_date(n['ef'])
+        # v2.9.44 — the finish instant beside the boundary: the calendar day
+        # whose opening the finish is (Saturday for a Friday 17:00 finish).
+        if not n.get('ef_instant'):
+            n['ef_instant'] = n['ef']
+        n['ef_instant_date'] = num_to_date(n['ef_instant'])
         if n.get('actual_start') and not n['is_complete']:
             # B4 - display LS is the actual start; remaining-late calculus
             # exposed separately (mirrors the P6 grid and the JS emitter).
