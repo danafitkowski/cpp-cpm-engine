@@ -1,0 +1,246 @@
+# cpm-engine
+
+[![npm version](https://img.shields.io/npm/v/cpp-cpm-engine.svg)](https://www.npmjs.com/package/cpp-cpm-engine)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![tests: 1288 passing](https://img.shields.io/badge/tests-1288%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![crossval: JS↔Python 1009/1015](https://img.shields.io/badge/JS%E2%86%94Python-1009%2F1015-brightgreen.svg)](DAUBERT.md#31-independent-verification)
+[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2083%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2944-baseline)
+[![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
+[![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
+[![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
+
+An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
+**Open source. AACE-aligned. Daubert-disclosed. 1,288 JS unit tests, plus JS/Python parity on 1009 of 1015 enumerated cross-validation comparisons; the remaining 6 are not compared because neither engine emits the field on a completed activity (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+
+Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
+
+Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a forensic-scheduling consultancy.
+
+---
+
+## Quick start
+
+**The npm package lags this repository.** npm `latest` is 2.9.19, published 2026-05-17 — that is the number the npm badge above renders, and nothing has been published to npm since, while 22 tagged releases have shipped here. `npm install cpp-cpm-engine` therefore does **not** give you the engine described by DAUBERT.md, by the [`release-evidence/`](release-evidence/) packets, or by any version reference in these docs. Install from the git tag:
+
+```bash
+git clone https://github.com/danafitkowski/cpp-cpm-engine.git
+cd cpp-cpm-engine
+git checkout v2.9.44
+```
+
+The engine has zero runtime dependencies, so a clone is all it needs. This is the same install path [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md) gives an opposing expert.
+
+```js
+const E = require('./cpm-engine.js');
+
+const result = E.computeCPM(
+    [
+        { code: 'A', duration_days: 5, early_start: '2026-01-05', clndr_id: 'MF' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF' },
+        { code: 'C', duration_days: 4, clndr_id: 'MF' },
+    ],
+    [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
+    ],
+    {
+        dataDate: '2026-01-05',
+        calMap: { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } },
+    }
+);
+
+console.log('Project finish:', result.projectFinish);     // 2026-01-21
+console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
+console.log('Engine version:', result.manifest.engine_version); // 2.9.44
+```
+
+That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
+
+---
+
+## Why this engine?
+
+| Capability | cpm-engine |
+|------------|:----------:|
+| Open source                                            | yes |
+| AACE-canonical method labels (29R-03 / 49R-06 / 52R-06)| yes |
+| Daubert / FRE 702 disclosure (built-in `DAUBERT.md`)   | yes |
+| JS-Python bit-identical parity on enumerated CPM surface | yes |
+| Topology fingerprint hash (SHA-256, copy-detection signal) | yes |
+| Kinematic delay dynamics (pre-publication, JS-only)    | yes |
+| Bayesian update with hierarchical pooling (pre-publication, JS-only) | yes |
+| 66 default holiday rule sets (multi-jurisdiction; framework-aligned defaults, **not** legally certified — see [`docs/jurisdictions.md`](docs/jurisdictions.md)) | yes |
+| MIT licensed                                           | yes |
+
+*(Vendor comparison removed in the v2.9.33 audit cycle. Comparisons against specific commercial CPM tools should be supplied by an independent reviewer, not authored by the engine's maintainer.)*
+
+The engine math is a commodity. What carries a forensic schedule analysis is the **workflow, the methodology discipline, and the Daubert disclosure posture** — not the forward pass itself. Critical Path Partners open-sources the engine so any academic, any solo forensic scheduler, any contractor's internal scheduler can build on a transparent, citable foundation.
+
+---
+
+## What you can build
+
+- **Forensic delay analysis primitives** — CPM forward/backward pass that supports analyses under AACE 29R-03 MIPs 3.3 (windows), 3.6/3.7 (prospective TIA single-base / multi-base), and 3.8 (collapsed as-built). The engine provides the CPM math; full method implementations (period selection, fragnet integration, as-built reconstruction) live in the CPP forensic skill suite — this OSS engine is the math core they build on, not the full method.
+- **Claim packages** — owner-submission EOT bundles with cover letter, exhibits, mitigation logs
+- **Daubert disclosures** — FRCP 26(a)(2)(B) reports, FRE 702/707 four-prong methodology statements
+- **Schedule risk primitives** — Bayesian posterior estimation (`computeBayesianUpdate`); per-iteration CPM (`runCPM`) suitable as an inner loop for Monte Carlo wrappers built on top of this engine. Full Monte Carlo / QRAMM scoring lives in the CPP forensic skill suite (`schedule-risk-analysis`), built atop this primitive.
+- **Schedule health** — DCMA-14 assessment, A-F auto-grade, baseline-vs-current diff
+- **Multi-jurisdiction calendars** — 66 default holiday rule sets (CA-FED + 13 provinces/territories, US-FED + 50 states + DC). These are framework-aligned defaults sufficient for general-purpose date math — see [`docs/jurisdictions.md`](docs/jurisdictions.md) for the per-jurisdiction reference table and forensic-use verification guidance. They are **not** legally certified calendars; for forensic use, override with the project's contract calendar via `opts.calendar`.
+
+---
+
+## AACE alignment
+
+The engine implements the math behind these AACE Recommended Practices:
+
+| RP            | Title                                                          | Method labels emitted |
+|---------------|----------------------------------------------------------------|-----------------------|
+| 29R-03        | Forensic Schedule Analysis                                     | MIP 3.3 / 3.6 / 3.7 / 3.8 |
+| 49R-06        | Identifying the Critical Path                                  | LPM, TFM, MFP        |
+| 52R-06        | Prospective Time Impact Analysis                               | MIP 3.6 (Single Base) / MIP 3.7 (Multiple Base) |
+| 122R-22       | Quantitative Risk Analysis Maturity Model (QRAMM)              | (badge surface)       |
+| PPG #20 (2nd Ed 2024) | Forensic Schedule Analysis Practice Guide              | (general acceptance)  |
+
+Method labels are emitted in `result.manifest.methodology` — exactly the strings AACE peer-reviewers and opposing experts expect.
+
+---
+
+## Verifiable provenance
+
+Every computation emits a manifest:
+
+```js
+result.manifest = {
+    engine_version: '2.9.44',
+    method_id: 'computeCPM',
+    activity_count: 3,
+    relationship_count: 2,
+    data_date: '2026-01-05',
+    calendar_count: 1,
+    computed_at: '2026-05-10T14:32:01.847Z',
+}
+```
+
+Plus, for forensic provenance, every input carries a SHA-256 topology hash:
+
+```js
+const hash = E.computeTopologyHash(activities, relationships);
+console.log(hash.topology_hash);  // 64-char hex over canonical (code, duration, sorted preds + types + lags)
+// Two XERs with identical hashes have IDENTICAL CANONICALIZED TOPOLOGY under the hashed-field
+// set (activity codes, durations, predecessor links + types + lags). NOT a forensic-equivalence
+// statement — different calendars, resources, WBS, names, or constraints can still produce
+// different schedules under the same hash. The hash is a signal, not a schedule-equivalence proof.
+```
+
+This is the engine's network-topology fingerprint. **Bid-collusion signal, retroactive-manipulation signal, and copy-detection signal across XERs all rely on it.** It is also the foundation that lets opposing counsel verify topology-level integrity of a CPP analysis post-hoc — they can recompute the hash from the same XER and confirm the activity/relationship network was not altered between submission and review.
+
+---
+
+## JavaScript - Python parity
+
+The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP forensic skill. The two implementations are kept bit-identical via cross-validation:
+
+```bash
+npm run crossval
+# 46 fixtures, 1009 checks executed, 0 deviations, measured 2026-09-15.
+# A further 6 comparisons on the enumerated surface (1015 total) are skipped rather than failed by the harness field guards, all on ff_signed / ff_signed_working_days on completed activities, where NEITHER engine emits the field.
+```
+
+Plus a 282-activity real-XER stress test reports 0 mismatches. That XER is a single non-public reference file, is not committed, and the run is not independently reproducible from this repo (see [DAUBERT.md §2](DAUBERT.md#2-methodology-tested)).
+
+This means a forensic analysis run in JavaScript (browser, Node) produces the same numbers as one run in Python (claims-preparation skill, MCP server, batch pipeline). Every CPP deliverable carries the same manifest regardless of which surface produced it.
+
+---
+
+## Independent verification
+
+The same-author crossval is honest about its limit: both JS and Python implementations are maintained here. To close the Daubert "no independent testing" objection, the engine ships with a **one-command third-party reproduction harness**:
+
+```bash
+git clone https://github.com/danafitkowski/cpp-cpm-engine
+cd cpp-cpm-engine
+git checkout <commit-sha>     # the SHA cited in the disclosure
+npm run verify                # runs unit + crossval + citation tests
+# → attestations/latest.json   ← machine-readable witness file
+```
+
+Engine has **zero npm dependencies**, so reproduction requires only Node 18+ and Python 3.10+. The witness file contains:
+
+- Engine SHA-256 + Python-reference SHA-256
+- Commit SHA + git ref + workflow URL (in CI)
+- Test counts: unit-tests passed/failed, crossval fixtures + checks, citation regression status
+- Timestamp + Node version + platform
+- Verdict (PASS/FAIL)
+
+Compare your locally-generated witness against the CI-signed witness (published on every push as a workflow artifact + Sigstore-signed via `actions/attest-build-provenance`). Bit-identical SHA-256s + matching pass counts on a clean clone = third-party reproduction confirmed.
+
+Verify a signed CI attestation:
+
+```bash
+gh attestation verify attestations/latest.json --owner danafitkowski
+```
+
+See [DAUBERT.md §3.1 — Independent Verification](DAUBERT.md#31-independent-verification) for the full Daubert framing.
+
+---
+
+## Production use
+
+Client setup for the hosted MCP server (Cline, Cursor, Claude Code, Claude Desktop) is in [`llms-install.md`](llms-install.md). The engine runs live at **[mcp.criticalpathpartners.ca](https://mcp.criticalpathpartners.ca/try)** — try it in your browser. The same `cpm-engine.js` file is served over the wire and embedded inline in every report CPP produces.
+
+The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis) all consume this engine — the JS port for browser/MCP, the Python sibling for batch pipelines.
+
+---
+
+## Citation
+
+If you use this engine in academic work or expert-witness reports, please cite:
+
+> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.44. <https://github.com/danafitkowski/cpp-cpm-engine>
+
+Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+You can use this engine in commercial forensic consulting, in academic research, in your own scheduling product, in court-filed expert reports. Just keep the copyright notice. No support is implied; no warranty is provided. **You are responsible for the conclusions you draw with the engine.** A Daubert disclosure is built in (`DAUBERT.md`) — you may use it as a starting point for your own FRCP 26(a)(2)(B) report.
+
+---
+
+## Release notes
+
+**v2.9.12 (2026-05-16) — Round 9 engine math fix wave.** ~30 substantive math defects closed across four buckets: T1 constraint handling (MS_Start backward LF clamp, actual_start precedence over ES-side constraints per P6 forward-pass semantics, Section D Monte Carlo actual_start pinning, INFO task-dropped alerts, constraint-unrecognized / incomplete WARNs, CS_MANSTART/CS_MANFINISH aliases, Section D SNLT/FNLT/MS_Start violated+applied alerts); T2 calendar/lag arithmetic (calendar-aware Free Float on binding link, signed _countWorkDaysBetween, negative-FF preserved, dateToNum rollover guard, non-finite lag rejection, invalid-calendar-falling-back WARN, SUB_DAY_LAG_ROUNDED direction-bias disclosure); T3 in-progress + actuals (remaining_duration P6 retained-logic, backward LS=ES pin for in-progress, Section C EF>=ES guard, OoS enumerates every pred, hammock-orphan ALERT, hammock duration_working_days, unrecognized-task-type WARN); T4 Python parity (R8A-1 backport, ALAP secondary slot, forward ES gate). 792 unit tests / 416 crossval checks / verify PASS. See [CHANGELOG.md](CHANGELOG.md) for the full T1-T4 fix index.
+
+**v2.9.11 (2026-05-16) — Round 8 R8A engine math fix wave.** Four T1 silent-wrong-answer paths closed: `actual_finish` without `actual_start` no longer collapses ES to EF; sub-day fractional lags emit `SUB_DAY_LAG_ROUNDED` ALERT; FF / SF Free Float uses the successor's calendar; Section D constraint clamps emit `constraint-skipped` WARN when `opts.projectStart` is missing.
+
+**v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.44.
+
+---
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,288 unit tests and the cross-validation harness, in which 1009 of 1015 defined comparisons execute and are bit-identical with 0 failures across 46 fixtures (the remaining 6 are skipped rather than compared — 3 `ff_signed`, 3 `ff_signed_working_days`, all on completed activities where neither engine emits the field), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+
+---
+
+## Companion repositories
+
+Two companion repositories are public:
+
+- **[cpp-xer-parser](https://github.com/danafitkowski/cpp-xer-parser)** — the canonical Primavera P6 XER parser. The engine consumes its parse output as the canonical XER → JS-object layer; `cpp-xer-parser` has no dependency on this engine.
+- **[cpp-critical-path-validator](https://github.com/danafitkowski/cpp-critical-path-validator)** — critical path validation and DCMA-14 assessment. Optionally consumes this engine for the LPM cross-check; degrades gracefully when absent.
+
+Additional CPP skills (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, collapsed-as-built, counter-claim-analysis, schedule-risk-analysis) are private; contact Critical Path Partners for access.
+
+---
+
+## Strategic note
+
+CPP is a forensic-scheduling consultancy. The engine is open-source as a deliberate posture choice: the CPM math is a decades-old peer-reviewed commodity (Kelley & Walker 1959, Kahn 1962, Tarjan 1972); the workflow, methodology discipline, and Daubert-disclosure posture are where forensic value lives. Open-sourcing the math layer means any academic, solo forensic, contractor's internal scheduler, or independent reviewer has a transparent, citable foundation to inspect, modify, or build on.
+
+If you ship something built on this engine, we'd love to hear about it: [danafitkowski@gmail.com](mailto:danafitkowski@gmail.com).
