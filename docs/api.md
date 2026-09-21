@@ -311,7 +311,7 @@ Reset the Monte-Carlo state.
 
 ---
 
-## Forensic features (industry-first)
+## Forensic features
 
 ### `E.computeTopologyHash(activities, relationships)`
 
