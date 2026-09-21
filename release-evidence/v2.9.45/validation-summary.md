@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Tag | `v2.9.45` (not yet created — see `PENDING-CI.md`) |
+| Tag | `v2.9.45` |
 | Commit | `ee8c4410b5e1ea3723ce7b39666f64f26f911e67` |
 | Release date | 2026-09-21 |
 | Engine SHA-256 | `96ff9986700189e0ab48027795eae80196f41705ca4d7b2f543577073a07e4eb` |
@@ -11,8 +11,8 @@
 | Python reference bytes | 160472 |
 | Unit tests | 1306 / 1306 passing |
 | Cross-validation | 1009 of 1015 defined comparisons executed and bit-identical, 0 failures, across 46 fixtures; 6 skipped rather than compared (3 `ff_signed`, 3 `ff_signed_working_days`), all on completed activities where NEITHER engine emits the field |
-| Sigstore Rekor logIndex | not yet produced — see `PENDING-CI.md` |
-| CI run | not yet produced — see `PENDING-CI.md` |
+| Sigstore Rekor logIndex | 2907179312 (rekor.sigstore.dev) |
+| CI run | https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/35663183826 |
 
 ## Suites
 
@@ -106,4 +106,4 @@
 - The P6 comparison matrix is fitted to one capture and was recomputed, not re-captured, for this release; no held-out capture exists.
 - The engine works in whole days. The constraint resolver reads the hour only to decide which working-day boundary the instant names; it does not make the engine sub-day. A constraint stamped mid-shift resolves to the same boundary as a bare date.
 - The shift close is read from `CALENDAR.clndr_data`. On a calendar that carries no hour detail the result is unchanged from v2.9.44 and a `constraint-instant-unresolved` alert is raised; it is disclosed, not guessed.
-- This packet is missing its cryptographic layer — see `PENDING-CI.md`. Layer 2 of `VERIFY_RELEASE.md` cannot be exercised against v2.9.45 until CI signs the tag.
+- The cryptographic layer is present: `witness-v2.9.45.json` signed by the tag run above, its Sigstore bundle in `sigstore-attestation-output.txt`, and the transparency-log entry in `rekor-entry.txt`. Layer 2 of `VERIFY_RELEASE.md` can be exercised against v2.9.45.
