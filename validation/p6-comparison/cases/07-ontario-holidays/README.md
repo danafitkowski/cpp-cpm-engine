@@ -24,7 +24,7 @@ A starts Mon Jan 5 2026, 90 wd Mon-Fri on CA-ON calendar. Crosses Family Day (3r
 3. F9.
 4. Verify A.EF matches the engine output within +/- 0 wd.
 
-## Engine output (produced by engine v2.9.44)
+## Engine output (v2.9.45)
 
 Project finish: `2026-05-13`
 

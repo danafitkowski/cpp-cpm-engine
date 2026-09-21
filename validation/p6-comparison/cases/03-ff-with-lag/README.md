@@ -16,7 +16,7 @@ A starts dataDate (Mon Jan 5), 5 wd → A.EF = Fri Jan 9. B has no FS predecesso
 4. F9 to schedule.
 5. Capture columns and compare.
 
-## Engine output (produced by engine v2.9.44)
+## Engine output (v2.9.45)
 
 Project finish: `2026-01-15`
 

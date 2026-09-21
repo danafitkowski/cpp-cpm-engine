@@ -41,12 +41,43 @@ have been applied:
    predecessor's finish INSTANT and snapped onto their own calendar, lags
    are working time on the lag calendar from that instant, and the backward
    pass mirrors it. See CHANGELOG.md v2.9.44.
+4. v2.9.45 (finish-constraint instants) is applied here by the same patch
+   as the canonical engine: a finish-side constraint resolves onto the
+   activity's own exclusive boundary, advanced one working day when the
+   constraint's time of day falls at or after the close of that day's
+   shift, read hour-accurately out of `CALENDAR.clndr_data`. Both walks
+   resolve through the one helper, so they stay inverses. See CHANGELOG.md
+   v2.9.45.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  a3ebb418739c36c4af6a9088a229cc81d3cae58d8f45efad8620e4d9b50799d1
+cpm.py  SHA-256:  34dbc2aa0966f133207be405fb09951a7027b5ae2b515b43b4ab211e83a0c895
 
+(v2.9.45 finish-constraint instants 2026-09-21 - bumped from
+a3ebb418...: a P6 constraint date is an INSTANT and the time of day
+decides which working-day boundary it names. _normalize_constraint
+truncated it with [:10] and the clamp then compared the bare date
+against ef / lf, which since v2.9.44 are EXCLUSIVE boundaries, so every
+finish constraint written at the close of its own working day bound one
+working day early in both passes. The rule: the bare constraint date,
+advanced ONE working day on the activity's own calendar if and only if
+the instant falls at or after the close of that day's shift, read
+hour-accurately out of CALENDAR.clndr_data (_constraint_finish_num /
+_calendar_day_close / _day_close_tables). Not the clock: the same 16:00
+is the close on an 08:00-16:00 calendar and one working hour INSIDE the
+day on an 08:00-12:00 + 13:00-17:00 one, and both shapes occur. Where
+no hour detail is available the v2.9.44 answer is returned and
+constraint-instant-unresolved is emitted rather than guessed; a
+constraint with no time at all is untouched. Start constraints were
+measured over the same population, found already correct, and are not
+touched. Applied to this reference by the same patch as the canonical
+engine; the 46-fixture harness stays at 1009 of 1015 executed and
+bit-identical. Measured P6 against P6 over 205 real exports and 2,032
+constrained rows: 113 of 796 early-finish and 151 of 254 late-finish
+constraint-pinned rows were exactly one working day out; the new rule
+fixes all 264 and regresses none.
+Prior:
 (v2.9.44 cross-calendar finish instants 2026-09-15 - bumped from
 83c6db6f...: a successor is driven from its predecessor's finish INSTANT
 (the close of the last worked period, Friday 17:00 = the opening of
@@ -202,8 +233,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 150186
-  sha-256:  a3ebb418739c36c4af6a9088a229cc81d3cae58d8f45efad8620e4d9b50799d1
+  bytes: 160472
+  sha-256:  34dbc2aa0966f133207be405fb09951a7027b5ae2b515b43b4ab211e83a0c895
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

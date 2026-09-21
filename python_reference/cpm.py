@@ -42,6 +42,13 @@
 #      predecessor's finish INSTANT and snapped onto their own calendar,
 #      lags are working time on the lag calendar from that instant, and the
 #      backward pass mirrors it. See CHANGELOG.md v2.9.44.
+#   4. v2.9.45 (finish-constraint instants) is applied here by the same
+#      patch as the canonical engine: a finish-side constraint resolves onto
+#      the activity's own exclusive boundary, advanced one working day when
+#      the constraint's time of day falls at or after the close of that
+#      day's shift, read hour-accurately out of CALENDAR.clndr_data. Both
+#      walks resolve through the one helper, so they stay inverses. See
+#      CHANGELOG.md v2.9.45.
 #
 # This file is pinned by SHA-256 — see python_reference/README.md and the
 # hash printed by cpm-engine.crossval.js at startup. Any drift between this
@@ -125,7 +132,7 @@ def _round_half_up_to(x, decimals=0):
 # dropping are executed. Only the completed-activity branch still emits neither
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those 6 comparisons are absent on both sides rather than one.
-ENGINE_VERSION = '2.9.44'
+ENGINE_VERSION = '2.9.45'
 
 
 # =============================================================================
@@ -187,6 +194,42 @@ CANONICAL_CONSTRAINT_TYPES = frozenset([
 ])
 
 
+# v2.9.45 — a P6 constraint date is an INSTANT, and the time of day is
+# load-bearing. `[:10]` threw it away and the clamp then compared a bare date
+# against `ef` / `lf`, which since v2.9.44 are EXCLUSIVE boundaries: the
+# opening of the working day AFTER the last day worked. A finish constraint
+# written at the close of Friday therefore bound on Friday's boundary instead
+# of Monday's, one working day early. Measured against P6's own stored dates
+# over 205 real exports: 113 of 796 rows whose early finish P6 pinned at the
+# constraint, and 151 of 254 whose late finish it pinned there, were exactly
+# one working day out (P6-CONSTRAINT-INSTANTS-2026-09-21.md, private oracle
+# repo). Start constraints were measured over the same population and found
+# already correct — `es` / `ls` ARE the start instant — and are untouched.
+_TIME_RE = re.compile(r'^\d{4}-\d{2}-\d{2}[ T](\d{2}):(\d{2})')
+
+
+def _constraint_time_minutes(raw_date):
+    """Minute of day carried by a P6 constraint string, or None when it
+    carries no time at all ('2026-01-09', or anything unparseable). None
+    means "no instant to resolve" and every clamp then behaves exactly as it
+    did before v2.9.45."""
+    m = _TIME_RE.match(str(raw_date or '').strip())
+    if not m:
+        return None
+    hh, mm = int(m.group(1)), int(m.group(2))
+    if hh > 24 or mm > 59:
+        return None
+    return hh * 60 + mm
+
+
+def _with_constraint_instant(cstr, raw_date):
+    """Attach the constraint's time of day, when it has one."""
+    tod = _constraint_time_minutes(raw_date)
+    if tod is not None:
+        cstr['time_minutes'] = tod
+    return cstr
+
+
 def _normalize_constraint(c, alerts=None, ctx=None):
     """Primary constraint normalization (cstr_type + cstr_date).
 
@@ -230,7 +273,11 @@ def _normalize_constraint(c, alerts=None, ctx=None):
                 ),
             })
         return None
-    return {'type': canonical, 'date': date_str}
+    # v2.9.45 — carry the TIME OF DAY beside the date. `date` is unchanged
+    # (every consumer that reads a constraint back still sees the date P6
+    # stored); `time_minutes` is what the finish-side clamp resolves the
+    # instant with. See _constraint_finish_num.
+    return _with_constraint_instant({'type': canonical, 'date': date_str}, raw_date)
 
 
 def _normalize_constraint2(c, alerts=None, ctx=None):
@@ -273,7 +320,8 @@ def _normalize_constraint2(c, alerts=None, ctx=None):
                 ),
             })
         return None
-    return {'type': canonical, 'date': date_str}
+    # v2.9.45 — mirrors the primary; see _normalize_constraint.
+    return _with_constraint_instant({'type': canonical, 'date': date_str}, raw_date)
 
 
 # =============================================================================
@@ -872,6 +920,143 @@ def _finish_instant(pnode):
 
 
 # =============================================================================
+# v2.9.45 — resolving a P6 constraint INSTANT to an engine boundary
+# =============================================================================
+#
+# The discriminator between "this instant is the close of its day" and "this
+# instant is inside its day" is the calendar's own shift close, hour-accurate
+# and per calendar. It is NOT the clock: the corpus carries 16:00 constraints
+# on a 08:00-16:00 calendar (at the close, 128 rows) and 16:00 constraints on
+# a 08:00-12:00 + 13:00-17:00 calendar (inside the day, 28 rows), and the two
+# shapes must behave differently. Any "afternoon means end of day" heuristic
+# regresses the second group.
+#
+# The close comes out of CALENDAR.clndr_data, which production already carries
+# on every calendar_info under `raw` (xer_parser.get_calendar_map stores the
+# blob there). work_days / holidays are NOT read from it — the day model the
+# caller supplied stays authoritative; `raw` supplies the shift close and
+# nothing else. When no hour detail is available the engine leaves the
+# conversion exactly where v2.9.44 left it and DISCLOSES, rather than guessing.
+
+_DAY_CLOSE_CACHE = {}
+_DAY_CLOSE_CACHE_MAX = 256
+_CSTR_SLOT_RE = re.compile(
+    r'(?:s\|(\d{1,2}:\d{2})\|f\|(\d{1,2}:\d{2}))'
+    r'|(?:f\|(\d{1,2}:\d{2})\|s\|(\d{1,2}:\d{2}))')
+_CSTR_DAY_SEG = re.compile(r'^\(0\|\|([1-7])\(\)')
+
+
+def _slot_close_of(seg):
+    """Latest slot end, in minutes of the day, in one clndr_data segment.
+    Mirrors decode_clndr_data's slot grammar, finish-first variant and the
+    f|00:00 == midnight fix included."""
+    close = None
+    for m in _CSTR_SLOT_RE.finditer(seg):
+        if m.group(1) is not None:
+            s, f = _d7_hhmm(m.group(1)), _d7_hhmm(m.group(2))
+        else:
+            f, s = _d7_hhmm(m.group(3)), _d7_hhmm(m.group(4))
+        if f == 0:
+            f = 1440
+        if f > s and (close is None or f > close):
+            close = f
+    return close
+
+
+def _day_close_tables(raw):
+    """(week_close[js_dow], exception_close{iso-date}) decoded from a
+    clndr_data blob, or (None, None) when it carries no usable hours."""
+    if raw in _DAY_CLOSE_CACHE:
+        return _DAY_CLOSE_CACHE[raw]
+    week = [None] * 7
+    exc = {}
+    dow_block = _d7_block_after(raw, 'DaysOfWeek')
+    if dow_block is not None:
+        for seg in _d7_segments_of(dow_block):
+            m = _CSTR_DAY_SEG.match(seg)
+            if not m:
+                continue
+            week[(int(m.group(1)) - 1) % 7] = _slot_close_of(seg)
+    exc_block = _d7_block_after(raw, 'Exceptions')
+    if exc_block is not None:
+        for seg in _d7_segments_of(exc_block):
+            dm = _D7_EXC_DATE.search(seg)
+            if not dm:
+                continue
+            ds = _d7_serial_to_date_string(dm.group(1))
+            if ds:
+                exc[ds] = _slot_close_of(seg)
+    out = (week, exc) if any(c is not None for c in week) else (None, None)
+    if len(_DAY_CLOSE_CACHE) < _DAY_CLOSE_CACHE_MAX:
+        _DAY_CLOSE_CACHE[raw] = out
+    return out
+
+
+def _calendar_day_close(day_num, calendar_info):
+    """Minute of day at which `calendar_info` stops working on the day
+    `day_num`, or None when the calendar carries no hour detail for it."""
+    if not calendar_info or not isinstance(calendar_info, dict):
+        return None
+    raw = calendar_info.get('raw')
+    if not raw or '(' not in str(raw):
+        return None
+    week, exc = _day_close_tables(str(raw))
+    if week is None:
+        return None
+    d = _date_from_num(day_num)
+    if d is None:
+        return None
+    iso = d.isoformat()
+    if iso in exc:
+        return exc[iso]                     # a dated exception owns its hours
+    return week[(d.weekday() + 1) % 7]      # Python Mon=0 -> JS/P6 Sun=0
+
+
+# The canonical types whose date addresses the activity's FINISH, and which
+# therefore clamp against the engine's exclusive ef / lf boundary. The
+# start-side types (SNET / SNLT / SO / MS_Start) address `es` / `ls`, which
+# already ARE the instant, and take no conversion.
+_FINISH_CLAMP_TYPES = ('FNET', 'FNLT', 'FO', 'MS_Finish', 'MFO')
+
+
+def _constraint_finish_num(cstr, calendar_info, *, alerts, ctx):
+    """The day number a FINISH-side constraint clamps `ef` / `lf` against.
+
+    P6 pins the LAST WORKED INSTANT; the engine's ef / lf are the EXCLUSIVE
+    boundary one working day later. So the bare constraint date is advanced by
+    one working day if and only if the constraint instant falls at or after
+    the close of that day's shift. A constraint with no time of day, or on a
+    calendar with no hour detail, is returned unchanged — the v2.9.44 answer.
+    """
+    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
+    if cd_num <= 0:
+        return cd_num
+    tod = cstr.get('time_minutes')
+    if tod is None:
+        return cd_num                       # bare date: nothing to resolve
+    close = _calendar_day_close(cd_num, calendar_info)
+    if close is None:
+        if alerts is not None and isinstance(alerts, list):
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-instant-unresolved',
+                'message': (
+                    f'{cstr.get("type")} on {ctx or "activity"} carries the '
+                    f'instant {cstr["date"]} {tod // 60:02d}:{tod % 60:02d}, but '
+                    f'its calendar supplies no shift hours (no CALENDAR.'
+                    f'clndr_data), so the engine cannot tell an end-of-day '
+                    f'constraint from a mid-day one. Clamped on the bare date, '
+                    f'which is correct for a mid-day instant and one working '
+                    f'day early for an end-of-day one.'
+                ),
+            })
+        return cd_num
+    if tod < close:
+        return cd_num                       # the instant is inside the day
+    return _advance_workdays(cd_num, 1, calendar_info, alerts=alerts, ctx=ctx)
+
+
+# =============================================================================
 # Constraint clamp helpers (mirrors cpm-engine.js v2.9.7)
 # =============================================================================
 
@@ -937,7 +1122,8 @@ def _apply_forward_es_constraint(code, max_es, cstr, label, alerts):
     return max_es
 
 
-def _apply_forward_ef_constraint(code, ef, cstr, label, alerts, es=None):
+def _apply_forward_ef_constraint(code, ef, cstr, label, alerts, es=None,
+                                 node_cal=None):
     """Forward-pass EF-side clamp.
 
     v2.9.14 F5 Bug E backport — optional `es` parameter. When provided, the
@@ -955,9 +1141,18 @@ def _apply_forward_ef_constraint(code, ef, cstr, label, alerts, es=None):
     """
     if not cstr:
         return ef
-    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
     tag = ' (secondary)' if label == 'secondary' else ''
     ctype = cstr.get('type')
+    # v2.9.45 — the P6 instant resolved into the engine's boundary space, for
+    # the FINISH-side types only: a start-side constraint reaching this helper
+    # falls through untouched and must not be resolved (or disclosed) here.
+    # The messages below still name cstr['date'], which is what the scheduler
+    # set in P6 and what a reader expects to see quoted back.
+    if ctype in _FINISH_CLAMP_TYPES:
+        cd_num = _constraint_finish_num(
+            cstr, node_cal, alerts=alerts, ctx=code)
+    else:
+        cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
 
     def _guard_ef(candidate):
         if es is not None and isinstance(es, (int, float)) and math.isfinite(es) and candidate < es:
@@ -1035,8 +1230,20 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
     """
     if not cstr:
         return min_lf
-    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
     ctype = cstr.get('type')
+    # v2.9.45 — mirror of the forward EF clamp: the finish-side types resolve
+    # their P6 instant onto the engine's exclusive boundary, the start-side
+    # types (SNLT / SO / MS_Start below, which derive LF from a START date
+    # plus the duration) keep the bare date. Both walks therefore clamp on the
+    # same number and stay inverses.
+    # The throwaway alerts list is deliberate: the forward pass already
+    # disclosed anything this resolution has to say about this constraint, and
+    # the same disclosure twice reads as two findings. Same pattern as the
+    # ef_last_worked_date derivation.
+    if ctype in _FINISH_CLAMP_TYPES:
+        cd_num = _constraint_finish_num(cstr, node_cal, alerts=[], ctx=code)
+    else:
+        cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
     if ctype == 'FNLT' and cd_num > 0:
         if cd_num < min_lf:
             return cd_num
@@ -1821,8 +2028,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # Forward-pass EF-side clamps (FNET, FNLT, MS_Finish, MFO).
         # v2.9.14 F5 Bug E backport — pass node['es'] so the helper guarantees
         # EF >= ES, matching JS T3.20 behavior.
-        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr, 'primary', alerts, node['es'])
-        node['ef'] = _apply_forward_ef_constraint(code, node['ef'], cstr2, 'secondary', alerts, node['es'])
+        # v2.9.45 — node_cal reaches the helper so a finish constraint's P6
+        # instant can be resolved onto this activity's own boundary space.
+        node['ef'] = _apply_forward_ef_constraint(
+            code, node['ef'], cstr, 'primary', alerts, node['es'], node_cal)
+        node['ef'] = _apply_forward_ef_constraint(
+            code, node['ef'], cstr2, 'secondary', alerts, node['es'], node_cal)
 
         # v2.9.42 PAIRED FIX — in-progress work with no remaining_duration.
         # The retained-logic restart above applies ONLY when remaining_duration
@@ -1919,7 +2130,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     continue
                 if _c.get('type') not in _FIN_PIN_TYPES:
                     continue
-                _c_num = date_to_num(_c['date'])
+                # v2.9.45 — the SAME resolved number the clamp above used, or
+                # the pin would stop recognising the constraint that is
+                # actually holding EF and the activity would stretch instead
+                # of shift.
+                _c_num = _constraint_finish_num(_c, node_cal, alerts=[], ctx=code)
                 if _c_num > 0 and node['ef'] == _c_num:
                     _mfc = _c
                     break
