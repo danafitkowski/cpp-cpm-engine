@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Tag | `v2.9.45` (not yet created — see `PENDING-CI.md`) |
-| Commit | `34de18fb2672b68c4315a89f2bd6bb863611ad5b` |
+| Commit | `ee8c4410b5e1ea3723ce7b39666f64f26f911e67` |
 | Release date | 2026-09-21 |
 | Engine SHA-256 | `96ff9986700189e0ab48027795eae80196f41705ca4d7b2f543577073a07e4eb` |
 | Engine bytes | 548300 |

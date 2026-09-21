@@ -23,7 +23,7 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 | Item | Value |
 |---|---|
 | Tag | `v2.9.45` |
-| Commit SHA | `34de18fb2672b68c4315a89f2bd6bb863611ad5b` |
+| Commit SHA | `ee8c4410b5e1ea3723ce7b39666f64f26f911e67` |
 | Release date | 2026-09-21 |
 | Engine source | `cpm-engine.js` |
 | Engine SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/cpm-engine.js.sha256` (the top-level `cpm-engine.js.sha256` is **gitignored** per `scripts/attestation.js` — it is a per-machine regenerated artifact, not a committed pin). |
