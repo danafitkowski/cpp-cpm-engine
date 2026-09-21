@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.44';
+const ENGINE_VERSION = '2.9.45';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -262,6 +262,39 @@ const CANONICAL_CONSTRAINT_TYPES = new Set([
 // returns null silently as before (used by Section D parseXER which builds
 // its own alerts via a different path; see also the constraint-unrecognized
 // emission in parseXER for the XER-row path).
+// v2.9.45 — a P6 constraint date is an INSTANT, and the time of day is
+// load-bearing. slice(0, 10) threw it away and the clamp then compared a bare
+// date against ef / lf, which since v2.9.44 are EXCLUSIVE boundaries: the
+// opening of the working day AFTER the last day worked. A finish constraint
+// written at the close of Friday therefore bound one working day early.
+// Measured against P6's own stored dates over 205 real exports: 113 of 796
+// rows whose early finish P6 pinned at the constraint, and 151 of 254 whose
+// late finish it pinned there, were exactly one working day out
+// (P6-CONSTRAINT-INSTANTS-2026-09-21.md, private oracle repo). Start
+// constraints were measured over the same population and found already
+// correct — es / ls ARE the start instant — and are untouched.
+const _CSTR_TIME_RE = /^\d{4}-\d{2}-\d{2}[ T](\d{2}):(\d{2})/;
+
+// Minute of day carried by a P6 constraint string, or null when it carries no
+// time at all ('2026-01-09', or anything unparseable). null means "no instant
+// to resolve" and every clamp then behaves exactly as it did before v2.9.45.
+function _constraintTimeMinutes(rawDate) {
+    const m = _CSTR_TIME_RE.exec(String(rawDate === null || rawDate === undefined
+        ? '' : rawDate).trim());
+    if (!m) return null;
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh > 24 || mm > 59) return null;
+    return hh * 60 + mm;
+}
+
+// Attach the constraint's time of day, when it has one.
+function _withConstraintInstant(cstr, rawDate) {
+    const tod = _constraintTimeMinutes(rawDate);
+    if (tod !== null) cstr.time_minutes = tod;
+    return cstr;
+}
+
 function _normalizeConstraint(c, alerts, _ctx) {
     if (!c || typeof c !== 'object') return null;
     const rawType = c.type || c.cstr_type || '';
@@ -327,7 +360,11 @@ function _normalizeConstraint(c, alerts, _ctx) {
         }
         return null;
     }
-    return { type: canonical, date: dateStr };
+    // v2.9.45 — carry the TIME OF DAY beside the date. `date` is unchanged
+    // (every consumer that reads a constraint back still sees the date P6
+    // stored); `time_minutes` is what the finish-side clamp resolves the
+    // instant with. See _constraintFinishNum.
+    return _withConstraintInstant({ type: canonical, date: dateStr }, rawDate);
 }
 
 // v2.9.7 — Secondary-constraint normalization. Per Oracle P6 Database
@@ -388,7 +425,8 @@ function _normalizeConstraint2(c, alerts, _ctx) {
         }
         return null;
     }
-    return { type: canonical, date: dateStr };
+    // v2.9.45 — mirrors the primary; see _normalizeConstraint.
+    return _withConstraintInstant({ type: canonical, date: dateStr }, rawDate);
 }
 
 // ============================================================================
@@ -802,6 +840,12 @@ function _preResolveCalendars(calMap, alerts) {
             work_days: orig.work_days,
             holidays: orig.holidays,
             special_workdays: orig.special_workdays,
+            // v2.9.45 — the clndr_data blob must survive pre-resolution: it is
+            // the only source of the SHIFT CLOSE, which _constraintFinishNum
+            // needs to tell an end-of-day constraint from a mid-day one. It is
+            // read for that and nothing else; the day model above is still
+            // what every walk uses.
+            raw: orig.raw,
         };
     }
     return out;
@@ -1250,6 +1294,137 @@ function tarjanSCC(nodeCodes, succMap) {
 // sequence with the same semantics. Returns the (possibly-clamped) ES value.
 // `label` is 'primary' or 'secondary' and appears in alert messages so the
 // caller can tell which constraint moved the value.
+// ============================================================================
+// v2.9.45 — resolving a P6 constraint INSTANT to an engine boundary
+// ============================================================================
+//
+// The discriminator between "this instant is the close of its day" and "this
+// instant is inside its day" is the calendar's own shift close, hour-accurate
+// and per calendar. It is NOT the clock: the corpus carries 16:00 constraints
+// on a 08:00-16:00 calendar (at the close, 128 rows) and 16:00 constraints on
+// a 08:00-12:00 + 13:00-17:00 calendar (inside the day, 28 rows), and the two
+// shapes must behave differently. Any "afternoon means end of day" heuristic
+// regresses the second group.
+//
+// The close comes out of CALENDAR.clndr_data, which production already carries
+// on every calendarInfo under `raw` (xer_parser.get_calendar_map and parseXER
+// below both store the blob there). work_days / holidays are NOT read from it
+// — the day model the caller supplied stays authoritative; `raw` supplies the
+// shift close and nothing else. When no hour detail is available the engine
+// leaves the conversion exactly where v2.9.44 left it and DISCLOSES, rather
+// than guessing.
+const _DAY_CLOSE_CACHE = new Map();
+const _DAY_CLOSE_CACHE_MAX = 256;
+const _CSTR_SLOT_RE =
+    /(?:s\|(\d{1,2}:\d{2})\|f\|(\d{1,2}:\d{2}))|(?:f\|(\d{1,2}:\d{2})\|s\|(\d{1,2}:\d{2}))/g;
+const _CSTR_DAY_SEG = /^\(0\|\|([1-7])\(\)/;
+
+// Latest slot end, in minutes of the day, in one clndr_data segment. Mirrors
+// decodeClndrData's slot grammar, finish-first variant and the f|00:00 ==
+// midnight fix included.
+function _slotCloseOf(seg) {
+    let close = null;
+    _CSTR_SLOT_RE.lastIndex = 0;
+    let m;
+    while ((m = _CSTR_SLOT_RE.exec(seg)) !== null) {
+        let s;
+        let f;
+        if (m[1] !== undefined) {
+            s = _d7hhmm(m[1]); f = _d7hhmm(m[2]);
+        } else {
+            f = _d7hhmm(m[3]); s = _d7hhmm(m[4]);
+        }
+        if (f === 0) f = 1440;
+        if (f > s && (close === null || f > close)) close = f;
+    }
+    return close;
+}
+
+// { week: [close per jsDow], exc: { 'YYYY-MM-DD': close } } decoded from a
+// clndr_data blob, or null when it carries no usable hours.
+function _dayCloseTables(raw) {
+    if (_DAY_CLOSE_CACHE.has(raw)) return _DAY_CLOSE_CACHE.get(raw);
+    const week = [null, null, null, null, null, null, null];
+    const exc = Object.create(null);
+    const dowBlock = _d7BlockAfter(raw, 'DaysOfWeek');
+    if (dowBlock !== null) {
+        for (const seg of _d7SegmentsOf(dowBlock)) {
+            const m = _CSTR_DAY_SEG.exec(seg);
+            if (!m) continue;
+            week[(parseInt(m[1], 10) - 1) % 7] = _slotCloseOf(seg);
+        }
+    }
+    const excBlock = _d7BlockAfter(raw, 'Exceptions');
+    if (excBlock !== null) {
+        for (const seg of _d7SegmentsOf(excBlock)) {
+            const dm = _D7_EXC_DATE_RE.exec(seg);
+            if (!dm) continue;
+            const ds = _d7SerialToDateString(dm[1]);
+            if (ds) exc[ds] = _slotCloseOf(seg);
+        }
+    }
+    const out = week.some((c) => c !== null) ? { week, exc } : null;
+    if (_DAY_CLOSE_CACHE.size < _DAY_CLOSE_CACHE_MAX) _DAY_CLOSE_CACHE.set(raw, out);
+    return out;
+}
+
+// Minute of day at which `calendarInfo` stops working on the day `dayNum`, or
+// null when the calendar carries no hour detail for it.
+function _calendarDayClose(dayNum, calendarInfo) {
+    if (!calendarInfo || typeof calendarInfo !== 'object') return null;
+    const raw = calendarInfo.raw;
+    if (!raw || String(raw).indexOf('(') === -1) return null;
+    const tables = _dayCloseTables(String(raw));
+    if (!tables) return null;
+    const iso = numToDate(dayNum);
+    if (!iso) return null;
+    if (Object.prototype.hasOwnProperty.call(tables.exc, iso)) return tables.exc[iso];
+    const d = new Date(iso + 'T00:00:00Z');
+    if (Number.isNaN(d.getTime())) return null;
+    return tables.week[d.getUTCDay()];       // getUTCDay(): 0 = Sunday
+}
+
+// The canonical types whose date addresses the activity's FINISH, and which
+// therefore clamp against the engine's exclusive ef / lf boundary. The
+// start-side types (SNET / SNLT / SO / MS_Start) address es / ls, which
+// already ARE the instant, and take no conversion.
+const _FINISH_CLAMP_TYPES = ['FNET', 'FNLT', 'FO', 'MS_Finish', 'MFO'];
+
+// The day number a FINISH-side constraint clamps ef / lf against.
+//
+// P6 pins the LAST WORKED INSTANT; the engine's ef / lf are the EXCLUSIVE
+// boundary one working day later. So the bare constraint date is advanced by
+// one working day if and only if the constraint instant falls at or after the
+// close of that day's shift. A constraint with no time of day, or on a
+// calendar with no hour detail, is returned unchanged — the v2.9.44 answer.
+function _constraintFinishNum(cstr, calendarInfo, alerts, ctx) {
+    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+    if (cdNum <= 0) return cdNum;
+    const tod = (cstr.time_minutes === undefined || cstr.time_minutes === null)
+        ? null : cstr.time_minutes;
+    if (tod === null) return cdNum;          // bare date: nothing to resolve
+    const close = _calendarDayClose(cdNum, calendarInfo);
+    if (close === null) {
+        if (alerts) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'constraint-instant-unresolved',
+                message: cstr.type + ' on ' + (ctx || 'activity') +
+                    ' carries the instant ' + cstr.date + ' ' +
+                    _pad2(Math.floor(tod / 60)) + ':' + _pad2(tod % 60) +
+                    ', but its calendar supplies no shift hours (no ' +
+                    'CALENDAR.clndr_data), so the engine cannot tell an ' +
+                    'end-of-day constraint from a mid-day one. Clamped on the ' +
+                    'bare date, which is correct for a mid-day instant and one ' +
+                    'working day early for an end-of-day one.',
+            });
+        }
+        return cdNum;
+    }
+    if (tod < close) return cdNum;           // the instant is inside the day
+    return _advanceWithAlerts(cdNum, 1, calendarInfo, alerts || [], ctx);
+}
+
 function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
     if (!cstr) return maxES;
     const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
@@ -1335,10 +1510,17 @@ function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
 // duration is done by the caller, in the finish-pin back-compute block that
 // runs after both EF clamps (search _FIN_PIN_TYPES). Anything added here that
 // pushes EF must be added to that list too, or it will stretch.
-function _applyForwardEFConstraint(code, ef, cstr, label, alerts, es) {
+function _applyForwardEFConstraint(code, ef, cstr, label, alerts, es, nodeCal) {
     if (!cstr) return ef;
-    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
     const tag = label === 'secondary' ? ' (secondary)' : '';
+    // v2.9.45 — the P6 instant resolved into the engine's boundary space, for
+    // the FINISH-side types only: a start-side constraint reaching this helper
+    // falls through untouched and must not be resolved (or disclosed) here.
+    // The messages below still name cstr.date, which is what the scheduler set
+    // in P6 and what a reader expects to see quoted back.
+    const cdNum = _FINISH_CLAMP_TYPES.indexOf(cstr.type) !== -1
+        ? _constraintFinishNum(cstr, nodeCal, alerts, code)
+        : (cstr.date ? dateToNum(cstr.date) : 0);
     // v2.9.12 T3.20 — guard helper that preserves EF >= ES.
     function _guardEF(candidate) {
         if (es !== undefined && Number.isFinite(es) && candidate < es) {
@@ -1426,7 +1608,16 @@ function _applyForwardEFConstraint(code, ef, cstr, label, alerts, es) {
 // cstr.date.
 function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, alerts) {
     if (!cstr) return minLF;
-    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+    // v2.9.45 — mirror of the forward EF clamp: the finish-side types resolve
+    // their P6 instant onto the engine's exclusive boundary, the start-side
+    // types (SNLT / SO / MS_Start below, which derive LF from a START date plus
+    // the duration) keep the bare date. Both walks therefore clamp on the same
+    // number and stay inverses. The throwaway alerts array is deliberate: the
+    // forward pass already disclosed anything this resolution has to say about
+    // this constraint, and the same disclosure twice reads as two findings.
+    const cdNum = _FINISH_CLAMP_TYPES.indexOf(cstr.type) !== -1
+        ? _constraintFinishNum(cstr, nodeCal, [], code)
+        : (cstr.date ? dateToNum(cstr.date) : 0);
     if (cstr.type === 'FNLT' && cdNum > 0) {
         if (cdNum < minLF) return cdNum;
     } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
@@ -2615,8 +2806,10 @@ function computeCPM(activities, relationships, opts) {
 
         // Forward-pass EF-side constraint clamps (FNET, FNLT, MS_Finish, MFO).
         // v2.9.12 T3.20 — pass node.es so the helper guarantees EF >= ES.
-        node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts, node.es);
-        node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts, node.es);
+        // v2.9.45 — nodeCal reaches the helper so a finish constraint's P6
+        // instant can be resolved onto this activity's own boundary space.
+        node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts, node.es, nodeCal);
+        node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts, node.es, nodeCal);
         // v2.9.16 F5-A — after BOTH EF constraints applied, re-check FNLT /
         // MS_Finish / MFO deadlines on either slot. Soft FNET on the secondary
         // can silently push EF past a FNLT primary's deadline. Single-call
@@ -2624,7 +2817,13 @@ function computeCPM(activities, relationships, opts) {
         // need a second cross-check.
         function _checkFinalEFDeadline(_cstr, _label) {
             if (!_cstr) return;
-            const _cd = _cstr.date ? dateToNum(_cstr.date) : 0;
+            // v2.9.45 — the SAME resolved number the clamps used. Comparing
+            // node.ef (an exclusive boundary) against the bare constraint date
+            // raised a violation on every schedule that MEETS an end-of-day
+            // finish constraint exactly.
+            const _cd = _FINISH_CLAMP_TYPES.indexOf(_cstr.type) !== -1
+                ? _constraintFinishNum(_cstr, nodeCal, [], code)
+                : (_cstr.date ? dateToNum(_cstr.date) : 0);
             if (_cd <= 0) return;
             if ((_cstr.type === 'FNLT' || _cstr.type === 'MS_Finish' || _cstr.type === 'MFO') &&
                 node.ef > _cd) {
@@ -2754,7 +2953,11 @@ function computeCPM(activities, relationships, opts) {
             for (const _c of [cstr, cstr2]) {
                 if (!_c || !_c.date) continue;
                 if (_FIN_PIN_TYPES.indexOf(_c.type) === -1) continue;
-                const _cNum = dateToNum(_c.date);
+                // v2.9.45 — the SAME resolved number the clamp above used, or
+                // the pin would stop recognising the constraint that is
+                // actually holding EF and the activity would stretch instead
+                // of shift.
+                const _cNum = _constraintFinishNum(_c, nodeCal, [], code);
                 if (_cNum > 0 && node.ef === _cNum) { _mfc = _c; break; }
             }
             if (_mfc) {
@@ -3797,6 +4000,69 @@ function computeCPM(activities, relationships, opts) {
 // record failing only one conjunct keeps decoding as declared. A caller
 // that does not supply `clndrType` (or supplies a blank one) fails (b) by
 // definition, preserving the fallback for type-less invocations.
+// v2.9.45 — clndr_data grammar helpers, module level so decodeClndrData below
+// and the constraint-instant resolver in Section A read the SAME parser. Moved
+// verbatim out of decodeClndrData; no behaviour change.
+//
+// Contents of the parenthesised block that follows `anchor`.
+function _d7BlockAfter(text, anchor) {
+    const i = text.indexOf(anchor);
+    if (i < 0) return null;
+    let j = text.indexOf('(', i + anchor.length);
+    if (j < 0) return null;
+    if (text.substr(j, 2) === '()') {
+        j = text.indexOf('(', j + 2);
+        if (j < 0) return null;
+    }
+    let depth = 0;
+    for (let k = j; k < text.length; k++) {
+        if (text[k] === '(') depth += 1;
+        else if (text[k] === ')') {
+            depth -= 1;
+            if (depth === 0) return text.substring(j + 1, k);
+        }
+    }
+    return null;
+}
+// Split a block into its top-level (...) segments.
+function _d7SegmentsOf(block) {
+    const segs = [];
+    let depth = 0;
+    let start = -1;
+    for (let k = 0; k < block.length; k++) {
+        const ch = block[k];
+        if (ch === '(') {
+            if (depth === 0) start = k;
+            depth += 1;
+        } else if (ch === ')') {
+            depth -= 1;
+            if (depth === 0 && start >= 0) {
+                segs.push(block.substring(start, k + 1));
+                start = -1;
+            }
+        }
+    }
+    return segs;
+}
+function _d7hhmm(s) {
+    const p = s.split(':');
+    return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+const _D7_EXC_DATE_RE = /d\|(\d{3,7}|\d{4}-\d{2}-\d{2})/;
+function _d7SerialToDateString(rawVal) {
+    const v = String(rawVal).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+        const dt = new Date(v + 'T00:00:00Z');
+        return Number.isNaN(dt.getTime()) ? '' : v;
+    }
+    const serial = parseInt(v, 10);
+    if (!Number.isFinite(serial)) return '';
+    const dt = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+    const y = dt.getUTCFullYear();
+    if (y < 1970 || y > 2099) return '';   // same guard as the oracle harness
+    return y + '-' + _pad2(dt.getUTCMonth() + 1) + '-' + _pad2(dt.getUTCDate());
+}
+
 const _D7_LEGAL_CLNDR_TYPES = ['CA_Base', 'CA_Rsrc', 'CA_Project'];
 function decodeClndrData(clndrData, clndrType) {
     const out = {
@@ -3812,50 +4078,13 @@ function decodeClndrData(clndrData, clndrType) {
     const raw = (clndrData === null || clndrData === undefined) ? '' : String(clndrData);
     if (!raw || raw.indexOf('(') === -1) return out;
 
-    // Contents of the parenthesised block that follows `anchor`.
-    function blockAfter(text, anchor) {
-        const i = text.indexOf(anchor);
-        if (i < 0) return null;
-        let j = text.indexOf('(', i + anchor.length);
-        if (j < 0) return null;
-        if (text.substr(j, 2) === '()') {
-            j = text.indexOf('(', j + 2);
-            if (j < 0) return null;
-        }
-        let depth = 0;
-        for (let k = j; k < text.length; k++) {
-            if (text[k] === '(') depth += 1;
-            else if (text[k] === ')') {
-                depth -= 1;
-                if (depth === 0) return text.substring(j + 1, k);
-            }
-        }
-        return null;
-    }
-    // Split a block into its top-level (...) segments.
-    function segmentsOf(block) {
-        const segs = [];
-        let depth = 0;
-        let start = -1;
-        for (let k = 0; k < block.length; k++) {
-            const ch = block[k];
-            if (ch === '(') {
-                if (depth === 0) start = k;
-                depth += 1;
-            } else if (ch === ')') {
-                depth -= 1;
-                if (depth === 0 && start >= 0) {
-                    segs.push(block.substring(start, k + 1));
-                    start = -1;
-                }
-            }
-        }
-        return segs;
-    }
-    function hhmm(s) {
-        const p = s.split(':');
-        return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
-    }
+    // v2.9.45 — these three were local to this function until the
+    // constraint-instant resolver needed the same grammar. Hoisted to module
+    // level verbatim (_d7BlockAfter / _d7SegmentsOf / _d7hhmm) so one parser
+    // serves both; the local names are kept as aliases so nothing below moved.
+    const blockAfter = _d7BlockAfter;
+    const segmentsOf = _d7SegmentsOf;
+    const hhmm = _d7hhmm;
     const SLOT_ANY =
         /(?:s\|(\d{1,2}:\d{2})\|f\|(\d{1,2}:\d{2}))|(?:f\|(\d{1,2}:\d{2})\|s\|(\d{1,2}:\d{2}))/g;
     const FINISH_FIRST = /f\|\d{1,2}:\d{2}\|s\|\d{1,2}:\d{2}/;
@@ -3872,19 +4101,7 @@ function decodeClndrData(clndrData, clndrType) {
         }
         return slots;
     }
-    function serialToDateString(rawVal) {
-        const v = String(rawVal).trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-            const dt = new Date(v + 'T00:00:00Z');
-            return Number.isNaN(dt.getTime()) ? '' : v;
-        }
-        const serial = parseInt(v, 10);
-        if (!Number.isFinite(serial)) return '';
-        const dt = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
-        const y = dt.getUTCFullYear();
-        if (y < 1970 || y > 2099) return '';   // same guard as the oracle harness
-        return y + '-' + _pad2(dt.getUTCMonth() + 1) + '-' + _pad2(dt.getUTCDate());
-    }
+    const serialToDateString = _d7SerialToDateString;
 
     const weekMinutes = [0, 0, 0, 0, 0, 0, 0];
     let finishFirstInWeek = false;
@@ -4142,6 +4359,12 @@ function parseXER(content) {
                                 holidays: _dec.holidays.slice(),
                                 special_workdays: _dec.special_workdays.slice(),
                                 hours_per_day: _dec.hours_per_day,
+                                // v2.9.45 — the shift close lives only here.
+                                // work_days / holidays above stay
+                                // authoritative; `raw` is read for the close
+                                // and nothing else. Same key
+                                // xer_parser.get_calendar_map uses.
+                                raw: row.clndr_data,
                             };
                         }
                     }
@@ -4293,7 +4516,11 @@ function parseXER(content) {
                     // parseAlerts so unrecognized tokens and missing dates
                     // emit a forensic WARN instead of dropping silently.
                     const cstrType = row.cstr_type || '';
-                    const cstrDate = (row.cstr_date || '').slice(0, 10);
+                    // v2.9.45 — the full P6 instant, timestamp included.
+                    // _normalizeConstraint below keeps `date` as the bare day
+                    // and carries the time separately; truncating here made
+                    // the instant unrecoverable.
+                    const cstrDate = (row.cstr_date || '').trim();
                     let constraint = null;
                     if (cstrType) {
                         constraint = _normalizeConstraint(
@@ -4303,7 +4530,7 @@ function parseXER(content) {
                     }
                     // v2.9.7 — Secondary constraint (cstr_type2 + cstr_date2).
                     const cstrType2 = row.cstr_type2 || '';
-                    const cstrDate2nd = (row.cstr_date2 || '').slice(0, 10);
+                    const cstrDate2nd = (row.cstr_date2 || '').trim();
                     let constraint2 = null;
                     if (cstrType2) {
                         constraint2 = _normalizeConstraint2(
