@@ -98,7 +98,7 @@
   "excluded_by_task_type": [],
   "excludedByTaskType": [],
   "manifest": {
-    "engine_version": "2.9.44",
+    "engine_version": "2.9.45",
     "method_id": "computeCPM",
     "activity_count": 2,
     "relationship_count": 1,
@@ -108,6 +108,6 @@
     "finish_boundary_note": "ef_date / lf_date are EXCLUSIVE (the opening of the first working day AFTER the last day worked). P6 prints the LAST WORKED DAY. Both name the same instant; ef_last_worked_date and lf_last_worked_date carry the inclusive form for reports.",
     "relationship_lag_calendar": "successor",
     "float_type": "FT_FF",
-    "computed_at": "2026-09-16T02:15:31.663Z"
+    "computed_at": "2026-09-21T22:12:25.978Z"
   }
 }

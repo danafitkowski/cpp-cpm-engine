@@ -12,6 +12,101 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.45 — 2026-09-21 — finish constraints clamp on the instant P6 stored, not the bare date
+
+**Engine math changed.** Every finish-side constraint clamp moves, in both
+passes, on any network whose constraint dates carry a time of day. A result
+computed on v2.9.44 or earlier can differ on any constrained activity, so a
+deliverable already issued from an earlier tagged build is inside the
+supersession window and needs the re-check step in PROCEDURE.md.
+
+What P6 does: a constraint date is an INSTANT, and the time of day is
+load-bearing. "Finish no later than 2026-01-16 17:00" on a calendar that
+closes at 17:00 names the END of Friday, which in this engine's boundary
+space is Monday's opening.
+
+What the engine did: `_normalizeConstraint` truncated the stored value with
+`slice(0, 10)` and threw the time away, and the clamp then compared that bare
+date against `ef` / `lf`, which since v2.9.44 are EXCLUSIVE boundaries — the
+opening of the working day AFTER the last day worked. A finish constraint
+written at the close of its own working day therefore bound on that day's
+boundary instead of the next one: one working day early, in both passes. An
+activity finishing exactly ON its own finish-no-later-than was reported at
+tf -1 — a constraint violation on a schedule that meets it.
+
+**The rule.** The bare constraint date, advanced ONE working day on the
+activity's own calendar if and only if the constraint instant falls at or
+after the close of that day's shift. The close is read hour-accurately out of
+`CALENDAR.clndr_data`, which production already carries on every
+`calendar_info` under `raw`; the day model the caller supplied stays
+authoritative and `raw` is read for the shift close and nothing else.
+
+This is not the clock. The same 16:00 is the close on an `08:00-16:00`
+calendar and one working hour INSIDE the day on an `08:00-12:00 + 13:00-17:00`
+calendar, and both shapes occur: 128 rows of the first and 28 of the second
+in the measured population. A noon heuristic gets the second group wrong,
+which is why the discriminator is the calendar's own shift close.
+
+Where no hour detail is available the engine returns the v2.9.44 answer and
+emits `constraint-instant-unresolved` rather than guessing. A constraint with
+no time at all is untouched, so every hand-built fixture keeps its meaning.
+`date` on the normalised constraint is still P6's own date, so driver chains,
+DCMA-12 and the constraint register read back what the scheduler set.
+
+**Start constraints were measured over the same population, found already
+correct, and are not touched** — `es` / `ls` ARE the start instant. Mandatory
+start tokens do not occur in the measured population and are untouched.
+
+**Empirical basis.** Measured P6 against P6 over 205 real exports and 2,032
+constrained rows (private oracle memo, 2026-09-21; the exports are client
+files and are not part of this repository). Before the change, 113 of the 796
+rows whose early finish P6 pinned at a constraint, and 151 of the 254 whose
+late finish it pinned there, were exactly one working day out. The new rule
+fixes all 264 and regresses none. On the 36 gate-strict files — the only ones
+whose stored dates are an exact solution of their own network — it fixes 603
+es, 603 ef, 1,018 ls, 1,022 lf, 807 tf and 109 ff cells and regresses none.
+
+**Zero regressions, proven rather than asserted.** The corpus was re-run in
+the configuration v2.9.44 was validated under and diffed cell by cell: 0
+differences in 278,868 cells across every gate-strict and gate-pass file.
+
+Changes, paired in `cpm-engine.js` and the Python reference:
+
+- `_normalizeConstraint` / `_normalizeConstraint2` carry `time_minutes`
+  beside the unchanged `date`.
+- `_constraintFinishNum` resolves a finish-side constraint (FNET, FNLT, FO,
+  MS_Finish, MFO) onto the activity's own exclusive boundary using the shift
+  close decoded from `clndr_data`. The forward EF clamp, the backward LF
+  clamp and the finish-pin back-compute all read that one number, so the two
+  walks stay inverses.
+- The `clndr_data` grammar helpers (`blockAfter`, `segmentsOf`, `hhmm`,
+  `serialToDateString`, the exception-date regex) were local closures inside
+  `decodeClndrData`. They are hoisted to module level verbatim so one parser
+  serves both the decoder and the resolver; `decodeClndrData` keeps the local
+  names as aliases and is otherwise untouched.
+
+Three JS-only sites the Python reference does not have:
+
+- `_checkFinalEFDeadline` compared `node.ef` (an exclusive boundary) against
+  the bare constraint date and so raised `constraint-violated` on every
+  schedule that MEETS an end-of-day finish constraint exactly. It now uses
+  the resolved number.
+- `_preResolveCalendars` rebuilt each calendar struct and dropped `raw`, so
+  the resolver saw no shift hours and silently fell back to the bare date on
+  every real file. `raw` is now preserved.
+- `parseXER` truncated `cstr_date` / `cstr_date2` with `slice(0, 10)` before
+  the engine ever saw them, and did not keep `clndr_data` on its calMap
+  entries. Both fixed.
+
+Tests: CI-1..CI-18 added to `cpm-engine.test.js` (1,306 checks green, up from
+1,288); the public 46-fixture harness reads 1009 of 1015 comparisons executed
+and bit-identical, the 6 mutual skips unchanged; the 13-case P6 comparison
+matrix recomputed under these bytes against the same 2026-08-11 capture and
+still reads 13 / 13 over 27 field checks, with every engine column identical
+to v2.9.44's; coverage re-measured on these bytes 2026-09-21: 93.87%
+statements (9,939 / 10,588), 83.09% branches (2,129 / 2,562), 94.92%
+functions (131 / 138).
+
 ## v2.9.44 — 2026-09-15 — cross-calendar finish instants: successors driven from the predecessor's finish instant on their own calendar; backward pass mirrored
 
 **Engine math changed.** The forward and backward passes both move on any

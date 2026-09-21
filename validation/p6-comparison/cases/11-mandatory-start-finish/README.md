@@ -16,7 +16,7 @@ A.ES = MS_Start = 2026-01-12 (pinned, ignoring dataDate floor). A.LS = MS_Start 
 4. F9 — both dates should be hard-pinned.
 5. Verify the mandatory constraints pin LS/LF in the backward pass.
 
-## Engine output (produced by engine v2.9.44)
+## Engine output (v2.9.45)
 
 Project finish: `2026-01-30`
 
@@ -24,8 +24,8 @@ Critical activities: `["A","B"]`
 
 ### Alerts emitted
 
-- **WARN** `constraint-applied` — Mandatory Start on A pins ES to 2026-01-12
-- **WARN** `constraint-applied` — Mandatory Finish on B pins EF to 2026-01-30
+- **WARN** `constraint-applied` — Start On on A pushes ES from 2026-01-05 to 2026-01-12
+- **WARN** `constraint-applied` — Finish On on B pushes EF from 2026-01-23 to 2026-01-30
 
 
 ## How to populate the P6 column of `comparison.csv`

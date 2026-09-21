@@ -10832,6 +10832,197 @@ const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
         r.nodes.A.lf_date + ' tf ' + r.nodes.A.tf + '/' + r.nodes.B.tf);
 }
 
+// =====================================================================
+// CI — P6 constraint INSTANTS (v2.9.45)
+//
+// A P6 constraint date is an instant. A finish constraint pins the LAST
+// WORKED instant; ef / lf are the EXCLUSIVE boundary one working day later.
+// `slice(0, 10)` dropped the time and the clamp bound a working day early:
+// measured against P6's own stored dates over 205 real exports, 113 of 796
+// rows whose early finish P6 pinned at the constraint and 151 of 254 whose
+// late finish it pinned there were exactly one working day out.
+//
+// The discriminator is the calendar's own shift close, hour-accurate — NOT
+// the clock. 16:00 is the close on an 08:00-16:00 calendar and one working
+// hour inside the day on an 08:00-12:00 + 13:00-17:00 one; the corpus carries
+// 128 rows of the first shape and 28 of the second, and they resolve
+// differently. Start constraints were measured over the same population and
+// found already correct; the tests below pin that they do not move.
+// =====================================================================
+{
+    const ciDays = (slots) => {
+        let out = '';
+        for (let p6 = 1; p6 <= 7; p6 += 1) {
+            const sl = slots[p6] || [];
+            const body = sl.map((x, i) =>
+                '(0||' + i + '(s|' + x[0] + '|f|' + x[1] + ')())').join('');
+            out += body ? '(0||' + p6 + '()(' + body + '))' : '(0||' + p6 + '()())';
+        }
+        return '(0||CalendarData()((0||DaysOfWeek()(' + out + '))(0||Exceptions()())))';
+    };
+    const s0816 = {};
+    const sLunch = {};
+    for (const d of [2, 3, 4, 5, 6]) {
+        s0816[d] = [['08:00', '16:00']];
+        sLunch[d] = [['08:00', '12:00'], ['13:00', '17:00']];
+    }
+    const ciCal = {
+        C8: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: ciDays(s0816) },
+        CL: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: ciDays(sLunch) },
+        CN: { work_days: [1, 2, 3, 4, 5], holidays: [] },
+    };
+    const ciRun = (acts, rels) => E.computeCPM(acts, rels || [],
+        { dataDate: '2026-01-05', calMap: ciCal });
+    const ciOne = (cal, cstr, extra) => ciRun([Object.assign(
+        { code: 'A', duration_days: 5, clndr_id: cal, constraint: cstr }, extra || {})]);
+    let r;
+
+    // CI-1 — a finish constraint at the close binds on the next working day.
+    r = ciOne('CL', { type: 'CS_MEOB', date: '2026-01-09 17:00' });
+    check('CI-1: FNLT at the 17:00 close -> lf 2026-01-12, last worked 01-09',
+        r.nodes.A.lf_date === '2026-01-12'
+        && r.nodes.A.lf_last_worked_date === '2026-01-09',
+        r.nodes.A.lf_date + ' / ' + r.nodes.A.lf_last_worked_date);
+
+    // CI-2 — and a schedule that MEETS it carries zero float, not -1.
+    check('CI-2: an activity finishing exactly on its FNLT has tf 0',
+        r.nodes.A.ef_date === '2026-01-12' && r.nodes.A.tf === 0
+        && !r.alerts.some((a) => a.context === 'constraint-violated'),
+        r.nodes.A.ef_date + ' tf ' + r.nodes.A.tf);
+
+    // CI-3 — the SAME clock time on two calendars must behave differently.
+    r = ciRun([
+        { code: 'CLOSE', duration_days: 5, clndr_id: 'C8',
+          constraint: { type: 'CS_MEOB', date: '2026-01-09 16:00' } },
+        { code: 'INSIDE', duration_days: 5, clndr_id: 'CL',
+          constraint: { type: 'CS_MEOB', date: '2026-01-09 16:00' } },
+    ]);
+    check('CI-3: 16:00 is the close on 08:00-16:00 and inside 08:00-17:00',
+        r.nodes.CLOSE.lf_date === '2026-01-12' && r.nodes.INSIDE.lf_date === '2026-01-09',
+        r.nodes.CLOSE.lf_date + ' / ' + r.nodes.INSIDE.lf_date);
+
+    // CI-4 — a morning instant names the opening of its day, already a boundary.
+    r = ciOne('C8', { type: 'CS_MEOB', date: '2026-01-12 08:00' });
+    check('CI-4: FNLT at the 08:00 opening -> lf 2026-01-12, unchanged',
+        r.nodes.A.lf_date === '2026-01-12', r.nodes.A.lf_date);
+
+    // CI-5 — a bare date has no instant to resolve. Every hand-built fixture
+    // in this suite and every synthetic caller relies on this.
+    r = ciOne('C8', { type: 'CS_MEOB', date: '2026-01-09' });
+    check('CI-5: a bare YYYY-MM-DD constraint is the v2.9.44 answer',
+        r.nodes.A.lf_date === '2026-01-09', r.nodes.A.lf_date);
+
+    // CI-6 — no shift hours: leave it alone and DISCLOSE, never guess.
+    r = ciOne('CN', { type: 'CS_MEOB', date: '2026-01-09 17:00' });
+    check('CI-6: a timestamp with no calendar hours is unchanged and disclosed',
+        r.nodes.A.lf_date === '2026-01-09'
+        && r.alerts.filter((a) => a.context === 'constraint-instant-unresolved').length === 1,
+        r.nodes.A.lf_date + ' warns '
+        + r.alerts.filter((a) => a.context === 'constraint-instant-unresolved').length);
+
+    // CI-7 — no disclosure when the hours ARE there.
+    r = ciOne('C8', { type: 'CS_MEOB', date: '2026-01-09 16:00' });
+    check('CI-7: no unresolved-instant WARN when the calendar carries hours',
+        !r.alerts.some((a) => a.context === 'constraint-instant-unresolved'),
+        JSON.stringify(r.alerts.map((a) => a.context)));
+
+    // CI-8 — FNET at the close pushes EF to the boundary and SHIFTS the
+    // activity; a pin that stretched it would leave es on the logic date.
+    r = ciOne('C8', { type: 'CS_MEOA', date: '2026-01-16 16:00' });
+    check('CI-8: FNET at the close -> ef 2026-01-19, es back-computed 01-12',
+        r.nodes.A.ef_date === '2026-01-19' && r.nodes.A.es_date === '2026-01-12',
+        r.nodes.A.es_date + '..' + r.nodes.A.ef_date);
+
+    // CI-9 — the mandatory pin resolves the same way, both ends.
+    r = ciOne('C8', { type: 'CS_MANDFIN', date: '2026-01-16 16:00' });
+    check('CI-9: mandatory finish at the close pins ef and lf on 2026-01-19',
+        r.nodes.A.ef_date === '2026-01-19' && r.nodes.A.lf_date === '2026-01-19',
+        r.nodes.A.ef_date + ' / ' + r.nodes.A.lf_date);
+
+    // CI-10 — Finish On, on the zero-duration milestone shape the corpus is
+    // full of: es must equal ef.
+    r = ciRun([{ code: 'M', duration_days: 0, clndr_id: 'C8', task_type: 'TT_FinMile',
+                 constraint: { type: 'CS_MEO', date: '2026-01-16 16:00' } }]);
+    check('CI-10: Finish On at the close puts the milestone on 2026-01-19',
+        r.nodes.M.ef_date === '2026-01-19' && r.nodes.M.es_date === '2026-01-19',
+        r.nodes.M.es_date + ' / ' + r.nodes.M.ef_date);
+
+    // CI-11..13 — the start side was measured correct and must NOT move.
+    r = ciOne('C8', { type: 'CS_MSOA', date: '2026-02-02 08:00' });
+    check('CI-11: SNET at the opening is unchanged', r.nodes.A.es_date === '2026-02-02',
+        r.nodes.A.es_date);
+    r = ciOne('C8', { type: 'CS_MSOA', date: '2026-02-02 15:00' });
+    check('CI-12: SNET with an afternoon stamp is unchanged (4 corpus rows)',
+        r.nodes.A.es_date === '2026-02-02', r.nodes.A.es_date);
+    r = ciOne('C8', { type: 'CS_MSOB', date: '2026-01-05 08:00' });
+    check('CI-13: SNLT derives LF from the start date; start side unchanged',
+        r.nodes.A.ls_date === '2026-01-05', r.nodes.A.ls_date);
+
+    // CI-14 — forward and backward stay inverses through a constrained chain.
+    r = ciRun([{ code: 'P', duration_days: 5, clndr_id: 'C8' },
+               { code: 'S', duration_days: 5, clndr_id: 'C8',
+                 constraint: { type: 'CS_MEOB', date: '2026-01-16 16:00' } }],
+              [{ from_code: 'P', to_code: 'S', type: 'FS', lag_days: 0 }]);
+    check('CI-14: constrained FS chain reports zero float end to end',
+        r.nodes.S.ef_date === '2026-01-19' && r.nodes.S.lf_date === '2026-01-19'
+        && r.nodes.P.tf === 0 && r.nodes.S.tf === 0,
+        r.nodes.S.ef_date + '/' + r.nodes.S.lf_date + ' tf '
+        + r.nodes.P.tf + '/' + r.nodes.S.tf);
+
+    // CI-15 — the secondary slot resolves too.
+    r = ciOne('C8', { type: 'CS_MSOA', date: '2026-01-05 08:00' },
+        { constraint2: { type: 'CS_MEOB', date: '2026-01-09 16:00' } });
+    check('CI-15: a secondary finish constraint resolves like the primary',
+        r.nodes.A.lf_date === '2026-01-12', r.nodes.A.lf_date);
+
+    // CI-16 — the resolution is INTERNAL. Anything reading the constraint back
+    // still sees the date P6 stored.
+    r = ciOne('C8', { type: 'CS_MEOB', date: '2026-01-09 16:00' });
+    check('CI-16: node.constraint.date is still the P6 date, not the boundary',
+        r.nodes.A.constraint.date === '2026-01-09', r.nodes.A.constraint.date);
+
+    // CI-17 — parseXER must hand the engine the instant, not a truncated day.
+    const CI_TAB = String.fromCharCode(9);
+    const ciXer = [
+        '%T' + CI_TAB + 'CALENDAR',
+        ['%F', 'clndr_id', 'clndr_name', 'day_hr_cnt', 'clndr_type',
+            'clndr_data'].join(CI_TAB),
+        ['%R', 'C1', 'Std', '8', 'CA_Base', ciDays(s0816)].join(CI_TAB),
+        '%T' + CI_TAB + 'PROJECT',
+        ['%F', 'proj_id', 'proj_short_name', 'last_recalc_date',
+            'clndr_id'].join(CI_TAB),
+        ['%R', 'P1', 'T', '2026-01-05', 'C1'].join(CI_TAB),
+        '%T' + CI_TAB + 'TASK',
+        ['%F', 'task_id', 'proj_id', 'task_code', 'task_name', 'task_type',
+            'status_code', 'clndr_id', 'target_drtn_hr_cnt',
+            'remain_drtn_hr_cnt', 'cstr_type', 'cstr_date'].join(CI_TAB),
+        ['%R', 'T1', 'P1', 'A', 'A', 'TT_Task', 'TK_NotStart', 'C1', '40', '40',
+            'CS_MEOB', '2026-01-09 16:00'].join(CI_TAB),
+        '%E',
+    ].join(String.fromCharCode(10));
+    E.resetMC();
+    E.parseXER(ciXer);
+    const ciTask = Object.values(E.getTasks()).find((t) => t.code === 'A');
+    check('CI-17: parseXER carries the constraint timestamp to the engine',
+        !!ciTask && !!ciTask.constraint && ciTask.constraint.date === '2026-01-09'
+        && ciTask.constraint.time_minutes === 960,
+        JSON.stringify(ciTask && ciTask.constraint));
+    // CI-18 — the secondary slot survives parseXER with its instant too.
+    const ciXer2 = ciXer.replace('CS_MEOB' + CI_TAB + '2026-01-09 16:00',
+        'CS_MSOA' + CI_TAB + '2026-01-05 08:00' + CI_TAB + 'CS_MEOB' + CI_TAB
+        + '2026-01-09 16:00').replace('cstr_type' + CI_TAB + 'cstr_date',
+        'cstr_type' + CI_TAB + 'cstr_date' + CI_TAB + 'cstr_type2' + CI_TAB
+        + 'cstr_date2');
+    E.resetMC();
+    E.parseXER(ciXer2);
+    const ciTask2 = Object.values(E.getTasks()).find((t) => t.code === 'A');
+    check('CI-18: parseXER carries the SECONDARY constraint timestamp too',
+        !!ciTask2 && !!ciTask2.constraint2 && ciTask2.constraint2.date === '2026-01-09'
+        && ciTask2.constraint2.time_minutes === 960,
+        JSON.stringify(ciTask2 && ciTask2.constraint2));
+    E.resetMC();
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

@@ -16,7 +16,7 @@ fitted to capture 9b748cc (2026-08-11), not independently validated: no relation
 4. Both start on 2026-01-05.
 5. F9 — verify B finishes earlier than A by 2 calendar days (1 wd on the 6-day cal).
 
-## Engine output (produced by engine v2.9.44)
+## Engine output (v2.9.45)
 
 Project finish: `2026-01-19`
 

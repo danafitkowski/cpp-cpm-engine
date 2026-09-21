@@ -80,10 +80,10 @@ No audit item changed status between v2.9.39 and v2.9.43; the two releases since
 - **Item 6 stays as recorded:** 13 / 13 is fitted to the one 2026-08-11 capture. The independent held-out capture (about one hour in P6) remains Dana's action and is the only thing that turns the matrix from fitted to blind.
 - **Item 8 closed 2026-09-08** as superseded by the private oracle harness; no public corpus is planned.
 
-## Status at v2.9.44 (reviewed 2026-09-15)
+## Status at v2.9.45 (reviewed 2026-09-21)
 
-No audit item changed status. v2.9.44 is an engine-math release (cross-calendar finish instants, see CHANGELOG.md): the cross-validation surface is unchanged at 1,009 of 1,015 comparisons across 46 fixtures, the unit suite grew from 1,273 to 1,288, coverage was re-measured on the new bytes (93.79% statements / 83.32% branches / 94.69% functions), and the 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture. Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
+No audit item changed status. v2.9.45 is an engine-math release (finish-constraint instants, see CHANGELOG.md): the cross-validation surface is unchanged at 1,009 of 1,015 comparisons across 46 fixtures, the unit suite grew from 1,288 to 1,306, coverage was re-measured on the new bytes (93.87% statements / 83.09% branches / 94.92% functions), and the 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture, every engine column identical to v2.9.44's. Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.44. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.45. Update on every release that closes or opens an audit item.

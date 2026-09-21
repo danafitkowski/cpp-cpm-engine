@@ -16,7 +16,7 @@ B has actual_start 2025-12-15, actual_finish 2025-12-30 (in the past). A is plan
 4. Verify A.LF does NOT pull back through B.actual_finish.
 5. Engine emits "completed-succ-skipped-in-backward" INFO.
 
-## Engine output (produced by engine v2.9.44)
+## Engine output (v2.9.45)
 
 Project finish: `2026-01-12`
 
