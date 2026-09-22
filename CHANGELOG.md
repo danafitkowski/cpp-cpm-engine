@@ -12,6 +12,93 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.46 — 2026-09-22 — retained-logic pass-through, and P6 parity for started predecessors
+
+**Engine math changed.** Under retained logic, a network with a completed
+activity that is itself out of sequence (its own predecessor still
+unfinished) now schedules differently, and any SS/SF successor of a
+started, incomplete predecessor can move. A result computed on v2.9.45 or
+earlier can differ on either shape, so a deliverable already issued from an
+earlier tagged build is inside the supersession window and needs the
+re-check step in PROCEDURE.md. `progress_override` restart anchors also
+move whenever the data date falls on a non-working instant of the
+activity's own calendar.
+
+**What P6 does (pass-through).** Retained logic does not stop scheduling at
+a COMPLETED activity: P6 schedules it like any other, with zero remaining
+duration. A completed activity whose own predecessor is still unfinished —
+completed out of sequence — therefore still carries that predecessor's
+controlling date, and P6 hands the date on to the completed activity's
+successors exactly as if the completed activity were not there.
+
+**What the engine did.** Both ports skipped a completed node outright in
+the forward pass, the backward pass and free float. The unfinished
+predecessor's finish died at the first completed activity on the path, and
+everything downstream of it floated free at the data date instead.
+
+**Empirical basis.** Measured on a 503-activity real schedule with 24
+out-of-sequence activities, scheduled in P6 Professional 23.12 (F9) and
+read back from the P6 database (the file is not named, it is a client
+schedule): P6 stamps early start = early finish on all 302 completed rows,
+84 of them LATER than the data date, each on the latest date its
+predecessors hand it. A rule written from P6's own stored dates alone (no
+engine) reproduces 503 of 503 early starts and 503 of 503 late finishes to
+the minute under retained logic; under progress override there is no
+pass-through and 201 of 201 incomplete rows reproduce with none. With the
+pass-through, incomplete rows matching P6 go 83 -> 146 of 201 on early
+start/finish and 55 -> 141 on total float, and free float 159 -> 190.
+
+**The rule.** A completed node records the instant it carries from
+unfinished work (`rl_passthrough` forward, `rl_late_passthrough`
+backward). A successor's FS/SS/FF/SF drive is floored by that instant
+WITHOUT the relationship's lag applied — the lag belongs to the completed
+activity's own actual finish, which the existing drive already counts it
+from. A started successor's restart takes the carried instant too (D2
+stood for the completed predecessor's actual finish; the date it carries
+from unfinished work is not history). Free float is measured at it. The
+`driving_predecessor` on the FIRST live activity downstream gets
+`passthrough: true` and the completed carrier in between gets its own
+driver, so a chain walk reaches the unfinished work rather than stopping
+at the completed node. One new INFO alert, `retained-logic-passthrough`,
+names the completed carrier whenever it is the final driver of a
+not-started activity's start.
+
+**SS_U — P6 parity for a started, incomplete predecessor.** For an SS/SF
+successor, drive = `max(actual_start + lag, restart)`, the restart
+contributing WITHOUT its own lag applied (the backward mirror: the
+effective backward lag is only the portion of `actual_start + lag` that
+extends past the data date, clamped to 0 otherwise). Measured on 9 SS+5d
+links on the same file: this closes all 55 date differences remaining
+after the pass-through fix alone. Combined result: 201/201/201/201 on
+ES/EF/TF/FF.
+
+**PO_SNAP — the D3 calendar snap now applies to progress_override too.**
+`retained_logic`'s restart anchor has snapped forward on the activity's
+own calendar since v2.9.43 (D3); `progress_override` did not. A data date
+encoded at a non-working instant (the close of a Saturday) left the
+progress_override remaining-bar walk starting on it and landing one
+working day early on 194 of 201 in-progress rows on the same file; with
+the snap, 201/201.
+
+**Zero regressions, proven rather than asserted.** The 46-fixture harness
+stays at 1009 of 1015 executed and bit-identical; 7 new fixtures (F51-F57)
+exercise pass-through, SS_U and PO_SNAP directly and are bit-identical
+between the JS engine and the Python reference (53 fixtures, 1167 of 1167
+checks). The 13-case real P6 comparison matrix, re-run against these
+bytes against the same capture, still reads 13 / 13 over 27 field checks
+with zero changed rows. JS unit suite: 1,307 checks green (up from 1,306;
+RL-5/RL-6/RL-7 in `cpm-engine.test.js` re-pinned to the SS_U-correct
+values, one fixture widened to keep discriminating which calendar an SS
+lag walks on now that SS_U's restart-wins branch would otherwise collapse
+it). Coverage re-measured on these bytes: 93.81% statements (10,128 /
+10,796), 82.63% branches (2,156 / 2,609), 94.96% functions (132 / 139).
+
+**Deliberately not in this wave** (measured, and recorded alongside the
+proposal): the progress-override backward pass keeping links into started
+successors that P6 drops; a downstream validator's longest-path check
+shares this exact completed-node blind spot and inherits false positives
+from it on out-of-sequence files until it is updated separately.
+
 ## v2.9.45 — 2026-09-21 — finish constraints clamp on the instant P6 stored, not the bare date
 
 **Engine math changed.** Every finish-side constraint clamp moves, in both

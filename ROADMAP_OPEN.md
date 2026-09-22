@@ -84,6 +84,10 @@ No audit item changed status between v2.9.39 and v2.9.43; the two releases since
 
 No audit item changed status. v2.9.45 is an engine-math release (finish-constraint instants, see CHANGELOG.md): the cross-validation surface is unchanged at 1,009 of 1,015 comparisons across 46 fixtures, the unit suite grew from 1,288 to 1,306, coverage was re-measured on the new bytes (93.87% statements / 83.09% branches / 94.92% functions), and the 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture, every engine column identical to v2.9.44's. Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
 
+## Status at v2.9.46 (reviewed 2026-09-22)
+
+No audit item changed status. v2.9.46 is an engine-math release (retained-logic pass-through, SS_U, PO_SNAP; see CHANGELOG.md): the cross-validation surface grew from 46 to 53 fixtures (7 new ones exercising the three changes directly) and from 1,009 of 1,015 to 1,167 of 1,183 comparisons, still 0 failures; the unit suite grew from 1,306 to 1,307 (RL-5/RL-6/RL-7 re-pinned to the SS_U-correct values rather than added as new tests); coverage was re-measured on the new bytes (93.81% statements / 82.63% branches / 94.96% functions); the 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture and reads 13 / 13 with zero changed rows. Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.45. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.46. Update on every release that closes or opens an audit item.

@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.45';
+const ENGINE_VERSION = '2.9.46';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2383,10 +2383,89 @@ function computeCPM(activities, relationships, opts) {
         return pnode.es;
     }
 
+    // PT (retained-logic pass-through, 2026-09-20) — under retained logic P6
+    // does not stop at a COMPLETED activity: it schedules it like any other
+    // with zero remaining duration, so a completed activity whose predecessor
+    // is still unfinished (completed out of sequence) carries that
+    // predecessor's controlling date, and P6 hands the date on to the
+    // completed activity's successors. Both ports skipped completed nodes
+    // outright, so the unfinished predecessor's finish died at the first
+    // completed activity on the path.
+    // Measured on a 503-activity real schedule with 24 out-of-sequence
+    // activities, scheduled in P6 Professional 23.12 (F9) and read back from
+    // the P6 database; the file is not named, it is a client schedule:
+    //   * P6 stamps early start = early finish on all 302 completed rows; 84
+    //     of them sit LATER than the data date, each on the latest date its
+    //     predecessors hand it, and a rule written from P6's own stored dates
+    //     alone (no engine) reproduces 503 of 503 early starts and 503 of 503
+    //     late finishes to the minute;
+    //   * a not-started activity behind six completed out-of-sequence
+    //     activities starts on the finish of the in-progress activity ahead of
+    //     them, 59 working days after its only unfinished DIRECT predecessor,
+    //     with total float 0; this engine started it 59 working days early and
+    //     finished the project 14 working days early. With the pass-through
+    //     the incomplete rows matching P6 go 83 -> 146 of 201 on early start
+    //     and early finish and 55 -> 141 on total float, and every remaining
+    //     difference is one other rule (the lag of an SS link off a STARTED
+    //     predecessor), not this one;
+    //   * the date is handed on WITHOUT the relationship's lag: a completed
+    //     predecessor carrying 2026-10-05 into an FS + 25 d successor starts it
+    //     on 2026-10-05. The lag belongs to the ACTUAL finish, which the
+    //     existing drive below already counts it from (an SS + 12 d successor
+    //     of a completed activity starts 12 working days after its ACTUAL
+    //     start, where the stored early start of that completed row is the
+    //     data date).
+    // Progress override publishes no dates on completed rows and ignores the
+    // unfinished predecessor (201 of 201 incomplete rows reproduced from P6's
+    // own dates with no pass-through), so this is retained logic only.
+    // The instant is carried unsnapped, like a finish milestone's: the
+    // successor snaps it onto its own calendar. Single-calendar files cannot
+    // tell that from snapping it onto the completed activity's calendar
+    // first - INFERRED for mixed calendars. A lag on the link INTO the
+    // completed activity is applied as on any link - INFERRED, the measured
+    // file has none. Python paired site: _passthrough_of.
+    function _rlPassthroughOf(pnode) {
+        if (_scheduleMode === 'retained_logic' && pnode.is_complete) {
+            return pnode.rl_passthrough || 0;
+        }
+        return 0;
+    }
+
     // Forward pass.
     for (const code of sortRes.order) {
         const node = nodes[code];
-        if (node.is_complete) continue;
+        if (node.is_complete) {
+            if (_scheduleMode === 'retained_logic') {
+                let _pt = 0;
+                let _ptRel = null;
+                for (const p of (predMap[code] || [])) {
+                    const pnode = nodes[p.from_code];
+                    if (!pnode) continue;
+                    let _d;
+                    if (pnode.is_complete) {
+                        _d = _rlPassthroughOf(pnode);
+                    } else {
+                        const _src = (p.type === 'SS' || p.type === 'SF')
+                            ? startDriveSrcFor(pnode) : _finishInstant(pnode);
+                        _d = _lagFromInstant(_src, p.lag_days, lagCalFor(pnode, node), alerts,
+                            'pass-through ' + pnode.code + '->' + code);
+                    }
+                    if (_d > _pt) { _pt = _d; _ptRel = p; }
+                }
+                // At or before the data date it can move nothing: every
+                // successor's remaining work is floored there already.
+                if (_ptRel !== null && _pt > ddNum) {
+                    node.rl_passthrough = _pt;
+                    node.driving_predecessor = {
+                        code: _ptRel.from_code,
+                        type: _ptRel.type,
+                        lag_days: _ptRel.lag_days,
+                        passthrough: true,
+                    };
+                }
+            }
+            continue;
+        }
         const preds = predMap[code] || [];
         const nodeCal = calFor(node);
         // v2.9.5 in-progress ES pin (corrected pin order). When an activity has
@@ -2454,6 +2533,9 @@ function computeCPM(activities, relationships, opts) {
         // v2.9.44 — [snapped drive, instant] per relationship, so a finish
         // milestone can sit at the instant that actually drove it.
         const _driveInstants = [];
+        // PT — predecessors whose drive was the date they carry from
+        // unfinished work, so the recorded driver can say so.
+        const _ptVia = new Set();
         // v2.9.12 F2.2 — FF/SF finish-anchor identity. Round-tripping
         // retreat→advance through duration drifts off the anchor whenever
         // the anchor lies on a non-workday under nodeCal. Capture the
@@ -2470,6 +2552,11 @@ function computeCPM(activities, relationships, opts) {
             // (see lagCalFor); the DURATION walk stays on this activity's own
             // calendar, which is a different question.
             const lagCal = lagCalFor(pnode, node);
+            // PT — the date a completed predecessor carries from unfinished
+            // work (0 when none, and always 0 under progress override). It
+            // floors the drive below without the lag; see _rlPassthroughOf.
+            const _ptInst = _rlPassthroughOf(pnode);
+            let _viaPt = false;
             // v2.9.44 — every drive is computed as an INSTANT (the
             // predecessor's finish or start instant, the lag consumed as
             // working time on the lag calendar from that instant) and then
@@ -2481,7 +2568,8 @@ function computeCPM(activities, relationships, opts) {
             // started on Monday instead of Saturday.
             if (p.type === 'FS') {
                 const _ctx = 'FS lag ' + pnode.code + '->' + code;
-                const driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                let driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
                 drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
                 _driveInstants.push([drive, driveInstant]);
             } else if (p.type === 'SS') {
@@ -2489,12 +2577,23 @@ function computeCPM(activities, relationships, opts) {
                 // reference (restart for a started incomplete pred; es
                 // otherwise). See startDriveSrcFor.
                 const _ctx = 'SS lag ' + pnode.code + '->' + code;
-                const driveInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
+                let driveInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
+                // SS_U (P6 parity 2026-09-21) — P6 floors the restart-driven
+                // drive with actual_start + lag for a started incomplete
+                // predecessor; the restart itself contributes WITHOUT lag.
+                // Measured: 9 SS+5d links on a real-file oracle, explains all
+                // 55 remaining date differences after the pass-through fix.
+                if (_scheduleMode === 'retained_logic' && !pnode.is_complete && pnode.actual_start) {
+                    const _a = _lagFromInstant(dateToNum(pnode.actual_start), lag, lagCal, alerts, _ctx);
+                    driveInstant = Math.max(_a, startDriveSrcFor(pnode));
+                }
+                if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
                 drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
                 _driveInstants.push([drive, driveInstant]);
             } else if (p.type === 'FF') {
                 const _ctx = 'FF lag ' + pnode.code + '->' + code;
-                const anchorInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                let anchorInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                if (_ptInst > anchorInstant) { anchorInstant = _ptInst; _viaPt = true; }
                 const ffAnchor = _snapFwd(anchorInstant, nodeCal, alerts, _ctx);
                 drive = _retreatWithAlerts(ffAnchor, node.duration_days, nodeCal, alerts,
                     'FF duration ' + code);
@@ -2506,7 +2605,8 @@ function computeCPM(activities, relationships, opts) {
                 // corpus carries no discriminating SF instance; adopted by
                 // symmetry with the measured SS rule.
                 const _ctx = 'SF lag ' + pnode.code + '->' + code;
-                const anchorInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
+                let anchorInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
+                if (_ptInst > anchorInstant) { anchorInstant = _ptInst; _viaPt = true; }
                 const sfAnchor = _snapFwd(anchorInstant, nodeCal, alerts, _ctx);
                 drive = _retreatWithAlerts(sfAnchor, node.duration_days, nodeCal, alerts,
                     'SF duration ' + code);
@@ -2514,10 +2614,12 @@ function computeCPM(activities, relationships, opts) {
                 _driveInstants.push([sfAnchor, anchorInstant]);
             } else {
                 const _ctx = 'FS-default lag ' + pnode.code + '->' + code;
-                const driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                let driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
+                if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
                 drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
                 _driveInstants.push([drive, driveInstant]);
             }
+            if (_viaPt) _ptVia.add(pnode.code);
             // v2.9.5 — when this node has an actual_start, predecessor logic
             // cannot push ES later. We still track the driving_predecessor for
             // forensic traceability (which pred *would* have driven if not for
@@ -2557,7 +2659,14 @@ function computeCPM(activities, relationships, opts) {
                 // (+lag) keeps driving ES in the main path below (P6's
                 // documented behaviour; the corpus carries no discriminating
                 // instance either way — INFERRED).
-                if (!pnode.is_complete) {
+                // PT — D2 stands for the completed predecessor's ACTUAL
+                // finish. The date it carries from unfinished work is not
+                // history: it restarts a started successor as it starts a
+                // not-started one (on a real-file oracle P6's own dates give
+                // 33 of 41 in-progress restarts to the minute with this rule
+                // and 19 without it; the other 8 are the SS-lag rule named
+                // at _rlPassthroughOf, not this one).
+                if (!pnode.is_complete || _viaPt) {
                     let _rDrive = drive;
                     if ((p.type === 'FF' || p.type === 'SF') && thisAnchorEF !== null &&
                         Number.isFinite(node.remaining_duration) && node.remaining_duration >= 0) {
@@ -2620,6 +2729,13 @@ function computeCPM(activities, relationships, opts) {
                     finishAnchorEF = thisAnchorEF;
                 }
             }
+        }
+
+        // PT — a driver that drove with the date it carries from unfinished
+        // work says so. The completed activity's own driving_predecessor
+        // leads on to the unfinished one.
+        if (drivingPred !== null && drivingPred.code !== undefined && _ptVia.has(drivingPred.code)) {
+            drivingPred.passthrough = true;
         }
 
         // v2.9.3 — P6 constraint application (forward pass), v2.9.7 — secondary support.
@@ -2780,14 +2896,22 @@ function computeCPM(activities, relationships, opts) {
                 // bar by the non-worked anchor day. Measured corpus-wide:
                 // P6's stored restart always sits on a working instant of the
                 // activity's own calendar (zero snap-forward failures across
-                // all 51 corpus calendars). progress_override keeps its
-                // documented unsnapped max(actual_start, data date) anchor —
-                // unmeasured, deliberately untouched.
+                // all 51 corpus calendars).
                 if (nodeCal) {
                     const _snapped = _advanceWithAlerts(efAnchor, 0, nodeCal, alerts,
                         'restart-snap ' + code);
                     if (_snapped !== efAnchor) efAnchor = _snapped;
                 }
+            } else if (_scheduleMode === 'progress_override' && nodeCal) {
+                // PO_SNAP (P6 parity 2026-09-21) — progress_override applies
+                // the same D3 snap. Measured on a real-file oracle: a data
+                // date encoded as the open of a non-working day left the
+                // remaining-bar walk starting on it and landing 1 working day
+                // early on the great majority of in-progress rows; with the
+                // snap, exact.
+                const _snapped = _advanceWithAlerts(efAnchor, 0, nodeCal, alerts,
+                    'restart-snap ' + code);
+                if (_snapped !== efAnchor) efAnchor = _snapped;
             }
             node.restart = efAnchor;
             node.ef = _advanceWithAlerts(efAnchor, _remRaw, nodeCal, alerts,
@@ -3015,6 +3139,22 @@ function computeCPM(activities, relationships, opts) {
             };
         }
 
+        // PT — when the FINAL driver of a not-started activity is a date
+        // carried through completed work, say so: the start is set by work
+        // that is not a direct predecessor, and a reader tracing the driver
+        // has to be told. (A started activity's driver is attribution only.)
+        if (drivingPred !== null && drivingPred.passthrough && !hasActualStart) {
+            alerts.push({
+                severity: 'INFO',
+                context: 'retained-logic-passthrough',
+                message: code + ' starts ' + numToDate(node.es) +
+                    ' on a date carried through completed activity ' + drivingPred.code +
+                    ' from unfinished work upstream of it (retained logic: ' + drivingPred.code +
+                    ' was completed out of sequence, so its unfinished predecessor still ' +
+                    'holds its successors). Progress override ignores it.',
+            });
+        }
+
         node.driving_predecessor = drivingPred;
     }
 
@@ -3154,6 +3294,33 @@ function computeCPM(activities, relationships, opts) {
             node.lf = node.ef;
             node.ls = node.es;
             node.tf = 0;
+            // PT — the backward mirror of the forward pass-through: under
+            // retained logic the completed activity hands the tightest late
+            // bound of its successors back to its predecessors, again as a
+            // zero-duration node and again without the lag, which belongs to
+            // its actual date. (Its own historical dates still bound
+            // nothing - the R6 defect stays fixed.) Without the mirror the
+            // unfinished activity that DRIVES the project through completed
+            // work is bounded by nothing: on a real-file oracle the
+            // in-progress driver of the longest path reported working days
+            // of float where P6 has 0.
+            if (_scheduleMode === 'retained_logic') {
+                let _lpt = null;
+                for (const s of (succMap[code] || [])) {
+                    const snode = nodes[s.to_code];
+                    if (!snode) continue;
+                    let _b;
+                    if (snode.is_complete) {
+                        _b = (snode.rl_late_passthrough !== undefined) ? snode.rl_late_passthrough : null;
+                    } else if (s.type === 'FF' || s.type === 'SF') {
+                        _b = _lfInstantOf(snode);
+                    } else {
+                        _b = snode.ls;
+                    }
+                    if (_b !== null && _b !== undefined && (_lpt === null || _b < _lpt)) _lpt = _b;
+                }
+                if (_lpt !== null) node.rl_late_passthrough = _lpt;
+            }
             continue;
         }
         const nodeCal = calFor(node);
@@ -3206,7 +3373,18 @@ function computeCPM(activities, relationships, opts) {
             for (const s of succs) {
                 const snode = nodes[s.to_code];
                 if (!snode) continue;
-                if (snode.is_complete) { _skippedCompletedSucc += 1; continue; }
+                // PT — a completed successor bounds this activity only with the
+                // late date it passes back from ITS successors (retained
+                // logic); with none it is skipped as before.
+                let _sLS = snode.ls;
+                let _sLFInst = null;
+                if (snode.is_complete) {
+                    const _lpt = (_scheduleMode === 'retained_logic' &&
+                        snode.rl_late_passthrough !== undefined) ? snode.rl_late_passthrough : null;
+                    if (_lpt === null) { _skippedCompletedSucc += 1; continue; }
+                    _sLS = _lpt;
+                    _sLFInst = _lpt;
+                }
                 // v2.9.42 — the backward lag walk must use the SAME calendar
                 // the forward walk used, or the two stop being inverses and
                 // manufacture float out of nothing. `node` is the predecessor
@@ -3232,23 +3410,33 @@ function computeCPM(activities, relationships, opts) {
                 // constraint.
                 if (s.type === 'FS') {
                     const _ctx = 'backward FS lag ' + code + '->' + snode.code;
-                    const _inst = _lagBackFromInstant(snode.ls, lag, sCal, alerts, _ctx);
+                    const _inst = _lagBackFromInstant(_sLS, lag, sCal, alerts, _ctx);
                     drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'SS') {
                     const _ctx = 'backward SS lag ' + code + '->' + snode.code;
-                    const _inst = _lagBackFromInstant(snode.ls, lag, sCal, alerts, _ctx);
+                    // SS_U backward — mirror the forward rule: only the
+                    // portion of actual_start+lag that extends past the data
+                    // date counts as the effective backward lag.
+                    let _ssLag = lag;
+                    if (_scheduleMode === 'retained_logic' && node.actual_start && !node.is_complete) {
+                        const _a = _lagFromInstant(dateToNum(node.actual_start), lag, sCal, alerts, _ctx);
+                        _ssLag = (_a > ddNum) ? _countWorkDaysBetween(ddNum, _a, sCal) : 0;
+                    }
+                    const _inst = _lagBackFromInstant(_sLS, _ssLag, sCal, alerts, _ctx);
                     lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'FF') {
                     const _ctx = 'backward FF lag ' + code + '->' + snode.code;
-                    const _inst = _lagBackFromInstant(_lfInstantOf(snode), lag, sCal, alerts, _ctx);
+                    if (_sLFInst === null) _sLFInst = _lfInstantOf(snode);
+                    const _inst = _lagBackFromInstant(_sLFInst, lag, sCal, alerts, _ctx);
                     drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'SF') {
                     const _ctx = 'backward SF lag ' + code + '->' + snode.code;
-                    const _inst = _lagBackFromInstant(_lfInstantOf(snode), lag, sCal, alerts, _ctx);
+                    if (_sLFInst === null) _sLFInst = _lfInstantOf(snode);
+                    const _inst = _lagBackFromInstant(_sLFInst, lag, sCal, alerts, _ctx);
                     lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else {
                     const _ctx = 'backward default ' + code + '->' + snode.code;
-                    const _inst = _lagBackFromInstant(snode.ls, lag, sCal, alerts, _ctx);
+                    const _inst = _lagBackFromInstant(_sLS, lag, sCal, alerts, _ctx);
                     drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 }
                 if (drive !== null && (minLF === null || drive < minLF)) minLF = drive;
@@ -3542,6 +3730,11 @@ function computeCPM(activities, relationships, opts) {
         if (n.restart !== undefined) {
             n.restart_date = numToDate(n.restart);
         }
+        if (n.rl_passthrough) {
+            // PT — the date a completed activity carries from unfinished work
+            // (the instant, like ef_instant_date); es / ef stay its actuals.
+            n.rl_passthrough_date = numToDate(n.rl_passthrough);
+        }
         n.lf_date = numToDate(n.lf);
         const nCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
         // v2.9.42 — inclusive companions to the exclusive boundary dates.
@@ -3627,7 +3820,17 @@ function computeCPM(activities, relationships, opts) {
             // the remaining network. Case 09 A: only successor complete,
             // P6 FF 0 via the no-live-successor fallback, not via a clamp
             // of the -28 slack to history.
-            if (sn.is_complete) continue;
+            // PT — and, mirroring it again, a completed successor that
+            // carries a date from unfinished work is measured AT that date
+            // (retained logic): an activity that drives its network through
+            // completed work has no free float to give, where skipping the
+            // completed successor reported its whole total float as free.
+            let _snPt = 0;
+            if (sn.is_complete) {
+                _snPt = _rlPassthroughOf(sn);
+                if (!_snPt) continue;
+                _snPt = _snapFwd(_snPt, calFor(n), [], 'FF-slack PT');
+            }
             // v2.9.18 A11-HIGH — calendar-aware slack. The previous formula
             // `sn.es - n.ef - lag_days` mixed units: (sn.es - n.ef) is a
             // calendar-day delta while lag_days is in working days on the
@@ -3683,6 +3886,11 @@ function computeCPM(activities, relationships, opts) {
             } else {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack default');
                 succAnchor = sn.es;
+            }
+            if (_snPt) {
+                // PT — a completed successor has zero remaining duration:
+                // its start and finish are both the date it carries.
+                succAnchor = _snPt;
             }
             const slack = succAnchor - predAnchor;
             if (slack < minSlack) {

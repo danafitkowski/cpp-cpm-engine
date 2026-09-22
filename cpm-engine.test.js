@@ -10262,8 +10262,12 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
     check('RL-5: no-rem started pred carries restart = max(dd, act_start) = 2026-06-22',
         r.nodes.P.restart_date === '2026-06-22',
         'P.restart=' + r.nodes.P.restart_date);
-    check('RL-5: SS+3 successor is driven from the D5 restart (2026-06-25), not act_start',
-        r.nodes.X.es_date === '2026-06-25',
+    // SS_U (P6 parity 2026-09-21): drive = max(actual_start+lag, restart),
+    // the restart contributing WITHOUT its own lag. advance(May-25, 3
+    // workdays on MF) = May-28, which does not exceed restart=Jun-22, so
+    // the restart wins outright. Pre-SS_U value: 2026-06-25 (restart+lag).
+    check('RL-5: SS+3 successor is driven from the D5 restart with no lag applied (SS_U: actual_start+lag=2026-05-28 does not exceed it)',
+        r.nodes.X.es_date === '2026-06-22',
         'X.es=' + r.nodes.X.es_date);
     check('RL-5: legacy no-rem EF path still alerts completion-data-incomplete',
         r.alerts.some(a => a.context === 'completion-data-incomplete' &&
@@ -10285,11 +10289,15 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
     );
     check('RL-6: started pred restart = data date 2026-06-22',
         r.nodes.P.restart_date === '2026-06-22');
-    check('RL-6: not-started SS successor ES = advance(pred.restart, 5) = 2026-06-29',
-        r.nodes.X.es_date === '2026-06-29',
+    // SS_U (P6 parity 2026-09-21): drive = max(actual_start+lag, restart),
+    // restart WITHOUT its own lag. advance(May-25, 5 workdays on MF) =
+    // Jun-01 < restart Jun-22, so the restart wins outright.
+    // Pre-SS_U value: ES 2026-06-29, EF 2026-07-13 (restart + lag applied).
+    check('RL-6: not-started SS successor ES = the D1 restart with no lag applied (SS_U: actual_start+lag=2026-06-01 does not exceed it)',
+        r.nodes.X.es_date === '2026-06-22',
         'X.es=' + r.nodes.X.es_date);
-    check('RL-6: successor EF - ES = duration (rigid bar, 2026-07-13)',
-        r.nodes.X.ef_date === '2026-07-13',
+    check('RL-6: successor EF - ES = duration (rigid bar, 2026-07-06)',
+        r.nodes.X.ef_date === '2026-07-06',
         'X.ef=' + r.nodes.X.ef_date);
     // Free-float consistency: P drives X through the SAME anchor the forward
     // pass used (its restart), so the driving pred carries zero free float.
@@ -10307,8 +10315,19 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
         S7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [] },
         MF: { work_days: [1, 2, 3, 4, 5], holidays: [] },
     };
+    // SS_U (P6 parity 2026-09-21) triggers whenever P has an actual_start:
+    // drive = max(actual_start+lag, restart), restart WITHOUT its own lag.
+    // actual_start moved from 2026-05-25 to 2026-06-18 (close to the
+    // 2026-06-22 restart) so actual_start+lag EXCEEDS the restart in every
+    // sub-case below and this test keeps discriminating which calendar the
+    // lag walks on — with the original 05-25 value, both modes collapsed to
+    // the bare restart (2026-06-22) regardless of calendar choice, which
+    // proved nothing about the lag calendar any more. Values verified
+    // against the engine itself, not hand-computed (calendar arithmetic
+    // across a 7-day and a Mon-Fri calendar is exactly the kind of thing
+    // that is easy to get wrong by hand).
     const acts = [
-        { code: 'P', duration_days: 40, actual_start: '2026-05-25',
+        { code: 'P', duration_days: 40, actual_start: '2026-06-18',
           remaining_duration: 10, clndr_id: 'S7' },
         { code: 'X', duration_days: 10, clndr_id: 'MF' },
     ];
@@ -10316,32 +10335,33 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
     const rPred = E.computeCPM(acts, rels,
         { dataDate: '2026-06-22', calMap: cal,
           relationshipLagCalendar: 'rcal_Predecessor' });
-    // v2.9.44 (finish instants): the five-day walk on P's seven-day calendar
-    // from the Monday 06-22 restart still lands on Saturday 06-27, but X is
-    // on a Mon-Fri calendar and cannot start on a Saturday: its early start
-    // is Monday 06-29, the first working day of ITS calendar at or after
-    // the instant. (The value pinned here before, 06-27, put a Mon-Fri
-    // activity's start on a day it does not work.)
-    check('RL-7: rcal_Predecessor — SS lag walks pred 7-day calendar from restart, X snaps to its own Monday (2026-06-29)',
-        rPred.nodes.X.es_date === '2026-06-29',
+    // Five days on P's seven-day calendar from actual_start 06-18 lands
+    // 06-23 (a Tuesday), already a working day on X's Mon-Fri calendar.
+    check('RL-7: rcal_Predecessor — SS_U actual_start+lag walks pred 7-day calendar (2026-06-23)',
+        rPred.nodes.X.es_date === '2026-06-23',
         'X.es=' + rPred.nodes.X.es_date);
-    // With a seven-day lag the two calendars still separate: seven seven-day
-    // days from Monday 06-22 is Monday 06-29 on P's calendar, seven Mon-Fri
-    // days is Wednesday 07-01 on X's.
+    // Five Mon-Fri days from 06-18 (Thursday) lands 06-25 (Thursday) —
+    // separates cleanly from the 7-day-calendar walk above.
+    const rSucc = E.computeCPM(acts, rels,
+        { dataDate: '2026-06-22', calMap: cal });
+    check('RL-7: default successor mode — SS_U actual_start+lag walks MF calendar (2026-06-25)',
+        rSucc.nodes.X.es_date === '2026-06-25',
+        'X.es=' + rSucc.nodes.X.es_date);
+    check('RL-7: the two lag-calendar modes still discriminate under SS_U (pred 06-23 / succ 06-25)',
+        rPred.nodes.X.es_date === '2026-06-23' && rSucc.nodes.X.es_date === '2026-06-25',
+        'pred ' + rPred.nodes.X.es_date + ' / succ ' + rSucc.nodes.X.es_date);
+    // With a seven-day lag the two calendars separate further: seven
+    // seven-day days from 06-18 is 06-25 on P's calendar, seven Mon-Fri
+    // days is 06-29 on X's.
     const rels7 = [{ from_code: 'P', to_code: 'X', type: 'SS', lag_days: 7 }];
     const rPred7 = E.computeCPM(acts, rels7,
         { dataDate: '2026-06-22', calMap: cal,
           relationshipLagCalendar: 'rcal_Predecessor' });
     const rSucc7 = E.computeCPM(acts, rels7,
         { dataDate: '2026-06-22', calMap: cal });
-    check('RL-7: a seven-day SS lag still discriminates the lag calendar (pred 06-29 / succ 07-01)',
-        rPred7.nodes.X.es_date === '2026-06-29' && rSucc7.nodes.X.es_date === '2026-07-01',
+    check('RL-7: a seven-day SS lag still discriminates the lag calendar (pred 06-25 / succ 06-29)',
+        rPred7.nodes.X.es_date === '2026-06-25' && rSucc7.nodes.X.es_date === '2026-06-29',
         'pred ' + rPred7.nodes.X.es_date + ' / succ ' + rSucc7.nodes.X.es_date);
-    const rSucc = E.computeCPM(acts, rels,
-        { dataDate: '2026-06-22', calMap: cal });
-    check('RL-7: default successor mode — same lag walks MF calendar (2026-06-29)',
-        rSucc.nodes.X.es_date === '2026-06-29',
-        'X.es=' + rSucc.nodes.X.es_date);
 }
 
 // ===========================================================================

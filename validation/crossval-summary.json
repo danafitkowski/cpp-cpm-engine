@@ -1,34 +1,34 @@
 {
-  "engine_version": "2.9.45",
-  "generated_utc": "2026-09-21T22:13:23.369Z",
+  "engine_version": "2.9.46",
+  "generated_utc": "2026-09-22T04:00:18.886Z",
   "fixtures": {
-    "total": 46,
-    "passed": 46,
+    "total": 53,
+    "passed": 53,
     "failed": 0
   },
   "checks": {
-    "executed": 1009,
+    "executed": 1167,
     "failed": 0,
-    "passed": 1009,
-    "skipped": 6,
-    "surface": 1015
+    "passed": 1167,
+    "skipped": 16,
+    "surface": 1183
   },
   "skips_by_field": {
-    "ff_signed": 3,
-    "ff_signed_working_days": 3
+    "ff_signed": 8,
+    "ff_signed_working_days": 8
   },
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 6
+    "mutual": 16
   },
   "checks_by_field": {
-    "project_finish_num": 44,
-    "project_finish": 44,
-    "critical_codes": 44,
-    "topo_order": 44,
-    "alert_count": 44,
-    "alert_severity_counts": 44,
-    "node <id>": 743,
+    "project_finish_num": 51,
+    "project_finish": 51,
+    "critical_codes": 51,
+    "topo_order": 51,
+    "alert_count": 51,
+    "alert_severity_counts": 51,
+    "node <id>": 859,
     "threw (both engines)": 2
   },
   "rows": [
@@ -405,6 +405,74 @@
       "id": "F50",
       "name": "F50 — special_workdays: a forced-ON Saturday and a forced-OFF Monday",
       "checks": 20,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F51",
+      "name": "F51 — pass-through: completed C carries unfinished P's date to X",
+      "checks": 25,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F52",
+      "name": "F52 — progress_override ignores the pass-through (same topology as F51)",
+      "checks": 25,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F53",
+      "name": "F53 — pass-through is carried without the lag into C; the lag out of C still applies",
+      "checks": 25,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F54",
+      "name": "F54 — pass-through survives a chain of two completed activities",
+      "checks": 30,
+      "fails": 0,
+      "skips": 4,
+      "skips_by_field": {
+        "ff_signed": 2,
+        "ff_signed_working_days": 2
+      }
+    },
+    {
+      "id": "F55",
+      "name": "F55 — SS_U: restart wins over actual_start+lag",
+      "checks": 20,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F56",
+      "name": "F56 — SS_U: actual_start+lag wins when it exceeds the restart",
+      "checks": 20,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F57",
+      "name": "F57 — PO_SNAP: progress_override restart snaps off a weekend data date",
+      "checks": 13,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

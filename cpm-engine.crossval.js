@@ -1369,6 +1369,143 @@ compareFixture('F50 — special_workdays: a forced-ON Saturday and a forced-OFF 
                       special_workdays: ['2026-01-10'] } },
 });
 
+// =====================================================================
+// FIXTURES 51-56 — retained-logic pass-through, SS_U, PO_SNAP (2026-09-21)
+// =====================================================================
+// P6 does not stop at a COMPLETED activity under retained logic: it
+// schedules the completed activity like any other, with zero remaining
+// duration, so a completed activity that is itself out of sequence (its
+// own predecessor still unfinished) carries that predecessor's date on to
+// ITS successors. See cpm-engine.js's _rlPassthroughOf for the full
+// citation of the real-file measurement this reproduces.
+
+// F51 — the basic case: P unfinished, C completed out of sequence behind
+// it, X waits on C. Without pass-through X floats free at the data date
+// (C is skipped outright); with it, X starts on P's carried finish.
+compareFixture('F51 — pass-through: completed C carries unfinished P\'s date to X', {
+    activities: [
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'C', duration_days: 5, actual_start: '2026-01-05',
+          actual_finish: '2026-01-09', is_complete: true, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'X', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F52 — the same topology under progress_override: no pass-through, C is
+// simply skipped and X's only live driver is the data date.
+compareFixture('F52 — progress_override ignores the pass-through (same topology as F51)', {
+    activities: [
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'C', duration_days: 5, actual_start: '2026-01-05',
+          actual_finish: '2026-01-09', is_complete: true, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'X', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    schedule_mode: 'progress_override',
+});
+
+// F53 — the date is handed on WITHOUT the relationship's lag into C, but a
+// lag on the link OUT of C to X still applies as on any link.
+compareFixture('F53 — pass-through is carried without the lag into C; the lag out of C still applies', {
+    activities: [
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'C', duration_days: 5, actual_start: '2026-01-05',
+          actual_finish: '2026-01-09', is_complete: true, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'C', type: 'FS', lag_days: 3 },
+        { from_code: 'C', to_code: 'X', type: 'FS', lag_days: 2 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F54 — a chain of two completed out-of-sequence activities: the carried
+// date must survive both hops to reach the first live successor.
+compareFixture('F54 — pass-through survives a chain of two completed activities', {
+    activities: [
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'C1', duration_days: 5, actual_start: '2026-01-05',
+          actual_finish: '2026-01-09', is_complete: true, clndr_id: 'MF' },
+        { code: 'C2', duration_days: 3, actual_start: '2026-01-05',
+          actual_finish: '2026-01-08', is_complete: true, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'C1', type: 'FS', lag_days: 0 },
+        { from_code: 'C1', to_code: 'C2', type: 'FS', lag_days: 0 },
+        { from_code: 'C2', to_code: 'X', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F55 — SS_U: drive = max(actual_start+lag, restart), restart WITHOUT its
+// own lag. actual_start 2026-01-05 + 3d = 2026-01-08 < restart 2026-01-12
+// (the data date, P having no predecessors of its own), so the restart
+// wins outright and X starts there, not at restart+lag (2026-01-15).
+compareFixture('F55 — SS_U: restart wins over actual_start+lag', {
+    activities: [
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 3 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F56 — SS_U discriminating case: actual_start close enough to the restart
+// that actual_start+lag EXCEEDS it, so the actual_start term wins instead.
+// actual_start 2026-01-08 + 3d = 2026-01-13 > restart 2026-01-12.
+compareFixture('F56 — SS_U: actual_start+lag wins when it exceeds the restart', {
+    activities: [
+        { code: 'P', duration_days: 20, actual_start: '2026-01-08',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 3 },
+    ],
+    data_date: '2026-01-12',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F57 — PO_SNAP: a data date landing on a non-working instant (Saturday
+// close) must snap the progress_override restart forward the same way
+// retained_logic's D3 already does, or the remaining bar starts on a day
+// the calendar does not work and lands one working day early.
+compareFixture('F57 — PO_SNAP: progress_override restart snaps off a weekend data date', {
+    activities: [
+        { code: 'X', duration_days: 10, actual_start: '2026-01-05',
+          remaining_duration: 2, clndr_id: 'MF' },
+    ],
+    relationships: [],
+    data_date: '2026-01-10 15:00',  // Saturday afternoon on a Mon-Fri calendar
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [],
+                     hours: { 1: [[8,17]], 2: [[8,17]], 3: [[8,17]],
+                              4: [[8,17]], 5: [[8,17]] } } },
+    schedule_mode: 'progress_override',
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

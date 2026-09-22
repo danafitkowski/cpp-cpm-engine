@@ -52,8 +52,42 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  34dbc2aa0966f133207be405fb09951a7027b5ae2b515b43b4ab211e83a0c895
+cpm.py  SHA-256:  e08e402d9a1adacd105d6fc6663643474ed00b10db67795edba789bad7c90d50
 
+(v2.9.46 retained-logic pass-through + P6 parity for started predecessors
+2026-09-21 - bumped from 34dbc2aa...: under retained logic P6 does not stop
+at a COMPLETED activity - it schedules it like any other, with zero
+remaining duration, so a completed activity that is itself out of sequence
+(its own predecessor still unfinished) carries that predecessor's date on
+to ITS successors, without the relationship's lag into it. Measured on a
+503-activity real schedule read back from the P6 database (not named, a
+client schedule): P6 stamps early start = early finish on all 302
+completed rows, 84 of them later than the data date; a rule written from
+P6's own stored dates alone (no engine) reproduces 503 of 503 early starts
+and late finishes to the minute under retained logic, and 201 of 201
+incomplete rows with NO pass-through under progress override. With the
+pass-through, incomplete rows matching P6 go 83 -> 146 of 201 on early
+start/finish and 55 -> 141 on total float.
+SS_U (same wave): for an SS/SF successor of a STARTED, incomplete
+predecessor, drive = max(actual_start + lag, restart), the restart
+contributing WITHOUT its own lag applied (backward mirror: the effective
+backward lag is only the portion of actual_start + lag that extends past
+the data date). Measured on 9 SS+5d links on the same file, closing all 55
+date differences remaining after the pass-through fix alone: combined
+201/201/201/201 on ES/EF/TF/FF.
+PO_SNAP (same wave): progress_override applies the same forward-snap to
+its restart anchor that retained_logic already did (D3, v2.9.43). A data
+date encoded at a non-working instant (the close of a Saturday) left the
+progress_override remaining-bar walk starting on it and landing one
+working day early on 194 of 201 in-progress rows; with the snap, 201/201.
+Deliberately not in this wave (measured, recorded alongside the proposal):
+the progress-override backward pass keeping links into started successors
+that P6 drops; a validator blind spot on the same completed-node
+pass-through, sharing the identical fix. Applied to this reference by the
+same patch as the canonical engine; the 46-fixture harness stays at 1009
+of 1015 executed and bit-identical, plus 7 new fixtures (F51-F57)
+exercising pass-through, SS_U and PO_SNAP directly, all bit-identical.
+Prior:
 (v2.9.45 finish-constraint instants 2026-09-21 - bumped from
 a3ebb418...: a P6 constraint date is an INSTANT and the time of day
 decides which working-day boundary it names. _normalize_constraint
@@ -233,15 +267,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 160472
-  sha-256:  34dbc2aa0966f133207be405fb09951a7027b5ae2b515b43b4ab211e83a0c895
+  bytes: 173231
+  sha-256:  e08e402d9a1adacd105d6fc6663643474ed00b10db67795edba789bad7c90d50
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 46 passed, 0 failed
-  Checks:   1009 / 1009 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 53 passed, 0 failed
+  Checks:   1167 / 1167 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 
