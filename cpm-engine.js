@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.46';
+const ENGINE_VERSION = '2.9.47';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1138,6 +1138,20 @@ function _lagBackFromInstant(instant, lag, lagCal, alerts, ctx) {
     return _lagFromInstant(instant, -lag, lagCal, alerts, ctx);
 }
 
+function _unexpiredLag(actualInstant, lag, lagCal, ddNum) {
+    // The part of a relationship lag out of PROGRESSED work that the data
+    // date has not already used up: `lag` less the working days of lagCal
+    // from the predecessor's actual date (its actual start for SS / SF) to
+    // the data date - none when that actual is at or after the data date -
+    // and never below zero, so a lead lays nothing. Without a calendar the
+    // elapsed count is ordinal, the same 7-day fallback the lag walk itself
+    // takes there. Python paired site: _unexpired_lag.
+    if (!(lag > 0)) return 0;
+    if (!(actualInstant > 0) || !(ddNum > 0) || actualInstant >= ddNum) return lag;
+    if (!lagCal) return Math.max(0, lag - (ddNum - actualInstant));
+    return Math.max(0, lag - _countWorkDaysBetween(actualInstant - 1, ddNum - 1, lagCal));
+}
+
 function _finishInstant(pnode) {
     // The instant a successor is driven from: the node's finish instant when
     // the forward pass (or a timed actual finish) stamped one, else its boundary.
@@ -1974,6 +1988,11 @@ function computeCPM(activities, relationships, opts) {
         } else if (isComplete) {
             efInstant = ef;
         }
+        // SSL (2026-09-23) — the actual start as an INSTANT too: an SS or SF
+        // lag off a started predecessor is used up by the working time the
+        // predecessor has run from it to the data date (_startedLagLeft), and
+        // P6 counts an afternoon start from the close of its day.
+        const asInstant = actualStart ? _instantOf(actualStart) : 0;
         if (isComplete && actualFinish) {
             ef = dateToNum(actualFinish);
             // v2.9.13 F1-Bug3 — Forensic data-quality check: actual_finish
@@ -2072,6 +2091,7 @@ function computeCPM(activities, relationships, opts) {
             is_complete: isComplete,
             is_fragnet: !!a.is_fragnet,
             actual_start: String(actualStart).trim().slice(0, 10),
+            as_instant: asInstant,
             actual_finish: String(actualFinish).trim().slice(0, 10),
             clndr_id: a.clndr_id || '',
             // v2.9.44 — finish instant (stamped by the forward pass for
@@ -2354,6 +2374,27 @@ function computeCPM(activities, relationships, opts) {
         _floatType = 'FT_FF';
     }
 
+    // SSL (P6 parity 2026-09-23) — SCHEDOPTIONS.sched_lag_early_start_flag,
+    // P6's "Calculate start-to-start lag from": 'early_start' (flag Y, P6's
+    // default) or 'actual_start' (flag N). It moves only the anchor of an SS
+    // link off a started predecessor; see _ssAnchorOf. The raw flag is
+    // accepted too. Unknown values ALERT and keep Early Start. Python paired
+    // site: _ss_lag_from in compute_cpm.
+    let _ssLagFrom = String(opts.ssLagFrom || opts.ss_lag_from || 'early_start').trim();
+    if (_ssLagFrom === 'Y') _ssLagFrom = 'early_start';
+    else if (_ssLagFrom === 'N') _ssLagFrom = 'actual_start';
+    if (_ssLagFrom !== 'early_start' && _ssLagFrom !== 'actual_start') {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'unknown-ss-lag-from',
+            message: 'ss_lag_from=' + JSON.stringify(_ssLagFrom) +
+                ' is not a P6 "Calculate start-to-start lag from" setting ' +
+                '(early_start | actual_start, or the SCHEDOPTIONS flag Y | N). ' +
+                "SS lags were computed from Early Start, P6's default.",
+        });
+        _ssLagFrom = 'early_start';
+    }
+
     // The calendar a lag between predNode and succNode is walked on.
     function lagCalFor(predNode, succNode) {
         return (_lagCalMode === 'successor') ? calFor(succNode) : calFor(predNode);
@@ -2408,13 +2449,14 @@ function computeCPM(activities, relationships, opts) {
     //     and early finish and 55 -> 141 on total float, and every remaining
     //     difference is one other rule (the lag of an SS link off a STARTED
     //     predecessor), not this one;
-    //   * the date is handed on WITHOUT the relationship's lag: a completed
-    //     predecessor carrying 2026-10-05 into an FS + 25 d successor starts it
-    //     on 2026-10-05. The lag belongs to the ACTUAL finish, which the
-    //     existing drive below already counts it from (an SS + 12 d successor
-    //     of a completed activity starts 12 working days after its ACTUAL
-    //     start, where the stored early start of that completed row is the
-    //     data date).
+    //   * the date is handed on WITHOUT the part of the relationship's lag
+    //     that ran out before the data date: a completed predecessor
+    //     carrying 2026-10-05 into an FS + 25 d successor, its actual finish
+    //     two months earlier, starts it on 2026-10-05, and an SS + 12 d
+    //     successor of a completed activity starts 12 working days after its
+    //     ACTUAL start, where the stored early start of that completed row is
+    //     the data date. The elapsed part is counted from the actual date and
+    //     the rest laid on the carried date (FA, _doneDrive).
     // Progress override publishes no dates on completed rows and ignores the
     // unfinished predecessor (201 of 201 incomplete rows reproduced from P6's
     // own dates with no pass-through), so this is retained logic only.
@@ -2422,13 +2464,123 @@ function computeCPM(activities, relationships, opts) {
     // successor snaps it onto its own calendar. Single-calendar files cannot
     // tell that from snapping it onto the completed activity's calendar
     // first - INFERRED for mixed calendars. A lag on the link INTO the
-    // completed activity is applied as on any link - INFERRED, the measured
-    // file has none. Python paired site: _passthrough_of.
+    // completed activity is applied as on any link, except an SS or SF link
+    // off STARTED work, which carries the anchor with no lag. Both measured
+    // in P6 on the SSC1/SSC2 probes (2026-09-23): FS +3 / +8 d, FF +2 d and
+    // SS +5 d off not-started work and FS +3 d off started work keep their
+    // lag. See the pass-through loop below. Python paired site: _passthrough_of.
     function _rlPassthroughOf(pnode) {
         if (_scheduleMode === 'retained_logic' && pnode.is_complete) {
             return pnode.rl_passthrough || 0;
         }
         return 0;
+    }
+
+    // SSL (P6 parity 2026-09-23) — the lag of an SS or SF link off a STARTED,
+    // incomplete predecessor, under retained logic. P6 counts only the part of
+    // the lag the predecessor has not already used up along its bar: the lag
+    // less the working time from its actual start to the data date, laid from
+    // its RESTART (_unexpiredLag). A future actual start has used up none of
+    // it, and a lead lays nothing. This replaces SS_U (v2.9.46:
+    // max(actual_start + lag, restart)), which agrees with it only when the
+    // restart sits at the data date - the one shape SS_U was measured on.
+    // Measured on P6's own stored dates:
+    //   * a real P6 export, 1,196 incomplete activities: two SS links (+30 d,
+    //     +32 d) off started predecessors whose restart a date carried through
+    //     completed work holds 7 working days past the data date. P6 starts
+    //     both successors at restart + the unexpired lag, in all six copies
+    //     of the file; SS_U and restart + lag match neither. With this rule the
+    //     engine's early starts and finishes on that file match P6 on 1,139 of
+    //     1,196 rows against 788 (every row still off is the separate rule for
+    //     a completed predecessor's future actual finish);
+    //   * a second real export: a started predecessor whose actual start is
+    //     AFTER the data date, restart held: the successor sits at the restart
+    //     plus the whole lag (nothing has elapsed);
+    //   * the same unexpired-lag rule for links out of COMPLETED work, measured
+    //     on six probe projects scheduled in P6 Professional 23.12: FS / SS /
+    //     FF / SF, carried dates, started successors, a lead dropped, the
+    //     elapsed time counted on the lag calendar.
+    // Measured in P6 since (the SSL1-3 probes, 2026-09-23, 19 cases each):
+    // SF off a started predecessor follows the same rule. The elapsed count
+    // is on the LAG calendar under either lag-calendar setting. A lead lays
+    // nothing. "Calculate start-to-start lag from Actual Start" moves the SS
+    // anchor to the data date (_ssAnchorOf). An SS / SF link into a
+    // COMPLETED activity lays no lag (the pass-through loop).
+    // Not modelled: a SUSPENDED predecessor. P6 counts only the working time
+    // before the suspension as elapsed and restarts at the resume date. The
+    // engine reads neither suspend nor resume, so it lays such a link from
+    // the data date with the whole elapsed count (SSL1 S13: P6 26 Oct,
+    // engine 12 Oct).
+    // Python paired sites: _ss_off_started / _started_lag_left.
+    function _ssOffStarted(pnode) {
+        return _scheduleMode === 'retained_logic' && !pnode.is_complete &&
+            !!pnode.actual_start && pnode.restart !== undefined && pnode.restart !== null;
+    }
+
+    function _startedLagLeft(pnode, lag, lagCal) {
+        return _unexpiredLag(pnode.as_instant || 0, lag, lagCal, ddNum);
+    }
+
+    // SSL measured (P6 probe 2026-09-23) — the INSTANT an SS link off a
+    // started predecessor is laid from. Under P6's "Calculate start-to-start
+    // lag from: Early Start" (the default) it is the restart. Under "Actual
+    // Start" (SCHEDOPTIONS sched_lag_early_start_flag = N) it is the DATA
+    // DATE. The option moves the anchor only; the unexpired-lag count is the
+    // same under both.
+    // Measured in P6 Professional 23.12 on the SSL1/SSL2 probe projects (19
+    // cases each, one F9 per project, read back from the P6 database). Under
+    // Actual Start P6 starts the successor at the data date + the unexpired
+    // lag on every case, including a week BEFORE the predecessor's restart
+    // when logic holds that restart later.
+    // SF links ignore the option: restart + unexpired lag under both. So
+    // does the backward pass: the late restart is the successor's late start
+    // less the unexpired lag under both.
+    // Python paired site: _ss_anchor_for.
+    function _ssAnchorOf(pnode) {
+        if (_ssLagFrom === 'actual_start' && ddNum > 0 && _ssOffStarted(pnode)) return ddNum;
+        return startDriveSrcFor(pnode);
+    }
+
+    // FA (completed predecessors, P6 parity 2026-09-23) — how P6 drives a
+    // successor off COMPLETED work. Measured in P6 Professional 23.12 on six
+    // probe projects (every link type, both scheduling modes, not-started and
+    // started successors, carried dates) scheduled one project at a time and
+    // read back from the P6 database; the probes are synthetic, the two real
+    // files that raised it are client schedules and are not named:
+    //     drive = stamp + max(0, lag - elapsed)
+    //   stamp:   the completed activity's own scheduled instant - the data
+    //            date, or under retained logic the later date it carries from
+    //            unfinished work (PT above; progress override carries none);
+    //   elapsed: working time on the lag calendar from its ACTUAL date at the
+    //            link's predecessor end (actual start for SS/SF, actual finish
+    //            for FS/FF) up to the data date, and zero when that actual
+    //            date is at or after the data date (_unexpiredLag).
+    // So an actual date recorded AFTER the data date drives nothing: P6 lists
+    // the row in its schedule log ("Activities with Actual Dates > Data
+    // Date"), starts an FS+0 successor at the data date and an FS+2d one two
+    // working days after it, where v2.9.46 started them off the recorded date
+    // (16 probe cases: 14 wrong, the other two agree either way). The cap is
+    // per date: an actual start before the data date still counts although
+    // the actual finish is after it. A lag not yet run out is laid ON the
+    // stamp, carried date included; v2.9.46 took the later of the carried date
+    // and actual + lag and started such successors up to two working days
+    // early. A fully elapsed lag leaves the stamp alone - the measured v2.9.46
+    // pass-through case (an FS+200 h successor of work finished two months
+    // before the data date starts ON the carried date). Without a data date
+    // nothing is "after" it and the actual dates drive as before. Python
+    // paired sites: _stamp_of / _done_drive.
+    function _stampOf(pnode) {
+        return Math.max(ddNum, _rlPassthroughOf(pnode));
+    }
+
+    function _doneActual(pnode, rtype) {
+        if (rtype === 'SS' || rtype === 'SF') return pnode.as_instant || pnode.es;
+        return _finishInstant(pnode);
+    }
+
+    function _doneDrive(pnode, p, lagCal, ctx, sink) {
+        const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum);
+        return _lagFromInstant(_stampOf(pnode), _rem, lagCal, sink, ctx);
     }
 
     // Forward pass.
@@ -2442,12 +2594,39 @@ function computeCPM(activities, relationships, opts) {
                     const pnode = nodes[p.from_code];
                     if (!pnode) continue;
                     let _d;
-                    if (pnode.is_complete) {
+                    if (pnode.is_complete && ddNum > 0) {
+                        // FA — a completed predecessor hands this one its
+                        // stamp plus the unexpired part of the lag, as it
+                        // would a not-started successor. INFERRED for a
+                        // completed-to-completed link: the rule is measured
+                        // into not-started and started successors only. The
+                        // walk is silent: v2.9.46 took no lag walk here, so a
+                        // calendar-less network gains no ALERT from it.
+                        _d = _doneDrive(pnode, p, lagCalFor(pnode, node),
+                            'pass-through ' + pnode.code + '->' + code, []);
+                    } else if (pnode.is_complete) {
                         _d = _rlPassthroughOf(pnode);
                     } else {
-                        const _src = (p.type === 'SS' || p.type === 'SF')
-                            ? startDriveSrcFor(pnode) : _finishInstant(pnode);
-                        _d = _lagFromInstant(_src, p.lag_days, lagCalFor(pnode, node), alerts,
+                        const _ptLagCal = lagCalFor(pnode, node);
+                        let _src, _ptLag;
+                        if (p.type === 'SS' || p.type === 'SF') {
+                            _src = (p.type === 'SS') ? _ssAnchorOf(pnode) : startDriveSrcFor(pnode);
+                            // SSL measured (P6 probe 2026-09-23) — off a
+                            // STARTED predecessor P6 lays NO lag into a
+                            // completed activity; it carries the anchor
+                            // itself (_ssAnchorOf / the restart for SF).
+                            // Measured on SSL1/SSL2 and SSC1/SSC2: SS +15 and
+                            // +18 d (5 and 8 unused), SF +18 d, into 5 d and
+                            // 3 d carriers, under both lag options. Not the
+                            // unexpired lag, not the whole lag, and not the
+                            // lag less the carrier's duration. The backward
+                            // pass still subtracts the unexpired lag.
+                            _ptLag = _ssOffStarted(pnode) ? 0 : p.lag_days;
+                        } else {
+                            _src = _finishInstant(pnode);
+                            _ptLag = p.lag_days;
+                        }
+                        _d = _lagFromInstant(_src, _ptLag, _ptLagCal, alerts,
                             'pass-through ' + pnode.code + '->' + code);
                     }
                     if (_d > _pt) { _pt = _d; _ptRel = p; }
@@ -2557,6 +2736,11 @@ function computeCPM(activities, relationships, opts) {
             // floors the drive below without the lag; see _rlPassthroughOf.
             const _ptInst = _rlPassthroughOf(pnode);
             let _viaPt = false;
+            // FA — a COMPLETED predecessor drives with its stamp plus the
+            // unexpired part of the lag (_doneDrive), for every link type;
+            // a date it carries is already in the stamp. Its actual dates
+            // drive only through the elapsed time they subtract.
+            let _done = pnode.is_complete && ddNum > 0;
             // v2.9.44 — every drive is computed as an INSTANT (the
             // predecessor's finish or start instant, the lag consumed as
             // working time on the lag calendar from that instant) and then
@@ -2566,7 +2750,43 @@ function computeCPM(activities, relationships, opts) {
             // calendar, so a successor could start on a day its own calendar
             // does not work, and a seven-day successor of a Friday finish
             // started on Monday instead of Saturday.
-            if (p.type === 'FS') {
+            let _inst = 0;
+            if (_done) {
+                const _ctx = p.type + ' completed ' + pnode.code + '->' + code;
+                const _sink = [];
+                _inst = _doneDrive(pnode, p, lagCal, _ctx, _sink);
+                if (_inst <= ddNum) {
+                    // Nothing carried and no lag left: the drive is the data
+                    // date itself, which floors this activity already, so it
+                    // moves no date. Who is RECORDED as driving is left to the
+                    // v2.9.46 walk below (its drive, actual + lag, cannot pass
+                    // the floor here), so a predecessor that finished exactly
+                    // at the data date still takes the tie from the DATA_DATE
+                    // sentinel and one that finished earlier still does not -
+                    // unless its actual date is AFTER the data date, which P6
+                    // does not drive from at all: then it is not offered.
+                    if (_lagFromInstant(_doneActual(pnode, p.type), lag, lagCal, [], _ctx) > ddNum) {
+                        continue;
+                    }
+                    _done = false;
+                } else {
+                    for (const _a of _sink) alerts.push(_a);
+                }
+            }
+            if (_done) {
+                const _ctx = p.type + ' completed ' + pnode.code + '->' + code;
+                _viaPt = _ptInst > 0;
+                if (p.type === 'FF' || p.type === 'SF') {
+                    const _anchor = _snapFwd(_inst, nodeCal, alerts, _ctx);
+                    drive = _retreatWithAlerts(_anchor, node.duration_days, nodeCal, alerts,
+                        p.type + ' duration ' + code);
+                    thisAnchorEF = _anchor;
+                    _driveInstants.push([_anchor, _inst]);
+                } else {
+                    drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
+                    _driveInstants.push([drive, _inst]);
+                }
+            } else if (p.type === 'FS') {
                 const _ctx = 'FS lag ' + pnode.code + '->' + code;
                 let driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
                 if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
@@ -2576,17 +2796,18 @@ function computeCPM(activities, relationships, opts) {
                 // D1 — SS drives from the predecessor's remaining-start
                 // reference (restart for a started incomplete pred; es
                 // otherwise). See startDriveSrcFor.
+                // SSL (P6 parity 2026-09-23) — off a STARTED predecessor only
+                // the lag it has not yet used up is laid from that restart
+                // (_startedLagLeft). Supersedes SS_U (v2.9.46), which read
+                // max(actual_start + lag, restart): the same date while the
+                // restart sits at the data date (the real-file links SS_U was
+                // measured on), and too early by the lag's unused part once
+                // logic holds the restart later. See _ssOffStarted.
                 const _ctx = 'SS lag ' + pnode.code + '->' + code;
-                let driveInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
-                // SS_U (P6 parity 2026-09-21) — P6 floors the restart-driven
-                // drive with actual_start + lag for a started incomplete
-                // predecessor; the restart itself contributes WITHOUT lag.
-                // Measured: 9 SS+5d links on a real-file oracle, explains all
-                // 55 remaining date differences after the pass-through fix.
-                if (_scheduleMode === 'retained_logic' && !pnode.is_complete && pnode.actual_start) {
-                    const _a = _lagFromInstant(dateToNum(pnode.actual_start), lag, lagCal, alerts, _ctx);
-                    driveInstant = Math.max(_a, startDriveSrcFor(pnode));
-                }
+                const _lagHere = _ssOffStarted(pnode) ? _startedLagLeft(pnode, lag, lagCal) : lag;
+                // SSL measured — laid from the data date under "Actual Start"
+                // (_ssAnchorOf).
+                let driveInstant = _lagFromInstant(_ssAnchorOf(pnode), _lagHere, lagCal, alerts, _ctx);
                 if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
                 drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
                 _driveInstants.push([drive, driveInstant]);
@@ -2604,8 +2825,10 @@ function computeCPM(activities, relationships, opts) {
                 // reference, same as SS. INFERRED for SF specifically: the
                 // corpus carries no discriminating SF instance; adopted by
                 // symmetry with the measured SS rule.
+                // SSL — the same unused-lag rule as SS.
                 const _ctx = 'SF lag ' + pnode.code + '->' + code;
-                let anchorInstant = _lagFromInstant(startDriveSrcFor(pnode), lag, lagCal, alerts, _ctx);
+                const _lagHere = _ssOffStarted(pnode) ? _startedLagLeft(pnode, lag, lagCal) : lag;
+                let anchorInstant = _lagFromInstant(startDriveSrcFor(pnode), _lagHere, lagCal, alerts, _ctx);
                 if (_ptInst > anchorInstant) { anchorInstant = _ptInst; _viaPt = true; }
                 const sfAnchor = _snapFwd(anchorInstant, nodeCal, alerts, _ctx);
                 drive = _retreatWithAlerts(sfAnchor, node.duration_days, nodeCal, alerts,
@@ -2647,26 +2870,28 @@ function computeCPM(activities, relationships, opts) {
                 // with REMAINING duration (FF measured on the oracle corpus
                 // — the whole-bar pull-back reproduces P6's stored restart
                 // exactly; SF stays INFERRED, no discriminating instance).
-                // D2 (retained-logic P6 semantics wave 2026-09-02) — a
-                // COMPLETED predecessor contributes NOTHING to the restart
-                // of a STARTED successor. Measured: a pred whose actual
-                // finish lands AFTER the data date leaves the started
-                // successor's stored restart at the data date — P6 treats
-                // finished work as history, never as a driver of remaining
-                // work. The shadow (attribution-only) accumulator above is
-                // unchanged: it records what "would have driven". For a
-                // NOT-started successor the completed pred's actual finish
-                // (+lag) keeps driving ES in the main path below (P6's
-                // documented behaviour; the corpus carries no discriminating
-                // instance either way — INFERRED).
-                // PT — D2 stands for the completed predecessor's ACTUAL
-                // finish. The date it carries from unfinished work is not
-                // history: it restarts a started successor as it starts a
-                // not-started one (on a real-file oracle P6's own dates give
-                // 33 of 41 in-progress restarts to the minute with this rule
-                // and 19 without it; the other 8 are the SS-lag rule named
-                // at _rlPassthroughOf, not this one).
-                if (!pnode.is_complete || _viaPt) {
+                // D2 (retained-logic P6 semantics wave 2026-09-02) held that
+                // a COMPLETED predecessor contributes NOTHING to the restart
+                // of a STARTED successor, from instances whose actual finish
+                // lands AFTER the data date with a zero lag. FA (2026-09-23)
+                // measures what those instances were: the completed
+                // predecessor drives with its stamp plus the UNEXPIRED lag
+                // (_doneDrive), which for a zero lag is the data date - the
+                // D2 observation - and for a lag still running past the data
+                // date pushes the restart exactly as it pushes a not-started
+                // successor's start (probes: FS+2d off a future actual finish
+                // restarts data date + 2; FS+3d, SS+4d, FF+3d and FS+5d whose
+                // actual dates leave part of the lag unexpired restart where
+                // that remainder ends; v2.9.46 held all of them at the data
+                // date). The shadow (attribution-only) accumulator above is
+                // unchanged: it records what "would have driven". PT — the
+                // date a completed predecessor carries from unfinished work
+                // restarts a started successor too (on a real-file oracle P6's
+                // own dates give 33 of 41 in-progress restarts to the minute
+                // with it and 19 without); FA lays the unexpired lag on it.
+                // Without a data date the old D2 path stands (nothing is
+                // "after" the data date).
+                if (!pnode.is_complete || _viaPt || _done) {
                     let _rDrive = drive;
                     if ((p.type === 'FF' || p.type === 'SF') && thisAnchorEF !== null &&
                         Number.isFinite(node.remaining_duration) && node.remaining_duration >= 0) {
@@ -3297,13 +3522,19 @@ function computeCPM(activities, relationships, opts) {
             // PT — the backward mirror of the forward pass-through: under
             // retained logic the completed activity hands the tightest late
             // bound of its successors back to its predecessors, again as a
-            // zero-duration node and again without the lag, which belongs to
-            // its actual date. (Its own historical dates still bound
+            // zero-duration node. (Its own historical dates still bound
             // nothing - the R6 defect stays fixed.) Without the mirror the
             // unfinished activity that DRIVES the project through completed
             // work is bounded by nothing: on a real-file oracle the
             // in-progress driver of the longest path reported working days
             // of float where P6 has 0.
+            // FA — each successor's bound comes back LESS the unexpired part
+            // of that link's lag, mirroring _doneDrive: forward the lag
+            // still running at the data date is laid on the stamp, so
+            // backward it is taken off (a real-file oracle showed P6 applying
+            // only the unexpired part backward on an SS + 96 h link). A lag
+            // that had run out by the data date leaves the bound alone, as
+            // before; no data date, no unexpired part.
             if (_scheduleMode === 'retained_logic') {
                 let _lpt = null;
                 for (const s of (succMap[code] || [])) {
@@ -3316,6 +3547,16 @@ function computeCPM(activities, relationships, opts) {
                         _b = _lfInstantOf(snode);
                     } else {
                         _b = snode.ls;
+                    }
+                    if (_b !== null && _b !== undefined && ddNum > 0) {
+                        // (silent: the forward walk of the same link already
+                        // disclosed any missing calendar)
+                        const _sCal = lagCalFor(node, snode);
+                        const _rl = _unexpiredLag(_doneActual(node, s.type), s.lag_days, _sCal, ddNum);
+                        if (_rl) {
+                            _b = _lagBackFromInstant(_b, _rl, _sCal, [],
+                                'backward unexpired lag ' + code + '->' + snode.code);
+                        }
                     }
                     if (_b !== null && _b !== undefined && (_lpt === null || _b < _lpt)) _lpt = _b;
                 }
@@ -3414,14 +3655,10 @@ function computeCPM(activities, relationships, opts) {
                     drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'SS') {
                     const _ctx = 'backward SS lag ' + code + '->' + snode.code;
-                    // SS_U backward — mirror the forward rule: only the
-                    // portion of actual_start+lag that extends past the data
-                    // date counts as the effective backward lag.
-                    let _ssLag = lag;
-                    if (_scheduleMode === 'retained_logic' && node.actual_start && !node.is_complete) {
-                        const _a = _lagFromInstant(dateToNum(node.actual_start), lag, sCal, alerts, _ctx);
-                        _ssLag = (_a > ddNum) ? _countWorkDaysBetween(ddNum, _a, sCal) : 0;
-                    }
+                    // SSL backward — mirror the forward rule: off a started
+                    // predecessor only the unused part of the lag separates
+                    // its late restart from the successor's late start.
+                    const _ssLag = _ssOffStarted(node) ? _startedLagLeft(node, lag, sCal) : lag;
                     const _inst = _lagBackFromInstant(_sLS, _ssLag, sCal, alerts, _ctx);
                     lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'FF') {
@@ -3432,7 +3669,9 @@ function computeCPM(activities, relationships, opts) {
                 } else if (s.type === 'SF') {
                     const _ctx = 'backward SF lag ' + code + '->' + snode.code;
                     if (_sLFInst === null) _sLFInst = _lfInstantOf(snode);
-                    const _inst = _lagBackFromInstant(_sLFInst, lag, sCal, alerts, _ctx);
+                    // SSL backward — as SS.
+                    const _sfLag = _ssOffStarted(node) ? _startedLagLeft(node, lag, sCal) : lag;
+                    const _inst = _lagBackFromInstant(_sLFInst, _sfLag, sCal, alerts, _ctx);
                     lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else {
                     const _ctx = 'backward default ' + code + '->' + snode.code;
@@ -3869,19 +4108,26 @@ function computeCPM(activities, relationships, opts) {
             // schedule actually used, or a started SS-driving predecessor
             // reports phantom positive float against its own historical
             // actual start.
-            const _nStartAnchor = startDriveSrcFor(n);
+            // SSL measured — an SS anchor is the data date under "Actual
+            // Start" (_ssAnchorOf), as in the forward pass.
+            const _nStartAnchor = (s.type === 'SS') ? _ssAnchorOf(n) : startDriveSrcFor(n);
+            // SSL — and off a started predecessor the SS/SF slack is measured
+            // from the unused part of the lag, the drive the forward pass used:
+            // none into a completed successor, which carries the anchor itself.
+            const _startLag = _ssOffStarted(n)
+                ? (sn.is_complete ? 0 : _startedLagLeft(n, lag, succCal)) : lag;
             let predAnchor, succAnchor;
             if (s.type === 'FS') {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FS');
                 succAnchor = _snStartAnchor;
             } else if (s.type === 'SS') {
-                predAnchor = _advanceWithAlerts(_nStartAnchor, lag, succCal, _slackAlertSink, 'FF-slack SS');
+                predAnchor = _advanceWithAlerts(_nStartAnchor, _startLag, succCal, _slackAlertSink, 'FF-slack SS');
                 succAnchor = _snStartAnchor;
             } else if (s.type === 'FF') {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack FF');
                 succAnchor = sn.ef;
             } else if (s.type === 'SF') {
-                predAnchor = _advanceWithAlerts(_nStartAnchor, lag, succCal, _slackAlertSink, 'FF-slack SF');
+                predAnchor = _advanceWithAlerts(_nStartAnchor, _startLag, succCal, _slackAlertSink, 'FF-slack SF');
                 succAnchor = sn.ef;
             } else {
                 predAnchor = _advanceWithAlerts(n.ef, lag, succCal, _slackAlertSink, 'FF-slack default');
@@ -3959,6 +4205,46 @@ function computeCPM(activities, relationships, opts) {
     for (const c in nodes) {
         const n = nodes[c];
         if (n.tf <= 0 && !n.is_complete) criticalCodes.add(c);
+    }
+
+    // FA — disclosure. P6 lists completed activities whose actual dates fall
+    // after the data date in its schedule log ("Activities with Actual Dates
+    // > Data Date") and drives their successors from the data date instead
+    // (_doneDrive). The engine does the same, so it says so, once, naming
+    // every such activity in input order. (The per-activity
+    // 'future-actual-finish' ALERT above flags the data-entry question; this
+    // WARN says how the dates were scheduled. Python paired site: the
+    // 'actual-after-data-date' WARN in compute_cpm.)
+    if (ddNum > 0) {
+        const _future = [];
+        const _faSeen = new Set();
+        for (const _aa of activities) {
+            if (!_aa || !_aa.code || _faSeen.has(_aa.code)) continue;
+            _faSeen.add(_aa.code);
+            const _nn = Object.prototype.hasOwnProperty.call(nodes, _aa.code) ? nodes[_aa.code] : null;
+            if (!_nn || !_nn.is_complete) continue;
+            const _parts = [];
+            if ((_nn.as_instant || 0) > ddNum) _parts.push('actual start ' + _nn.actual_start);
+            if (_nn.actual_finish && _nn.ef_instant > ddNum) _parts.push('actual finish ' + _nn.actual_finish);
+            if (_parts.length) _future.push(_aa.code + ' (' + _parts.join(', ') + ')');
+        }
+        if (_future.length) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'actual-after-data-date',
+                message: 'ACTUAL_AFTER_DATA_DATE: ' + _future.length + ' completed ' +
+                    (_future.length === 1 ? 'activity records' : 'activities record') +
+                    ' an actual date after the data date ' + dataDate + ': ' +
+                    _future.join('; ') + '. P6 does not drive a successor from an ' +
+                    'actual date recorded after the data date: it schedules the ' +
+                    'successor from the data date (or the later date the ' +
+                    'completed activity carries from unfinished work) plus the ' +
+                    'part of the lag not yet run out, and lists these rows in its ' +
+                    'schedule log under "Activities with Actual Dates > Data ' +
+                    'Date". This engine does the same; the recorded actual dates ' +
+                    'are left as they are.',
+            });
+        }
     }
 
     // Out-of-sequence progress detection (non-blocking — emits ALERT only).
@@ -4106,6 +4392,9 @@ function computeCPM(activities, relationships, opts) {
             'and lf_last_worked_date carry the inclusive form for reports.',
         relationship_lag_calendar: _lagCalMode,
         float_type: _floatType,
+        // SSL measured (2026-09-23): P6's "Calculate start-to-start lag
+        // from" as this run resolved it (see _ssAnchorOf).
+        ss_lag_from: _ssLagFrom,
         computed_at: new Date().toISOString(),
     };
     const result = {

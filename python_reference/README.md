@@ -52,8 +52,30 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  e08e402d9a1adacd105d6fc6663643474ed00b10db67795edba789bad7c90d50
+cpm.py  SHA-256:  8148a7584c67c8b4945fdd048b4362bb53c9ffe9b630d7061a6659afb3e15a74
 
+(v2.9.47 unexpired-lag wave 2026-09-23 - bumped from e08e402d...: three
+rules measured in P6 Professional 23.12 on probe projects scheduled one at
+a time and read back from the P6 database, and on real exports (client
+schedules, not named). SSL: an SS/SF link off a STARTED, incomplete
+predecessor lays only the UNEXPIRED part of its lag, the lag less the
+working time on the lag calendar from the actual start to the data date,
+from the restart (_unexpired_lag). This replaces SS_U, max(actual_start +
+lag, restart), which agreed only while the restart sat at the data date.
+Under P6's "Calculate start-to-start lag from: Actual Start"
+(compute_cpm(ss_lag_from='actual_start'), SCHEDOPTIONS
+sched_lag_early_start_flag = N) an SS link is laid from the DATA DATE
+instead of the restart (_ss_anchor_for); SF and the backward pass ignore
+the option. An SS/SF link off started work INTO a completed activity lays
+no lag: the completed activity carries the anchor itself. FA: a COMPLETED
+predecessor drives at its stamp (the data date, or the date it carries
+from unfinished work) plus the unexpired lag, never from an actual date
+after the data date (_done_drive). Applied to this reference by the same
+patches as the canonical engine; the 53-fixture harness gains 29 fixtures
+(F58-F86): 82 fixtures, 1957 of 2011 executed and bit-identical, F53 and
+F61 re-described. Not modelled: a suspended predecessor (P6 counts only
+the time worked before the suspension and restarts at the resume date).
+Prior:
 (v2.9.46 retained-logic pass-through + P6 parity for started predecessors
 2026-09-21 - bumped from 34dbc2aa...: under retained logic P6 does not stop
 at a COMPLETED activity - it schedules it like any other, with zero
@@ -267,15 +289,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 173231
-  sha-256:  e08e402d9a1adacd105d6fc6663643474ed00b10db67795edba789bad7c90d50
+  bytes: 190699
+  sha-256:  8148a7584c67c8b4945fdd048b4362bb53c9ffe9b630d7061a6659afb3e15a74
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 53 passed, 0 failed
-  Checks:   1167 / 1167 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 82 passed, 0 failed
+  Checks:   1957 / 1957 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

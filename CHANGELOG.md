@@ -12,6 +12,117 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.47 — 2026-09-23 — only the unexpired part of a lag, measured in P6
+
+**Engine math changed.** Under retained logic P6 lays only the part of a
+relationship lag that has not already run out at the data date, and the
+engine now does the same off started and completed work. The following can
+move:
+- any SS/SF successor of a started predecessor;
+- any successor of completed work whose lag had not run out at the data
+  date, or whose actual date is after it;
+- any schedule whose SCHEDOPTIONS say "Calculate start-to-start lag from:
+  Actual Start".
+
+A result computed on v2.9.46 or earlier can differ on those shapes. A
+deliverable already issued from an earlier tagged build is inside the
+supersession window and needs the re-check step in PROCEDURE.md.
+
+**How it was measured.** P6 Professional 23.12, with probe projects
+scheduled one at a time and read back from the P6 database:
+- six projects for completed predecessors;
+- five for started ones: 19 cases each in three projects, 9 each in two.
+
+Each rule below was pinned there. The real exports that raised the
+questions are client schedules and are not named.
+
+**1. Off a STARTED predecessor: the unexpired lag.** An SS or SF link off a
+started, incomplete predecessor is laid from its restart plus the lag less
+the working time, on the lag calendar, from its actual start to the data
+date (`_unexpired_lag` / `_unexpiredLag`). None of the lag has run for a
+future actual start, and a lead lays nothing. The backward pass and free
+float mirror it.
+- It replaces SS_U, `max(actual_start + lag, restart)`. SS_U agreed with P6
+  only while the restart sat at the data date, the one shape it had been
+  measured on. Once logic holds the restart later, SS_U started the
+  successor early by the lag's unused part.
+- On a real P6 export of 1,196 incomplete activities, two SS links off such
+  predecessors moved 788 -> 1,139 rows matching P6's stored early dates.
+- On the probes it held on every case in both lag-calendar settings. That
+  includes SF, a lead, a successor lag calendar and a started successor.
+
+**2. "Calculate start-to-start lag from: Actual Start".** The option is
+SCHEDOPTIONS `sched_lag_early_start_flag = N`; pass it as
+`opts.ssLagFrom = 'actual_start'` or the raw `'N'`. P6 then lays an SS
+link off a started predecessor from the DATA DATE plus the unexpired lag,
+not from the restart (`_ssAnchorOf`). The successor can start before its
+predecessor restarts: in one probe, a week before.
+- SF links and the backward pass ignore the option: late restart =
+  successor late start less the unexpired lag, under both settings.
+- An unknown value raises an `unknown-ss-lag-from` ALERT and keeps Early
+  Start, P6's default.
+- The manifest reports what the run used (`ss_lag_from`).
+- 33 of 351 real exports on the machine the probes ran on use this option.
+  None of them contains the shape it changes.
+
+**3. Off a COMPLETED predecessor (FA).** Every link type drives from the
+completed activity's stamp plus the lag not yet run out since its actual
+date. The stamp is the data date, or under retained logic the later date
+the activity carries from unfinished work (`_doneDrive`).
+- An actual date recorded after the data date therefore drives nothing.
+  One `actual-after-data-date` WARN names each such activity.
+- This applies to not-started and started successors, and backward the
+  completed activity hands its successors' bounds back less the unexpired
+  lag.
+- Probes: 129 -> 182 of 182 starts and finishes, 84 -> 159 of 159 total
+  floats.
+- Real exports: 1,139 -> 1,196 of 1,196 and 1,057 -> 1,114 of 1,114 rows
+  matching P6.
+
+**4. Into a COMPLETED activity: no lag off started work.** An SS or SF link
+off a started predecessor into a completed activity (the retained-logic
+pass-through) lays no lag. The completed activity carries the anchor
+itself: the restart, or the data date for SS under Actual Start.
+- The probes separated this from the unexpired lag, from SS_U and from the
+  lag less the carrier's duration: SS +15 d and +18 d with 5 and 8 unused
+  days, SF +18 d, 5 d and 3 d carriers, both options.
+- Every other link into completed work keeps its lag: FS, FF, SS off
+  not-started work, FS off started work.
+- The backward pass still subtracts the unexpired lag, so the predecessor
+  that drives through the completed activity has zero float, as in P6.
+
+**Zero regressions, proven rather than asserted.**
+- The 53 existing fixtures all stay bit-identical between the two engines.
+  F53, whose lag out of a completed activity now counts only its unexpired
+  part, moves by one working day and is re-described.
+- 29 new fixtures (F58-F86) exercise every rule above and are bit-identical
+  between the JS engine and the Python reference: 82 fixtures, 1957 of 2011
+  checks, 0 failures. The 54 skipped are mutual `ff_signed` pairs on
+  completed activities, as before.
+- With only the Python reference patched, every new fixture that pins a
+  changed behaviour fails, 2 to 18 checks each. The others pin what must
+  not move.
+- The 13-case real P6 comparison matrix, re-run on these bytes against the
+  same capture, still reads 13 / 13 over 27 field checks with zero changed
+  rows.
+- JS unit suite: 1,315 checks green, up from 1,307. FA-1..FA-8 are added.
+  RL-5/RL-6/RL-7 keep their values (their restart sits at the data date)
+  and are re-described for the unexpired lag.
+- Coverage re-measured on these bytes: 93.95% statements (10,415 / 11,085),
+  83.08% branches (2,249 / 2,707), 95.20% functions (139 / 146).
+- Alert parity is not compared on F65 and F67. The JS engine's
+  per-activity future-actual-finish ALERT has never had a Python
+  counterpart; this is a pre-existing gap, disclosed.
+
+**Deliberately not in this wave.**
+- A SUSPENDED predecessor is not modelled. P6 counts only the time worked
+  before the suspension and restarts at the resume date; the engine reads
+  neither date.
+- The project finish when a future actual finish is itself the latest date
+  in the project is unmeasured.
+- Progress override's restart still ignores an FF link into started work,
+  which P6 honours.
+
 ## v2.9.46 — 2026-09-22 — retained-logic pass-through, and P6 parity for started predecessors
 
 **Engine math changed.** Under retained logic, a network with a completed

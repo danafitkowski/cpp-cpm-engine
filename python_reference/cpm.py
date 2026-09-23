@@ -132,7 +132,7 @@ def _round_half_up_to(x, decimals=0):
 # dropping are executed. Only the completed-activity branch still emits neither
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those 6 comparisons are absent on both sides rather than one.
-ENGINE_VERSION = '2.9.46'
+ENGINE_VERSION = '2.9.47'
 
 
 # =============================================================================
@@ -910,6 +910,23 @@ def _lag_back_from_instant(instant, lag, lag_cal, *, alerts, ctx):
     return _lag_from_instant(instant, -lag, lag_cal, alerts=alerts, ctx=ctx)
 
 
+def _unexpired_lag(actual_instant, lag, lag_cal, dd_num):
+    """The part of a relationship lag out of PROGRESSED work that the data
+    date has not already used up: `lag` less the working days of `lag_cal`
+    from the predecessor's actual date (its actual start for SS / SF) to the
+    data date - none when that actual is at or after the data date - and
+    never below zero, so a lead lays nothing. Without a calendar the elapsed
+    count is ordinal, the same 7-day fallback the lag walk itself takes
+    there. JS paired site: _unexpiredLag."""
+    if lag <= 0:
+        return 0
+    if actual_instant <= 0 or dd_num <= 0 or actual_instant >= dd_num:
+        return lag
+    if not lag_cal:
+        return max(0, lag - (dd_num - actual_instant))
+    return max(0, lag - _count_work_days_between(actual_instant - 1, dd_num - 1, lag_cal))
+
+
 def _finish_instant(pnode):
     """The instant a successor is driven from: the node's finish instant when
     the forward pass (or a timed actual finish) stamped one, else its boundary."""
@@ -1312,7 +1329,7 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 project_calendar='', schedule_mode='retained_logic',
                 relationship_lag_calendar='successor',
-                float_type='FT_FF'):
+                float_type='FT_FF', ss_lag_from='early_start'):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -1476,6 +1493,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             ef_instant = _instant_of(actual_finish)
         elif is_complete:
             ef_instant = ef
+        # SSL (2026-09-23) — the actual start as an INSTANT too: an SS or SF
+        # lag off a started predecessor is used up by the working time the
+        # predecessor has run from it to the data date (_started_lag_left),
+        # and P6 counts an afternoon start from the close of its day.
+        as_instant = _instant_of(actual_start) if actual_start else 0
         actual_start = str(actual_start).strip()[:10]
         actual_finish = str(actual_finish).strip()[:10]
         if is_complete and actual_finish:
@@ -1532,6 +1554,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             'is_complete': is_complete,
             'is_fragnet': bool(a.get('is_fragnet', False)),
             'actual_start': actual_start,
+            'as_instant': as_instant,
             # v2.9.7 — P6 constraint normalization
             # v2.9.12 T1.6 — thread alerts + code for unrecognized / empty-date WARN.
             'constraint': _normalize_constraint(a.get('constraint'), alerts, code),
@@ -1685,6 +1708,26 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         })
         _float_type = 'FT_FF'
 
+    # SSL (P6 parity 2026-09-23) — SCHEDOPTIONS.sched_lag_early_start_flag,
+    # P6's "Calculate start-to-start lag from": 'early_start' (flag Y, P6's
+    # default) or 'actual_start' (flag N). It moves only the anchor of an SS
+    # link off a started predecessor; see _ss_anchor_for. The raw flag is
+    # accepted too. Unknown values ALERT and keep Early Start.
+    _ss_lag_from = str(ss_lag_from or 'early_start').strip()
+    _ss_lag_from = {'Y': 'early_start', 'N': 'actual_start'}.get(_ss_lag_from, _ss_lag_from)
+    if _ss_lag_from not in ('early_start', 'actual_start'):
+        alerts.append({
+            'severity': 'ALERT',
+            'context': 'unknown-ss-lag-from',
+            'message': (
+                'ss_lag_from=%r is not a P6 "Calculate start-to-start lag from" '
+                'setting (early_start | actual_start, or the SCHEDOPTIONS flag '
+                'Y | N). SS lags were computed from Early Start, P6\'s '
+                'default.' % (ss_lag_from,)
+            ),
+        })
+        _ss_lag_from = 'early_start'
+
     def _lag_cal_for(pred_node, succ_node):
         return _cal_for(succ_node) if _lag_cal_mode == 'successor' else _cal_for(pred_node)
 
@@ -1735,13 +1778,14 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     #     and early finish and 55 -> 141 on total float, and every remaining
     #     difference is one other rule (the lag of an SS link off a STARTED
     #     predecessor), not this one;
-    #   * the date is handed on WITHOUT the relationship's lag: a completed
-    #     predecessor carrying 2026-10-05 into an FS + 25 d successor starts it
-    #     on 2026-10-05. The lag belongs to the ACTUAL finish, which the
-    #     existing drive below already counts it from (an SS + 12 d successor
-    #     of a completed activity starts 12 working days after its ACTUAL
-    #     start, where the stored early start of that completed row is the
-    #     data date).
+    #   * the date is handed on WITHOUT the part of the relationship's lag
+    #     that ran out before the data date: a completed predecessor
+    #     carrying 2026-10-05 into an FS + 25 d successor, its actual finish
+    #     two months earlier, starts it on 2026-10-05, and an SS + 12 d
+    #     successor of a completed activity starts 12 working days after its
+    #     ACTUAL start, where the stored early start of that completed row is
+    #     the data date. The elapsed part is counted from the actual date and
+    #     the rest laid on the carried date (FA, _done_drive).
     # Progress override publishes no dates on completed rows and ignores the
     # unfinished predecessor (201 of 201 incomplete rows reproduced from P6's
     # own dates with no pass-through), so this is retained logic only.
@@ -1749,12 +1793,121 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # successor snaps it onto its own calendar. Single-calendar files cannot
     # tell that from snapping it onto the completed activity's calendar
     # first - INFERRED for mixed calendars. A lag on the link INTO the
-    # completed activity is applied as on any link - INFERRED, the measured
-    # file has none. JS paired site: _rlPassthroughOf.
+    # completed activity is applied as on any link, except an SS or SF link
+    # off STARTED work, which carries the anchor with no lag. Both measured
+    # in P6 on the SSC1/SSC2 probes (2026-09-23): FS +3 / +8 d, FF +2 d and
+    # SS +5 d off not-started work and FS +3 d off started work keep their
+    # lag. See the pass-through loop below. JS paired site: _rlPassthroughOf.
     def _passthrough_of(pnode):
         if schedule_mode == 'retained_logic' and pnode['is_complete']:
             return pnode.get('rl_passthrough') or 0
         return 0
+
+    # SSL (P6 parity 2026-09-23) — the lag of an SS or SF link off a STARTED,
+    # incomplete predecessor, under retained logic. P6 counts only the part of
+    # the lag the predecessor has not already used up along its bar: the lag
+    # less the working time from its actual start to the data date, laid from
+    # its RESTART (_unexpired_lag). A future actual start has used up none of
+    # it, and a lead lays nothing. This replaces SS_U (v2.9.46:
+    # max(actual_start + lag, restart)), which agrees with it only when the
+    # restart sits at the data date - the one shape SS_U was measured on.
+    # Measured on P6's own stored dates:
+    #   * a real P6 export, 1,196 incomplete activities: two SS links (+30 d,
+    #     +32 d) off started predecessors whose restart a date carried through
+    #     completed work holds 7 working days past the data date. P6 starts
+    #     both successors at restart + the unexpired lag, in all six copies
+    #     of the file; SS_U and restart + lag match neither. With this rule the
+    #     engine's early starts and finishes on that file match P6 on 1,139 of
+    #     1,196 rows against 788 (every row still off is the separate rule for
+    #     a completed predecessor's future actual finish);
+    #   * a second real export: a started predecessor whose actual start is
+    #     AFTER the data date, restart held: the successor sits at the restart
+    #     plus the whole lag (nothing has elapsed);
+    #   * the same unexpired-lag rule for links out of COMPLETED work, measured
+    #     on six probe projects scheduled in P6 Professional 23.12: FS / SS /
+    #     FF / SF, carried dates, started successors, a lead dropped, the
+    #     elapsed time counted on the lag calendar.
+    # Measured in P6 since (the SSL1-3 probes, 2026-09-23, 19 cases each):
+    # SF off a started predecessor follows the same rule. The elapsed count
+    # is on the LAG calendar under either lag-calendar setting. A lead lays
+    # nothing. "Calculate start-to-start lag from Actual Start" moves the SS
+    # anchor to the data date (_ss_anchor_for). An SS / SF link into a
+    # COMPLETED activity lays no lag (the pass-through loop).
+    # Not modelled: a SUSPENDED predecessor. P6 counts only the working time
+    # before the suspension as elapsed and restarts at the resume date. The
+    # engine reads neither suspend nor resume, so it lays such a link from
+    # the data date with the whole elapsed count (SSL1 S13: P6 26 Oct,
+    # engine 12 Oct).
+    # JS paired sites: _ssOffStarted / _startedLagLeft.
+    def _ss_off_started(pnode):
+        return (schedule_mode == 'retained_logic' and not pnode['is_complete']
+                and bool(pnode.get('actual_start'))
+                and pnode.get('restart') is not None)
+
+    def _started_lag_left(pnode, lag, lag_cal):
+        return _unexpired_lag(pnode.get('as_instant') or 0, lag, lag_cal, dd_num)
+
+    # SSL measured (P6 probe 2026-09-23) — the INSTANT an SS link off a
+    # started predecessor is laid from. Under P6's "Calculate start-to-start
+    # lag from: Early Start" (the default) it is the restart. Under "Actual
+    # Start" (SCHEDOPTIONS sched_lag_early_start_flag = N) it is the DATA
+    # DATE. The option moves the anchor only; the unexpired-lag count is the
+    # same under both.
+    # Measured in P6 Professional 23.12 on the SSL1/SSL2 probe projects (19
+    # cases each, one F9 per project, read back from the P6 database). Under
+    # Actual Start P6 starts the successor at the data date + the unexpired
+    # lag on every case, including a week BEFORE the predecessor's restart
+    # when logic holds that restart later.
+    # SF links ignore the option: restart + unexpired lag under both. So
+    # does the backward pass: the late restart is the successor's late start
+    # less the unexpired lag under both.
+    # JS paired site: _ssAnchorOf.
+    def _ss_anchor_for(pnode):
+        if _ss_lag_from == 'actual_start' and dd_num > 0 and _ss_off_started(pnode):
+            return dd_num
+        return _start_drive_src_for(pnode)
+
+    # FA (completed predecessors, P6 parity 2026-09-23) — how P6 drives a
+    # successor off COMPLETED work. Measured in P6 Professional 23.12 on six
+    # probe projects (every link type, both scheduling modes, not-started and
+    # started successors, carried dates) scheduled one project at a time and
+    # read back from the P6 database; the probes are synthetic, the two real
+    # files that raised it are client schedules and are not named:
+    #     drive = stamp + max(0, lag - elapsed)
+    #   stamp:   the completed activity's own scheduled instant - the data
+    #            date, or under retained logic the later date it carries from
+    #            unfinished work (PT above; progress override carries none);
+    #   elapsed: working time on the lag calendar from its ACTUAL date at the
+    #            link's predecessor end (actual start for SS/SF, actual finish
+    #            for FS/FF) up to the data date, and zero when that actual
+    #            date is at or after the data date (_unexpired_lag).
+    # So an actual date recorded AFTER the data date drives nothing: P6 lists
+    # the row in its schedule log ("Activities with Actual Dates > Data
+    # Date"), starts an FS+0 successor at the data date and an FS+2d one two
+    # working days after it, where v2.9.46 started them off the recorded date
+    # (16 probe cases: 14 wrong, the other two agree either way). The cap is
+    # per date: an actual start before the data date still counts although
+    # the actual finish is after it. A lag not yet run out is laid ON the
+    # stamp, carried date included; v2.9.46 took the later of the carried date
+    # and actual + lag and started such successors up to two working days
+    # early. A fully elapsed lag leaves the stamp alone - the measured v2.9.46
+    # pass-through case (an FS+200 h successor of work finished two months
+    # before the data date starts ON the carried date). Without a data date
+    # nothing is "after" it and the actual dates drive as before. JS paired
+    # sites: _stampOf / _doneDrive.
+    def _stamp_of(pnode):
+        return max(dd_num, _passthrough_of(pnode))
+
+    def _done_actual(pnode, rtype):
+        if rtype in ('SS', 'SF'):
+            return pnode.get('as_instant') or pnode['es']
+        return _finish_instant(pnode)
+
+    def _done_drive(pnode, p, lag_cal, ctx, sink):
+        _rem = _unexpired_lag(_done_actual(pnode, p['type']), p['lag_days'],
+                              lag_cal, dd_num)
+        return _lag_from_instant(_stamp_of(pnode), _rem, lag_cal,
+                                 alerts=sink, ctx=ctx)
 
     # Forward Pass
     for code in order:
@@ -1767,14 +1920,39 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     pnode = nodes.get(p['from_code'])
                     if not pnode:
                         continue
-                    if pnode['is_complete']:
+                    if pnode['is_complete'] and dd_num > 0:
+                        # FA — a completed predecessor hands this one its
+                        # stamp plus the unexpired part of the lag, as it
+                        # would a not-started successor. INFERRED for a
+                        # completed-to-completed link: the rule is measured
+                        # into not-started and started successors only. The
+                        # walk is silent: v2.9.46 took no lag walk here, so a
+                        # calendar-less network gains no ALERT from it.
+                        _d = _done_drive(pnode, p, _lag_cal_for(pnode, node),
+                                         f'pass-through {pnode["code"]}->{code}', [])
+                    elif pnode['is_complete']:
                         _d = _passthrough_of(pnode)
                     else:
-                        _src = (_start_drive_src_for(pnode)
-                                if p['type'] in ('SS', 'SF')
-                                else _finish_instant(pnode))
+                        _pt_lag_cal = _lag_cal_for(pnode, node)
+                        if p['type'] in ('SS', 'SF'):
+                            _src = (_ss_anchor_for(pnode) if p['type'] == 'SS'
+                                    else _start_drive_src_for(pnode))
+                            # SSL measured (P6 probe 2026-09-23) — off a
+                            # STARTED predecessor P6 lays NO lag into a
+                            # completed activity; it carries the anchor
+                            # itself (_ss_anchor_for / the restart for SF).
+                            # Measured on SSL1/SSL2 and SSC1/SSC2: SS +15 and
+                            # +18 d (5 and 8 unused), SF +18 d, into 5 d and
+                            # 3 d carriers, under both lag options. Not the
+                            # unexpired lag, not the whole lag, and not the
+                            # lag less the carrier's duration. The backward
+                            # pass still subtracts the unexpired lag.
+                            _pt_lag = 0 if _ss_off_started(pnode) else p['lag_days']
+                        else:
+                            _src = _finish_instant(pnode)
+                            _pt_lag = p['lag_days']
                         _d = _lag_from_instant(
-                            _src, p['lag_days'], _lag_cal_for(pnode, node),
+                            _src, _pt_lag, _pt_lag_cal,
                             alerts=alerts,
                             ctx=f'pass-through {pnode["code"]}->{code}')
                     if _d > _pt:
@@ -1854,6 +2032,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # floors the drive below without the lag; see _passthrough_of.
             _pt_inst = _passthrough_of(pnode)
             _via_pt = False
+            # FA — a COMPLETED predecessor drives with its stamp plus the
+            # unexpired part of the lag (_done_drive), for every link type;
+            # a date it carries is already in the stamp. Its actual dates
+            # drive only through the elapsed time they subtract.
+            _done = pnode['is_complete'] and dd_num > 0
             # v2.9.44 — every drive is computed as an INSTANT (the
             # predecessor's finish or start instant, the lag consumed as
             # working time on the lag calendar from that instant) and then
@@ -1863,7 +2046,39 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # calendar, so a successor could start on a day its own calendar
             # does not work, and a seven-day successor of a Friday finish
             # started on Monday instead of Saturday.
-            if t == 'FS':
+            if _done:
+                _ctx = f'{t} completed {pnode["code"]}->{code}'
+                _sink = []
+                _inst = _done_drive(pnode, p, lag_cal, _ctx, _sink)
+                if _inst <= dd_num:
+                    # Nothing carried and no lag left: the drive is the data
+                    # date itself, which floors this activity already, so it
+                    # moves no date. Who is RECORDED as driving is left to the
+                    # v2.9.46 walk below (its drive, actual + lag, cannot pass
+                    # the floor here), so a predecessor that finished exactly
+                    # at the data date still takes the tie from the DATA_DATE
+                    # sentinel and one that finished earlier still does not -
+                    # unless its actual date is AFTER the data date, which P6
+                    # does not drive from at all: then it is not offered.
+                    if _lag_from_instant(_done_actual(pnode, t), lag, lag_cal,
+                                         alerts=[], ctx=_ctx) > dd_num:
+                        continue
+                    _done = False
+                else:
+                    alerts.extend(_sink)
+            if _done:
+                _via_pt = _pt_inst > 0
+                if t in ('FF', 'SF'):
+                    succ_ef_anchor = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
+                    drive = _retreat_workdays(
+                        succ_ef_anchor, node['duration_days'], node_cal,
+                        alerts=alerts, ctx=f'{t} duration {code}')
+                    this_anchor_ef = succ_ef_anchor
+                    _drive_instants.append((succ_ef_anchor, _inst))
+                else:
+                    drive = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
+                    _drive_instants.append((drive, _inst))
+            elif t == 'FS':
                 _ctx = f'FS lag {pnode["code"]}->{code}'
                 drive_instant = _lag_from_instant(
                     _finish_instant(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
@@ -1875,19 +2090,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 # D1 — SS drives from the predecessor's remaining-start
                 # reference (restart for a started incomplete pred; es
                 # otherwise). See _start_drive_src_for.
+                # SSL (P6 parity 2026-09-23) — off a STARTED predecessor only
+                # the lag it has not yet used up is laid from that restart
+                # (_started_lag_left). Supersedes SS_U (v2.9.46), which read
+                # max(actual_start + lag, restart): the same date while the
+                # restart sits at the data date (the real-file links SS_U was
+                # measured on), and too early by the lag's unused part once
+                # logic holds the restart later. See _ss_off_started.
                 _ctx = f'SS lag {pnode["code"]}->{code}'
+                _lag_here = (_started_lag_left(pnode, lag, lag_cal)
+                             if _ss_off_started(pnode) else lag)
+                # SSL measured — laid from the data date under "Actual Start"
+                # (_ss_anchor_for).
                 drive_instant = _lag_from_instant(
-                    _start_drive_src_for(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
-                # SS_U (P6 parity 2026-09-21) — P6 floors the restart-driven
-                # drive with actual_start + lag for a started incomplete
-                # predecessor; the restart itself contributes WITHOUT lag.
-                # Measured: 9 SS+5d links on the PEC LTC file, explains all
-                # 55 remaining date differences after the pass-through fix.
-                if (schedule_mode == 'retained_logic' and not pnode['is_complete']
-                        and pnode.get('actual_start')):
-                    _a = _lag_from_instant(date_to_num(pnode['actual_start']),
-                                           lag, lag_cal, alerts=alerts, ctx=_ctx)
-                    drive_instant = max(_a, _start_drive_src_for(pnode))
+                    _ss_anchor_for(pnode), _lag_here, lag_cal, alerts=alerts, ctx=_ctx)
                 if _pt_inst > drive_instant:
                     drive_instant, _via_pt = _pt_inst, True
                 drive = _snap_fwd(drive_instant, node_cal, alerts=alerts, ctx=_ctx)
@@ -1909,9 +2125,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 # reference, same as SS. INFERRED for SF specifically: the
                 # corpus carries no discriminating SF instance; adopted by
                 # symmetry with the measured SS rule.
+                # SSL — the same unused-lag rule as SS.
                 _ctx = f'SF lag {pnode["code"]}->{code}'
+                _lag_here = (_started_lag_left(pnode, lag, lag_cal)
+                             if _ss_off_started(pnode) else lag)
                 anchor_instant = _lag_from_instant(
-                    _start_drive_src_for(pnode), lag, lag_cal, alerts=alerts, ctx=_ctx)
+                    _start_drive_src_for(pnode), _lag_here, lag_cal, alerts=alerts, ctx=_ctx)
                 if _pt_inst > anchor_instant:
                     anchor_instant, _via_pt = _pt_inst, True
                 succ_ef_anchor = _snap_fwd(anchor_instant, node_cal, alerts=alerts, ctx=_ctx)
@@ -1945,24 +2164,26 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 # with REMAINING duration (FF measured on the oracle corpus
                 # — the whole-bar pull-back reproduces P6's stored restart
                 # exactly; SF stays INFERRED, no discriminating instance).
-                # D2 (retained-logic P6 semantics wave 2026-09-02) — a
-                # COMPLETED predecessor contributes NOTHING to the restart
-                # of a STARTED successor. Measured: a pred whose actual
-                # finish lands AFTER the data date leaves the started
-                # successor's stored restart at the data date — P6 treats
-                # finished work as history, never as a driver of remaining
-                # work. For a NOT-started successor the completed pred's
-                # actual finish (+lag) keeps driving ES in the main path
-                # below (P6's documented behaviour; the corpus carries no
-                # discriminating instance either way — INFERRED).
-                # PT — D2 stands for the completed predecessor's ACTUAL
-                # finish. The date it carries from unfinished work is not
-                # history: it restarts a started successor as it starts a
-                # not-started one (on the measured file P6's own dates give
-                # 33 of 41 in-progress restarts to the minute with this rule
-                # and 19 without it; the other 8 are the SS-lag rule named
-                # at _passthrough_of, not this one).
-                if not pnode['is_complete'] or _via_pt:
+                # D2 (retained-logic P6 semantics wave 2026-09-02) held that
+                # a COMPLETED predecessor contributes NOTHING to the restart
+                # of a STARTED successor, from instances whose actual finish
+                # lands AFTER the data date with a zero lag. FA (2026-09-23)
+                # measures what those instances were: the completed
+                # predecessor drives with its stamp plus the UNEXPIRED lag
+                # (_done_drive), which for a zero lag is the data date - the
+                # D2 observation - and for a lag still running past the data
+                # date pushes the restart exactly as it pushes a not-started
+                # successor's start (probes: FS+2d off a future actual finish
+                # restarts data date + 2; FS+3d, SS+4d, FF+3d and FS+5d whose
+                # actual dates leave part of the lag unexpired restart where
+                # that remainder ends; v2.9.46 held all of them at the data
+                # date). PT — the date a completed predecessor carries from
+                # unfinished work restarts a started successor too (on the
+                # measured file P6's own dates give 33 of 41 in-progress
+                # restarts to the minute with it and 19 without); FA lays
+                # the unexpired lag on it. Without a data date the old D2
+                # path stands (nothing is "after" the data date).
+                if not pnode['is_complete'] or _via_pt or _done:
                     _r_drive = drive
                     _rd = node.get('remaining_duration')
                     if (t in ('FF', 'SF') and this_anchor_ef is not None
@@ -2410,8 +2631,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # PT — the backward mirror of the forward pass-through: under
             # retained logic the completed activity hands the tightest late
             # bound of its successors back to its predecessors, again as a
-            # zero-duration node and again without the lag, which belongs to
-            # its actual date. (Its own historical dates still bound
+            # zero-duration node. (Its own historical dates still bound
             # nothing - the R6 defect stays fixed.) Without the mirror the
             # unfinished activity that DRIVES the project through completed
             # work is bounded by nothing: on the measured file the
@@ -2419,6 +2639,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # days of float where P6 has 0, and total float matched P6 on
             # 120 of 201 incomplete rows against 141 with it (201 once the
             # SS-lag rule is also applied).
+            # FA — each successor's bound comes back LESS the unexpired part
+            # of that link's lag, mirroring _done_drive: forward the lag
+            # still running at the data date is laid on the stamp, so
+            # backward it is taken off (the measured file showed P6 applying
+            # only the unexpired part backward on an SS + 96 h link). A lag
+            # that had run out by the data date leaves the bound alone, as
+            # before; no data date, no unexpired part.
             if schedule_mode == 'retained_logic':
                 _lpt = None
                 for s in succ_map.get(code, []):
@@ -2431,6 +2658,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         _b = _lf_instant_of(snode)
                     else:
                         _b = snode['ls']
+                    if _b is not None and dd_num > 0:
+                        # (silent: the forward walk of the same link already
+                        # disclosed any missing calendar)
+                        _s_cal = _lag_cal_for(node, snode)
+                        _rl = _unexpired_lag(_done_actual(node, s['type']), s['lag_days'],
+                                             _s_cal, dd_num)
+                        if _rl:
+                            _b = _lag_back_from_instant(
+                                _b, _rl, _s_cal, alerts=[],
+                                ctx=f'backward unexpired lag {code}->{snode["code"]}')
                     if _b is not None and (_lpt is None or _b < _lpt):
                         _lpt = _b
                 if _lpt is not None:
@@ -2507,16 +2744,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     drive = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
                 elif t == 'SS':
                     _ctx = f'backward SS lag {code}->{snode["code"]}'
-                    # SS_U backward — mirror the forward rule: only the
-                    # portion of actual_start+lag that extends past the data
-                    # date counts as the effective backward lag.
-                    _ss_lag = lag
-                    if (schedule_mode == 'retained_logic' and node.get('actual_start')
-                            and not node['is_complete']):
-                        _a = _lag_from_instant(date_to_num(node['actual_start']),
-                                               lag, s_cal, alerts=alerts, ctx=_ctx)
-                        _ss_lag = (_count_work_days_between(dd_num, _a, s_cal)
-                                   if _a > dd_num else 0)
+                    # SSL backward — mirror the forward rule: off a started
+                    # predecessor only the unused part of the lag separates
+                    # its late restart from the successor's late start.
+                    _ss_lag = (_started_lag_left(node, lag, s_cal)
+                               if _ss_off_started(node) else lag)
                     _inst = _lag_back_from_instant(_s_ls, _ss_lag, s_cal,
                                                    alerts=alerts, ctx=_ctx)
                     ls_bound = _snap_bwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
@@ -2531,7 +2763,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     _ctx = f'backward SF lag {code}->{snode["code"]}'
                     if _s_lf_inst is None:
                         _s_lf_inst = _lf_instant_of(snode)
-                    _inst = _lag_back_from_instant(_s_lf_inst, lag, s_cal,
+                    # SSL backward — as SS.
+                    _sf_lag = (_started_lag_left(node, lag, s_cal)
+                               if _ss_off_started(node) else lag)
+                    _inst = _lag_back_from_instant(_s_lf_inst, _sf_lag, s_cal,
                                                    alerts=alerts, ctx=_ctx)
                     ls_bound = _snap_bwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
                 else:
@@ -2852,13 +3087,21 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # schedule actually used, or a started SS-driving predecessor
             # reports phantom positive float against its own historical
             # actual start.
-            _n_start_anchor = _start_drive_src_for(n)
+            # SSL measured — an SS anchor is the data date under "Actual
+            # Start" (_ss_anchor_for), as in the forward pass.
+            _n_start_anchor = (_ss_anchor_for(n) if stype == 'SS'
+                               else _start_drive_src_for(n))
+            # SSL — and off a started predecessor the SS/SF slack is measured
+            # from the unused part of the lag, the drive the forward pass used:
+            # none into a completed successor, which carries the anchor itself.
+            _start_lag = ((0 if sn.get('is_complete') else _started_lag_left(n, lag, succ_cal))
+                          if _ss_off_started(n) else lag)
             if stype == 'FS':
                 pred_anchor = _advance_workdays(n['ef'], lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack FS')
                 succ_anchor = _sn_start_anchor
             elif stype == 'SS':
-                pred_anchor = _advance_workdays(_n_start_anchor, lag, succ_cal,
+                pred_anchor = _advance_workdays(_n_start_anchor, _start_lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack SS')
                 succ_anchor = _sn_start_anchor
             elif stype == 'FF':
@@ -2866,7 +3109,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     alerts=_slack_sink, ctx='FF-slack FF')
                 succ_anchor = sn['ef']
             elif stype == 'SF':
-                pred_anchor = _advance_workdays(_n_start_anchor, lag, succ_cal,
+                pred_anchor = _advance_workdays(_n_start_anchor, _start_lag, succ_cal,
                     alerts=_slack_sink, ctx='FF-slack SF')
                 succ_anchor = sn['ef']
             else:
@@ -2936,6 +3179,48 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         n['ff_working_days'] = max(0, n['ff_signed_working_days'])
 
     critical = {c for c, n in nodes.items() if n['tf'] <= 0.0 and not n['is_complete']}
+
+    # FA — disclosure. P6 lists completed activities whose actual dates fall
+    # after the data date in its schedule log ("Activities with Actual Dates
+    # > Data Date") and drives their successors from the data date instead
+    # (_done_drive). The engine does the same, so it says so, once, naming
+    # every such activity in input order.
+    if dd_num > 0:
+        _future = []
+        _fa_seen = set()
+        for _aa in activities:
+            if not _aa or not _aa.get('code') or _aa['code'] in _fa_seen:
+                continue
+            _fa_seen.add(_aa['code'])
+            _nn = nodes.get(_aa['code'])
+            if not _nn or not _nn['is_complete']:
+                continue
+            _parts = []
+            if _nn.get('as_instant', 0) > dd_num:
+                _parts.append('actual start ' + _nn['actual_start'])
+            if _nn['actual_finish'] and _nn['ef_instant'] > dd_num:
+                _parts.append('actual finish ' + _nn['actual_finish'])
+            if _parts:
+                _future.append('%s (%s)' % (_aa['code'], ', '.join(_parts)))
+        if _future:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'actual-after-data-date',
+                'message': (
+                    'ACTUAL_AFTER_DATA_DATE: %d completed %s an actual date after '
+                    'the data date %s: %s. P6 does not drive a successor from an '
+                    'actual date recorded after the data date: it schedules the '
+                    'successor from the data date (or the later date the '
+                    'completed activity carries from unfinished work) plus the '
+                    'part of the lag not yet run out, and lists these rows in its '
+                    'schedule log under "Activities with Actual Dates > Data '
+                    'Date". This engine does the same; the recorded actual dates '
+                    'are left as they are.'
+                    % (len(_future),
+                       'activity records' if len(_future) == 1 else 'activities record',
+                       data_date, '; '.join(_future))
+                ),
+            })
 
 
     # B4 parity (2026-08-11, surfaced by crossval F48) — out-of-sequence

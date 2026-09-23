@@ -115,6 +115,8 @@ try:
         data_date=payload.get('data_date', ''),
         cal_map=payload.get('cal_map') or None,
         schedule_mode=payload.get('schedule_mode', 'retained_logic'),
+        relationship_lag_calendar=payload.get('relationship_lag_calendar', 'successor'),
+        ss_lag_from=payload.get('ss_lag_from', 'early_start'),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -184,7 +186,9 @@ function runJS(payload) {
             payload.activities,
             payload.relationships,
             { dataDate: payload.data_date || '', calMap: payload.cal_map || {},
-              scheduleMode: payload.schedule_mode || 'retained_logic' }
+              scheduleMode: payload.schedule_mode || 'retained_logic',
+              relationshipLagCalendar: payload.relationship_lag_calendar || 'successor',
+              ssLagFrom: payload.ss_lag_from || 'early_start' }
         );
     } catch (e) {
         return {
@@ -1417,9 +1421,14 @@ compareFixture('F52 — progress_override ignores the pass-through (same topolog
     schedule_mode: 'progress_override',
 });
 
-// F53 — the date is handed on WITHOUT the relationship's lag into C, but a
-// lag on the link OUT of C to X still applies as on any link.
-compareFixture('F53 — pass-through is carried without the lag into C; the lag out of C still applies', {
+// F53 — the lag on the link INTO C is applied as on any link (C carries P's
+// finish + 3, 2026-01-29), and the lag on the link OUT of C to X adds the
+// part of it not yet run out at the data date (FA, 2026-09-23): C's
+// date-only finish counts Friday 01-09 as one of its two days, so X starts
+// one working day after the carried date, 2026-01-30. v2.9.46 counted the
+// whole lag from the actual finish (01-13), which lost to the carried date,
+// and started X on it (01-29).
+compareFixture('F53 — pass-through carries the lag into C; the lag out of C adds its unexpired part', {
     activities: [
         { code: 'P', duration_days: 20, actual_start: '2026-01-05',
           remaining_duration: 10, clndr_id: 'MF' },
@@ -1504,6 +1513,627 @@ compareFixture('F57 — PO_SNAP: progress_override restart snaps off a weekend d
                      hours: { 1: [[8,17]], 2: [[8,17]], 3: [[8,17]],
                               4: [[8,17]], 5: [[8,17]] } } },
     schedule_mode: 'progress_override',
+});
+
+// =====================================================================
+// FIXTURES 58-64 — SSL: the lag of an SS / SF link off a STARTED
+// predecessor (2026-09-23)
+// =====================================================================
+// P6 lays only the part of the lag the started predecessor has not already
+// used up along its bar: lag less the working time from its actual start to
+// the data date, from its RESTART (see cpm-engine.js _unexpiredLag and the
+// SSL block at the forward-pass SS site for the P6 measurement). SS_U
+// (v2.9.46) read max(actual_start + lag, restart), the same date only while
+// the restart sits at the data date, which is why F55/F56 did not move.
+// Every fixture below holds the restart PAST the data date, or reads the
+// rule through another path (SF, a completed carrier, a future actual
+// start, a second calendar, a started successor). Data date Monday
+// 2026-01-19; P started Monday 2026-01-05, so 10 working days have elapsed.
+
+// F58 — the real-file shape: H holds P's restart to 2026-01-26; SS+18 leaves
+// 8 days unused, so X starts 2026-02-05 (SS_U: 2026-01-29).
+compareFixture('F58 — SSL: SS off a started predecessor whose restart is held past the data date', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 18 },
+    ],
+    data_date: '2026-01-19',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F59 — the lag is used up (SS+5 against 10 elapsed days) while the
+// restart is held: X starts ON the restart, not before it.
+compareFixture('F59 — SSL: a used-up lag lays nothing; X starts on the held restart', {
+    activities: [
+        { code: 'H', duration_days: 10, clndr_id: 'MF' },
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 5 },
+    ],
+    data_date: '2026-01-19',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F60 — SF: the same unused-lag rule anchors X's finish.
+compareFixture('F60 — SSL: SF off a started predecessor whose restart is held', {
+    activities: [
+        { code: 'H', duration_days: 10, clndr_id: 'MF' },
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'X', duration_days: 3, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'X', type: 'SF', lag_days: 15 },
+    ],
+    data_date: '2026-01-19',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F61 — through completed out-of-sequence work: an SS link off STARTED work
+// lays no lag into a completed activity (measured in P6 on 2026-09-23; see
+// F82-F84), so C carries P's restart itself, 2026-01-26, on to X. The rule
+// as first written carried the restart + the unused lag (2026-02-02), and
+// v2.9.46 the whole lag.
+compareFixture('F61 — SSL: an SS link off started work lays no lag into a completed activity', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'C', duration_days: 5, actual_start: '2026-01-12',
+          actual_finish: '2026-01-16', is_complete: true, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'C', type: 'SS', lag_days: 15 },
+        { from_code: 'C', to_code: 'X', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-19',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F62 — a FUTURE actual start (after the data date) has used up none of
+// the lag: X starts restart (the data date) + the whole lag.
+compareFixture('F62 — SSL: a future actual start uses up none of the lag', {
+    activities: [
+        { code: 'P', duration_days: 10, actual_start: '2026-01-21',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 5 },
+    ],
+    data_date: '2026-01-19',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F63 — mixed calendars: P and H on a six-day calendar, X on Mon-Fri, the
+// lag walked on the predecessor's calendar. 12 six-day days have elapsed.
+compareFixture('F63 — SSL: six-day predecessor, Mon-Fri successor, predecessor lag calendar', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'SIX' },
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'SIX' },
+        { code: 'X', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 15 },
+    ],
+    data_date: '2026-01-19',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] },
+               SIX: { work_days: [1,2,3,4,5,6], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+});
+
+// F64 — a STARTED successor: its restart takes the same drive.
+compareFixture('F64 — SSL: a started successor restarts at the held restart + unused lag', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 20, actual_start: '2026-01-05',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'X', duration_days: 10, actual_start: '2026-01-12',
+          remaining_duration: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'X', type: 'SS', lag_days: 15 },
+    ],
+    data_date: '2026-01-19',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURES 65-75 — FA: a completed predecessor drives from the data date
+// plus its UNEXPIRED lag (2026-09-23)
+// =====================================================================
+// P6 never drives a successor from an actual date recorded after the data
+// date, and off completed work it lays only the part of the lag not yet run
+// out at the data date: drive = stamp + max(0, lag - elapsed), the stamp being
+// the data date or the later date the completed activity carries from
+// unfinished work (see cpm-engine.js _stampOf / _doneDrive for the P6
+// measurement). v2.9.46 drove from the recorded actual date plus the whole
+// lag, took the later of that and a carried date, and never let a completed
+// predecessor restart started work. Data date Monday 2026-01-19 08:00.
+//
+// Alert parity. Where an actual finish is recorded on a LATER DAY than the
+// data date the JS engine also emits its per-activity FUTURE_ACTUAL_FINISH
+// ALERT ('future-actual-finish', v2.9.13 F1-Bug3), which the Python reference
+// has never carried; those fixtures (F65, F67) set skip_alert_parity and say
+// so. It is a pre-existing gap, not part of this change. Every other fixture
+// records its future actual later on the data date's own day (17:00 against
+// 08:00), where that ALERT compares dates and stays silent while the FA rule
+// compares instants, so alert parity runs on them, the new
+// 'actual-after-data-date' WARN included.
+
+// F65 — the real-file shape: C's finish is recorded weeks after the data
+// date; S starts off its unfinished predecessor N (2026-01-21), not off C
+// (v2.9.46: 2026-02-06). X is longer than C's recorded finish, so remaining
+// work sets the project finish, as on every measured probe: where a future
+// actual finish is itself the latest date in the project, P6's project
+// finish (and so the float of open ends) is not yet measured.
+compareFixture('F65 — FA: FS+0 off an actual finish recorded weeks after the data date, beside an unfinished predecessor', {
+    activities: [
+        { code: 'C', duration_days: 5, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-02-05 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'N', duration_days: 2, clndr_id: 'MF' },
+        { code: 'S', duration_days: 1, clndr_id: 'MF' },
+        { code: 'X', duration_days: 20, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 0 },
+        { from_code: 'N', to_code: 'S', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+}, { skip_alert_parity: true,
+     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+
+// F66 — FS+2 off an actual finish later on the data date's own day: two
+// working days from the data date (Wed 2026-01-21; v2.9.46 Thu 2026-01-22).
+compareFixture('F66 — FA: FS+2 off an actual finish after the data date is laid from the data date', {
+    activities: [
+        { code: 'C', duration_days: 5, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-19 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 3, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 2 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F67 — SS+3 off an actual START after the data date: nothing has elapsed,
+// three days from the data date (Thu 2026-01-22; v2.9.46 Mon 2026-01-26).
+compareFixture('F67 — FA: SS+3 off an actual start after the data date', {
+    activities: [
+        { code: 'C', duration_days: 2, actual_start: '2026-01-21 08:00',
+          actual_finish: '2026-01-22 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'SS', lag_days: 3 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+}, { skip_alert_parity: true,
+     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+
+// F68 — FF+2 off an actual finish after the data date: S finishes no earlier
+// than two days from the data date (S on Tue 2026-01-20; v2.9.46 Wed 01-21).
+compareFixture('F68 — FA: FF+2 off an actual finish after the data date', {
+    activities: [
+        { code: 'C', duration_days: 5, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-19 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 1, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'FF', lag_days: 2 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F69 — a carried date with a lag still running: U (not started) holds the
+// out-of-sequence C to U's finish (close of Wed 01-21), and one of C's three
+// lag days had run by the data date, so the two left are laid ON the carried
+// date (S Mon 2026-01-26; v2.9.46 took the later of the carried date and
+// actual finish + 3: Thu 01-22).
+compareFixture('F69 — FA: the unexpired lag rides on a carried date', {
+    activities: [
+        { code: 'U', duration_days: 3, clndr_id: 'MF' },
+        { code: 'C', duration_days: 4, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-15 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'U', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 3 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F70 — the backward mirror: F69 beside a 15-day X that sets the finish. C
+// hands S's late start back LESS the unexpired two days, so U has S's float
+// (v2.9.46 handed it back whole and gave U two days more).
+compareFixture('F70 — FA: the backward pass takes the unexpired lag off the carried bound', {
+    activities: [
+        { code: 'U', duration_days: 3, clndr_id: 'MF' },
+        { code: 'C', duration_days: 4, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-15 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 2, clndr_id: 'MF' },
+        { code: 'X', duration_days: 15, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'U', to_code: 'C', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 3 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F71 — a STARTED successor restarts on the same drive: FS+2 off an actual
+// finish after the data date restarts S on Wed 2026-01-21 (v2.9.46, D2: a
+// completed predecessor never drove a restart - the data date, 01-19).
+compareFixture('F71 — FA: a started successor restarts at the data date plus the unexpired lag', {
+    activities: [
+        { code: 'C', duration_days: 5, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-19 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 10, actual_start: '2026-01-12 08:00',
+          remaining_duration: 3, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 2 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F72 — progress override caps the drive the same way (S Wed 2026-01-21;
+// v2.9.46 Thu 01-22).
+compareFixture('F72 — FA: progress override lays the lag from the data date too', {
+    activities: [
+        { code: 'C', duration_days: 5, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-19 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 2 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    schedule_mode: 'progress_override',
+});
+
+// F73 — no data date, nothing is "after" it: the actual finish + lag drives
+// as before (a guard; both versions agree).
+compareFixture('F73 — FA: without a data date the actual dates still drive', {
+    activities: [
+        { code: 'C', duration_days: 5, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-22 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 2 },
+    ],
+    data_date: '',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// F74 — mixed calendars: C on a six-day calendar, the lag on the
+// predecessor's calendar, S on Mon-Fri. Three six-day days from the data
+// date end Wed 01-21 17:00, so S starts Thu 2026-01-22 (v2.9.46 counted from
+// the recorded finish: Fri 01-23).
+compareFixture('F74 — FA: six-day predecessor, Mon-Fri successor, predecessor lag calendar', {
+    activities: [
+        { code: 'C', duration_days: 6, actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-19 17:00', is_complete: true, clndr_id: 'SIX' },
+        { code: 'S', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'S', type: 'FS', lag_days: 3 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] },
+               SIX: { work_days: [1,2,3,4,5,6], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+});
+
+// F75 — completed to completed (INFERRED; the rule is measured into
+// not-started and started successors): C1's FS+4 has two days left at the
+// data date, so the completed C2 is held to Tue 01-20 17:00 and hands that on
+// to S (Wed 2026-01-21; v2.9.46 carried nothing between completed
+// activities and started S at the data date).
+compareFixture('F75 — FA: a completed-to-completed link carries its unexpired lag', {
+    activities: [
+        { code: 'C1', duration_days: 8, actual_start: '2026-01-05 08:00',
+          actual_finish: '2026-01-14 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'C2', duration_days: 5, actual_start: '2026-01-05 08:00',
+          actual_finish: '2026-01-09 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C1', to_code: 'C2', type: 'FS', lag_days: 4 },
+        { from_code: 'C2', to_code: 'S', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+});
+
+// =====================================================================
+// FIXTURES 76-86 — SSL measured in P6: "lag from Actual Start", and no lag
+// from started work into completed work (2026-09-23)
+// =====================================================================
+// Five probe projects were scheduled in P6 Professional 23.12 (SSL1-3, 19
+// cases each; SSC1-2, 9 cases each), one F9 per project, and read back from
+// the P6 database. See cpm-engine.js _ssAnchorOf and the pass-through loop.
+//   * Under "Calculate start-to-start lag from: Actual Start" (SCHEDOPTIONS
+//     sched_lag_early_start_flag = N; opts.ssLagFrom / ss_lag_from =
+//     'actual_start') an SS link off a started predecessor is laid from the
+//     DATA DATE plus the unexpired lag, not from the restart. SF links and
+//     the backward pass ignore the option.
+//   * An SS or SF link off a started predecessor INTO a completed activity
+//     lays no lag: the completed activity carries the anchor itself. The
+//     backward pass still subtracts the unexpired lag.
+// Data date Monday 2026-10-05 08:00. H holds P's restart; P started Monday
+// 2026-09-21 (10 working days elapsed) with 10 left (fed, as the validator
+// feeds it, with duration = remaining). The dates in each description are
+// P6's own.
+
+// F76 — SSL2 S03: restart held to Mon 10-12, SS+18 (8 unused): S starts Thu
+// 10-15, the data date + 8 (Early Start: Thu 10-22).
+compareFixture('F76 — SSL measured: SS under lag from Actual Start is laid from the data date', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'S', type: 'SS', lag_days: 18 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F77 — SSL2 S04: restart held to Mon 10-19, SS+15 (5 unused): S starts Mon
+// 10-12, a week BEFORE its predecessor restarts.
+compareFixture('F77 — SSL measured: under Actual Start the successor can start before the restart', {
+    activities: [
+        { code: 'H', duration_days: 10, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'S', type: 'SS', lag_days: 15 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F78 — SSL2 S05: SS+5 against 10 elapsed days: S starts ON the data date
+// although P restarts Mon 10-19. The raw SCHEDOPTIONS flag is accepted.
+compareFixture('F78 — SSL measured: a used-up lag under Actual Start starts on the data date (flag N)', {
+    activities: [
+        { code: 'H', duration_days: 10, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'S', type: 'SS', lag_days: 5 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'N',
+});
+
+// F79 — SSL2 S11: P and H six-day, S Mon-Fri, lag on the predecessor's
+// calendar: 12 six-day days elapsed of SS+15; the data date + 3 six-day days
+// closes Wed 10-07, S starts Thu 10-08.
+compareFixture('F79 — SSL measured: Actual Start, six-day predecessor, Mon-Fri successor', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'SIX' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'SIX' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'S', type: 'SS', lag_days: 15 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] },
+               SIX: { work_days: [1,2,3,4,5,6], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F80 — SSL2 S16: S itself started (09-28, 5 left): its restart is the data
+// date + 5 unused days, Mon 10-12 (Early Start: 10-19).
+compareFixture('F80 — SSL measured: under Actual Start a started successor restarts at the data date + unused lag', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, actual_start: '2026-09-28 08:00',
+          remaining_duration: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'S', type: 'SS', lag_days: 15 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F81 — SSL2 S09: SF ignores the option. SF+15 off the restart held to 10-19
+// (5 unused): S (3 d) finishes the close of Fri 10-23 and starts Wed 10-21.
+compareFixture('F81 — SSL measured: SF ignores lag from Actual Start', {
+    activities: [
+        { code: 'H', duration_days: 10, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'S', duration_days: 3, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'S', type: 'SF', lag_days: 15 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F82 — SSC1 C1: SS+18 off started P (restart held to 10-12, 8 unused) into
+// Q, completed 09-28 to 10-02 (out of sequence); Q FS S. P6 carries P's
+// restart itself: S starts Mon 10-12 (unexpired lag: Thu 10-22). Z (18 d)
+// gives P6's project finish, Wed 10-28: backward, Q hands S's late start
+// (Thu 10-22) back, less the 8 unused days, so P's late restart is its own
+// restart: zero float, as P6 has it.
+compareFixture('F82 — SSL measured: no lag from started work into a completed activity; float through it', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'Q', duration_days: 0, actual_start: '2026-09-28 08:00',
+          actual_finish: '2026-10-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+        { code: 'Z', duration_days: 18, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'Q', type: 'SS', lag_days: 18 },
+        { from_code: 'Q', to_code: 'S', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+});
+
+// F83 — SSC2 C1: the same under Actual Start: Q carries the data date, which
+// moves nothing, so S starts ON the data date, Mon 10-05.
+compareFixture('F83 — SSL measured: into a completed activity under Actual Start the data date is carried', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'Q', duration_days: 0, actual_start: '2026-09-28 08:00',
+          actual_finish: '2026-10-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+        { code: 'Z', duration_days: 18, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'Q', type: 'SS', lag_days: 18 },
+        { from_code: 'Q', to_code: 'S', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F84 — SSC2 C7: SF+18 into the completed Q under Actual Start: SF ignores
+// the option, Q carries the restart, S starts Mon 10-12.
+compareFixture('F84 — SSL measured: SF into a completed activity carries the restart under Actual Start', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'Q', duration_days: 0, actual_start: '2026-09-28 08:00',
+          actual_finish: '2026-10-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'Q', type: 'SF', lag_days: 18 },
+        { from_code: 'Q', to_code: 'S', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F85 — SSC1 C2 / C3 / C4: every other link into a completed activity keeps
+// its lag. U (not started, 5 d) FS+3 into Q1, V (held by H, starts 10-12)
+// SS+5 into Q2, R (started, restart at the data date, 5 left) FS+3 into Q3;
+// each Q FS its own successor: 10-15, 10-19, 10-15.
+compareFixture('F85 — SSL measured: other links into completed work keep their lag', {
+    activities: [
+        { code: 'U', duration_days: 5, clndr_id: 'MF' },
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'V', duration_days: 10, clndr_id: 'MF' },
+        { code: 'R', duration_days: 5, actual_start: '2026-09-21 08:00',
+          remaining_duration: 5, clndr_id: 'MF' },
+        { code: 'Q1', duration_days: 0, actual_start: '2026-09-28 08:00',
+          actual_finish: '2026-10-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'Q2', duration_days: 0, actual_start: '2026-09-28 08:00',
+          actual_finish: '2026-10-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'Q3', duration_days: 0, actual_start: '2026-09-28 08:00',
+          actual_finish: '2026-10-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S1', duration_days: 5, clndr_id: 'MF' },
+        { code: 'S2', duration_days: 5, clndr_id: 'MF' },
+        { code: 'S3', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'U', to_code: 'Q1', type: 'FS', lag_days: 3 },
+        { from_code: 'H', to_code: 'V', type: 'FS', lag_days: 0 },
+        { from_code: 'V', to_code: 'Q2', type: 'SS', lag_days: 5 },
+        { from_code: 'R', to_code: 'Q3', type: 'FS', lag_days: 3 },
+        { from_code: 'Q1', to_code: 'S1', type: 'FS', lag_days: 0 },
+        { from_code: 'Q2', to_code: 'S2', type: 'FS', lag_days: 0 },
+        { from_code: 'Q3', to_code: 'S3', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'actual_start',
+});
+
+// F86 — an unknown option ALERTs ('unknown-ss-lag-from') and keeps Early
+// Start, in both ports.
+compareFixture('F86 — SSL measured: an unknown lag-from option alerts and keeps Early Start', {
+    activities: [
+        { code: 'H', duration_days: 5, clndr_id: 'MF' },
+        { code: 'P', duration_days: 10, actual_start: '2026-09-21 08:00',
+          remaining_duration: 10, clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'H', to_code: 'P', type: 'FS', lag_days: 0 },
+        { from_code: 'P', to_code: 'S', type: 'SS', lag_days: 18 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
+    relationship_lag_calendar: 'predecessor',
+    ss_lag_from: 'from_the_moon',
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

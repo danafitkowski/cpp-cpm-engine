@@ -10262,11 +10262,14 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
     check('RL-5: no-rem started pred carries restart = max(dd, act_start) = 2026-06-22',
         r.nodes.P.restart_date === '2026-06-22',
         'P.restart=' + r.nodes.P.restart_date);
-    // SS_U (P6 parity 2026-09-21): drive = max(actual_start+lag, restart),
-    // the restart contributing WITHOUT its own lag. advance(May-25, 3
-    // workdays on MF) = May-28, which does not exceed restart=Jun-22, so
-    // the restart wins outright. Pre-SS_U value: 2026-06-25 (restart+lag).
-    check('RL-5: SS+3 successor is driven from the D5 restart with no lag applied (SS_U: actual_start+lag=2026-05-28 does not exceed it)',
+    // SSL (measured in P6 23.12, 2026-09-23): an SS link off a started
+    // predecessor is laid from its restart plus only the UNEXPIRED part of
+    // the lag, the lag less the working time from the actual start to the
+    // data date. 20 Mon-Fri days ran from May-25 to Jun-22, so none of SS+3
+    // is left and X starts on the restart. (The superseded SS_U reading,
+    // max(actual_start + lag, restart), gave the same date here; before
+    // either rule the value was 2026-06-25, restart + the whole lag.)
+    check('RL-5: SS+3 successor is driven from the D5 restart with no lag applied (the lag ran out along P before the data date)',
         r.nodes.X.es_date === '2026-06-22',
         'X.es=' + r.nodes.X.es_date);
     check('RL-5: legacy no-rem EF path still alerts completion-data-incomplete',
@@ -10289,11 +10292,11 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
     );
     check('RL-6: started pred restart = data date 2026-06-22',
         r.nodes.P.restart_date === '2026-06-22');
-    // SS_U (P6 parity 2026-09-21): drive = max(actual_start+lag, restart),
-    // restart WITHOUT its own lag. advance(May-25, 5 workdays on MF) =
-    // Jun-01 < restart Jun-22, so the restart wins outright.
-    // Pre-SS_U value: ES 2026-06-29, EF 2026-07-13 (restart + lag applied).
-    check('RL-6: not-started SS successor ES = the D1 restart with no lag applied (SS_U: actual_start+lag=2026-06-01 does not exceed it)',
+    // SSL (measured in P6 23.12, 2026-09-23): restart + the unexpired lag.
+    // 20 Mon-Fri days ran from May-25 to Jun-22, so none of SS+5 is left.
+    // (SS_U gave the same date; before either rule: ES 2026-06-29, EF
+    // 2026-07-13, restart + the whole lag.)
+    check('RL-6: not-started SS successor ES = the D1 restart with no lag applied (the lag ran out along P before the data date)',
         r.nodes.X.es_date === '2026-06-22',
         'X.es=' + r.nodes.X.es_date);
     check('RL-6: successor EF - ES = duration (rigid bar, 2026-07-06)',
@@ -10315,17 +10318,18 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
         S7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [] },
         MF: { work_days: [1, 2, 3, 4, 5], holidays: [] },
     };
-    // SS_U (P6 parity 2026-09-21) triggers whenever P has an actual_start:
-    // drive = max(actual_start+lag, restart), restart WITHOUT its own lag.
-    // actual_start moved from 2026-05-25 to 2026-06-18 (close to the
-    // 2026-06-22 restart) so actual_start+lag EXCEEDS the restart in every
-    // sub-case below and this test keeps discriminating which calendar the
-    // lag walks on — with the original 05-25 value, both modes collapsed to
-    // the bare restart (2026-06-22) regardless of calendar choice, which
-    // proved nothing about the lag calendar any more. Values verified
-    // against the engine itself, not hand-computed (calendar arithmetic
-    // across a 7-day and a Mon-Fri calendar is exactly the kind of thing
-    // that is easy to get wrong by hand).
+    // SSL (measured in P6 23.12, 2026-09-23): off a started predecessor the
+    // SS lag is laid from the restart less the part that ran out between the
+    // actual start and the data date, both counted on the LAG calendar.
+    // actual_start sits at 2026-06-18, close to the 2026-06-22 restart, so
+    // part of the lag is still unexpired in every sub-case below and this
+    // test keeps discriminating which calendar the lag walks on; with an
+    // earlier actual start both modes collapse to the bare restart. (The
+    // superseded SS_U reading, max(actual_start + lag, restart), gave the
+    // same dates here.) Values verified against the engine itself, not
+    // hand-computed (calendar arithmetic across a 7-day and a Mon-Fri
+    // calendar is exactly the kind of thing that is easy to get wrong by
+    // hand).
     const acts = [
         { code: 'P', duration_days: 40, actual_start: '2026-06-18',
           remaining_duration: 10, clndr_id: 'S7' },
@@ -10335,19 +10339,21 @@ const _RL_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
     const rPred = E.computeCPM(acts, rels,
         { dataDate: '2026-06-22', calMap: cal,
           relationshipLagCalendar: 'rcal_Predecessor' });
-    // Five days on P's seven-day calendar from actual_start 06-18 lands
-    // 06-23 (a Tuesday), already a working day on X's Mon-Fri calendar.
-    check('RL-7: rcal_Predecessor — SS_U actual_start+lag walks pred 7-day calendar (2026-06-23)',
+    // On P's seven-day calendar 4 days ran from 06-18 to 06-22, so 1 of the
+    // 5 is left: the restart + 1 lands 06-23 (a Tuesday), already a working
+    // day on X's Mon-Fri calendar.
+    check('RL-7: rcal_Predecessor — the unexpired lag is counted and laid on the pred 7-day calendar (2026-06-23)',
         rPred.nodes.X.es_date === '2026-06-23',
         'X.es=' + rPred.nodes.X.es_date);
-    // Five Mon-Fri days from 06-18 (Thursday) lands 06-25 (Thursday) —
-    // separates cleanly from the 7-day-calendar walk above.
+    // On X's Mon-Fri calendar 2 days ran (Thursday and Friday), so 3 are
+    // left: the restart + 3 lands 06-25 (Thursday), cleanly apart from the
+    // 7-day-calendar walk above.
     const rSucc = E.computeCPM(acts, rels,
         { dataDate: '2026-06-22', calMap: cal });
-    check('RL-7: default successor mode — SS_U actual_start+lag walks MF calendar (2026-06-25)',
+    check('RL-7: default successor mode — the unexpired lag is counted and laid on the MF calendar (2026-06-25)',
         rSucc.nodes.X.es_date === '2026-06-25',
         'X.es=' + rSucc.nodes.X.es_date);
-    check('RL-7: the two lag-calendar modes still discriminate under SS_U (pred 06-23 / succ 06-25)',
+    check('RL-7: the two lag-calendar modes still discriminate (pred 06-23 / succ 06-25)',
         rPred.nodes.X.es_date === '2026-06-23' && rSucc.nodes.X.es_date === '2026-06-25',
         'pred ' + rPred.nodes.X.es_date + ' / succ ' + rSucc.nodes.X.es_date);
     // With a seven-day lag the two calendars separate further: seven
@@ -10800,22 +10806,35 @@ const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
         r.nodes.A.ef_date + ' / ' + r.nodes.B.es_date);
 
     // XC-7 — a completed predecessor's finish TIME sets its instant.
-    r = xcRun([{ code: 'A', duration_days: 5, clndr_id: 'MF', actual_start: '2027-03-01',
-                 actual_finish: '2027-03-05 17:00', is_complete: true },
-               { code: 'B', duration_days: 2, clndr_id: 'MF' },
-               { code: 'C', duration_days: 2, clndr_id: 'D7' }],
-              [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
-               { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 }]);
-    check('XC-7: completed at Friday 17:00 - Mon-Fri successor Monday, seven-day successor Saturday, date kept for display',
-        r.nodes.A.actual_finish === '2027-03-05' && r.nodes.B.es_date === '2027-03-08' &&
-        r.nodes.C.es_date === '2027-03-06',
-        r.nodes.A.actual_finish + ' / ' + r.nodes.B.es_date + ' / ' + r.nodes.C.es_date);
-    r = xcRun([{ code: 'A', duration_days: 5, clndr_id: 'MF', actual_start: '2027-03-01',
-                 actual_finish: '2027-03-05', is_complete: true },
-               { code: 'B', duration_days: 2, clndr_id: 'MF' }],
-              [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }]);
-    check('XC-7: a date-only actual finish keeps the legacy reading (successor 2027-03-05)',
-        r.nodes.B.es_date === '2027-03-05', r.nodes.B.es_date);
+    // Rewritten 2026-09-23 (FA; paired with the Python rewrite in
+    // test_cross_calendar_finish_instants_2026_09_15.py). The original put the
+    // data date (2027-03-01) BEFORE the actual finish and drove the successors
+    // from it; P6 never schedules from an actual date recorded after the data
+    // date, so the instant now shows where P6 uses it: the elapsed part of a
+    // lag. At Monday 03-08 08:00 no working day of an FS + 1 d lag has run
+    // since the close of Friday, so B and C start Tuesday 03-09 (a date-only
+    // finish, next check, has used that day up); with the data date at the
+    // close of Friday and FS + 0, B (Mon-Fri) starts Monday 03-08 and C
+    // (seven-day) Saturday 03-06, each on its own calendar.
+    const xc7 = (af, lag, dd) => xcRun(
+        [{ code: 'A', duration_days: 5, clndr_id: 'MF', actual_start: '2027-03-01',
+           actual_finish: af, is_complete: true },
+         { code: 'B', duration_days: 2, clndr_id: 'MF' },
+         { code: 'C', duration_days: 2, clndr_id: 'D7' }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: lag },
+         { from_code: 'A', to_code: 'C', type: 'FS', lag_days: lag }], dd);
+    r = xc7('2027-03-05 17:00', 1, '2027-03-08 08:00');
+    const r7b = xc7('2027-03-05 17:00', 0, '2027-03-05 17:00');
+    check('XC-7: completed at Friday 17:00 - an FS+1 day still whole at Monday 08:00 (B, C Tuesday); at the close of Friday, Mon-Fri successor Monday, seven-day successor Saturday; date kept for display',
+        r.nodes.A.actual_finish === '2027-03-05' && r.nodes.A.ef_instant_date === '2027-03-06' &&
+        r.nodes.B.es_date === '2027-03-09' && r.nodes.C.es_date === '2027-03-09' &&
+        r7b.nodes.B.es_date === '2027-03-08' && r7b.nodes.C.es_date === '2027-03-06',
+        [r.nodes.A.actual_finish, r.nodes.A.ef_instant_date, r.nodes.B.es_date, r.nodes.C.es_date,
+         r7b.nodes.B.es_date, r7b.nodes.C.es_date].join(' / '));
+    r = xc7('2027-03-05', 1, '2027-03-08 08:00');
+    check('XC-7: a date-only actual finish keeps the legacy reading - Friday counts as a lag day already run, so B starts at the data date 2027-03-08',
+        r.nodes.A.ef_instant_date === '2027-03-05' && r.nodes.B.es_date === '2027-03-08',
+        r.nodes.A.ef_instant_date + ' / ' + r.nodes.B.es_date);
 
     // XC-8 — the data date is an instant too.
     r = xcRun([{ code: 'A', duration_days: 2, clndr_id: 'MF' }], [], '2026-08-28 17:00');
@@ -11041,6 +11060,148 @@ const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
         && ciTask2.constraint2.time_minutes === 960,
         JSON.stringify(ciTask2 && ciTask2.constraint2));
     E.resetMC();
+}
+
+// ===========================================================================
+// FA — a completed predecessor drives from the data date plus its UNEXPIRED
+// lag (proposed 2026-09-23; paired with the Python pins in
+// _cpp_common/tests/test_completed_pred_unexpired_lag_2026_09_23.py). Every
+// expected date below is the one P6 Professional 23.12 stored on six
+// synthetic probe projects scheduled one at a time (case ids F.., L.., U..);
+// the old value v2.9.46 returned is quoted where it differs. See the FA block
+// at _stampOf / _doneDrive in cpm-engine.js.
+// ===========================================================================
+{
+    const faCal = {
+        MF: { work_days: [1, 2, 3, 4, 5], holidays: [], special_workdays: [] },
+        SIX: { work_days: [1, 2, 3, 4, 5, 6], holidays: [], special_workdays: [] },
+    };
+    const FA_DD_MON = '2026-10-05 08:00';
+    const FA_DD_FRI = '2026-08-28 08:00';
+    const done = (code, as, af) => ({ code, duration_days: 0, actual_start: as,
+        actual_finish: af, is_complete: true, clndr_id: 'MF' });
+    // finished (recorded) Thu 10-08 17:00, after the Monday data date
+    const cf = () => done('C', '2026-09-28 08:00', '2026-10-08 17:00');
+    const todo = (code, days) => ({ code, duration_days: days === undefined ? 1 : days,
+        clndr_id: 'MF' });
+    const started = (code, as, rem) => ({ code, duration_days: rem, remaining_duration: rem,
+        actual_start: as, early_start: as.slice(0, 10), clndr_id: 'MF' });
+    const rel = (a, b, t, lag) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: lag || 0 });
+    const run = (acts, rels, dd, mode) => E.computeCPM(acts, rels, {
+        dataDate: dd === undefined ? FA_DD_MON : dd, calMap: faCal,
+        scheduleMode: mode || 'retained_logic', relationshipLagCalendar: 'predecessor' });
+    const startOf = (res, c) => {
+        const n = res.nodes[c];
+        return (n.restart_date && !n.is_complete) ? n.restart_date : n.es_date;
+    };
+    let r;
+
+    // FA-1 — F01 / F02: FS+0 off a future actual finish starts at the data
+    // date, FS+2d two working days after it (v2.9.46: Fri 10-09, Tue 10-13).
+    const f01 = startOf(run([cf(), todo('S')], [rel('C', 'S')]), 'S');
+    const f02 = startOf(run([cf(), todo('S')], [rel('C', 'S', 'FS', 2)]), 'S');
+    check('FA-1: F01 / F02 - FS+0 off a future actual finish starts at the data date, FS+2d two working days after it',
+        f01 === '2026-10-05' && f02 === '2026-10-07', f01 + ' / ' + f02);
+
+    // FA-2 — F16, the real-file shape: beside an unfinished predecessor N the
+    // completed one drives nothing, and N is the recorded driver
+    // (v2.9.46: Fri 10-09 off C).
+    r = run([cf(), todo('N', 2), todo('S')], [rel('C', 'S'), rel('N', 'S')]);
+    check('FA-2: F16 - S starts Wed 10-07 off its unfinished predecessor, which is recorded as the driver',
+        startOf(r, 'S') === '2026-10-07' && !!r.nodes.S.driving_predecessor &&
+        r.nodes.S.driving_predecessor.code === 'N',
+        startOf(r, 'S') + ' ' + JSON.stringify(r.nodes.S.driving_predecessor));
+
+    // FA-3 — every link type, a lead, and the per-date cap: F07 SS+3d off an
+    // actual start after the data date (v2.9.46 Mon 10-12), F10 FF+2d
+    // (Mon 10-12), F11 SF+2d (Thu 10-08), F12 FS-2d (Thu 10-08), and F08 SS+3d
+    // off an actual start BEFORE the data date, which still counts.
+    const f07 = startOf(run([done('C', '2026-10-07 08:00', '2026-10-09 17:00'), todo('S')],
+        [rel('C', 'S', 'SS', 3)]), 'S');
+    const f08 = startOf(run([done('C', '2026-10-02 08:00', '2026-10-08 17:00'), todo('S')],
+        [rel('C', 'S', 'SS', 3)]), 'S');
+    const f10 = startOf(run([cf(), todo('S')], [rel('C', 'S', 'FF', 2)]), 'S');
+    const f11 = startOf(run([done('C', '2026-10-07 08:00', '2026-10-08 17:00'), todo('S')],
+        [rel('C', 'S', 'SF', 2)]), 'S');
+    const f12 = startOf(run([done('C', '2026-09-28 08:00', '2026-10-09 17:00'), todo('S')],
+        [rel('C', 'S', 'FS', -2)]), 'S');
+    check('FA-3: F07 / F08 / F10 / F11 / F12 - SS, FF and SF lags and a lead off future actual dates; an actual start before the data date still counts',
+        f07 === '2026-10-08' && f08 === '2026-10-07' && f10 === '2026-10-06' &&
+        f11 === '2026-10-06' && f12 === '2026-10-05',
+        [f07, f08, f10, f11, f12].join(' / '));
+
+    // FA-4 — STARTED successors restart on the same drive: F15 FS+2d off a
+    // future actual finish, L2 FS+3d and L5 FF+3d off finishes whose lag is
+    // still running at the Friday data date (v2.9.46 held all three at the
+    // data date: D2 is true only for zero or fully elapsed lags).
+    const f15 = startOf(run([cf(), started('S', '2026-09-28 08:00', 2)], [rel('C', 'S', 'FS', 2)]), 'S');
+    const l2 = startOf(run([done('C', '2026-08-17 08:00', '2026-08-26 17:00'),
+        started('S', '2026-08-17 08:00', 2)], [rel('C', 'S', 'FS', 3)], FA_DD_FRI), 'S');
+    const l5 = startOf(run([done('C', '2026-08-17 08:00', '2026-08-26 17:00'),
+        started('S', '2026-08-17 08:00', 1)], [rel('C', 'S', 'FF', 3)], FA_DD_FRI), 'S');
+    check('FA-4: F15 / L2 / L5 - the unexpired lag restarts started work too',
+        f15 === '2026-10-07' && l2 === '2026-09-01' && l5 === '2026-08-31',
+        [f15, l2, l5].join(' / '));
+
+    // FA-5 — a carried date: U (3 d, Tue 09-01 17:00) carries through C.
+    // U1 FS+2d and U6 FF+3d lay the unexpired lag ON the carried date
+    // (v2.9.46: Wed 09-02, Tue 09-01); a lead (U2) and a lag that ran out
+    // before the data date (the v2.9.46 pass-through measurement, FS+25d off
+    // a July finish) leave the carried date alone.
+    const chain = (c, t, lag) => run([todo('U', 3), c, todo('S')],
+        [rel('U', 'C'), rel('C', 'S', t, lag)], FA_DD_FRI);
+    const cAug = () => done('C', '2026-08-17 08:00', '2026-08-26 17:00');
+    const u1 = startOf(chain(cAug(), 'FS', 2), 'S');
+    const u6 = startOf(chain(cAug(), 'FF', 3), 'S');
+    const u2 = startOf(chain(cAug(), 'FS', -1), 'S');
+    const uPt = startOf(chain(done('C', '2026-06-01 08:00', '2026-07-02 17:00'), 'FS', 25), 'S');
+    check('FA-5: U1 / U6 - the unexpired lag rides on a carried date; a lead and a fully elapsed lag hand the carried date on unchanged',
+        u1 === '2026-09-03' && u6 === '2026-09-03' && u2 === '2026-09-02' && uPt === '2026-09-02',
+        [u1, u6, u2, uPt].join(' / '));
+
+    // FA-6 — backward: the U1 chain beside a 10-day X that sets the finish.
+    // C hands S's late start back LESS the unexpired day, so U has exactly
+    // S's float (v2.9.46: 6 and 6, with S a day early).
+    r = run([todo('U', 3), cAug(), todo('S'), todo('X', 10)],
+        [rel('U', 'C'), rel('C', 'S', 'FS', 2)], FA_DD_FRI);
+    check('FA-6: the backward pass mirrors the unexpired lag - U and S both 5 working days of float',
+        r.projectFinish === '2026-09-11' && r.nodes.S.tf_working_days === 5 &&
+        r.nodes.U.tf_working_days === 5,
+        r.projectFinish + ' ' + r.nodes.S.tf_working_days + '/' + r.nodes.U.tf_working_days);
+
+    // FA-7 — progress override: the same cap (F02, v2.9.46 Tue 10-13), no
+    // carried date (F14, v2.9.46 Fri 10-09) and a started successor's restart
+    // left at the data date (F15, unchanged).
+    const po1 = startOf(run([cf(), todo('S')], [rel('C', 'S', 'FS', 2)],
+        FA_DD_MON, 'progress_override'), 'S');
+    const po2 = startOf(run([todo('U'), cf(), todo('S')], [rel('U', 'C'), rel('C', 'S')],
+        FA_DD_MON, 'progress_override'), 'S');
+    const po3 = startOf(run([cf(), started('S', '2026-09-28 08:00', 2)], [rel('C', 'S', 'FS', 2)],
+        FA_DD_MON, 'progress_override'), 'S');
+    check('FA-7: progress override caps the drive too, carries nothing and leaves a started restart at the data date',
+        po1 === '2026-10-07' && po2 === '2026-10-05' && po3 === '2026-10-05',
+        [po1, po2, po3].join(' / '));
+
+    // FA-8 — the disclosure: one WARN naming every completed activity with an
+    // actual date after the data date (P6's schedule log lists the same
+    // rows); none when every actual is at or before it; and without a data
+    // date the actual dates drive as before (actual finish + 2: Tue 10-13).
+    r = run([done('C1', '2026-09-28 08:00', '2026-10-08 17:00'),
+             done('C2', '2026-10-07 08:00', '2026-10-08 17:00'),
+             done('C3', '2026-09-21 08:00', '2026-10-02 17:00'), todo('S')],
+            [rel('C1', 'S'), rel('C2', 'S'), rel('C3', 'S')]);
+    const faW = r.alerts.filter((a) => a.context === 'actual-after-data-date');
+    const faNone = run([done('C', '2026-09-21 08:00', '2026-10-02 17:00'), todo('S')],
+        [rel('C', 'S', 'FS', 3)]);
+    const faNoDd = run([cf(), todo('S')], [rel('C', 'S', 'FS', 2)], '');
+    check('FA-8: one WARN names every completed activity with an actual date after the data date; none when there is none; no data date keeps the old path',
+        faW.length === 1 && faW[0].severity === 'WARN' &&
+        faW[0].message.indexOf('C1 (actual finish 2026-10-08)') >= 0 &&
+        faW[0].message.indexOf('C2 (actual start 2026-10-07, actual finish 2026-10-08)') >= 0 &&
+        faW[0].message.indexOf('C3') < 0 &&
+        !faNone.alerts.some((a) => a.context === 'actual-after-data-date') &&
+        startOf(faNoDd, 'S') === '2026-10-13',
+        JSON.stringify(faW.map((a) => a.message.slice(0, 160))) + ' / ' + startOf(faNoDd, 'S'));
 }
 
 console.log('\n========================================');

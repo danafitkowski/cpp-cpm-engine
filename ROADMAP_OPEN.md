@@ -88,6 +88,16 @@ No audit item changed status. v2.9.45 is an engine-math release (finish-constrai
 
 No audit item changed status. v2.9.46 is an engine-math release (retained-logic pass-through, SS_U, PO_SNAP; see CHANGELOG.md): the cross-validation surface grew from 46 to 53 fixtures (7 new ones exercising the three changes directly) and from 1,009 of 1,015 to 1,167 of 1,183 comparisons, still 0 failures; the unit suite grew from 1,306 to 1,307 (RL-5/RL-6/RL-7 re-pinned to the SS_U-correct values rather than added as new tests); coverage was re-measured on the new bytes (93.81% statements / 82.63% branches / 94.96% functions); the 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture and reads 13 / 13 with zero changed rows. Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
 
+## Status at v2.9.47 (reviewed 2026-09-23)
+
+No audit item changed status. v2.9.47 is an engine-math release (the unexpired lag off started and completed work, "lag from Actual Start", no lag from started work into completed work; see CHANGELOG.md).
+- The cross-validation surface grew from 53 to 82 fixtures (29 new ones exercising the changes directly) and from 1,167 of 1,183 to 1,957 of 2,011 comparisons, still 0 failures.
+- The unit suite grew from 1,307 to 1,315.
+- Coverage was re-measured on the new bytes: 93.95% statements / 83.08% branches / 95.20% functions.
+- The 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture. It reads 13 / 13 with zero changed rows.
+
+Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action. The new rules were measured in P6 itself, on probe projects scheduled and read back from its database. Those probes are not a held-out capture of the comparison matrix.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.46. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.47. Update on every release that closes or opens an audit item.

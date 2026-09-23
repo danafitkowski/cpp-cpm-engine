@@ -1,34 +1,34 @@
 {
-  "engine_version": "2.9.46",
-  "generated_utc": "2026-09-22T04:00:18.886Z",
+  "engine_version": "2.9.47",
+  "generated_utc": "2026-09-23T20:54:09.350Z",
   "fixtures": {
-    "total": 53,
-    "passed": 53,
+    "total": 82,
+    "passed": 82,
     "failed": 0
   },
   "checks": {
-    "executed": 1167,
+    "executed": 1957,
     "failed": 0,
-    "passed": 1167,
-    "skipped": 16,
-    "surface": 1183
+    "passed": 1957,
+    "skipped": 54,
+    "surface": 2011
   },
   "skips_by_field": {
-    "ff_signed": 8,
-    "ff_signed_working_days": 8
+    "ff_signed": 27,
+    "ff_signed_working_days": 27
   },
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 16
+    "mutual": 54
   },
   "checks_by_field": {
-    "project_finish_num": 51,
-    "project_finish": 51,
-    "critical_codes": 51,
-    "topo_order": 51,
-    "alert_count": 51,
-    "alert_severity_counts": 51,
-    "node <id>": 859,
+    "project_finish_num": 80,
+    "project_finish": 80,
+    "critical_codes": 80,
+    "topo_order": 80,
+    "alert_count": 78,
+    "alert_severity_counts": 78,
+    "node <id>": 1479,
     "threw (both engines)": 2
   },
   "rows": [
@@ -433,7 +433,7 @@
     },
     {
       "id": "F53",
-      "name": "F53 — pass-through is carried without the lag into C; the lag out of C still applies",
+      "name": "F53 — pass-through carries the lag into C; the lag out of C adds its unexpired part",
       "checks": 25,
       "fails": 0,
       "skips": 2,
@@ -473,6 +473,286 @@
       "id": "F57",
       "name": "F57 — PO_SNAP: progress_override restart snaps off a weekend data date",
       "checks": 13,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F58",
+      "name": "F58 — SSL: SS off a started predecessor whose restart is held past the data date",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F59",
+      "name": "F59 — SSL: a used-up lag lays nothing; X starts on the held restart",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F60",
+      "name": "F60 — SSL: SF off a started predecessor whose restart is held",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F61",
+      "name": "F61 — SSL: an SS link off started work lays no lag into a completed activity",
+      "checks": 32,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F62",
+      "name": "F62 — SSL: a future actual start uses up none of the lag",
+      "checks": 20,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F63",
+      "name": "F63 — SSL: six-day predecessor, Mon-Fri successor, predecessor lag calendar",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F64",
+      "name": "F64 — SSL: a started successor restarts at the held restart + unused lag",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F65",
+      "name": "F65 — FA: FS+0 off an actual finish recorded weeks after the data date, beside an unfinished predecessor",
+      "checks": 30,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F66",
+      "name": "F66 — FA: FS+2 off an actual finish after the data date is laid from the data date",
+      "checks": 18,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F67",
+      "name": "F67 — FA: SS+3 off an actual start after the data date",
+      "checks": 16,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F68",
+      "name": "F68 — FA: FF+2 off an actual finish after the data date",
+      "checks": 18,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F69",
+      "name": "F69 — FA: the unexpired lag rides on a carried date",
+      "checks": 25,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F70",
+      "name": "F70 — FA: the backward pass takes the unexpired lag off the carried bound",
+      "checks": 32,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F71",
+      "name": "F71 — FA: a started successor restarts at the data date plus the unexpired lag",
+      "checks": 18,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F72",
+      "name": "F72 — FA: progress override lays the lag from the data date too",
+      "checks": 18,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F73",
+      "name": "F73 — FA: without a data date the actual dates still drive",
+      "checks": 18,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F74",
+      "name": "F74 — FA: six-day predecessor, Mon-Fri successor, predecessor lag calendar",
+      "checks": 18,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F75",
+      "name": "F75 — FA: a completed-to-completed link carries its unexpired lag",
+      "checks": 23,
+      "fails": 0,
+      "skips": 4,
+      "skips_by_field": {
+        "ff_signed": 2,
+        "ff_signed_working_days": 2
+      }
+    },
+    {
+      "id": "F76",
+      "name": "F76 — SSL measured: SS under lag from Actual Start is laid from the data date",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F77",
+      "name": "F77 — SSL measured: under Actual Start the successor can start before the restart",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F78",
+      "name": "F78 — SSL measured: a used-up lag under Actual Start starts on the data date (flag N)",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F79",
+      "name": "F79 — SSL measured: Actual Start, six-day predecessor, Mon-Fri successor",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F80",
+      "name": "F80 — SSL measured: under Actual Start a started successor restarts at the data date + unused lag",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F81",
+      "name": "F81 — SSL measured: SF ignores lag from Actual Start",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F82",
+      "name": "F82 — SSL measured: no lag from started work into a completed activity; float through it",
+      "checks": 39,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F83",
+      "name": "F83 — SSL measured: into a completed activity under Actual Start the data date is carried",
+      "checks": 39,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F84",
+      "name": "F84 — SSL measured: SF into a completed activity carries the restart under Actual Start",
+      "checks": 32,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F85",
+      "name": "F85 — SSL measured: other links into completed work keep their lag",
+      "checks": 70,
+      "fails": 0,
+      "skips": 6,
+      "skips_by_field": {
+        "ff_signed": 3,
+        "ff_signed_working_days": 3
+      }
+    },
+    {
+      "id": "F86",
+      "name": "F86 — SSL measured: an unknown lag-from option alerts and keeps Early Start",
+      "checks": 27,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
