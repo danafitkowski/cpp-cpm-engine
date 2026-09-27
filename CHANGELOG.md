@@ -31,8 +31,12 @@ the following can move:
   through a lag not yet run out at the data date;
 - the free float of an activity whose successor is completed.
 
-**Change class: to be decided by Dana under PROCEDURE.md §12.1.** What moves,
-and by how much, is measured below under "Who is affected".
+**Change class under PROCEDURE.md §12.1:** Class A (computational), decided
+by Dana 27-Sep-2026: late dates and total float move on schedules with a Must
+Finish By; early dates move where work was suspended and resumed after the
+data date; free float moves where a successor is complete. §12.2 re-check:
+none requested at release. What moves, and by how much, is measured below
+under "Who is affected".
 
 **How it was measured.** P6 Professional 23.12.1 (standalone) scheduled the
 website demo update (405 activities; 404 scheduled, 291 open and 113
