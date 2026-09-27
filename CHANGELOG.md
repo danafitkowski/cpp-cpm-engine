@@ -169,6 +169,13 @@ cuts its own copy to the date, because it regenerates a fixed corpus.
   the next working opening, where P6 drives from the close of the previous
   working day. The two coincide unless the successor's calendar works in
   between; no measured row is affected.
+- Without a Must Finish By, an open end whose late finish a constraint
+  pulls in still reports its total float as its free float. P6 measures an
+  open end's free float to the project's early finish whatever its
+  constraints (45 open ends under Finish On or Before and 18 under a
+  mandatory finish, in P6-scheduled exports on the measuring machine), and
+  the engine does so when a Must Finish By is passed. The case without one
+  is a pre-existing difference, not changed in this release.
 - Display: a finish milestone's `es_date` prints the opening after P6's
   17:00, and a zero-duration task's `ef_last_worked_date` the working day
   before P6's 08:00; the instant is the same. At the corrected data date
@@ -190,9 +197,12 @@ Client files are not named here.
   move 44 early dates and not the finish), 23 rows of one real export whose
   suspended activity now waits for its resume date (finish unchanged), and
   2 rows of a P6 probe.
-- Late dates and total float move in 68 of the 78 files that carry a Must
-  Finish By (the other 10 set it at their early finish): 25,665 late
-  finishes and 25,845 total floats in all.
+- Late dates and total float move in 64 of the 78 files that carry a Must
+  Finish By: 25,665 late finishes and 25,845 total floats in all. In 4 more
+  only free float moves, 3 of them copies of one contract schedule with no
+  relationships, whose 1,090 activities are open ends pinned by mandatory
+  constraints: the free float of 1,089 of them now runs to the early
+  finish, as P6 measures it (above). Nothing moves in the other 10.
 - Free float alone moves on 1 to 3 activities in 24 further files, through
   rule 4.
 - On the 101 exports P6 scheduled at their own data date, every agreement
