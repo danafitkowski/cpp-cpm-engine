@@ -56,6 +56,8 @@ One consequence of the walk not being its own inverse across two calendars is th
 
 **Progressed predecessors (retained logic).** P6 lays only the part of a lag that has not already run out. Off a STARTED predecessor, an SS or SF link is laid from the restart plus the lag less the working time, on the lag calendar, from the actual start to the data date. None of the lag has run for a future actual start, and a lead lays nothing. Under P6's "Calculate start-to-start lag from: Actual Start" (SCHEDOPTIONS `sched_lag_early_start_flag = N`), an SS link is laid from the data date instead of the restart; pass `opts.ssLagFrom = 'actual_start'` (or the raw flag `'N'`). SF links and the backward pass ignore the option. Any other value raises an `unknown-ss-lag-from` ALERT and keeps Early Start, P6's default, and the manifest reports the value the run used (`ss_lag_from`). A link OUT of a COMPLETED predecessor drives from its stamp plus the lag that has not run out since its actual date. The stamp is the data date, or the later date the activity carries from unfinished work. So an actual date recorded after the data date drives nothing, and one `actual-after-data-date` WARN names each such activity. An SS or SF link off started work INTO a completed activity lays no lag at all: the completed activity carries the anchor itself. Each rule was measured in P6 Professional 23.12 on probe projects scheduled one at a time and read back from its database. A SUSPENDED predecessor is not modelled: P6 counts only the time worked before the suspension and restarts at the resume date.
 
+**Completed work and the resume date (v2.9.49).** A completed predecessor hands a COMPLETED successor its stamp with no lag; a lag out of completed work into unfinished work keeps the rule above. No work on a suspended activity is scheduled before its resume date: a completed activity resumed after the data date is stamped there and drives its successors from it, and a started one restarts there. A resume date with no suspend date (an MS Project conversion) is disclosed and not applied. Both were measured on P6's own F9 of the website demo update (retained logic; under progress override the resume date is disclosed, not applied).
+
 **P6 EF convention.** `EF = ES + duration` is **exclusive** — i.e., EF is the start of the day after the last work day. A 5-day task on a Mon-Fri calendar starting Mon 2026-01-05 has EF = next Mon 2026-01-12, not Fri 2026-01-09. Verified against P6 native output and Python `compute_cpm` reference.
 
 ---
@@ -67,9 +69,11 @@ P6-aligned semantics (alignment wave 2026-08-11, validated against the pinned
 Primavera P6 23.12 capture, comparison cases 02/04/06):
 
 ```text
-seedLF(n) = the project-finish instant expressed on n's OWN calendar:
-            the boundary after the last workable day <= the project's
-            last worked day. Single-calendar networks: seedLF == maxEF.
+seedLF(n) = the Must Finish By (opts.projectFinish) when one is passed,
+            otherwise the project-finish instant, expressed on n's OWN
+            calendar: the boundary after the last workable day <= that
+            deadline / the project's last worked day. Single-calendar
+            networks with no Must Finish By: seedLF == maxEF.
             (P6: sched_use_project_end_date_for_float = Y.)
 
 LF = min( seedLF(n),
@@ -122,7 +126,7 @@ For each activity, FF = min over successors S of:
 FF (working days) = countWorkDays(EF, EF + FF, calendar)
 ```
 
-Free Float is the slack that doesn't delay any successor's earliest start. For terminals (activities with no successors), FF = TF.
+Free Float is the slack that doesn't delay any successor's earliest start. For terminals (activities with no successors), FF runs to the project's EARLY finish, so FF = TF unless a Must Finish By seeds the late dates. Under retained logic with a data date, a COMPLETED successor is measured at its stamp: the data date, the date it carries from unfinished work, or its resume date (v2.9.49).
 
 The engine emits `tf` (calendar days), `tf_working_days`, `ff` (calendar days), `ff_working_days` on every node.
 

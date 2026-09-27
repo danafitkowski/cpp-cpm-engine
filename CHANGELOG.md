@@ -12,6 +12,200 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.49 — 2026-09-27 — the Must Finish By, the resume date and completed work, measured on P6's own F9
+
+**Engine math changed.** Primavera P6 Professional 23.12.1 scheduled the
+website demo update with F9 at three data dates, and the engine now
+reproduces every one of its 291 open activities on early and late dates and
+on total and free float at all three. Four rules moved to get there, and
+`parseXER` now hands on what they read. Once a caller passes the new inputs,
+the following can move:
+- every late date and total float of a schedule whose Must Finish By
+  (`PROJECT.plan_end_date`, `opts.projectFinish`) differs from its early
+  finish;
+- the reported project finish of a caller that already passed
+  `opts.projectFinish`: it is now the early finish;
+- under retained logic, anything downstream of a suspended activity whose
+  resume date is after the data date (`suspend_date`, `resume_date`);
+- any successor of a completed activity that a completed predecessor drives
+  through a lag not yet run out at the data date;
+- the free float of an activity whose successor is completed.
+
+**Change class: to be decided by Dana under PROCEDURE.md §12.1.** What moves,
+and by how much, is measured below under "Who is affected".
+
+**How it was measured.** P6 Professional 23.12.1 (standalone) scheduled the
+website demo update (405 activities; 404 scheduled, 291 open and 113
+completed) with F9 on 27-Sep-2026, one project open, and exported it three
+times: at its filed data date, 01-Jul-2025 17:00, and at 16-Sep-2025 17:00
+and 16-Sep-2025 08:00. Engine against P6 on every open activity, each P6
+instant read as the working day it opens on (the p6-oracle convention):
+
+| Data date | v2.9.48 matching P6 (ES / EF / LS / LF / TF / FF) | v2.9.49 |
+|---|---|---|
+| 16-Sep-2025 08:00 | 291 / 291 / 0 / 0 / 0 / 290 | 291 on every field |
+| 16-Sep-2025 17:00 | 291 / 291 / 0 / 0 / 0 / 290 | 291 on every field |
+| 01-Jul-2025 17:00 | 67 / 67 / 0 / 0 / 0 / 217 | 291 on every field |
+
+The three are committed as `validation/p6-comparison/cases/16-18` and
+scored by `npm run test:p6-comparison`. They are fitted, not held out: the
+rules below were derived from these exports.
+
+**1. The Must Finish By.** P6 seeds every late date from the project's Must
+Finish By when one is set, on each activity's own calendar, instead of from
+the project's early finish. The demo's is 30-Sep-2026 17:00 against a P6
+finish of 3 to 13 Nov 2026: every open end's late finish sits on it, and
+the critical path carries -23 to -31 working days of total float. Seeded at
+its early finish, the engine matched none of the 291 late dates or total
+floats at any of the three data dates; seeded here it matches all of them.
+The two real P6 exports on the measuring machine whose Must Finish By
+differs from their early finish seed at it too.
+- `opts.projectFinish` (aliases `project_finish`, `mustFinishBy`; Python
+  `compute_cpm(project_finish=...)`) takes it, time included. Its time of
+  day is resolved on the shift close exactly as a finish constraint's is
+  (v2.9.45): at or after the close counts that day. A date on a day the
+  activity does not work falls back to the close of its last working day
+  before it.
+- The reported project finish stays the EARLY finish. v2.9.18 through
+  v2.9.48 reported the deadline itself, and seeded every activity from its
+  bare date.
+- Free float of an activity with no successor still runs to the early
+  finish: all 78 open ends of the three P6 files show it.
+- An applied value raises `project-deadline-applied` (ALERT when it is
+  earlier than the early finish, WARN otherwise); an unparseable one raises
+  `project-deadline-invalid` (WARN) and is ignored.
+- `parseXER` returns `plan_end_date` and `project_finish`, the value to
+  pass: the date when SCHEDOPTIONS `sched_use_project_end_date_for_float` is
+  `Y` or absent (P6's default, the setting measured), `''` under `N`
+  ("opened projects"), whose P6 handling is unmeasured. The CPP converters
+  follow the same rule.
+
+**2. The resume date.** Under retained logic P6 schedules no work on a
+suspended activity before its resume date. At the demo's filed data date 65
+completed activities carry a resume date after the data date, and P6 stamps
+none of them at the data date: 62 on the resume date, 3 later, where
+unfinished work carries them further. They drive their successors from
+there: A1100.2, finished and resumed 04-Sep-2025 17:00, holds its FS
+successor to 05-Sep and its FS + 80 h successor to 19-Sep, where the engine,
+reading no resume date, restarted both at the data date and finished the
+project on 27-Aug-2026 against P6's 03-Nov-2026. A started activity is held
+the same way: a probe suspended 28-Sep and resumed 12-Oct-2026, at data date
+05-Oct, restarts on 12-Oct in P6.
+- The activity fields are `suspend_date` and `resume_date`, time included;
+  `parseXER` and the CPP converters hand both on.
+- A resume date is applied only beside a suspend date. Every P6-scheduled
+  row it was measured on carries both, as P6 enters them. A resume date
+  with no suspend date is the shape MS Project conversions carry (restart =
+  resume, and never scheduled in P6 in any file found), so its P6 handling
+  is unmeasured: it is not applied, and one `resume-date-without-suspend`
+  WARN names every such row. On one job's 18 converted monthly updates on
+  the measuring machine, applying it would have moved the finish by up to
+  142 calendar days on that unmeasured shape.
+- One `resume-date-holds` INFO names every activity a resume date holds.
+- Under progress override P6's handling is unmeasured: the date is not
+  applied, and a `resume-date-not-applied` WARN names each one.
+- An actual date after the data date on a row with no resume date still
+  drives nothing (v2.9.47): the demo's A2530, finished 12-Sep 12:00, hands
+  its successor the carried 05-Sep.
+
+**3. Completed to completed.** A completed predecessor hands a completed
+successor its stamp with NO lag. v2.9.47 laid the unexpired lag on that link
+too, inferred from links into unfinished work. P6's own dates say otherwise
+on every discriminating link found: the demo's A1020 -> A1370x (FS + 60 d,
+40 d unexpired: A1370x is stamped on its resume date, 09-Jul, not on the
+lag), two SS links in another real P6 project (SS + 66 d and SS + 44 d, both
+successors stamped at the data date) and eleven FF links in a third job's P6
+exports. A lag out of completed work into unfinished work keeps the v2.9.47
+rule. Crossval F75 moves to the measured value and is re-described.
+
+**4. Free float into completed work.** Under retained logic with a data
+date, free float to a completed successor runs to that successor's stamp:
+the data date, the date it carries from unfinished work, or its resume date.
+v2.9.48 skipped a completed successor that carried no date and measured to
+the project finish instead. The demo's A2220 feeds the completed A2290: P6
+gives it 10 working days at the filed date and 0 at the corrected one;
+v2.9.48 gave 43.
+
+**5. `parseXER` keeps P6's actual dates** (engine commit `0e1943e`, approved
+by Dana). `getTasks()` hands on `act_start_date` / `act_end_date` as P6 wrote
+them, time included, where it cut them to `YYYY-MM-DD`. `computeCPM` reads a
+bare date as the opening of that day, one working day before a finish at its
+close, so a caller building input from `getTasks()` started a lagged
+successor of completed work a working day early (P6 probe XFA1 case F04:
+Wednesday against P6's Thursday). No shipped caller did that (`runCPM` never
+reads the actual finish, and the try page passes no actual dates), so
+nothing published moves. `validation/xer-corpus/generate-corpus.js` still
+cuts its own copy to the date, because it regenerates a fixed corpus.
+
+**Verified.**
+- The three P6 exports: 291 of 291 open activities on ES, EF, LS, LF, TF
+  and FF at each data date, and all 113 completed rows' actual dates pass
+  through (`tests/p6-demo-capture.test.js`).
+- JS unit suite: 1,345 checks green, up from 1,325: PX-1/PX-2 (the timed
+  actual dates), MFB-1..MFB-7, RES-1..RES-6, CC-1..CC-3, and PX-3/PX-4 (the
+  Must Finish By and the suspend and resume dates through `parseXER`).
+  FIX 1.1 / 1.2 expect the timed dates.
+- Cross-validation: 99 fixtures, 2465 of 2539 executed, 74 skipped (37
+  `ff_signed`, 37 `ff_signed_working_days`, all mutual on completed
+  activities), 0 failures. The 17 new fixtures (F87-F103) exercise every
+  rule above. Alert parity is not compared on F96, F99, F101 and F102, which
+  carry the JS-only future-actual-finish ALERT, as F65 and F67 already did.
+- The 13-case P6 comparison matrix, re-run on these bytes against the same
+  capture: 13 / 13 over 27 field checks, zero changed rows.
+- Coverage re-measured on these bytes: 94.30% statements (10,675 / 11,320),
+  83.43% branches (2,332 / 2,795), 95.30% functions (142 / 149).
+
+**Not measured, not claimed.**
+- A Must Finish By under "opened projects" (flag `N`), a resume date under
+  progress override, and a resume date with no suspend date: disclosed, not
+  applied.
+- The lag off a SUSPENDED predecessor: P6 counts only the working time
+  before the suspension (the probe's SS + 15 d successor starts 26-Oct in P6
+  and 19-Oct in the engine).
+- A Must Finish By inside the working day: the day-granular engine resolves
+  it to the day, so on the one real export found with one the engine reads
+  a working day of negative float where P6 reads an hour.
+- An SS link off a zero-duration activity drives from its start boundary,
+  the next working opening, where P6 drives from the close of the previous
+  working day. The two coincide unless the successor's calendar works in
+  between; no measured row is affected.
+- Display: a finish milestone's `es_date` prints the opening after P6's
+  17:00, and a zero-duration task's `ef_last_worked_date` the working day
+  before P6's 08:00; the instant is the same. At the corrected data date
+  that is 4 finish milestones and 5 zero-duration tasks of the demo.
+- The Python engine counts working days one day at a time, so with a Must
+  Finish By far from the early finish every float is long to count: a
+  5,000-activity synthetic whose Must Finish By sits 16 years before its
+  finish runs in 155 s where v2.9.48 took 0.6 s. The largest increase on a
+  real export on the measuring machine is 3 s.
+
+**Who is affected.** Measured by running v2.9.48 and v2.9.49 through the CPP
+converter (`tia_builder._xer_to_canonical`) on every unique XER on the
+measuring machine: 371 files, 191,281 activities, 160,828 of them open.
+Client files are not named here.
+- 94 files move on at least one value. Early dates or the finish move in
+  13: the demo's own data in eleven copies (in each copy of the update
+  224 early dates move and the finish moves 48 to 68 calendar days later,
+  to P6's date wherever P6 scheduled the copy; the copies of the baseline
+  move 44 early dates and not the finish), 23 rows of one real export whose
+  suspended activity now waits for its resume date (finish unchanged), and
+  2 rows of a P6 probe.
+- Late dates and total float move in 68 of the 78 files that carry a Must
+  Finish By (the other 10 set it at their early finish): 25,665 late
+  finishes and 25,845 total floats in all.
+- Free float alone moves on 1 to 3 activities in 24 further files, through
+  rule 4.
+- On the 101 exports P6 scheduled at their own data date, every agreement
+  with P6's stored dates rises or holds except in one copy of the demo whose
+  stored dates do not come from scheduling the network it now holds (23 of
+  its 291 early starts match either engine): early starts 67 -> 291
+  and late finishes 0 -> 291 on the demo, and free float moves toward P6's
+  value on 605 activities and away on 22 (12 in that copy, 10 where P6
+  stored 0 against its own dates).
+- Where agreement with stored float falls, the files are generated test
+  fixtures that record no P6 schedule run, or exports P6 last scheduled
+  before their own data date.
+
 ## v2.9.48 — 2026-09-27 — a completed activity's last worked day, and the disclosure's validation figures
 
 **Engine math is unchanged.** Every `es`, `ef`, `ls`, `lf`, float,

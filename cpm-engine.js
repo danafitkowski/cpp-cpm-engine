@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.48';
+const ENGINE_VERSION = '2.9.49';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2100,6 +2100,14 @@ function computeCPM(activities, relationships, opts) {
             // at its own calendar's next working start (everything else).
             ef_instant: efInstant,
             task_type: _tt,
+            // RES (v2.9.49) — P6's resume date as an instant (17:00 is the
+            // close of its day). Read only under retained logic, and only
+            // when it is after the data date; see _resumeFloorOf.
+            resume_date: String(a.resume_date || '').trim(),
+            resume_instant: a.resume_date ? _instantOf(a.resume_date) : 0,
+            // RES — applied only beside a suspend date (P6 enters a resume
+            // date only on a suspended activity); see _resumeFloorOf.
+            suspend_date: String(a.suspend_date || '').trim(),
             // v2.9.12 T1.6 — thread `alerts` + activity code so unrecognized
             // tokens / incomplete dates emit a forensically-visible WARN
             // instead of silently dropping. Backward-compat: callers that
@@ -2570,7 +2578,38 @@ function computeCPM(activities, relationships, opts) {
     // nothing is "after" it and the actual dates drive as before. Python
     // paired sites: _stamp_of / _done_drive.
     function _stampOf(pnode) {
-        return Math.max(ddNum, _rlPassthroughOf(pnode));
+        return Math.max(ddNum, _rlPassthroughOf(pnode), pnode.resume_hold || 0);
+    }
+
+    // RES (P6 parity 2026-09-27) — P6 resumes no work before an activity's
+    // RESUME date. Measured on P6's own F9 of the website demo update at its
+    // filed data date (01-Jul-2025 17:00): 65 completed rows carry a resume
+    // date after the data date and P6 stamps none of them at the data date:
+    // 62 on the resume date, 3 later where unfinished work carries them
+    // further, so they drive their successors from it (A1100.2, finished
+    // and resumed 04-Sep-2025 17:00, holds A1680 to 05-Sep and its FS + 80 h
+    // successor A1130 to 19-Sep; the engine read no resume date, restarted
+    // both at the data date and finished the project on 27-Aug-2026 against
+    // P6's 03-Nov-2026). A started activity is held the same way: the SSL1-3
+    // probe's S13-P (suspended 28-Sep, resumed 12-Oct-2026, data date 05-Oct)
+    // restarts on 12-Oct in P6. An actual date after the data date on a row
+    // with NO resume date still drives nothing (FA): the demo's A2530,
+    // finished 12-Sep 12:00, hands its successor the carried 05-Sep. Under
+    // progress override P6's handling is unmeasured, so the date is not
+    // applied and a WARN names every row that carries one. Not modelled: the
+    // elapsed part of an SS / SF lag off a suspended predecessor (P6 counts
+    // only the working time before the suspension; S13-S). Every row it was
+    // measured on also carries a SUSPEND date, as P6 enters them (a resume
+    // date is entered only on a suspended activity); a resume date with no
+    // suspend date comes from MS Project conversions, which P6 never
+    // scheduled in any file found, so it is not applied and one WARN
+    // (resume-date-without-suspend) names every such row. Python paired
+    // site: _resume_floor.
+    function _resumeFloorOf(n) {
+        const r = n.resume_instant || 0;
+        if (_scheduleMode !== 'retained_logic' || ddNum <= 0 || r <= ddNum) return 0;
+        if (!n.suspend_date) return 0;
+        return r;
     }
 
     function _doneActual(pnode, rtype) {
@@ -2582,6 +2621,10 @@ function computeCPM(activities, relationships, opts) {
         const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum);
         return _lagFromInstant(_stampOf(pnode), _rem, lagCal, sink, ctx);
     }
+
+    // RES — the activities a resume date holds (retained logic), and under
+    // progress override the ones it would have held (disclosed, not applied).
+    const _resumeHeld = [];
 
     // Forward pass.
     for (const code of sortRes.order) {
@@ -2595,15 +2638,18 @@ function computeCPM(activities, relationships, opts) {
                     if (!pnode) continue;
                     let _d;
                     if (pnode.is_complete && ddNum > 0) {
-                        // FA — a completed predecessor hands this one its
-                        // stamp plus the unexpired part of the lag, as it
-                        // would a not-started successor. INFERRED for a
-                        // completed-to-completed link: the rule is measured
-                        // into not-started and started successors only. The
-                        // walk is silent: v2.9.46 took no lag walk here, so a
-                        // calendar-less network gains no ALERT from it.
-                        _d = _doneDrive(pnode, p, lagCalFor(pnode, node),
-                            'pass-through ' + pnode.code + '->' + code, []);
+                        // CC (P6 parity 2026-09-27) — a completed predecessor
+                        // hands a COMPLETED successor its stamp with NO lag.
+                        // v2.9.47 laid the unexpired lag here too, INFERRED
+                        // from links into unfinished work; P6's own dates say
+                        // otherwise on every discriminating link found: the
+                        // demo's A1020 -> A1370x (FS + 60 d, 40 d unexpired;
+                        // A1370x is stamped on its resume date, not on the
+                        // lag), two SS links in a fresh P6 database project
+                        // and eleven FF links in P6 exports of another job.
+                        // A lag out of completed work into unfinished work
+                        // keeps the FA rule (_doneDrive).
+                        _d = _stampOf(pnode);
                     } else if (pnode.is_complete) {
                         _d = _rlPassthroughOf(pnode);
                     } else {
@@ -2630,6 +2676,13 @@ function computeCPM(activities, relationships, opts) {
                             'pass-through ' + pnode.code + '->' + code);
                     }
                     if (_d > _pt) { _pt = _d; _ptRel = p; }
+                }
+                // RES — a completed activity resumed after the data date is
+                // stamped no earlier than its resume date (_stampOf).
+                const _rf = _resumeFloorOf(node);
+                if (_rf > Math.max(ddNum, _pt)) {
+                    node.resume_hold = _rf;
+                    _resumeHeld.push(node);
                 }
                 // At or before the data date it can move nothing: every
                 // successor's remaining work is floored there already.
@@ -3112,6 +3165,12 @@ function computeCPM(activities, relationships, opts) {
                 if (_restartMaxDrive > efAnchor) {
                     efAnchor = _restartMaxDrive;
                 }
+                // RES — no remaining work before the resume date.
+                const _rf = _resumeFloorOf(node);
+                if (_rf > efAnchor) {
+                    efAnchor = _rf;
+                    _resumeHeld.push(node);
+                }
                 // D3 (retained-logic P6 semantics wave 2026-09-02) — snap the
                 // restart anchor FORWARD on the ACTIVITY calendar, the same
                 // treatment the not-started data-date floor already gets
@@ -3226,6 +3285,12 @@ function computeCPM(activities, relationships, opts) {
             // (unmeasured; design contract).
             if (_scheduleMode === 'retained_logic') {
                 let _d5Anchor = (ddNum > 0 && ddNum > actStartNum) ? ddNum : actStartNum;
+                // RES — the same resume floor as the remaining-duration path.
+                const _rf5 = _resumeFloorOf(node);
+                if (_rf5 > _d5Anchor) {
+                    _d5Anchor = _rf5;
+                    _resumeHeld.push(node);
+                }
                 if (nodeCal) {
                     const _d5Snapped = _advanceWithAlerts(_d5Anchor, 0, nodeCal, alerts,
                         'restart-snap ' + code);
@@ -3390,45 +3455,131 @@ function computeCPM(activities, relationships, opts) {
     // raised CYCLE).
     const _order = sortRes.order;
     const _orderLen = _order.length;
+
+    // RES — one alert names every activity a resume date holds (retained
+    // logic) or would have held (progress override, not applied).
+    if (_resumeHeld.length > 0) {
+        alerts.push({
+            severity: 'INFO',
+            context: 'resume-date-holds',
+            message: _resumeHeld.length + ' ' +
+                (_resumeHeld.length === 1 ? 'activity is' : 'activities are') +
+                ' held to a resume date later than the data date: ' +
+                _resumeHeld.map((n) => n.code + ' (resume ' + n.resume_date + ')').join('; ') +
+                '. P6 resumes no work before an activity\'s resume date, so a ' +
+                'completed activity is stamped there and a started one ' +
+                'restarts there, and their successors are scheduled from it.',
+        });
+    }
+    if (_scheduleMode === 'progress_override' && ddNum > 0) {
+        const _poRes = [];
+        for (const c in nodes) {
+            const n = nodes[c];
+            if ((n.resume_instant || 0) > ddNum && n.suspend_date &&
+                    (n.is_complete || n.actual_start)) {
+                _poRes.push(n);
+            }
+        }
+        if (_poRes.length > 0) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'resume-date-not-applied',
+                message: _poRes.length + ' ' +
+                    (_poRes.length === 1 ? 'activity carries' : 'activities carry') +
+                    ' a resume date later than the data date: ' +
+                    _poRes.map((n) => n.code + ' (resume ' + n.resume_date + ')').join('; ') +
+                    '. Under retained logic P6 resumes no work before it; its ' +
+                    'handling under progress override is unmeasured, so these ' +
+                    'dates were not applied.',
+            });
+        }
+    }
+    if (ddNum > 0) {
+        const _noSusp = [];
+        for (const c in nodes) {
+            const n = nodes[c];
+            if ((n.resume_instant || 0) > ddNum && !n.suspend_date &&
+                    (n.is_complete || n.actual_start)) {
+                _noSusp.push(n);
+            }
+        }
+        if (_noSusp.length > 0) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'resume-date-without-suspend',
+                message: _noSusp.length + ' ' +
+                    (_noSusp.length === 1 ? 'activity carries' : 'activities carry') +
+                    ' a resume date later than the data date but no suspend date: ' +
+                    _noSusp.map((n) => n.code + ' (resume ' + n.resume_date + ')').join('; ') +
+                    '. P6 enters a resume date only on a suspended activity, and ' +
+                    'its handling of one without a suspend date (an MS Project ' +
+                    'conversion) is unmeasured, so these dates were not applied.',
+            });
+        }
+    }
+
     let maxEF = 0;
     for (let __i = 0; __i < _orderLen; __i++) {
         const ef = nodes[_order[__i]].ef;
         if (ef > maxEF) maxEF = ef;
     }
 
-    // v2.9.18 A3-HIGH — opts.projectFinish overrides the backward-pass seed.
-    // P6 supports a "Must Finish By" project property that seeds the backward
-    // pass at the contract deadline (or any user-imposed completion date),
-    // producing global negative float when the schedule cannot meet it.
-    // Without this option callers can only express "behind schedule" by
-    // attaching FNLT constraints to every end milestone — undisclosed in the
-    // public API. Now: opts.projectFinish (ISO date) overrides maxEF as the
-    // backward-pass seed. Negative TF emerges naturally when the deadline is
-    // earlier than the natural maxEF; positive TF when it's later.
-    const _projectFinishOpt = opts.projectFinish || opts.project_finish || opts.mustFinishBy || '';
+    // MFB (P6 parity 2026-09-27) — the project's Must Finish By
+    // (PROJECT.plan_end_date), passed as opts.projectFinish (aliases
+    // project_finish, mustFinishBy). P6 seeds every late date from it when it
+    // is set, on each activity's own calendar, instead of from the project's
+    // early finish. Measured on P6's own F9 of the website demo update at
+    // three data dates: every open end's late finish is its Must Finish By
+    // (30-Sep-2026 17:00) against an early finish of 3 to 12 Nov 2026, and the
+    // critical path carries -23 to -31 working days of float; seeded at its
+    // early finish the engine matched none of the 291 open rows' late dates or
+    // float, and seeded here it matches all of them. Two genuine P6 exports on
+    // this machine with a discriminating Must Finish By seed at it too. Its
+    // time of day is resolved on the shift close exactly as a finish
+    // constraint's is (v2.9.45), and a date on a day the activity does not
+    // work is the close of its last working day before it. The reported
+    // project finish stays the EARLY finish (v2.9.18 through v2.9.48 reported
+    // the deadline itself, and seeded every activity from its bare date), and
+    // free float of an activity with no successor still runs to the early
+    // finish (all 78 open ends of three P6 files). Python paired site:
+    // _deadline_lf_for.
+    const _projectFinishOpt = String(opts.projectFinish || opts.project_finish ||
+        opts.mustFinishBy || '').trim();
     let _projectDeadlineNum = 0;
     if (_projectFinishOpt) {
         _projectDeadlineNum = dateToNum(_projectFinishOpt);
         if (_projectDeadlineNum > 0) {
-            const _origMaxEF = maxEF;
-            maxEF = _projectDeadlineNum;
-            const _delta = _projectDeadlineNum - _origMaxEF;
+            // Both sides as INSTANTS: Friday 17:00 is the opening of Saturday,
+            // which is also the instant of a Friday early finish (ef_instant),
+            // while the ef boundary reads Monday.
+            const _pfInst = _instantOf(_projectFinishOpt);
+            let _earlyInst = 0;
+            for (let __i = 0; __i < _orderLen; __i++) {
+                const _n = nodes[_order[__i]];
+                const _ei = _n.ef_instant || _n.ef;
+                if (_ei > _earlyInst) _earlyInst = _ei;
+            }
             alerts.push({
-                severity: _delta < 0 ? 'ALERT' : 'WARN',
+                severity: _pfInst < _earlyInst ? 'ALERT' : 'WARN',
                 context: 'project-deadline-applied',
-                message: 'opts.projectFinish=' + _projectFinishOpt +
-                    ' (offset ' + _projectDeadlineNum + ') applied as backward-pass seed; ' +
-                    'natural maxEF=' + numToDate(_origMaxEF) +
-                    (_delta < 0 ? ' (deadline earlier than natural finish — negative float will propagate)'
-                                : ' (deadline later than natural finish — global positive float)') +
+                message: 'project_finish=' + _projectFinishOpt + ' (the Must Finish By) ' +
+                    'seeds the late dates on each activity\'s own calendar; the ' +
+                    'early-finish boundary is ' + numToDate(maxEF) +
+                    (_pfInst < _earlyInst
+                        ? ' (the Must Finish By is earlier: negative float runs through the critical path)'
+                        : (_pfInst > _earlyInst
+                            ? ' (the Must Finish By is later: the critical path carries positive float)'
+                            : '')) +
                     '.',
             });
         } else {
+            _projectDeadlineNum = 0;
             alerts.push({
                 severity: 'WARN',
                 context: 'project-deadline-invalid',
-                message: 'opts.projectFinish=' + JSON.stringify(_projectFinishOpt) +
-                    ' did not parse as YYYY-MM-DD; backward-pass seed defaulted to maxEF.',
+                message: 'project_finish=' + JSON.stringify(_projectFinishOpt) +
+                    ' did not parse as YYYY-MM-DD; the late dates were seeded ' +
+                    'from the early finish.',
             });
         }
     }
@@ -3462,16 +3613,36 @@ function computeCPM(activities, relationships, opts) {
         });
     }
     let _dLast = 0;
-    if (!_projectDeadlineNum) {
-        for (let __i = 0; __i < _orderLen; __i++) {
-            const n = nodes[_order[__i]];
-            const lw = _retreatWithAlerts(n.ef, 1, calFor(n), alerts,
-                'seed last-worked ' + n.code);
-            if (lw > _dLast) _dLast = lw;
+    for (let __i = 0; __i < _orderLen; __i++) {
+        const n = nodes[_order[__i]];
+        const lw = _retreatWithAlerts(n.ef, 1, calFor(n), alerts,
+            'seed last-worked ' + n.code);
+        if (lw > _dLast) _dLast = lw;
+    }
+    // MFB — the Must Finish By as this activity's exclusive late-finish
+    // boundary: the opening of the working day after the last day of its
+    // calendar that closes at or before the instant.
+    function _deadlineLFFor(n) {
+        const cal = calFor(n);
+        if (!cal) return _instantOf(_projectFinishOpt);   // ordinal fallback nodes
+        const rc = _resolveCalendar(cal);
+        if (!rc || !rc.workDays) return _instantOf(_projectFinishOpt);
+        const tod = _constraintTimeMinutes(_projectFinishOpt);
+        if (tod !== null && _isWorkDayOffset(_projectDeadlineNum, rc.workDays,
+                rc.holidaysSet, rc.specialSet)) {
+            const close = _calendarDayClose(_projectDeadlineNum, cal);
+            if (close !== null && tod >= close) {
+                return _advanceWithAlerts(_projectDeadlineNum, 1, cal, alerts,
+                    'seed-LF deadline ' + n.code);
+            }
         }
+        return _snapFwd(_projectDeadlineNum, cal, alerts, 'seed-LF deadline ' + n.code);
     }
     function _seedLFFor(n) {
-        if (_projectDeadlineNum) return maxEF;      // deadline is the instant
+        if (_projectDeadlineNum) return _deadlineLFFor(n);
+        return _naturalSeedLFFor(n);
+    }
+    function _naturalSeedLFFor(n) {
         const cal = calFor(n);
         if (!cal) return maxEF;                     // ordinal fallback nodes
         const rc = _resolveCalendar(cal);
@@ -3508,6 +3679,9 @@ function computeCPM(activities, relationships, opts) {
         const nCal = calFor(n);
         n._seedLF = _seedLFFor(n);
         n.lf = n._seedLF;
+        // MFB — free float that would run to the seed runs to the EARLY
+        // finish instead (the free-float pass below).
+        if (_projectDeadlineNum) n._ff_terminal = _naturalSeedLFFor(n);
         n.ls = _retreatWithAlerts(n.lf, n.duration_days, nCal, alerts,
             'init-LS ' + n.code);
     }
@@ -4049,9 +4223,13 @@ function computeCPM(activities, relationships, opts) {
             // finish sits), so it is preserved in ff_signed rather than
             // destroyed.
             const nCal = (n.clndr_id && calMap) ? calMap[n.clndr_id] : null;
-            n.ff_signed = n.tf;
-            n.ff_signed_working_days = _countWorkDaysBetween(n.ef, n.lf, nCal);
-            n.ff = Math.max(0, n.tf);
+            // MFB — with a Must Finish By the seed is not the early finish,
+            // and P6 still measures an open end's free float to the early
+            // finish (all 78 open ends of three P6 files).
+            const _ffEnd = _projectDeadlineNum ? n._ff_terminal : n.lf;
+            n.ff_signed = _projectDeadlineNum ? _roundHalfUpTo(_ffEnd - n.ef, 3) : n.tf;
+            n.ff_signed_working_days = _countWorkDaysBetween(n.ef, _ffEnd, nCal);
+            n.ff = Math.max(0, n.ff_signed);
             n.ff_working_days = Math.max(0, n.ff_signed_working_days);
             continue;
         }
@@ -4078,7 +4256,16 @@ function computeCPM(activities, relationships, opts) {
             // completed successor reported its whole total float as free.
             let _snPt = 0;
             if (sn.is_complete) {
-                _snPt = _rlPassthroughOf(sn);
+                // FF (P6 parity 2026-09-27) — under retained logic with a data
+                // date the completed successor is measured at its STAMP (the
+                // data date, the date it carries, or its resume date), not
+                // skipped when it carries nothing: the demo's A2220 feeds the
+                // completed A2290 and P6 gives it 10 working days of free float
+                // to A2290's resume date at the filed date and 0 at the data
+                // date at the corrected one, where skipping measured 43 to the
+                // finish. Python paired site: the same block in the FF pass.
+                _snPt = (_scheduleMode === 'retained_logic' && ddNum > 0)
+                    ? _stampOf(sn) : _rlPassthroughOf(sn);
                 if (!_snPt) continue;
                 _snPt = _snapFwd(_snPt, calFor(n), [], 'FF-slack PT');
             }
@@ -4172,7 +4359,10 @@ function computeCPM(activities, relationships, opts) {
         // fallback (minSlack stays Infinity -> n.tf); the published ff is
         // floored at zero with the signed value preserved (see the
         // terminal-branch comment).
-        const ffSigned = (minSlack === Infinity) ? n.tf : _roundHalfUpTo(minSlack, 3);
+        // MFB — every successor skipped: measured as for an open end.
+        const ffSigned = (minSlack === Infinity)
+            ? (_projectDeadlineNum ? _roundHalfUpTo(n._ff_terminal - n.ef, 3) : n.tf)
+            : _roundHalfUpTo(minSlack, 3);
         n.ff_signed = ffSigned;
         n.ff = Math.max(0, ffSigned);
         // v2.9.11 R8A-3 — Use binding successor's calendar for FF / SF.
@@ -4208,7 +4398,8 @@ function computeCPM(activities, relationships, opts) {
         // this lag-anchored window on 286 (91.4%). On zero-lag FS rows the two
         // windows coincide, which is why the defect hid.
         const _ffFromNum = (bindingPredAnchor !== null) ? bindingPredAnchor : n.ef;
-        const _ffToNum = (bindingSuccAnchor !== null) ? bindingSuccAnchor : n.lf;
+        const _ffToNum = (bindingSuccAnchor !== null) ? bindingSuccAnchor
+            : (_projectDeadlineNum ? n._ff_terminal : n.lf);
         n.ff_signed_working_days = _countWorkDaysBetween(_ffFromNum, _ffToNum, ffCal);
         n.ff_working_days = Math.max(0, n.ff_signed_working_days);
     }
@@ -4764,6 +4955,9 @@ function parseXER(content) {
     const droppedActivities = [];
     let currentTable = '';
     let headers = [];
+    // v2.9.49 — the first PROJECT row, for the Must Finish By
+    // (plan_end_date) handed on below. First row wins, as for SCHEDOPTIONS.
+    let _projectRow = null;
 
     // F12 — defensive parse limits. Adversarial or accidentally-large XER
     // exports can OOM the parser; cap up front and surface a PARSE_LIMIT_EXCEEDED
@@ -4809,6 +5003,9 @@ function parseXER(content) {
                 if (Object.keys(_MC.schedOptions).length === 0) {
                     _MC.schedOptions = Object.assign({}, row);
                 }
+            }
+            if (currentTable === 'PROJECT' && _projectRow === null) {
+                _projectRow = Object.assign({}, row);
             }
             if (currentTable === 'CALENDAR') {
                 const clndr_id = row.clndr_id;
@@ -5093,6 +5290,13 @@ function parseXER(content) {
                         cstr_date_raw: cstrDate,
                         cstr_type2_raw: cstrType2,
                         cstr_date2_raw: cstrDate2nd,
+                        // v2.9.49 — TASK.resume_date and suspend_date as P6
+                        // wrote them, time included: under retained logic
+                        // computeCPM schedules no work on a suspended activity
+                        // before its resume date (activity fields resume_date
+                        // and suspend_date).
+                        resume_date: (row.resume_date || '').trim(),
+                        suspend_date: (row.suspend_date || '').trim(),
                         ES: 0, EF: 0,
                         LS: Infinity, LF: Infinity,
                         TF: 0,
@@ -5278,6 +5482,17 @@ function parseXER(content) {
         sched_calendar_on_relationship_lag:
             _MC.schedOptions.sched_calendar_on_relationship_lag || '',
         sched_float_type: _MC.schedOptions.sched_float_type || '',
+        // v2.9.49 — the Must Finish By (PROJECT.plan_end_date), and the value
+        // to hand computeCPM as opts.projectFinish: the same date when
+        // SCHEDOPTIONS sched_use_project_end_date_for_float is Y or absent
+        // (P6's default, the setting P6 was measured under), '' when it is N
+        // ("opened projects", unmeasured) or no date is set. Paired with
+        // tia_builder._detect_project_finish.
+        plan_end_date: _projectRow ? String(_projectRow.plan_end_date || '').trim() : '',
+        project_finish: (_projectRow && String(_projectRow.plan_end_date || '').trim() &&
+            String(_MC.schedOptions.sched_use_project_end_date_for_float || '')
+                .trim().toUpperCase() !== 'N')
+            ? String(_projectRow.plan_end_date).trim() : '',
         hammock_count: Object.keys(_MC.hammocks).length,
         // v2.9.12 T1.5 — expose parse-time alerts so callers that don't go
         // through runCPM can still see what was dropped.
@@ -8368,20 +8583,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '82 cross-validation fixtures. The harness defines 2011 ' +
-                'comparisons; 54 of them are never executed because neither ' +
+                '99 cross-validation fixtures. The harness defines 2539 ' +
+                'comparisons; 74 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
-                '(27 ff_signed, 27 ff_signed_working_days, all on completed ' +
+                '(37 ff_signed, 37 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 1957 / 1957" counts executed comparisons only and ' +
-                'is not a coverage figure. None of those 54 is a one-sided parity ' +
+                'reported "Checks: 2465 / 2465" counts executed comparisons only and ' +
+                'is not a coverage figure. None of those 74 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 23 of the 82 fixtures contain at least one skipped ' +
-                'comparison. The 1957 comparisons that did run are bit-identical ' +
+                'branch. 30 of the 99 fixtures contain at least one skipped ' +
+                'comparison. The 2465 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 78 of the 82 fixtures). ' +
+                'severity-level alert parity, compared on 91 of the 99 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -8420,30 +8635,31 @@ function buildDaubertDisclosure(result, opts) {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite actually executes. Coverage limit: the cross-validation harness ' +
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
-                'emit the field, so 54 checks are skipped rather than compared, counted, ' +
-                'or reported as failures (27 ff_signed, 27 ff_signed_working_days). The ' +
-                'printed 1957 / 1957 therefore sits on a nominal surface of 2011 checks, and ' +
-                'those two fields go uncompared somewhere in 23 of the 82 fixtures. In ' +
-                'all 54 cases NEITHER engine emits the field, so the skip is a ' +
+                'emit the field, so 74 checks are skipped rather than compared, counted, ' +
+                'or reported as failures (37 ff_signed, 37 ff_signed_working_days). The ' +
+                'printed 2465 / 2465 therefore sits on a nominal surface of 2539 checks, and ' +
+                'those two fields go uncompared somewhere in 30 of the 99 fixtures. In ' +
+                'all 74 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
-                'emit, 54 are comparisons where neither engine emits one. Every ' +
+                'emit, 74 are comparisons where neither engine emits one. Every ' +
                 'ES/EF/LS/LF/TF and date comparison is executed, on every activity ' +
                 'comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '82 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '99 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '1957 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 1957 / 1957 tally cannot express ' +
-                'the following gaps. Not executed: 54 node comparisons on the signed ' +
+                '2465 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 2465 / 2465 tally cannot express ' +
+                'the following gaps. Not executed: 74 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 78 of the 82 fixtures: not on those 2, which have no ' +
-                'output to compare, and not on F65 and F67, where the JS engine also ' +
+                'parity runs on 91 of the 99 fixtures: not on those 2, which have no ' +
+                'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
+                'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +
                 'reference has never carried (a pre-existing gap, disclosed rather ' +
                 'than hidden). The former F20/F21/F27 carve-out (out-of-sequence ' +

@@ -110,6 +110,17 @@ No audit item changed status. v2.9.48 changes no scheduling arithmetic; it fixes
 
 Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
 
+## Status at v2.9.49 (reviewed 2026-09-27)
+
+No audit item changed status. v2.9.49 is an engine-math release measured on Primavera P6 Professional 23.12.1's own F9 of the website demo update at three data dates: the Must Finish By, the resume date, completed-to-completed links, free float to a completed successor, and what `parseXER` hands on (see CHANGELOG.md). Its change class is Dana's decision under the operator procedure.
+- The cross-validation surface grew from 82 to 99 fixtures (17 new ones exercising the changes directly) and from 1,957 of 2,011 to 2,465 of 2,539 comparisons, still 0 failures. F75 moves to the measured value and is re-described.
+- The unit suite grew from 1,325 to 1,345.
+- Coverage was re-measured on the new bytes: 94.30% statements / 83.43% branches / 95.30% functions.
+- The 13-case P6 comparison matrix was re-run on the new bytes against the same 2026-08-11 capture. It reads 13 / 13 with zero changed rows.
+- Three demo-update capture cases (16-18) join it: all 291 open activities match P6 on early and late dates and total and free float at each of the three data dates.
+
+Item 6 stands: the 13-case matrix is still fitted to one capture, and the held-out capture remains Dana's action. The demo-update cases are fitted too: the v2.9.49 rules were derived from them, so they are not the held-out capture either.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.48. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.49. Update on every release that closes or opens an audit item.

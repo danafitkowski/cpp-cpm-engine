@@ -117,6 +117,7 @@ try:
         schedule_mode=payload.get('schedule_mode', 'retained_logic'),
         relationship_lag_calendar=payload.get('relationship_lag_calendar', 'successor'),
         ss_lag_from=payload.get('ss_lag_from', 'early_start'),
+        project_finish=payload.get('project_finish', ''),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -188,7 +189,8 @@ function runJS(payload) {
             { dataDate: payload.data_date || '', calMap: payload.cal_map || {},
               scheduleMode: payload.schedule_mode || 'retained_logic',
               relationshipLagCalendar: payload.relationship_lag_calendar || 'successor',
-              ssLagFrom: payload.ss_lag_from || 'early_start' }
+              ssLagFrom: payload.ss_lag_from || 'early_start',
+              projectFinish: payload.project_finish || '' }
         );
     } catch (e) {
         return {
@@ -1852,12 +1854,14 @@ compareFixture('F74 — FA: six-day predecessor, Mon-Fri successor, predecessor 
     relationship_lag_calendar: 'predecessor',
 });
 
-// F75 — completed to completed (INFERRED; the rule is measured into
-// not-started and started successors): C1's FS+4 has two days left at the
-// data date, so the completed C2 is held to Tue 01-20 17:00 and hands that on
-// to S (Wed 2026-01-21; v2.9.46 carried nothing between completed
-// activities and started S at the data date).
-compareFixture('F75 — FA: a completed-to-completed link carries its unexpired lag', {
+// F75 — completed to completed, MEASURED 2026-09-27 (v2.9.49): C1's FS+4
+// has two days left at the data date, and P6 lays none of it on the
+// completed C2, which hands S the data date: S starts Mon 2026-01-19. P6's own
+// dates on every discriminating link found (the demo's A1020 -> A1370x, two
+// SS links in a fresh P6 database project, eleven FF links in P6 exports of
+// another job). v2.9.47 laid the lag here, INFERRED from links into
+// unfinished work, and started S Wed 01-21.
+compareFixture('F75 — CC: a completed-to-completed link lays no lag', {
     activities: [
         { code: 'C1', duration_days: 8, actual_start: '2026-01-05 08:00',
           actual_finish: '2026-01-14 17:00', is_complete: true, clndr_id: 'MF' },
@@ -2134,6 +2138,310 @@ compareFixture('F86 — SSL measured: an unknown lag-from option alerts and keep
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
     relationship_lag_calendar: 'predecessor',
     ss_lag_from: 'from_the_moon',
+});
+
+// =====================================================================
+// FIXTURES 87-102 — v2.9.49, measured on P6's own F9 of the website demo
+// update (2026-09-27): the Must Finish By seeds the late dates, P6 resumes
+// no work before a resume date, and a completed-to-completed link lays no lag
+// =====================================================================
+// P6 Professional 23.12 F9'd the demo at three data dates. Its Must Finish By
+// is 30-Sep-2026 17:00: every open end's late finish sits there, on its own
+// calendar, and free float of an open end still runs to the EARLY finish (78
+// of 78 open ends on three P6 files). At the filed data date 65 completed
+// rows resume after the data date and P6 stamps none at the data date (62 on
+// the resume date, 3 later where unfinished work carries them further); the
+// SSL1-3 probe's S13-P restarts on its resume date. See cpm-engine.js MFB /
+// RES / CC. The calendars carry clndr_data (`raw`) wherever a fixture reads a
+// time of day on the shift close.
+const RAW_MF_0817 = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+    '(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+    '(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+    '(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+    '(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+    '(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+    '(0||7()())))(0||Exceptions()())))';
+const RAW_SIX_0817 = RAW_MF_0817.replace('(0||7()())',
+    '(0||7()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))');
+const MFB_CAL = {
+    MF: { work_days: [1,2,3,4,5], holidays: [], raw: RAW_MF_0817 },
+    SIX: { work_days: [1,2,3,4,5,6], holidays: [], raw: RAW_SIX_0817 },
+};
+// A (5 d) -> B (5 d) -> X (3 d), with an open end C (2 d); early finish of
+// the chain Wed 2026-09-30 (boundary Thu 10-01).
+const mfbChain = (pf, extra) => Object.assign({
+    activities: [
+        { code: 'A', duration_days: 5, clndr_id: 'MF' },
+        { code: 'B', duration_days: 5, clndr_id: 'MF' },
+        { code: 'X', duration_days: 3, clndr_id: 'MF' },
+        { code: 'C', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+        { from_code: 'B', to_code: 'X', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-09-14 08:00',
+    cal_map: MFB_CAL,
+    relationship_lag_calendar: 'predecessor',
+    project_finish: pf,
+}, extra || {});
+
+// F87 — the demo shape: a Must Finish By (Fri 09-25 17:00) earlier than the
+// early finish: -3 working days through the path, an ALERT, and C's free
+// float still measured to the early finish.
+compareFixture('F87 — MFB: an earlier Must Finish By seeds negative float', mfbChain('2026-09-25 17:00'));
+
+// F88 — a later Must Finish By (Wed 10-07 17:00): +5 through the path, a WARN.
+compareFixture('F88 — MFB: a later Must Finish By seeds positive float', mfbChain('2026-10-07 17:00'));
+
+// F89 — inside the working day (16:00 on a 17:00 close): the day does not count.
+compareFixture('F89 — MFB: a Must Finish By inside the working day', mfbChain('2026-09-25 16:00'));
+
+// F90 — on a Saturday of a Mon-Fri calendar: the close of the Friday before.
+compareFixture('F90 — MFB: a Must Finish By on a non-working day', mfbChain('2026-09-26 17:00'));
+
+// F91 — a bare date is the opening of that day (the v2.9.18 option's form).
+compareFixture('F91 — MFB: a bare-date Must Finish By', mfbChain('2026-09-28'));
+
+// F92 — each activity reads it on its own calendar: a six-day open end
+// finishing Saturday carries -1 against Friday 17:00, a Mon-Fri one 0.
+compareFixture('F92 — MFB: the Must Finish By on each activity\'s own calendar', {
+    activities: [
+        { code: 'A', duration_days: 5, clndr_id: 'MF' },
+        { code: 'C', duration_days: 6, clndr_id: 'SIX' },
+        { code: 'D', duration_days: 3, clndr_id: 'SIX' },
+    ],
+    relationships: [
+        { from_code: 'D', to_code: 'A', type: 'SS', lag_days: 1 },
+    ],
+    data_date: '2026-09-14 08:00',
+    cal_map: MFB_CAL,
+    relationship_lag_calendar: 'predecessor',
+    project_finish: '2026-09-18 17:00',
+});
+
+// F93 — no calendar anywhere: the Must Finish By is the ordinal instant, as
+// the v2.9.18 option was, and the reported finish stays the early finish.
+compareFixture('F93 — MFB: an ordinal (calendar-less) network', {
+    activities: [
+        { code: 'A', duration_days: 10 },
+        { code: 'B', duration_days: 4 },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+    project_finish: '2026-01-12',
+});
+
+// F94 — an unparseable Must Finish By is disclosed and ignored.
+compareFixture('F94 — MFB: an unparseable Must Finish By', mfbChain('not a date'));
+
+// F95 — the Must Finish By with an FNLT on the open end: both bound its late
+// finish, the earlier wins, and every other late date follows.
+compareFixture('F95 — MFB: a finish constraint beside the Must Finish By', mfbChain('2026-10-07 17:00', {
+    activities: [
+        { code: 'A', duration_days: 5, clndr_id: 'MF' },
+        { code: 'B', duration_days: 5, clndr_id: 'MF' },
+        { code: 'X', duration_days: 3, clndr_id: 'MF',
+          constraint: { type: 'CS_MEOB', date: '2026-10-02 17:00' } },
+        { code: 'C', duration_days: 2, clndr_id: 'MF' },
+    ],
+}));
+
+// F96 — the demo pair behind a completed activity resumed after the data
+// date (A1100.2 -> A1680 FS, A1100.2 -> A1130 FS + 10 d): both restart where
+// P6 restarts them, Fri 09-05 and Fri 09-19.
+const RES_CAL = { MF: { work_days: [1,2,3,4,5], holidays: [] } };
+compareFixture('F96 — RES: a completed activity resumed after the data date holds its successors', {
+    activities: [
+        { code: 'C', duration_days: 0, actual_start: '2025-08-28 08:00',
+          actual_finish: '2025-09-04 17:00', suspend_date: '2025-09-04 17:00',
+          resume_date: '2025-09-04 17:00',
+          is_complete: true, clndr_id: 'MF' },
+        { code: 'P1', duration_days: 20, remaining_duration: 20,
+          actual_start: '2025-09-04 08:00', clndr_id: 'MF' },
+        { code: 'P2', duration_days: 10, remaining_duration: 10,
+          actual_start: '2025-08-26 08:00', clndr_id: 'MF' },
+        { code: 'N', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'P1', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'P2', type: 'FS', lag_days: 10 },
+        { from_code: 'P1', to_code: 'N', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2025-07-01 17:00',
+    cal_map: RES_CAL,
+    relationship_lag_calendar: 'predecessor',
+}, { skip_alert_parity: true,
+     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+
+// F97 — probe S13: P suspended 28-Sep, resumed Mon 12-Oct-2026, data date
+// 05-Oct; P6 restarts it 12-Oct. Its SS + 15 d successor is where P6 counts
+// only the pre-suspension work as elapsed (26-Oct), which neither engine
+// models; the fixture pins that the two engines agree on it.
+compareFixture('F97 — RES: a suspended activity restarts on its resume date', {
+    activities: [
+        { code: 'P', duration_days: 15, remaining_duration: 10,
+          actual_start: '2026-09-21 08:00', suspend_date: '2026-09-28 08:00',
+          resume_date: '2026-10-12 08:00', clndr_id: 'MF' },
+        { code: 'S', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'P', to_code: 'S', type: 'SS', lag_days: 15 },
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: RES_CAL,
+    relationship_lag_calendar: 'predecessor',
+});
+
+// F98 — a resume date at or before the data date moves nothing (the demo's 24
+// such rows at its filed date; 302 in another real export).
+compareFixture('F98 — RES: a resume date at or before the data date', {
+    activities: [
+        { code: 'C', duration_days: 0, actual_start: '2025-06-10 08:00',
+          actual_finish: '2025-06-16 17:00', suspend_date: '2025-06-16 17:00',
+          resume_date: '2025-06-16 17:00',
+          is_complete: true, clndr_id: 'MF' },
+        { code: 'N', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'N', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2025-07-01 17:00',
+    cal_map: RES_CAL,
+    relationship_lag_calendar: 'predecessor',
+});
+
+// F99 — progress override: P6's handling of a resume date is unmeasured
+// there, so it is not applied, and one WARN names every row carrying one.
+compareFixture('F99 — RES: progress override does not apply a resume date', {
+    activities: [
+        { code: 'C', duration_days: 0, actual_start: '2025-08-28 08:00',
+          actual_finish: '2025-09-04 17:00', suspend_date: '2025-09-04 17:00',
+          resume_date: '2025-09-04 17:00',
+          is_complete: true, clndr_id: 'MF' },
+        { code: 'P1', duration_days: 20, remaining_duration: 20,
+          actual_start: '2025-09-04 08:00', clndr_id: 'MF' },
+        { code: 'N', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'P1', type: 'FS', lag_days: 0 },
+        { from_code: 'C', to_code: 'N', type: 'FS', lag_days: 2 },
+    ],
+    data_date: '2025-07-01 17:00',
+    cal_map: RES_CAL,
+    schedule_mode: 'progress_override',
+    relationship_lag_calendar: 'predecessor',
+}, { skip_alert_parity: true,
+     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+
+// F100 — the demo row A1020 -> A1370x -> A1380x: FS + 60 d between completed
+// activities lays no lag, and A1370x is stamped on its own resume date
+// (09-Jul 17:00), so A1380x starts Thu 10-Jul, P6's date; a second completed
+// successor with no resume date carries the data date.
+compareFixture('F100 — CC: completed to completed, with and without a resume date', {
+    activities: [
+        { code: 'C1', duration_days: 0, actual_start: '2025-05-05 08:00',
+          actual_finish: '2025-06-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'C2', duration_days: 0, actual_start: '2025-06-23 08:00',
+          actual_finish: '2025-06-23 08:00', suspend_date: '2025-07-09 17:00',
+          resume_date: '2025-07-09 17:00',
+          is_complete: true, clndr_id: 'MF' },
+        { code: 'C3', duration_days: 0, actual_start: '2025-06-23 08:00',
+          actual_finish: '2025-06-24 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 10, clndr_id: 'MF' },
+        { code: 'T', duration_days: 4, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C1', to_code: 'C2', type: 'FS', lag_days: 60 },
+        { from_code: 'C1', to_code: 'C3', type: 'SS', lag_days: 30 },
+        { from_code: 'C2', to_code: 'S', type: 'FS', lag_days: 0 },
+        { from_code: 'C3', to_code: 'T', type: 'FS', lag_days: 1 },
+    ],
+    data_date: '2025-07-01 17:00',
+    cal_map: RES_CAL,
+    relationship_lag_calendar: 'predecessor',
+});
+
+// F101 — free float runs to a completed successor's STAMP under retained
+// logic: the demo's A2220 (zero duration, not started) -> A2290 (completed,
+// resumed Tue 15-Jul 17:00): 10 working days at the filed data date, P6's
+// figure; v2.9.48 skipped the completed successor and measured to the finish.
+compareFixture('F101 — FF: free float to a completed successor\'s stamp', {
+    activities: [
+        { code: 'Z', duration_days: 0, clndr_id: 'MF' },
+        { code: 'D', duration_days: 0, actual_start: '2025-06-24 08:00',
+          actual_finish: '2025-07-15 17:00', suspend_date: '2025-07-15 17:00',
+          resume_date: '2025-07-15 17:00',
+          is_complete: true, clndr_id: 'MF' },
+        { code: 'L', duration_days: 40, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'Z', to_code: 'D', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2025-07-01 17:00',
+    cal_map: RES_CAL,
+    relationship_lag_calendar: 'predecessor',
+}, { skip_alert_parity: true,
+     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on D; the Python reference never carried it' });
+
+// F102 — all three together on a small network with the demo's shape: a
+// resumed carrier ahead of the critical path, a Must Finish By behind it.
+compareFixture('F102 — MFB + RES + CC together', {
+    activities: [
+        { code: 'C1', duration_days: 0, actual_start: '2025-05-05 08:00',
+          actual_finish: '2025-06-02 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'C2', duration_days: 0, actual_start: '2025-08-28 08:00',
+          actual_finish: '2025-09-04 17:00', suspend_date: '2025-09-04 17:00',
+          resume_date: '2025-09-04 17:00',
+          is_complete: true, clndr_id: 'MF' },
+        { code: 'P', duration_days: 20, remaining_duration: 12,
+          actual_start: '2025-08-26 08:00', clndr_id: 'MF' },
+        { code: 'Q', duration_days: 15, clndr_id: 'MF' },
+        { code: 'R', duration_days: 8, clndr_id: 'MF' },
+        { code: 'Z', duration_days: 0, task_type: 'TT_FinMile', clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C1', to_code: 'C2', type: 'FS', lag_days: 40 },
+        { from_code: 'C2', to_code: 'P', type: 'FS', lag_days: 10 },
+        { from_code: 'P', to_code: 'Q', type: 'SS', lag_days: 5 },
+        { from_code: 'Q', to_code: 'Z', type: 'FS', lag_days: 0 },
+        { from_code: 'R', to_code: 'Z', type: 'FF', lag_days: 2 },
+    ],
+    data_date: '2025-07-01 17:00',
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [], raw: RAW_MF_0817 } },
+    relationship_lag_calendar: 'predecessor',
+    project_finish: '2025-10-31 17:00',
+}, { skip_alert_parity: true,
+     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C2; the Python reference never carried it' });
+
+// F103 — a resume date with NO suspend date is not applied. Every P6-scheduled
+// row the RES rule was measured on carries both (P6 enters a resume date only
+// on a suspended activity); MS Project conversions carry a resume date alone,
+// a shape P6 never scheduled in any file found. C (completed) and S (started)
+// carry one: neither is held, and one WARN names both. H, suspended, is held.
+compareFixture('F103 — RES: a resume date without a suspend date is not applied', {
+    activities: [
+        { code: 'C', duration_days: 0, actual_start: '2025-06-10 08:00',
+          actual_finish: '2025-06-20 17:00', resume_date: '2025-07-15 17:00',
+          is_complete: true, clndr_id: 'MF' },
+        { code: 'S', duration_days: 10, remaining_duration: 5,
+          actual_start: '2025-06-20 08:00', resume_date: '2025-08-01 08:00',
+          clndr_id: 'MF' },
+        { code: 'H', duration_days: 10, remaining_duration: 5,
+          actual_start: '2025-06-20 08:00', suspend_date: '2025-06-27 17:00',
+          resume_date: '2025-08-01 08:00', clndr_id: 'MF' },
+        { code: 'N', duration_days: 5, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'N', type: 'FS', lag_days: 0 },
+        { from_code: 'S', to_code: 'N', type: 'FS', lag_days: 0 },
+        { from_code: 'H', to_code: 'N', type: 'SS', lag_days: 0 },
+    ],
+    data_date: '2025-07-01 17:00',
+    cal_map: RES_CAL,
+    relationship_lag_calendar: 'predecessor',
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

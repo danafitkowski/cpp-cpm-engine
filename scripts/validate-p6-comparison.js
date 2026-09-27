@@ -59,11 +59,38 @@ const FIELD_TO_NODE_KEY = {
 const P6_COLS = ['ES_p6', 'EF_p6', 'LS_p6', 'LF_p6', 'TF_p6', 'FF_p6'];
 
 function parseCSV(content) {
-    // Simple CSV — no quoting, no embedded commas. The p6-comparison CSVs
-    // are hand-crafted with that constraint in mind. If we ever need quoting,
-    // swap this for a real CSV library; for now zero-dep simplicity wins.
+    // CSV with RFC 4180 quoting: a field may be wrapped in double quotes, with
+    // "" for a quote inside it. The 13 hand-built cases never quote; the demo
+    // capture cases (16-18) must, because a P6 activity code may carry a comma
+    // (the demo has "A1370,1"). An unquoted line parses exactly as the old
+    // split(',') did. Zero-dep on purpose.
     const lines = content.replace(/\r\n/g, '\n').split('\n').filter(l => l.length > 0);
-    return lines.map(l => l.split(','));
+    return lines.map(splitCSVLine);
+}
+
+function splitCSVLine(line) {
+    const out = [];
+    let cur = '';
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (quoted) {
+            if (ch === '"') {
+                if (line[i + 1] === '"') { cur += '"'; i++; } else { quoted = false; }
+            } else {
+                cur += ch;
+            }
+        } else if (ch === '"' && cur === '') {
+            quoted = true;
+        } else if (ch === ',') {
+            out.push(cur);
+            cur = '';
+        } else {
+            cur += ch;
+        }
+    }
+    out.push(cur);
+    return out;
 }
 
 function validateCase(caseDir) {

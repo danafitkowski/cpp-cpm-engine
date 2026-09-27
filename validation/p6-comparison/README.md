@@ -1,6 +1,6 @@
 # `validation/p6-comparison/` — Primavera P6 comparison matrix
 
-This folder holds the framework that compares `cpm-engine` output against Primavera P6 native scheduling output for 13 P6-comparable representative CPM cases (FS / SS / FF / SF, negative float, multi-calendar, Ontario holidays, in-progress retained logic, completed successors, out-of-sequence progress, mandatory start and finish, SNET plus FNLT, ALAP). Two cases that are not P6-comparable by construction, fractional lag (sub-day lag rounding) and a dangling relationship pointing at a non-existent activity, were moved to `validation/engine-limitations/` during the v2.9.33 audit cycle and are not part of this matrix.
+This folder holds the framework that compares `cpm-engine` output against Primavera P6 native scheduling output for 13 P6-comparable representative CPM cases (FS / SS / FF / SF, negative float, multi-calendar, Ontario holidays, in-progress retained logic, completed successors, out-of-sequence progress, mandatory start and finish, SNET plus FNLT, ALAP). Two cases that are not P6-comparable by construction, fractional lag (sub-day lag rounding) and a dangling relationship pointing at a non-existent activity, were moved to `validation/engine-limitations/` during the v2.9.33 audit cycle and are not part of this matrix. Since v2.9.49 the folder also holds three capture cases of a real-size progressed schedule, scored against P6's own F9 of it at three data dates (cases 16-18, below).
 
 It addresses the ChatGPT third-pass directive item #2:
 
@@ -54,6 +54,22 @@ See `comparison-matrix.md` for the per-case engine vs P6 verdict matrix. It is g
 
 ---
 
+## The demo-update capture cases (16-18, v2.9.49)
+
+Three further cases score a real-size progressed schedule against P6's own answers, not against a hand-built capture sheet. Primavera P6 Professional 23.12.1 (standalone) scheduled the website demo update (405 activities; 404 scheduled: 291 open and 113 completed; 653 relationships; one Mon-Fri calendar) with F9 on 27-Sep-2026 at three data dates, and each run was exported:
+
+| # | Case ID | Data date | P6 project finish | Open activities matching P6 (ES / EF / LS / LF / TF / FF) |
+|---|---|---|---|---|
+| 16 | `16-demo-update-corrected-data-date` | 16-Sep-2025 08:00 | 12-Nov-2026 17:00 | 291 / 291 / 291 / 291 / 291 / 291 |
+| 17 | `17-demo-update-data-date-1700` | 16-Sep-2025 17:00 | 13-Nov-2026 17:00 | 291 / 291 / 291 / 291 / 291 / 291 |
+| 18 | `18-demo-update-filed-data-date` | 01-Jul-2025 17:00 | 03-Nov-2026 17:00 | 291 / 291 / 291 / 291 / 291 / 291 |
+
+`build-demo-capture-cases.py` turns each export into `input.json` (the engine input, from the export's input fields only) and `p6-export.json` (P6's computed fields, raw, plus the working day each P6 instant opens on, on the activity's own calendar). It checks each export's pinned SHA-256 first; the exports themselves are not committed, because P6 writes its users into them, and no task name, WBS or user travels into the case files. `demo-capture.js` runs the engine and scores every open activity on the engine's own boundaries: a started activity on its remaining work (P6's restart and remaining late start), float in working days on the activity's calendar. `npm run test:p6-comparison` fails on any open activity that does not match and on a committed `engine-output.json` or `comparison.csv` the current engine does not produce. These three are not written by `apply-p6-capture.py` and are not in `comparison-matrix.md`.
+
+Before v2.9.49 the engine matched none of the 291 late dates or total floats at any of the three data dates (it seeded the late dates at its own early finish, not at the Must Finish By), and at the filed data date 67 of 291 early dates (it read no resume dates). These cases are therefore **fitted, not held out**: the v2.9.49 rules were derived from these same exports. The zero-duration rows are compared on the instant: P6 prints a finish milestone at the close of its day and a zero-duration task at the opening of it, and the engine's boundary is the same instant either way.
+
+---
+
 ## Per-case folder layout
 
 Each `cases/<NN-name>/` folder contains:
@@ -79,6 +95,8 @@ README.md                       — this file
 comparison-matrix.md            — master matrix overview
 generate-cases.js               — generator script (re-run to refresh after engine bumps)
 engine-outputs-summary.json     — index of all cases with engine project finish + alert counts
+build-demo-capture-cases.py     — builds cases 16-18 from the three pinned P6 exports
+demo-capture.js                 — scores cases 16-18 (--write regenerates their outputs)
 ```
 
 ---
@@ -100,7 +118,7 @@ For each case:
 python validation/p6-comparison/apply-p6-capture.py "validation/p6-comparison/P6 Capture Sheet (DB).csv"
 ```
 
-It writes the `*_p6` columns, computes every `verdict_pass_fail`, and regenerates `comparison-matrix.md` in the same pass. Never hand-edit that matrix: a hand-kept copy once sat at the first capture's 6 PASS / 7 FAIL while the per-case CSVs already read 13 / 13. Cases 14 and 15 are never populated here; they are not P6-comparable and live in `validation/engine-limitations/`. The capture sheet is gitignored, so keep your copy, since without it the matrix cannot be regenerated from a clean clone.
+It writes the `*_p6` columns, computes every `verdict_pass_fail`, and regenerates `comparison-matrix.md` in the same pass. Never hand-edit that matrix: a hand-kept copy once sat at the first capture's 6 PASS / 7 FAIL while the per-case CSVs already read 13 / 13. Cases 14 and 15 are never populated here; they are not P6-comparable and live in `validation/engine-limitations/`. Cases 16-18 are not populated by the applier either: they carry P6's own export values (see the demo-update section above). The capture sheet is gitignored, so keep your copy, since without it the matrix cannot be regenerated from a clean clone.
 
 The cases are deliberately small — each is a 2–5-activity schedule. Completion time depends on the analyst's P6 familiarity and the precision required for each capture; the framework imposes no time estimate.
 
@@ -125,6 +143,7 @@ If `generate-cases.js` is run with the engine in a state that produces different
 
 - It does not claim "the engine produces identical output to P6 for every CPM scenario." It claims field-level agreement on 13 named representative cases, with the P6 columns captured and the verdicts written by `apply-p6-capture.py`. PASS is convention-normalized, not raw equality: a computed EF/LF must equal the next working day after the finish date P6 displays (the day-start versus day-end boundary documented in `apply-p6-capture.py`), and a blank P6 total float or free float on a completed activity is accepted where the engine answers 0.
 - It does not claim these 13 cases are a held-out test. The first capture scored 6 of 13; five divergence families were then fixed in the engine against P6's pinned answers (23ffeca, 264de84, bf442d5, 05dc8b4) and the matrix regenerated to 13 of 13. These are the cases the engine was aligned to. An independent post-fix capture is not yet in the repository.
+- It does not claim the demo-update cases (16-18) are a held-out test either. The engine matched none of their 291 late dates before v2.9.49, and the v2.9.49 rules (the Must Finish By, the resume date, completed-to-completed links, free float to a completed successor) were derived from these exports.
 - It does not claim "P6 is the ground truth." P6 has its own quirks (e.g., progress override default, calendar-rollover behavior, undisclosed sub-day lag handling). The matrix documents agreement and disagreement; it does not adjudicate.
 - It does not extend to the engine's pre-publication public-API surfaces (Bayesian, kinematic, topology-hash). Those are JS-only and not part of the P6 comparison surface; see [DAUBERT.md §11](../../DAUBERT.md).
 

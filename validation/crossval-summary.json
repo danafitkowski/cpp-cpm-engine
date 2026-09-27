@@ -1,34 +1,34 @@
 {
-  "engine_version": "2.9.48",
-  "generated_utc": "2026-09-27T05:14:20.743Z",
+  "engine_version": "2.9.49",
+  "generated_utc": "2026-09-27T08:53:12.364Z",
   "fixtures": {
-    "total": 82,
-    "passed": 82,
+    "total": 99,
+    "passed": 99,
     "failed": 0
   },
   "checks": {
-    "executed": 1957,
+    "executed": 2465,
     "failed": 0,
-    "passed": 1957,
-    "skipped": 54,
-    "surface": 2011
+    "passed": 2465,
+    "skipped": 74,
+    "surface": 2539
   },
   "skips_by_field": {
-    "ff_signed": 27,
-    "ff_signed_working_days": 27
+    "ff_signed": 37,
+    "ff_signed_working_days": 37
   },
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 54
+    "mutual": 74
   },
   "checks_by_field": {
-    "project_finish_num": 80,
-    "project_finish": 80,
-    "critical_codes": 80,
-    "topo_order": 80,
-    "alert_count": 78,
-    "alert_severity_counts": 78,
-    "node <id>": 1479,
+    "project_finish_num": 97,
+    "project_finish": 97,
+    "critical_codes": 97,
+    "topo_order": 97,
+    "alert_count": 91,
+    "alert_severity_counts": 91,
+    "node <id>": 1893,
     "threw (both engines)": 2
   },
   "rows": [
@@ -648,7 +648,7 @@
     },
     {
       "id": "F75",
-      "name": "F75 — FA: a completed-to-completed link carries its unexpired lag",
+      "name": "F75 — CC: a completed-to-completed link lays no lag",
       "checks": 23,
       "fails": 0,
       "skips": 4,
@@ -756,6 +756,163 @@
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
+    },
+    {
+      "id": "F87",
+      "name": "F87 — MFB: an earlier Must Finish By seeds negative float",
+      "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F88",
+      "name": "F88 — MFB: a later Must Finish By seeds positive float",
+      "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F89",
+      "name": "F89 — MFB: a Must Finish By inside the working day",
+      "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F90",
+      "name": "F90 — MFB: a Must Finish By on a non-working day",
+      "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F91",
+      "name": "F91 — MFB: a bare-date Must Finish By",
+      "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F92",
+      "name": "F92 — MFB: the Must Finish By on each activity's own calendar",
+      "checks": 27,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F93",
+      "name": "F93 — MFB: an ordinal (calendar-less) network",
+      "checks": 20,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F94",
+      "name": "F94 — MFB: an unparseable Must Finish By",
+      "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F95",
+      "name": "F95 — MFB: a finish constraint beside the Must Finish By",
+      "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F96",
+      "name": "F96 — RES: a completed activity resumed after the data date holds its successors",
+      "checks": 30,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F97",
+      "name": "F97 — RES: a suspended activity restarts on its resume date",
+      "checks": 20,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F98",
+      "name": "F98 — RES: a resume date at or before the data date",
+      "checks": 18,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F99",
+      "name": "F99 — RES: progress override does not apply a resume date",
+      "checks": 23,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F100",
+      "name": "F100 — CC: completed to completed, with and without a resume date",
+      "checks": 35,
+      "fails": 0,
+      "skips": 6,
+      "skips_by_field": {
+        "ff_signed": 3,
+        "ff_signed_working_days": 3
+      }
+    },
+    {
+      "id": "F101",
+      "name": "F101 — FF: free float to a completed successor's stamp",
+      "checks": 23,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F102",
+      "name": "F102 — MFB + RES + CC together",
+      "checks": 42,
+      "fails": 0,
+      "skips": 4,
+      "skips_by_field": {
+        "ff_signed": 2,
+        "ff_signed_working_days": 2
+      }
+    },
+    {
+      "id": "F103",
+      "name": "F103 — RES: a resume date without a suspend date is not applied",
+      "checks": 32,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
     }
   ]
 }

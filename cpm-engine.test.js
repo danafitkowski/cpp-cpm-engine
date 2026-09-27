@@ -11425,6 +11425,346 @@ console.log('\n=== PX — parseXER hands computeCPM the actual dates P6 wrote (v
         'S es ' + px.nodes.S.es_date + ' (P6 2026-10-08)');
 }
 
+// ===========================================================================
+// MFB — the project's Must Finish By date (PROJECT.plan_end_date) seeds the
+// late dates (2026-09-27; paired with the Python pins in
+// _cpp_common/tests/test_must_finish_by_and_resume_2026_09_27.py).
+// P6 Professional 23.12 F9'd the website demo update three times (data dates
+// 01-Jul-2025 17:00, 16-Sep-2025 17:00 and 16-Sep-2025 08:00). Its Must Finish
+// By is 30-Sep-2026 17:00 and its early finish is 3 to 12 Nov 2026. In all
+// three exports every open end's late finish is 30-Sep-2026 17:00 and the
+// critical path carries -23 to -31 working days of float; seeded at its own
+// early finish, the engine matched none of the 291 open rows' late dates or
+// float. Two genuine P6 exports on this machine with a discriminating Must
+// Finish By (65 and 874 activities) seed at it too. Free float is different:
+// on all 78 open ends of the three P6 files it runs to the project's EARLY
+// finish, never to the Must Finish By. The expected values below apply those
+// measured rules to small networks; the per-calendar and time-of-day handling
+// is the rule the engine already uses for the natural seed (B2) and for
+// finish-constraint instants (v2.9.45).
+// ===========================================================================
+{
+    const RAW_MF = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        '(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+        '(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+        '(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+        '(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+        '(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))' +
+        '(0||7()())))(0||Exceptions()())))';
+    const RAW_SIX = RAW_MF.replace('(0||7()())',
+        '(0||7()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))');
+    const mfbCal = {
+        MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW_MF },
+        SIX: { work_days: [1, 2, 3, 4, 5, 6], holidays: [], raw: RAW_SIX },
+    };
+    const act = (code, days, cal) => ({ code, duration_days: days, clndr_id: cal || 'MF' });
+    const fs0 = (a, b) => ({ from_code: a, to_code: b, type: 'FS', lag_days: 0 });
+    // A (5 d) -> B (5 d) from Mon 2026-09-14: early finish Fri 09-25 (boundary
+    // Mon 09-28).
+    const chain = (pf) => E.computeCPM([act('A', 5), act('B', 5)], [fs0('A', 'B')],
+        { dataDate: '2026-09-14 08:00', calMap: mfbCal, projectFinish: pf });
+    const deadlineAlerts = (r) => r.alerts.filter((a) => a.context === 'project-deadline-applied');
+
+    // MFB-1 — the demo shape: a Must Finish By five working days before the
+    // early finish. The open end's late finish IS the Must Finish By (last
+    // worked Fri 09-18, boundary Mon 09-21), the path carries -5 working days,
+    // and the project finish the result reports is still the EARLY finish.
+    let r = chain('2026-09-18 17:00');
+    check('MFB-1: late dates run from the Must Finish By; the path carries -5 working days; the project finish stays the early finish',
+        r.nodes.B.lf_date === '2026-09-21' && r.nodes.B.lf_last_worked_date === '2026-09-18' &&
+        r.nodes.B.tf_working_days === -5 && r.nodes.A.ls_date === '2026-09-07' &&
+        r.nodes.A.tf_working_days === -5 && r.projectFinish === '2026-09-28' &&
+        deadlineAlerts(r).length === 1 && deadlineAlerts(r)[0].severity === 'ALERT' &&
+        !r.alerts.some((a) => a.context === 'impossible-negative-float'),
+        [r.nodes.B.lf_date, r.nodes.B.lf_last_worked_date, r.nodes.B.tf_working_days,
+         r.nodes.A.ls_date, r.nodes.A.tf_working_days, r.projectFinish,
+         JSON.stringify(deadlineAlerts(r).map((a) => a.severity))].join(' / '));
+
+    // MFB-2 — the time of day is read on the shift close, as for a finish
+    // constraint (v2.9.45): 17:00 on a 17:00 close counts Fri 09-25 (float 0);
+    // 16:00 is inside that day, so the day is not counted (-1 working day;
+    // P6 keeps the hour, -1 h, which a day-granular engine cannot hold).
+    const atClose = chain('2026-09-25 17:00');
+    const inside = chain('2026-09-25 16:00');
+    check('MFB-2: a Must Finish By at the shift close counts that day; one inside the day does not',
+        atClose.nodes.B.tf_working_days === 0 && atClose.nodes.B.lf_date === '2026-09-28' &&
+        inside.nodes.B.tf_working_days === -1 && inside.nodes.B.lf_date === '2026-09-25',
+        [atClose.nodes.B.tf_working_days, atClose.nodes.B.lf_date,
+         inside.nodes.B.tf_working_days, inside.nodes.B.lf_date].join(' / '));
+
+    // MFB-3 — a Must Finish By later than the early finish gives the whole
+    // path positive float (+5), disclosed as a WARN, not an ALERT.
+    r = chain('2026-10-02 17:00');
+    check('MFB-3: a later Must Finish By gives the path positive float',
+        r.nodes.B.tf_working_days === 5 && r.nodes.A.tf_working_days === 5 &&
+        r.projectFinish === '2026-09-28' &&
+        deadlineAlerts(r).length === 1 && deadlineAlerts(r)[0].severity === 'WARN',
+        [r.nodes.B.tf_working_days, r.nodes.A.tf_working_days, r.projectFinish,
+         JSON.stringify(deadlineAlerts(r).map((a) => a.severity))].join(' / '));
+
+    // MFB-4 — a Must Finish By on a day the activity's calendar does not work
+    // (Saturday 17:00 on Mon-Fri) is the close of the last working day before
+    // it: the same late dates as Friday 17:00.
+    r = chain('2026-09-19 17:00');
+    check('MFB-4: a Must Finish By on a non-working day falls back to the last working day before it',
+        r.nodes.B.lf_date === '2026-09-21' && r.nodes.B.lf_last_worked_date === '2026-09-18' &&
+        r.nodes.B.tf_working_days === -5,
+        [r.nodes.B.lf_date, r.nodes.B.lf_last_worked_date, r.nodes.B.tf_working_days].join(' / '));
+
+    // MFB-5 — each open end reads the instant on its OWN calendar: Friday
+    // 17:00 is float 0 for a Mon-Fri activity finishing that Friday and -1
+    // for a six-day activity finishing on the Saturday.
+    r = E.computeCPM([act('A', 5, 'MF'), act('C', 6, 'SIX')], [],
+        { dataDate: '2026-09-14 08:00', calMap: mfbCal, projectFinish: '2026-09-18 17:00' });
+    check('MFB-5: the Must Finish By is expressed on each activity\'s own calendar',
+        r.nodes.A.tf_working_days === 0 && r.nodes.A.lf_last_worked_date === '2026-09-18' &&
+        r.nodes.C.tf_working_days === -1 && r.nodes.C.lf_last_worked_date === '2026-09-18' &&
+        r.nodes.C.ef_last_worked_date === '2026-09-19',
+        [r.nodes.A.tf_working_days, r.nodes.A.lf_last_worked_date, r.nodes.C.tf_working_days,
+         r.nodes.C.lf_last_worked_date, r.nodes.C.ef_last_worked_date].join(' / '));
+
+    // MFB-6 — free float of an open end still runs to the project's EARLY
+    // finish (P6: 78 of 78 open ends on three files): C (2 d) has 3 working
+    // days of total float against the Must Finish By and 8 of free float to
+    // the early finish Fri 09-25.
+    r = E.computeCPM([act('A', 5), act('B', 5), act('C', 2)], [fs0('A', 'B')],
+        { dataDate: '2026-09-14 08:00', calMap: mfbCal, projectFinish: '2026-09-18 17:00' });
+    check('MFB-6: an open end\'s free float runs to the early finish, its total float to the Must Finish By',
+        r.nodes.C.tf_working_days === 3 && r.nodes.C.ff_working_days === 8 &&
+        r.nodes.B.ff_working_days === 0 && r.nodes.B.tf_working_days === -5,
+        [r.nodes.C.tf_working_days, r.nodes.C.ff_working_days,
+         r.nodes.B.ff_working_days, r.nodes.B.tf_working_days].join(' / '));
+
+    // MFB-7 — no Must Finish By keeps the early-finish seed; one that does not
+    // parse is disclosed and ignored.
+    const none = chain('');
+    const bad = chain('garbage');
+    check('MFB-7: no Must Finish By keeps the early-finish seed; an unparseable one is disclosed and ignored',
+        none.nodes.B.tf_working_days === 0 && none.nodes.B.lf_date === '2026-09-28' &&
+        deadlineAlerts(none).length === 0 &&
+        bad.nodes.B.tf_working_days === 0 &&
+        bad.alerts.some((a) => a.context === 'project-deadline-invalid' && a.severity === 'WARN'),
+        [none.nodes.B.tf_working_days, none.nodes.B.lf_date, deadlineAlerts(none).length,
+         bad.nodes.B.tf_working_days].join(' / '));
+}
+
+// ===========================================================================
+// RES — P6 resumes no work before an activity's RESUME date (2026-09-27;
+// paired with the Python pins in
+// _cpp_common/tests/test_must_finish_by_and_resume_2026_09_27.py).
+// At the demo's filed data date (01-Jul-2025 17:00) 65 completed rows carry a
+// resume date after the data date, and P6 stamps none of them at the data
+// date (62 on the resume date, 3 later where unfinished work carries them
+// further): A1100.2, finished and resumed 04-Sep-2025 17:00, holds its
+// FS successor A1680 to 05-Sep and its FS+80 h successor A1130 to 19-Sep,
+// where the engine, reading no resume date, restarted both at the data date
+// and finished the project on 27-Aug-2026 against P6's 03-Nov-2026. A started
+// activity is held the same way: the SSL1-3 probe's S13-P (suspended 28-Sep,
+// resumed 12-Oct, data date 05-Oct) restarts on 12-Oct in P6. An actual date
+// after the data date on a row with NO resume date still drives nothing (the
+// v2.9.47 rule holds on the demo: A2530, finished 12-Sep 12:00, hands its
+// successor A2440 the carried 05-Sep, not its finish). Every row measured
+// carries a suspend date beside its resume date, as P6 enters them; a resume
+// date with no suspend date (an MS Project conversion) is not applied.
+// ===========================================================================
+{
+    const resCal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
+    const rel = (a, b, t, lag) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: lag || 0 });
+    const run = (acts, rels, dd, mode) => E.computeCPM(acts, rels, {
+        dataDate: dd, calMap: resCal, scheduleMode: mode || 'retained_logic',
+        relationshipLagCalendar: 'predecessor' });
+    // A1100.2 as P6 holds it: finished Thu 04-Sep-2025 17:00, resumed then.
+    const held = () => ({ code: 'C', duration_days: 0, actual_start: '2025-08-28 08:00',
+        actual_finish: '2025-09-04 17:00', suspend_date: '2025-09-04 17:00',
+        resume_date: '2025-09-04 17:00', is_complete: true, clndr_id: 'MF' });
+    const started = (code, as, rem) => ({ code, duration_days: rem, remaining_duration: rem,
+        actual_start: as, clndr_id: 'MF' });
+    const DD_FILED = '2025-07-01 17:00';
+
+    // RES-1 — the demo pair: A1680 (FS, started 04-Sep, 20 d left) restarts
+    // Fri 05-Sep and finishes Thu 02-Oct; A1130 (FS + 10 d, 10 d left)
+    // restarts Fri 19-Sep and finishes Thu 02-Oct. P6's own dates.
+    let r = run([held(), started('P1', '2025-09-04 08:00', 20), started('P2', '2025-08-26 08:00', 10)],
+        [rel('C', 'P1'), rel('C', 'P2', 'FS', 10)], DD_FILED);
+    check('RES-1: a completed activity resumed after the data date holds its successors there (demo A1680 / A1130)',
+        r.nodes.P1.restart_date === '2025-09-05' && r.nodes.P1.ef_last_worked_date === '2025-10-02' &&
+        r.nodes.P2.restart_date === '2025-09-19' && r.nodes.P2.ef_last_worked_date === '2025-10-02',
+        [r.nodes.P1.restart_date, r.nodes.P1.ef_last_worked_date,
+         r.nodes.P2.restart_date, r.nodes.P2.ef_last_worked_date].join(' / '));
+
+    // RES-2 — a started activity: S13-P (15 d, 10 left) suspended Mon 28-Sep,
+    // resumed Mon 12-Oct, data date Mon 05-Oct-2026. P6 restarts it 12-Oct
+    // and finishes it Fri 23-Oct (SSL1, SSL2 and SSL3 alike).
+    r = run([{ code: 'P', duration_days: 15, remaining_duration: 10,
+               actual_start: '2026-09-21 08:00', suspend_date: '2026-09-28 08:00',
+               resume_date: '2026-10-12 08:00', clndr_id: 'MF' }], [], '2026-10-05 08:00');
+    check('RES-2: a suspended activity restarts on its resume date (probe S13-P)',
+        r.nodes.P.restart_date === '2026-10-12' && r.nodes.P.ef_last_worked_date === '2026-10-23',
+        r.nodes.P.restart_date + ' / ' + r.nodes.P.ef_last_worked_date);
+
+    // RES-3 — a resume date at or before the data date moves nothing (demo:
+    // 24 such completed rows at the filed date; 302 in another real export).
+    r = run([{ code: 'C', duration_days: 0, actual_start: '2025-06-10 08:00',
+               actual_finish: '2025-06-16 17:00', suspend_date: '2025-06-16 17:00',
+               resume_date: '2025-06-16 17:00', is_complete: true, clndr_id: 'MF' },
+             { code: 'N', duration_days: 5, clndr_id: 'MF' }], [rel('C', 'N')], DD_FILED);
+    check('RES-3: a resume date at or before the data date moves nothing',
+        r.nodes.N.es_date === '2025-07-02' &&
+        !r.alerts.some((a) => a.context === 'resume-date-holds'),
+        r.nodes.N.es_date);
+
+    // RES-4 — the disclosure: one INFO names every activity a resume date
+    // holds, under retained logic.
+    r = run([held(), started('P1', '2025-09-04 08:00', 20)], [rel('C', 'P1')], DD_FILED);
+    const holds = r.alerts.filter((a) => a.context === 'resume-date-holds');
+    check('RES-4: one INFO names every activity held to its resume date',
+        holds.length === 1 && holds[0].severity === 'INFO' &&
+        holds[0].message.indexOf('C (resume 2025-09-04 17:00)') >= 0,
+        JSON.stringify(holds.map((a) => a.severity + ' ' + a.message.slice(0, 160))));
+
+    // RES-5 — progress override: P6's handling of a resume date there is
+    // unmeasured, so it is not applied, and a WARN says so.
+    r = run([held(), started('P1', '2025-09-04 08:00', 20)], [rel('C', 'P1')], DD_FILED,
+        'progress_override');
+    const po = r.alerts.filter((a) => a.context === 'resume-date-not-applied');
+    check('RES-5: under progress override a resume date is not applied, and a WARN names it',
+        r.nodes.P1.restart_date === '2025-09-04' && po.length === 1 && po[0].severity === 'WARN' &&
+        po[0].message.indexOf('C (resume 2025-09-04 17:00)') >= 0,
+        r.nodes.P1.restart_date + ' ' + JSON.stringify(po.map((a) => a.message.slice(0, 120))));
+
+    // RES-6 — a resume date with NO suspend date is not applied, and a WARN
+    // names it. Every P6-scheduled row the rule was measured on carries both
+    // (P6 enters a resume date only on a suspended activity); MS Project
+    // conversions carry a resume date alone (one job's monthly updates on the
+    // measuring machine: restart = resume, never scheduled in P6), a shape
+    // whose P6 handling is unmeasured. The run must equal the same network
+    // with no resume dates at all: a completed row and a started row.
+    const bare = () => Object.assign(held(), { suspend_date: '' });
+    const s6 = () => ({ code: 'S', duration_days: 10, remaining_duration: 5,
+        actual_start: '2025-06-20 08:00', resume_date: '2025-08-01 08:00', clndr_id: 'MF' });
+    r = run([bare(), started('P1', '2025-09-04 08:00', 20), s6()], [rel('C', 'P1')], DD_FILED);
+    const r0 = run([Object.assign(bare(), { resume_date: '' }), started('P1', '2025-09-04 08:00', 20),
+        Object.assign(s6(), { resume_date: '' })], [rel('C', 'P1')], DD_FILED);
+    const ws = r.alerts.filter((a) => a.context === 'resume-date-without-suspend');
+    check('RES-6: a resume date with no suspend date is not applied, and a WARN names it',
+        r.nodes.P1.restart_date === r0.nodes.P1.restart_date &&
+        r.nodes.S.restart_date === r0.nodes.S.restart_date &&
+        r.nodes.S.ef_date === r0.nodes.S.ef_date &&
+        !r.alerts.some((a) => a.context === 'resume-date-holds') &&
+        ws.length === 1 && ws[0].severity === 'WARN' &&
+        ws[0].message.indexOf('C (resume 2025-09-04 17:00)') >= 0 &&
+        ws[0].message.indexOf('S (resume 2025-08-01 08:00)') >= 0,
+        [r.nodes.P1.restart_date, r0.nodes.P1.restart_date, r.nodes.S.restart_date,
+         r0.nodes.S.restart_date].join(' / ') + ' ' + JSON.stringify(ws.map((a) => a.message.slice(0, 160))));
+}
+
+// ===========================================================================
+// CC — a COMPLETED predecessor hands a COMPLETED successor its stamp, with NO
+// lag (2026-09-27; paired with the Python pins in
+// _cpp_common/tests/test_must_finish_by_and_resume_2026_09_27.py). v2.9.47
+// laid the unexpired lag on that link too, INFERRED from links into
+// not-started and started work. P6's own dates say otherwise on every
+// discriminating link found: the demo's A1020 -> A1370x (FS + 60 d, 40 d
+// unexpired: A1370x is stamped on its resume date 09-Jul, not 26-Aug), two
+// SS links in another real P6 project (SS + 66 d and SS + 44 d: both
+// successors stamped at the data date) and eleven FF links in a third job's
+// P6 exports. A lag OUT of a
+// completed activity into not-started or started work keeps the v2.9.47 rule.
+// ===========================================================================
+{
+    const ccCal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
+    const rel = (a, b, t, lag) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: lag || 0 });
+    const run = (acts, rels) => E.computeCPM(acts, rels, {
+        dataDate: '2025-07-01 17:00', calMap: ccCal, relationshipLagCalendar: 'predecessor' });
+    const c1 = { code: 'C1', duration_days: 0, actual_start: '2025-05-05 08:00',
+        actual_finish: '2025-06-02 17:00', is_complete: true, clndr_id: 'MF' };
+    const c2 = (resume) => Object.assign({ code: 'C2', duration_days: 0,
+        actual_start: '2025-06-23 08:00', actual_finish: '2025-06-23 08:00',
+        is_complete: true, clndr_id: 'MF' },
+        resume ? { suspend_date: resume, resume_date: resume } : {});
+    const s = { code: 'S', duration_days: 10, clndr_id: 'MF' };
+
+    // CC-1 — no lag is laid between completed activities: C2 is stamped at
+    // the data date, so S starts Wed 02-Jul (v2.9.47: 39 working days of the
+    // FS + 60 d still unexpired, S on 26-Aug).
+    let r = run([c1, c2(''), s], [rel('C1', 'C2', 'FS', 60), rel('C2', 'S')]);
+    check('CC-1: a completed-to-completed link lays no lag',
+        r.nodes.S.es_date === '2025-07-02', r.nodes.S.es_date);
+
+    // CC-2 — the demo row itself: A1370x resumed 09-Jul-2025 17:00, so A1380x
+    // starts Thu 10-Jul, P6's date.
+    r = run([c1, c2('2025-07-09 17:00'), s], [rel('C1', 'C2', 'FS', 60), rel('C2', 'S')]);
+    check('CC-2: the completed successor is stamped on its own resume date, not on the lag (demo A1370x -> A1380x)',
+        r.nodes.S.es_date === '2025-07-10', r.nodes.S.es_date);
+
+    // CC-3 — free float runs to a completed successor's STAMP (retained
+    // logic), not past it: the demo's A2220 (zero duration, not started)
+    // feeds the completed A2290 by FS. At the filed date A2290 is stamped on
+    // its resume date, Tue 15-Jul 17:00, and P6 gives A2220 10 working days of
+    // free float; at the corrected data date (16-Sep 08:00) the stamp is the
+    // data date and P6 gives 0. v2.9.48 skipped a completed successor that
+    // carried no date and measured to the finish instead (43 d).
+    const a2220 = { code: 'Z', duration_days: 0, clndr_id: 'MF' };
+    const a2290 = { code: 'D', duration_days: 0, actual_start: '2025-06-24 08:00',
+        actual_finish: '2025-07-15 17:00', suspend_date: '2025-07-15 17:00',
+        resume_date: '2025-07-15 17:00',
+        is_complete: true, clndr_id: 'MF' };
+    const tail = { code: 'L', duration_days: 40, clndr_id: 'MF' };
+    const ffRun = (dd) => E.computeCPM([a2220, a2290, tail], [rel('Z', 'D')], {
+        dataDate: dd, calMap: ccCal, relationshipLagCalendar: 'predecessor' });
+    const filed = ffRun('2025-07-01 17:00').nodes.Z;
+    const corrected = ffRun('2025-09-16 08:00').nodes.Z;
+    check('CC-3: free float runs to a completed successor\'s stamp (demo A2220: 10 at the filed date, 0 at the corrected)',
+        filed.ff_working_days === 10 && corrected.ff_working_days === 0,
+        filed.ff_working_days + ' / ' + corrected.ff_working_days);
+}
+
+// ===========================================================================
+// PX — parseXER hands a caller both new inputs, as it already hands the
+// SCHEDOPTIONS settings (v2.9.49): the Must Finish By (PROJECT.plan_end_date)
+// pre-extracted as project_finish when SCHEDOPTIONS
+// sched_use_project_end_date_for_float is Y or absent (P6's default; with N
+// P6's handling is unmeasured and it is not handed on), and each task's
+// resume_date as P6 wrote it. Paired with tia_builder._detect_project_finish
+// and the resume_date the Python converter passes.
+// ===========================================================================
+{
+    const T = String.fromCharCode(9);
+    const pxXer = (flag, planEnd) => [
+        '%T' + T + 'PROJECT',
+        ['%F', 'proj_id', 'proj_short_name', 'last_recalc_date', 'plan_end_date'].join(T),
+        ['%R', 'P1', 'T', '2025-07-01 17:00', planEnd].join(T),
+        '%T' + T + 'SCHEDOPTIONS',
+        ['%F', 'proj_id', 'sched_retained_logic', 'sched_use_project_end_date_for_float'].join(T),
+        ['%R', 'P1', 'Y', flag].join(T),
+        '%T' + T + 'TASK',
+        ['%F', 'task_id', 'proj_id', 'task_code', 'task_name', 'task_type', 'status_code',
+            'target_drtn_hr_cnt', 'remain_drtn_hr_cnt', 'act_start_date', 'suspend_date',
+            'resume_date'].join(T),
+        ['%R', 'T1', 'P1', 'A', 'A', 'TT_Task', 'TK_Active', '160', '80',
+            '2025-06-20 08:00', '2025-06-27 17:00', '2025-09-04 17:00'].join(T),
+        '%E',
+    ].join(String.fromCharCode(10));
+    E.resetMC();
+    const pY = E.parseXER(pxXer('Y', '2026-09-30 17:00'));
+    const task = Object.values(E.getTasks()).find((t) => t.code === 'A');
+    const pBlank = E.parseXER(pxXer('', '2026-09-30 17:00'));
+    const pN = E.parseXER(pxXer('N', '2026-09-30 17:00'));
+    const pNone = E.parseXER(pxXer('Y', ''));
+    E.resetMC();
+    check('PX-3: parseXER hands on the Must Finish By, and holds it back under "opened projects"',
+        pY.plan_end_date === '2026-09-30 17:00' && pY.project_finish === '2026-09-30 17:00' &&
+        pBlank.project_finish === '2026-09-30 17:00' &&
+        pN.plan_end_date === '2026-09-30 17:00' && pN.project_finish === '' &&
+        pNone.plan_end_date === '' && pNone.project_finish === '',
+        JSON.stringify([pY.project_finish, pBlank.project_finish, pN.project_finish,
+            pNone.plan_end_date]));
+    check('PX-4: parseXER carries each task\'s suspend and resume dates as P6 wrote them',
+        !!task && task.resume_date === '2025-09-04 17:00' &&
+        task.suspend_date === '2025-06-27 17:00',
+        JSON.stringify(task && [task.suspend_date, task.resume_date]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

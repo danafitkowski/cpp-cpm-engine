@@ -16,11 +16,11 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 1957 of 2011
-# across 82 as measured 2026-09-23 (validation/crossval-summary.json carries
-# the figures of the latest run). The 54 that remain are
+# measured 2026-08-27, and the fixtures added since took it to 2465 of 2539
+# across 99 as measured 2026-09-27 (validation/crossval-summary.json carries
+# the figures of the latest run). The 74 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
-# populates (27 ff_signed, 27 ff_signed_working_days).
+# populates (36 ff_signed, 36 ff_signed_working_days).
 # Why that mattered: the free-float working-day conversion carried a wrong
 # anchor in BOTH ports, and ff_signed_working_days — the field that would have
 # shown it — was one of the fields the harness was skipping.
@@ -63,10 +63,10 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 82 fixtures in cpm-engine.crossval.js. As
-measured 2026-09-23 that is 1957 of a 2011-comparison surface; the 54 that are
+the harness executes across the 99 fixtures in cpm-engine.crossval.js. As
+measured 2026-09-27 that is 2465 of a 2539-comparison surface; the 74 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
-field (27 ff_signed, 27 ff_signed_working_days on completed activities).
+field (37 ff_signed, 37 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
 DAUBERT.md §3 for verification methodology.
 """
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.48'
+ENGINE_VERSION = '2.9.49'
 
 
 # =============================================================================
@@ -1333,7 +1333,8 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 project_calendar='', schedule_mode='retained_logic',
                 relationship_lag_calendar='successor',
-                float_type='FT_FF', ss_lag_from='early_start'):
+                float_type='FT_FF', ss_lag_from='early_start',
+                project_finish=''):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -1342,6 +1343,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             ``early_start``, ``early_finish``, ``is_complete`` (bool),
             ``clndr_id`` - P6 calendar id used for duration arithmetic; if
             missing, 7-day ordinal fallback is used with an ALERT logged.
+            ``resume_date`` - P6 TASK.resume_date as written ('YYYY-MM-DD
+            HH:MM'); under retained logic no work on a started or completed
+            activity that also carries ``suspend_date`` (P6
+            TASK.suspend_date) is scheduled before it (v2.9.49). Without a
+            suspend date it is not applied and a WARN names it.
         relationships: list of dicts. Required: ``from_code``, ``to_code``,
             ``type`` (FS/SS/FF/SF), ``lag_days`` (float). Lag is scheduled on
             the calendar named by ``relationship_lag_calendar``
@@ -1356,6 +1362,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             default and the setting is exposed rather than assumed.
         data_date: YYYY-MM-DD string used as the floor for un-started activities.
         cal_map: dict ``{clndr_id: calendar_info}``.
+        project_finish: P6 PROJECT.plan_end_date (Must Finish By) as written
+            ('YYYY-MM-DD HH:MM', or a bare date = the opening of that day).
+            When set, every late date is seeded from it on each activity's
+            own calendar instead of from the early finish (v2.9.49); the
+            reported project finish stays the early finish.
 
     Returns:
         dict with ``nodes``, ``project_finish``, ``project_finish_num``,
@@ -1574,6 +1585,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # at its own calendar's next working start (everything else).
             'ef_instant': ef_instant,
             'task_type': _tt,
+            # RES (v2.9.49) — P6's resume date as an instant (17:00 is the
+            # close of its day). Read only under retained logic, and only
+            # when it is after the data date; see _resume_floor.
+            'resume_date': str(a.get('resume_date') or '').strip(),
+            'resume_instant': (_instant_of(a.get('resume_date'))
+                               if a.get('resume_date') else 0),
+            # RES — applied only beside a suspend date (P6 enters a resume
+            # date only on a suspended activity); see _resume_floor.
+            'suspend_date': str(a.get('suspend_date') or '').strip(),
         }
 
     # v2.9.42 PAIRED FIX — missing-data-date gate. Mirrors cpm-engine.js.
@@ -1900,7 +1920,39 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # nothing is "after" it and the actual dates drive as before. JS paired
     # sites: _stampOf / _doneDrive.
     def _stamp_of(pnode):
-        return max(dd_num, _passthrough_of(pnode))
+        return max(dd_num, _passthrough_of(pnode), pnode.get('resume_hold') or 0)
+
+    # RES (P6 parity 2026-09-27) — P6 resumes no work before an activity's
+    # RESUME date. Measured on P6's own F9 of the website demo update at its
+    # filed data date (01-Jul-2025 17:00): 65 completed rows carry a resume
+    # date after the data date and P6 stamps none of them at the data date:
+    # 62 on the resume date, 3 later where unfinished work carries them
+    # further, so they drive their successors from it (A1100.2, finished
+    # and resumed 04-Sep-2025 17:00, holds A1680 to 05-Sep and its FS + 80 h
+    # successor A1130 to 19-Sep; the engine read no resume date, restarted
+    # both at the data date and finished the project on 27-Aug-2026 against
+    # P6's 03-Nov-2026). A started activity is held the same way: the SSL1-3
+    # probe's S13-P (suspended 28-Sep, resumed 12-Oct-2026, data date 05-Oct)
+    # restarts on 12-Oct in P6. An actual date after the data date on a row
+    # with NO resume date still drives nothing (FA): the demo's A2530,
+    # finished 12-Sep 12:00, hands its successor the carried 05-Sep. Under
+    # progress override P6's handling is unmeasured, so the date is not
+    # applied and a WARN names every row that carries one. Not modelled: the
+    # elapsed part of an SS / SF lag off a suspended predecessor (P6 counts
+    # only the working time before the suspension; S13-S). Every row it was
+    # measured on also carries a SUSPEND date, as P6 enters them (a resume
+    # date is entered only on a suspended activity); a resume date with no
+    # suspend date comes from MS Project conversions, which P6 never
+    # scheduled in any file found, so it is not applied and one WARN
+    # (resume-date-without-suspend) names every such row. JS paired site:
+    # _resumeFloorOf.
+    def _resume_floor(n):
+        _r = n.get('resume_instant') or 0
+        if schedule_mode != 'retained_logic' or dd_num <= 0 or _r <= dd_num:
+            return 0
+        if not n.get('suspend_date'):
+            return 0
+        return _r
 
     def _done_actual(pnode, rtype):
         if rtype in ('SS', 'SF'):
@@ -1912,6 +1964,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                               lag_cal, dd_num)
         return _lag_from_instant(_stamp_of(pnode), _rem, lag_cal,
                                  alerts=sink, ctx=ctx)
+
+    # RES — the activities a resume date holds (retained logic), and under
+    # progress override the ones it would have held (disclosed, not applied).
+    _resume_held = []
 
     # Forward Pass
     for code in order:
@@ -1925,15 +1981,18 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     if not pnode:
                         continue
                     if pnode['is_complete'] and dd_num > 0:
-                        # FA — a completed predecessor hands this one its
-                        # stamp plus the unexpired part of the lag, as it
-                        # would a not-started successor. INFERRED for a
-                        # completed-to-completed link: the rule is measured
-                        # into not-started and started successors only. The
-                        # walk is silent: v2.9.46 took no lag walk here, so a
-                        # calendar-less network gains no ALERT from it.
-                        _d = _done_drive(pnode, p, _lag_cal_for(pnode, node),
-                                         f'pass-through {pnode["code"]}->{code}', [])
+                        # CC (P6 parity 2026-09-27) — a completed predecessor
+                        # hands a COMPLETED successor its stamp with NO lag.
+                        # v2.9.47 laid the unexpired lag here too, INFERRED
+                        # from links into unfinished work; P6's own dates say
+                        # otherwise on every discriminating link found: the
+                        # demo's A1020 -> A1370x (FS + 60 d, 40 d unexpired;
+                        # A1370x is stamped on its resume date, not on the
+                        # lag), two SS links in a fresh P6 database project
+                        # and eleven FF links in P6 exports of another job.
+                        # A lag out of completed work into unfinished work
+                        # keeps the FA rule (_done_drive).
+                        _d = _stamp_of(pnode)
                     elif pnode['is_complete']:
                         _d = _passthrough_of(pnode)
                     else:
@@ -1961,6 +2020,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                             ctx=f'pass-through {pnode["code"]}->{code}')
                     if _d > _pt:
                         _pt, _pt_rel = _d, p
+                # RES — a completed activity resumed after the data date is
+                # stamped no earlier than its resume date (_stamp_of).
+                _rf = _resume_floor(node)
+                if _rf > max(dd_num, _pt):
+                    node['resume_hold'] = _rf
+                    _resume_held.append(node)
                 # At or before the data date it can move nothing: every
                 # successor's remaining work is floored there already.
                 if _pt_rel is not None and _pt > dd_num:
@@ -2333,6 +2398,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     _ef_anchor = dd_num
                 if _restart_max_drive > _ef_anchor:
                     _ef_anchor = _restart_max_drive
+                # RES — no remaining work before the resume date.
+                _rf = _resume_floor(node)
+                if _rf > _ef_anchor:
+                    _ef_anchor = _rf
+                    _resume_held.append(node)
                 # D3 (retained-logic P6 semantics wave 2026-09-02) — snap the
                 # restart anchor FORWARD on the ACTIVITY calendar, the same
                 # treatment the not-started data-date floor already gets
@@ -2350,7 +2420,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     if _snapped != _ef_anchor:
                         _ef_anchor = _snapped
             # PO_SNAP (P6 parity 2026-09-21) — progress_override applies the
-            # same D3 snap. Measured on the PEC LTC 18-Sep-26 file: data date
+            # same D3 snap. Measured on a real P6 export: data date
             # 2026-09-18 15:00 encodes as the open of Saturday Sep 19; without
             # this snap the remaining-bar walk starts on Saturday and lands 1
             # working day early (194 of 201 rows off; with it, 201/201).
@@ -2408,6 +2478,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # (unmeasured; design contract).
             if schedule_mode == 'retained_logic':
                 _d5_anchor = dd_num if (dd_num > 0 and dd_num > act_start_num) else act_start_num
+                # RES — the same resume floor as the remaining-duration path.
+                _rf = _resume_floor(node)
+                if _rf > _d5_anchor:
+                    _d5_anchor = _rf
+                    _resume_held.append(node)
                 if node_cal:
                     _d5_snapped = _advance_workdays(
                         _d5_anchor, 0, node_cal,
@@ -2560,10 +2635,117 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # constraint-pinned).
         node['driving_predecessor'] = driving_pred
 
+    # RES — one alert names every activity a resume date holds (retained
+    # logic) or would have held (progress override, not applied).
+    if _resume_held:
+        alerts.append({
+            'severity': 'INFO',
+            'context': 'resume-date-holds',
+            'message': (
+                '%d %s held to a resume date later than the data date: %s. '
+                'P6 resumes no work before an activity\'s resume date, so a '
+                'completed activity is stamped there and a started one '
+                'restarts there, and their successors are scheduled from it.'
+                % (len(_resume_held),
+                   'activity is' if len(_resume_held) == 1 else 'activities are',
+                   '; '.join('%s (resume %s)' % (n['code'], n['resume_date'])
+                             for n in _resume_held))
+            ),
+        })
+    if schedule_mode == 'progress_override' and dd_num > 0:
+        _po_res = [n for c, n in nodes.items()
+                   if (n.get('resume_instant') or 0) > dd_num
+                   and n.get('suspend_date')
+                   and (n['is_complete'] or n.get('actual_start'))]
+        if _po_res:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'resume-date-not-applied',
+                'message': (
+                    '%d %s a resume date later than the data date: %s. Under '
+                    'retained logic P6 resumes no work before it; its handling '
+                    'under progress override is unmeasured, so these dates '
+                    'were not applied.'
+                    % (len(_po_res),
+                       'activity carries' if len(_po_res) == 1 else 'activities carry',
+                       '; '.join('%s (resume %s)' % (n['code'], n['resume_date'])
+                                 for n in _po_res))
+                ),
+            })
+    if dd_num > 0:
+        _no_susp = [n for c, n in nodes.items()
+                    if (n.get('resume_instant') or 0) > dd_num
+                    and not n.get('suspend_date')
+                    and (n['is_complete'] or n.get('actual_start'))]
+        if _no_susp:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'resume-date-without-suspend',
+                'message': (
+                    '%d %s a resume date later than the data date but no '
+                    'suspend date: %s. P6 enters a resume date only on a '
+                    'suspended activity, and its handling of one without a '
+                    'suspend date (an MS Project conversion) is unmeasured, so '
+                    'these dates were not applied.'
+                    % (len(_no_susp),
+                       'activity carries' if len(_no_susp) == 1 else 'activities carry',
+                       '; '.join('%s (resume %s)' % (n['code'], n['resume_date'])
+                                 for n in _no_susp))
+                ),
+            })
+
     max_ef = 0
     for n in nodes.values():
         if n['ef'] > max_ef:
             max_ef = n['ef']
+
+    # MFB (P6 parity 2026-09-27) — the project's Must Finish By
+    # (PROJECT.plan_end_date). P6 seeds every late date from it when it is
+    # set, on each activity's own calendar, instead of from the project's
+    # early finish. Measured on P6's own F9 of the website demo update at
+    # three data dates: every open end's late finish is its Must Finish By
+    # (30-Sep-2026 17:00) against an early finish of 3 to 12 Nov 2026, and the
+    # critical path carries -23 to -31 working days of float; seeded at its
+    # early finish the engine matched none of the 291 open rows' late dates or
+    # float, and seeded here it matches all of them. Two genuine P6 exports on
+    # this machine with a discriminating Must Finish By seed at it too. Its
+    # time of day is resolved on the shift close exactly as a finish
+    # constraint's is (v2.9.45), and a date on a day the activity does not
+    # work is the close of its last working day before it. The reported
+    # project finish stays the EARLY finish, and free float of an activity
+    # with no successor still runs to it (all 78 open ends of three P6 files).
+    # JS paired site: _projectDeadlineNum / _seedLFFor.
+    _pf_raw = str(project_finish or '').strip()
+    _pf_day = date_to_num(_pf_raw) if _pf_raw else 0
+    if _pf_raw and _pf_day <= 0:
+        alerts.append({
+            'severity': 'WARN',
+            'context': 'project-deadline-invalid',
+            'message': (
+                'project_finish=%r did not parse as YYYY-MM-DD; the late dates '
+                'were seeded from the early finish.' % (_pf_raw,)
+            ),
+        })
+    if _pf_day > 0:
+        # Both sides as INSTANTS: Friday 17:00 is the opening of Saturday,
+        # which is also the instant of a Friday early finish (ef_instant),
+        # while the ef boundary reads Monday.
+        _pf_inst = _instant_of(_pf_raw)
+        _early_inst = max(((n.get('ef_instant') or n['ef']) for n in nodes.values()),
+                          default=0)
+        alerts.append({
+            'severity': 'ALERT' if _pf_inst < _early_inst else 'WARN',
+            'context': 'project-deadline-applied',
+            'message': (
+                'project_finish=%s (the Must Finish By) seeds the late dates on '
+                'each activity\'s own calendar; the early-finish boundary is %s%s.'
+                % (_pf_raw, num_to_date(max_ef),
+                   ' (the Must Finish By is earlier: negative float runs through '
+                   'the critical path)' if _pf_inst < _early_inst else
+                   (' (the Must Finish By is later: the critical path carries '
+                    'positive float)' if _pf_inst > _early_inst else ''))
+            ),
+        })
 
     # B2 (P6 alignment wave 2026-08-11, capture 9b748cc) — per-calendar
     # project-finish seed. P6 (sched_use_project_end_date_for_float=Y) seeds
@@ -2579,7 +2761,31 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if lw > d_last:
             d_last = lw
 
+    def _deadline_lf_for(n):
+        # MFB — the Must Finish By as this activity's exclusive late-finish
+        # boundary: the opening of the working day after the last day of its
+        # calendar that closes at or before the instant.
+        n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+        if not n_cal:
+            return _instant_of(_pf_raw)         # ordinal fallback nodes
+        _tod = _constraint_time_minutes(_pf_raw)
+        _wd = n_cal.get('work_days') or [1, 2, 3, 4, 5]
+        _hol = set(n_cal.get('holidays') or [])
+        _sp = _special_workdays_set(n_cal)
+        _d = _date_from_num(_pf_day)
+        if _tod is not None and _d is not None and _is_work_day(_d, _wd, _hol, _sp):
+            _close = _calendar_day_close(_pf_day, n_cal)
+            if _close is not None and _tod >= _close:
+                return _advance_workdays(_pf_day, 1, n_cal,
+                                         alerts=alerts, ctx=f'seed-LF deadline {n["code"]}')
+        return _snap_fwd(_pf_day, n_cal, alerts=alerts, ctx=f'seed-LF deadline {n["code"]}')
+
     def _seed_lf_for(n):
+        if _pf_day > 0:
+            return _deadline_lf_for(n)
+        return _natural_seed_lf_for(n)
+
+    def _natural_seed_lf_for(n):
         n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
         if not n_cal:
             return max_ef                       # ordinal fallback nodes
@@ -2621,6 +2827,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
         n['_seed_lf'] = _seed_lf_for(n)
         n['lf'] = n['_seed_lf']
+        # MFB — free float that would run to the seed runs to the EARLY
+        # finish instead (the free-float pass below).
+        if _pf_day > 0:
+            n['_ff_terminal'] = _natural_seed_lf_for(n)
         n['ls'] = _retreat_workdays(
             n['lf'], n['duration_days'], n_cal,
             alerts=alerts, ctx=f'init-LS {n["code"]}')
@@ -2999,9 +3209,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         (n.get('constraint') or {}).get('type') or (n.get('constraint2') or {}).get('type')
         for n in nodes.values()
     )
-    # (this reference has no imposed-project-finish input, so the JS guard's
-    # `!_projectDeadlineNum` half is unconditionally true here.)
-    if not _any_constraint:
+    # A Must Finish By (project_finish) is an imposed project finish: negative
+    # float is then a schedule fact, as in the JS guard's `!_projectDeadlineNum`.
+    if not _any_constraint and not _pf_day > 0:
         _impossible = [
             '%s (tf %s d, ef %s, lf %s)' % (c, nodes[c]['tf'],
                                             num_to_date(nodes[c]['ef']),
@@ -3035,10 +3245,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # well, so all four free-float fields cross-validate. Only the
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
-    # comparisons are absent on both sides rather than one: 54 of them (27
-    # ff_signed, 27 ff_signed_working_days) on the 82-fixture harness as
-    # measured 2026-09-23, whose line reads 1957 / 1957 executed against a
-    # 2011-comparison surface (validation/crossval-summary.json in the engine
+    # comparisons are absent on both sides rather than one: 74 of them (37
+    # ff_signed, 37 ff_signed_working_days) on the 99-fixture harness as
+    # measured 2026-09-27, whose line reads 2465 / 2465 executed against a
+    # 2539-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.
@@ -3052,10 +3262,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # B5 (capture 9b748cc case 05) - published FF floors at zero;
             # the signed value is preserved in ff_signed as forensic signal.
             n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
-            n['ff_signed'] = n['tf']
+            # MFB — with a Must Finish By the seed is not the early finish,
+            # and P6 still measures an open end's free float to the early
+            # finish (all 78 open ends of three P6 files).
+            _ff_end = n['_ff_terminal'] if _pf_day > 0 else n['lf']
+            n['ff_signed'] = (_round_half_up_to(_ff_end - n['ef'], 3)
+                              if _pf_day > 0 else n['tf'])
             n['ff_signed_working_days'] = _count_work_days_between(
-                n['ef'], n['lf'], n_cal)
-            n['ff'] = max(0, n['tf'])
+                n['ef'], _ff_end, n_cal)
+            n['ff'] = max(0, n['ff_signed'])
             n['ff_working_days'] = max(0, n['ff_signed_working_days'])
             continue
         min_slack = float('inf')
@@ -3079,7 +3294,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # 131 working days).
             _sn_pt = 0
             if sn.get('is_complete'):
-                _sn_pt = _passthrough_of(sn)
+                # FF (P6 parity 2026-09-27) — under retained logic with a data
+                # date the completed successor is measured at its STAMP (the
+                # data date, the date it carries, or its resume date), not
+                # skipped when it carries nothing: the demo's A2220 feeds the
+                # completed A2290 and P6 gives it 10 working days of free float
+                # to A2290's resume date at the filed date and 0 at the data
+                # date at the corrected one, where skipping measured 43 to the
+                # finish. JS paired site: the same block in the FF pass.
+                _sn_pt = (_stamp_of(sn) if (schedule_mode == 'retained_logic' and dd_num > 0)
+                          else _passthrough_of(sn))
                 if not _sn_pt:
                     continue
                 _sn_pt = _snap_fwd(_sn_pt, _cal_for(n), alerts=[], ctx='FF-slack PT')
@@ -3155,7 +3379,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # semantics, capture cases 05/09); the signed value is preserved
         # in ff_signed so the forensic negative-FF signal survives.
         if min_slack == float('inf'):
-            ff_signed = n['tf']
+            # MFB — every successor skipped: measured as for an open end.
+            ff_signed = (_round_half_up_to(n['_ff_terminal'] - n['ef'], 3)
+                         if _pf_day > 0 else n['tf'])
         else:
             ff_signed = _round_half_up_to(min_slack, 3)
         n['ff_signed'] = ff_signed
@@ -3192,7 +3418,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # 61 comparisons rather than compare them — the reason both ports could
         # carry the identical anchor error and stay green.
         _ff_from = binding_pred_anchor if binding_pred_anchor is not None else n['ef']
-        _ff_to = binding_succ_anchor if binding_succ_anchor is not None else n['lf']
+        _ff_to = (binding_succ_anchor if binding_succ_anchor is not None
+                  else (n['_ff_terminal'] if _pf_day > 0 else n['lf']))
         n['ff_signed_working_days'] = _count_work_days_between(
             _ff_from, _ff_to, ff_cal)
         n['ff_working_days'] = max(0, n['ff_signed_working_days'])

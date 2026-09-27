@@ -300,13 +300,21 @@ def build_case(path, swap_cstr=False, honour_must_finish=False):
                          if so.get("sched_progress_override") == "Y" else "retained_logic"),
     }
     # PROJECT.plan_end_date is P6's "Must Finish By" slot. probe_seed.py
-    # measured what P6 ACTUALLY seeded the backward pass from across the
-    # corpus: 130 of 139 single-project exports have max(late_end_date) ==
-    # max(early_end_date) -- the natural seed, which is also the engine's
-    # default -- and only 2 seed from plan_end_date. Several files carry a
-    # plan_end_date that P6 demonstrably ignored. So the harness does NOT
-    # pass it by default; `honour_must_finish=True` measures the two files
-    # where P6 did use it.
+    # found max(late_end_date) == max(early_end_date) -- the natural seed --
+    # on 130 of 139 single-project exports and a plan_end_date seed on 2. That
+    # does not show P6 ignoring the date (re-measured 2026-09-27, v2.9.49):
+    # most of those files set none, or one equal to the early finish, where
+    # the two seeds coincide. Where the date differs from the early finish
+    # and SCHEDOPTIONS sched_use_project_end_date_for_float is Y, P6 seeded
+    # the open ends' late finish at it in every P6-scheduled export found (2
+    # on the measuring machine, and P6 23.12.1's own F9 of the website demo
+    # update at three data dates). The files that looked otherwise carried
+    # the flag N ("opened projects", unmeasured), no SCHEDOPTIONS setting or
+    # no last_schedule_date (no record of a P6 schedule run), or stored dates
+    # scheduled before their own data date. The CPP converters pass it (flag
+    # Y or absent). This harness still leaves it off by default so its
+    # recorded figures stay comparable; `honour_must_finish=True`
+    # (--must-finish) passes it.
     mf_raw = projects[0].get("plan_end_date", "") if projects else ""
     mf_dt = parse_dt(mf_raw)
     mf_day = base_cal.opening_day(mf_dt) if (base_cal and mf_dt) else None

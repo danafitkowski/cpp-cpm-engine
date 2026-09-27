@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.48'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.49'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -96,6 +96,8 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
         actual_start: '2026-01-05',      // Optional. Marks activity as in-progress. A recorded actual start governs ES over the data-date floor and over predecessor-driven early start, per Oracle P6 / CPM forward-pass semantics.
         actual_finish: '2026-01-12',     // Optional. Marks activity as complete. EXCLUSIVE BOUNDARY, not the last worked day — see below.
         is_complete: false,              // Optional. Sets ES=actual_start, EF=actual_finish (verbatim; the engine does NOT re-normalise it).
+        suspend_date: '2026-09-28 08:00', // Optional (v2.9.49). P6's TASK.suspend_date. A resume date is applied only beside one, as P6 enters them.
+        resume_date: '2026-10-12 08:00', // Optional (v2.9.49). P6's TASK.resume_date, time included. Under retained logic no work on a suspended activity is scheduled before it when it is after the data date: a completed activity is stamped there and drives its successors from it, a started one restarts there (INFO resume-date-holds names each). Under progress override it is not applied (WARN resume-date-not-applied); without a suspend_date it is not applied either (WARN resume-date-without-suspend: MS Project conversions carry that shape, which P6 was never measured scheduling).
         constraint: {                    // Optional. Primary P6 constraint.
             type: 'SNET',                //   One of: SNET | SNLT | FNET | FNLT | MS_Start | MS_Finish | MFO | SO | ALAP.
             date: '2026-01-10',          //   Anchor date for date-bearing constraints (omit for ALAP).
@@ -175,6 +177,7 @@ precision review before relying on the dates.
 - `dataDate` — `'YYYY-MM-DD'`. The "as-of" date for the run. ES of unstarted activities cannot be earlier than this.
 - `calMap` — object keyed by `clndr_id`: `{ MF: { work_days: [1,2,3,4,5], holidays: [...] } }`.
 - `projectCalendar` — string. Default calendar id when an activity has no `clndr_id`.
+- `projectFinish` (aliases `project_finish`, `mustFinishBy`) — the project's Must Finish By, P6's `PROJECT.plan_end_date` (`'YYYY-MM-DD'` or `'YYYY-MM-DD HH:MM'`). When set, every late date is seeded from it on each activity's own calendar, as P6 does: a time at or after the close of that day's shift counts the day, a date on a day the activity does not work falls back to the close of its last working day before it. Float is then measured against it and runs negative when the early finish is later. The result's `projectFinish` stays the EARLY finish, and an activity with no successor keeps its free float to the early finish, as P6 reports both. Pass it when SCHEDOPTIONS `sched_use_project_end_date_for_float` is `Y` or absent (P6's default, the setting it was measured under; `parseXER` pre-extracts `project_finish` on that rule). P6's handling under `N` ("opened projects") is unmeasured. An applied value raises `project-deadline-applied` (ALERT when it is earlier than the early finish, WARN otherwise); an unparseable one raises `project-deadline-invalid` (WARN) and is ignored. Through v2.9.48 the seed was the bare date for every activity and the result's `projectFinish` reported the deadline itself.
 
 **Returns:**
 
@@ -212,7 +215,7 @@ precision review before relying on the dates.
     criticalCodesArray,                          // string[]. JSON-safe parallel field.
     topoOrder, topo_order,                       // Topological order (camelCase + snake_case).
     alerts,                                      // Array of { severity, context, message }.
-                                                 //   severity: 'WARN' | 'ALERT'.
+                                                 //   severity: 'INFO' | 'WARN' | 'ALERT'.
                                                  //   context:  'constraint-applied' (WARN), 'constraint-violated' (ALERT),
                                                  //             'hammock-cycle' (ALERT), 'hammock-negative-span' (ALERT),
                                                  //             'hammock-unsupported-rel' (legacy v2.9.8, now 0/empty),
@@ -303,7 +306,7 @@ For the per-iteration hot loop in Monte Carlo schedule risk analysis.
 
 ### `E.parseXER(xerString)`
 
-Parse a P6 XER export. Returns `{ taskCount, relCount, dropped_activities }`.
+Parse a P6 XER export. Returns `{ taskCount, relCount, dropped_activities }` plus the SCHEDOPTIONS settings it read and, since v2.9.49, `plan_end_date` (the project's Must Finish By as P6 wrote it) and `project_finish` (the value to pass as `computeCPM`'s `opts.projectFinish`: the same date when SCHEDOPTIONS `sched_use_project_end_date_for_float` is `Y` or absent, `''` when it is `N` or no date is set). The `getTasks()` records carry `actual_start` / `actual_finish` as P6 wrote them, time included (they were cut to `YYYY-MM-DD` through v2.9.48), and each task's `suspend_date` and `resume_date`.
 
 - `dropped_activities: Array<{ task_code, task_type, reason }>` — activities dropped during parse (e.g. `TT_LOE` level-of-effort, `TT_WBS` summary, completed or zero-remaining rows that are not milestones). Caller can surface for transparency; no silent corruption.
 
