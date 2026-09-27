@@ -98,6 +98,18 @@ No audit item changed status. v2.9.47 is an engine-math release (the unexpired l
 
 Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action. The new rules were measured in P6 itself, on probe projects scheduled and read back from its database. Those probes are not a held-out capture of the comparison matrix.
 
+## Status at v2.9.48 (reviewed 2026-09-27)
+
+No audit item changed status. v2.9.48 changes no scheduling arithmetic; it fixes two display fields and the Daubert disclosure text (see CHANGELOG.md).
+- A completed activity's `ef_last_worked_date` / `lf_last_worked_date` print its actual finish date when that finish carries its closing time, as P6 prints it.
+- `buildDaubertDisclosure` states the harness's current figures (82 fixtures, 1957 of 2011, 54 skipped), and its gate R-v298-B10 reads them from `validation/crossval-summary.json`.
+- The cross-validation surface is unchanged at 1,957 of 2,011 comparisons across 82 fixtures, 0 failures.
+- The unit suite grew from 1,315 to 1,325.
+- Coverage was re-measured on the new bytes: 94.05% statements / 83.20% branches / 95.20% functions.
+- The 13-case P6 comparison matrix was re-run on the new bytes against the same 2026-08-11 capture. It reads 13 / 13 with zero changed rows.
+
+Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.47. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.48. Update on every release that closes or opens an audit item.

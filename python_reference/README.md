@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **1009 / 1009 executed-check** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995, and the 2026-08-25 wave took it to **1009 of 1015** across 46 fixtures. The 6 comparisons still skipped are activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **1957 of 2011 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **1957 of 2011** across 82 as measured 2026-09-23 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 54 comparisons still skipped (27 `ff_signed`, 27 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
 
 ## Provenance
 
@@ -52,8 +52,18 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  8148a7584c67c8b4945fdd048b4362bb53c9ffe9b630d7061a6659afb3e15a74
+cpm.py  SHA-256:  7e3772f40506ec81f99a756e8adf41ac4926c33f5d141384d8cdf5ba431f5b9f
 
+(v2.9.48 completed-activity last worked day 2026-09-27 - bumped from 8148a758...:
+ef_last_worked_date / lf_last_worked_date on a COMPLETED activity whose
+actual finish carries its closing time (ef_instant after ef) are its actual
+finish date, where the working-day retreat printed the day before it. A
+date-only or before-noon finish still retreats. No computed value moves.
+The comments that carried the 1009 / 1015 figures carry the measured ones,
+and ENGINE_VERSION reads 2.9.48. Applied to this reference by the same
+patch as the canonical engine; the 82-fixture harness stays at 1957 of 2011
+executed and bit-identical.
+Prior:
 (v2.9.47 unexpired-lag wave 2026-09-23 - bumped from e08e402d...: three
 rules measured in P6 Professional 23.12 on probe projects scheduled one at
 a time and read back from the P6 database, and on real exports (client
@@ -289,8 +299,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 190699
-  sha-256:  8148a7584c67c8b4945fdd048b4362bb53c9ffe9b630d7061a6659afb3e15a74
+  bytes: 192075
+  sha-256:  7e3772f40506ec81f99a756e8adf41ac4926c33f5d141384d8cdf5ba431f5b9f
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

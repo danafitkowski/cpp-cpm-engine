@@ -15,10 +15,12 @@
 # where it previously emitted nothing while the JS engine emitted a real
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
-# fixture then grew the surface again, and as measured 2026-08-27 the harness
-# stands at 1009 of 1015 across 46 fixtures. The 6 that remain are
+# fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
+# measured 2026-08-27, and the fixtures added since took it to 1957 of 2011
+# across 82 as measured 2026-09-23 (validation/crossval-summary.json carries
+# the figures of the latest run). The 54 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
-# populates (3 ff_signed, 3 ff_signed_working_days).
+# populates (27 ff_signed, 27 ff_signed_working_days).
 # Why that mattered: the free-float working-day conversion carried a wrong
 # anchor in BOTH ports, and ff_signed_working_days — the field that would have
 # shown it — was one of the fields the harness was skipping.
@@ -61,10 +63,11 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 46 fixtures in cpm-engine.crossval.js. As
-measured 2026-08-27 that is 1009 of a 1015-comparison surface; the 6 that are
-skipped rather than compared are activities where NEITHER engine emits the
-field (3 ff_signed, 3 ff_signed_working_days on completed activities). See
+the harness executes across the 82 fixtures in cpm-engine.crossval.js. As
+measured 2026-09-23 that is 1957 of a 2011-comparison surface; the 54 that are
+skipped rather than compared are comparisons where NEITHER engine emits the
+field (27 ff_signed, 27 ff_signed_working_days on completed activities).
+validation/crossval-summary.json carries the figures of the latest run. See
 DAUBERT.md §3 for verification methodology.
 """
 import math
@@ -131,8 +134,9 @@ def _round_half_up_to(x, decimals=0):
 # branch too, so the 58 comparisons the skip-not-fail guards were silently
 # dropping are executed. Only the completed-activity branch still emits neither
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
-# those 6 comparisons are absent on both sides rather than one.
-ENGINE_VERSION = '2.9.47'
+# those comparisons (54 on the harness as measured 2026-09-23) are absent on
+# both sides rather than one.
+ENGINE_VERSION = '2.9.48'
 
 
 # =============================================================================
@@ -2933,14 +2937,27 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # and a report printing ef_date beside an opposing expert's P6 print
         # looks one day out unless the convention is stated. Derived from the
         # same ef/lf; no computed value changes.
+        # v2.9.48 - a COMPLETED activity's ef is its actual finish, not a
+        # boundary the engine computed. When the finish carries P6's closing
+        # time ('2026-01-09 16:00') its instant is the opening of the next
+        # day, so the date itself is the last day worked, and retreating a
+        # working day printed the day before the actual finish P6 prints (and
+        # a Saturday finish on a Mon-Fri calendar as the Friday). lf equals ef
+        # there. A date-only or morning finish is the opening of that day, the
+        # documented boundary form (docs/api.md), and still retreats: the
+        # display follows the instant successors are scheduled from.
         _bcal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
+        _lw_on_finish_day = (n['is_complete'] and n['ef'] > 0
+                             and n['ef_instant'] > n['ef'])
         n['ef_last_worked_date'] = (
-            num_to_date(_retreat_workdays(n['ef'], 1, _bcal, alerts=[],
-                                          ctx=f'ef last-worked {c}'))
+            (num_to_date(n['ef']) if _lw_on_finish_day else
+             num_to_date(_retreat_workdays(n['ef'], 1, _bcal, alerts=[],
+                                           ctx=f'ef last-worked {c}')))
             if n['ef'] > 0 else '')
         n['lf_last_worked_date'] = (
-            num_to_date(_retreat_workdays(n['lf'], 1, _bcal, alerts=[],
-                                          ctx=f'lf last-worked {c}'))
+            (num_to_date(n['lf']) if _lw_on_finish_day else
+             num_to_date(_retreat_workdays(n['lf'], 1, _bcal, alerts=[],
+                                           ctx=f'lf last-worked {c}')))
             if n['lf'] > 0 else '')
         # v2.9.27 — audit R9 LOW PAIRED FIX. tf_working_days companion to
         # tf (calendar days). P6 reports float in working days on the
@@ -3017,11 +3034,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # ff_signed_working_days is now assigned on the has-successors branch as
     # well, so all four free-float fields cross-validate. Only the
     # completed-activity branch still emits neither ff_signed nor
-    # ff_signed_working_days, and neither does the JS engine, so those 6
-    # comparisons are absent on both sides rather than one — the harness line
-    # is 1009 / 1009 executed against a 1015-comparison surface. An opposing
-    # expert can now rely on this file for all four free-float fields on the
-    # has-successors path.
+    # ff_signed_working_days, and neither does the JS engine, so those
+    # comparisons are absent on both sides rather than one: 54 of them (27
+    # ff_signed, 27 ff_signed_working_days) on the 82-fixture harness as
+    # measured 2026-09-23, whose line reads 1957 / 1957 executed against a
+    # 2011-comparison surface (validation/crossval-summary.json in the engine
+    # repo carries the current figures). An opposing expert can rely on this
+    # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.
     for c, n in nodes.items():
         if n['is_complete']:

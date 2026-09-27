@@ -12,6 +12,101 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.48 — 2026-09-27 — a completed activity's last worked day, and the disclosure's validation figures
+
+**Engine math is unchanged.** Every `es`, `ef`, `ls`, `lf`, float,
+critical-path and driving-path value is what v2.9.47 returns, and the
+cross-validation and P6 comparison results do not move. Both fixes are to
+what the engine prints: two output fields that nothing inside the engine
+reads back, and the text of its Daubert disclosure.
+
+**1. The last worked day of a completed activity.** `ef_last_worked_date`
+and `lf_last_worked_date`, the inclusive companions of the exclusive `ef` /
+`lf` added at v2.9.42, retreated one working day from `ef` / `lf` on every
+activity. That is right wherever `ef` is the exclusive boundary, which is
+every activity the engine schedules. A completed activity's `ef` is its
+actual finish instead. When that finish carries P6's closing time
+(`'2026-01-09 16:00'`, as P6 writes `act_end_date`), its instant is the
+opening of the next day, so the date itself is the last day worked. The
+fields printed the working day before it:
+- 08-Jan for an activity P6 shows finished 09-Jan;
+- the Friday for a Saturday finish on a Mon-Fri calendar.
+
+`lf` equals `ef` on a completed activity, so the late field was out the
+same way.
+- The rule reads the finish instant the engine already schedules
+  successors from. A completed activity whose finish instant falls after
+  its finish date closed on that date, and both fields print it.
+- A date-only `actual_finish` is the exclusive boundary docs/api.md
+  documents, the opening of the next working day, and a time before noon is
+  the opening of its own day. Both still print the working day before,
+  because that is the instant successors are scheduled from. The same finish
+  written either way (`'2026-01-09 16:00'` or the boundary `'2026-01-12'`)
+  now prints the same day.
+- On the 82 cross-validation fixtures, 18 of the 27 completed activities
+  carry a closing-time finish and now print it. The other 9 are unchanged.
+- The harness does not compare these two display fields. A scratch run of
+  it that added them to its per-activity date comparison found both engines
+  agreeing on every activity of all 82 fixtures, 0 failures.
+- LW-1..LW-6 in `cpm-engine.test.js`, paired with the same six cases on
+  the Python side, pin the fix, the boundary and morning cases, and that no
+  computed date moves.
+- docs/api.md now lists both fields in the result schema and states how
+  each form of `actual_finish` prints.
+
+**2. The Daubert disclosure's validation figures.** `buildDaubertDisclosure`
+still described the cross-validation as it stood at the v2.9.42 tag: 46
+fixtures, 1009 of 1015 comparisons, 6 skipped over 3 fixtures, alert parity
+on all 44 non-throwing fixtures, 107 activity groups. Since v2.9.47 the
+harness runs 82 fixtures:
+- 1957 of 2011 comparisons executed, 0 failures;
+- 54 skipped (27 `ff_signed`, 27 `ff_signed_working_days`), all on
+  completed activities where neither engine emits the field, across 23
+  fixtures;
+- alert parity on 78 of the 82 fixtures.
+
+Prongs 1 and 3 now state those figures and, as DAUBERT.md already did, name
+the two fixtures (F65, F67) where alert parity is not compared because the
+JS engine's future-actual-finish ALERT has no Python counterpart. The
+surface is no longer called 2011 "node-field" comparisons: 478 of them are
+whole-schedule comparisons.
+- The gate that should have caught this, R-v298-B10, pinned the 46-fixture
+  wording as literals, so it held the stale text in place. It now reads
+  every figure from `validation/crossval-summary.json`, which
+  `node cpm-engine.crossval.js --json` writes from the run itself, and checks
+  the text the disclosure emits: fixture count, surface, skips and their
+  split, executed tally, fixtures carrying a skip, throw fixtures and alert
+  parity. A fifth check rejects any other fixture count or tally in the
+  three strings. In the `_cpp_common` mirror, which carries no
+  `validation/`, the same five checks report not applicable, as V2942-13
+  does, so the suite's count does not depend on where it runs.
+- Planting the old "3 of the 46 fixtures" wording in a scratch copy fails
+  the gate, and so does moving the summary's figures.
+- The Python reference's comments carried the same 1009 / 1015 figures and
+  now carry the measured ones.
+- The disclosure's methodology line for `computeTopologyHash` no longer
+  describes the fingerprint with a superlative CLAUDE.md forbids. It now
+  says what the line already went on to say: no AACE precedent, a
+  provenance primitive.
+
+**Verified.**
+- JS unit suite: 1,325 checks green, up from 1,315. LW-1..LW-6 are new.
+  R-v298-B10's two literal positive checks became five checks read from the
+  harness output, and its literal negative checks stay.
+- Cross-validation re-run on these bytes: 82 fixtures, 1957 of 2011
+  executed, 54 skipped, 0 failures. Every figure in
+  `validation/crossval-summary.json` is unchanged.
+- The 13-case P6 comparison matrix, re-run on these bytes against the same
+  capture: 13 / 13 over 27 field checks, zero changed rows.
+- Coverage re-measured on these bytes: 94.05% statements (10,442 / 11,102),
+  83.20% branches (2,259 / 2,715), 95.20% functions (139 / 146).
+
+**Who is affected.** A report that printed `ef_last_worked_date` or
+`lf_last_worked_date` for a completed activity whose finish carried its
+closing time printed the working day before that finish; nothing computed
+from it moved. A report that quoted the engine's own Daubert disclosure
+quoted the 46-fixture figures.
+
 ## v2.9.47 — 2026-09-23 — only the unexpired part of a lag, measured in P6
 
 **Engine math changed.** Under retained logic P6 lays only the part of a

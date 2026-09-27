@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.47'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.48'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -129,6 +129,20 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 > with no field improving — because callers that already follow this contract
 > would be shifted twice. The contract is the exclusive form; the engine does not
 > guess which form it was handed.
+>
+> P6's own `act_end_date`, time included (`'2026-01-09 16:00'`), is the other
+> form that reads correctly. Since v2.9.44 the engine takes its INSTANT: the close
+> of 09-Jan, the same instant as the boundary `2026-01-12` on a Mon-Fri
+> calendar. A time before noon is read as the opening of its day.
+>
+> **Last worked day of a completed activity** (`ef_last_worked_date` /
+> `lf_last_worked_date`, fixed since v2.9.48). Both forms of the same finish
+> print the same day, the one P6 prints: `09-Jan` above. A finish carrying its
+> closing time prints its own date (a Saturday finish on a Mon-Fri calendar
+> prints the Saturday); a date-only boundary, or a time before noon, prints the
+> working day before it, because that is the instant successors are scheduled
+> from. Before that fix the closing-time form printed the working day before
+> its own finish date.
 
 **Relationships array:**
 
@@ -173,6 +187,11 @@ precision review before relying on the dates.
             tf, ff,                              // Total / free float (calendar days).
             tf_working_days,                     // TF in working days on activity's own calendar.
             ff_working_days,                     // FF in working days.
+            ef_last_worked_date,                 // The last day worked, as P6 prints a finish:
+            lf_last_worked_date,                 //   ef / lf retreated one working day, except
+                                                 //   on a completed activity whose actual finish
+                                                 //   carries its closing time, which prints that
+                                                 //   date itself (see the actual_finish note).
             driving_predecessor,                 // Object describing what drove ES, or null.
                                                  //   {code, type, lag_days}  — real predecessor; `type` ∈ {'FS','SS','FF','SF'}.
                                                  //   {type:'CONSTRAINT', constraint_type, date}  — v2.9.15: an ES-side

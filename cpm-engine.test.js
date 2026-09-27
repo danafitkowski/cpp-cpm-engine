@@ -6029,15 +6029,107 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
 //          closed all 58 one-sided skips, so every remaining skip is a completed
 //          activity (F10.A, F20.B, F43.A) on which NEITHER engine emits the
 //          field. Both prong strings refreshed to those measured figures.
-// Test enforces that the disclosure references the CURRENT count and that no
-// earlier count strings persist in the source.
+// 2026-09-27 (v2.9.48): the gate pinned its figures as literals, so it went on
+//          pinning the 46-fixture, 1009-of-1015 wording through two releases
+//          after the harness moved to 53 and then 82 fixtures: the disclosure
+//          stayed stale and this gate held it there. Every figure is now read
+//          from validation/crossval-summary.json, which
+//          `node cpm-engine.crossval.js --json` writes from the run itself, and
+//          checked against the text buildDaubertDisclosure actually emits. A
+//          re-measure that moves the harness now fails this gate until the
+//          disclosure moves with it.
+// The literal source checks below the JSON block stay: they forbid wordings
+// that were retired for being wrong, whatever the current figures are.
+{
+    const fs = require('fs');
+    const path = require('path');
+    // Mirrored into _cpp_common/cpm-engine-js/, which carries the .js files but
+    // not validation/. package.json sits beside the suite only in the engine
+    // repo, so it tells the two contexts apart, as in V2942-13: the engine repo
+    // must have the summary, and the mirror, whose cpm-engine.js is required to
+    // be byte-identical to the engine repo's, runs the same NUMBER of checks so
+    // JS_UNIT_TEST_COUNT does not depend on where the suite runs.
+    const inEngineRepo = fs.existsSync(path.join(__dirname, 'package.json'));
+    const B10_JSON_CHECKS = [
+        'R-v298-B10: validation/crossval-summary.json is the harness run and reconciles',
+        'R-v298-B10: prong 1 states the fixture, surface, skip and executed figures of that run',
+        'R-v298-B10: prong 3 answer states the same figures and the skip split',
+        'R-v298-B10: prong 3 evidence states the same figures, the throw fixtures and alert parity',
+        'R-v298-B10: no other fixture count or tally survives in the disclosure',
+    ];
+    if (!inEngineRepo) {
+        for (const label of B10_JSON_CHECKS) {
+            check(label + ' (not applicable outside the engine repo)', true,
+                'running from a mirror with no validation/; the figures are checked in the engine repo');
+        }
+    } else {
+        const summaryPath = path.join(__dirname, 'validation', 'crossval-summary.json');
+        let s = null;
+        try { s = JSON.parse(fs.readFileSync(summaryPath, 'utf8')); } catch (e) { s = null; }
+        const ok = !!(s && s.fixtures && s.checks && s.skips_by_field && s.skips_by_kind &&
+            s.checks_by_field && Array.isArray(s.rows));
+        const X = ok ? s.checks.executed : NaN;          // comparisons executed
+        const S = ok ? s.checks.surface : NaN;           // comparisons defined
+        const K = ok ? s.checks.skipped : NaN;           // skipped, not failed
+        const K1 = ok ? s.skips_by_field.ff_signed : NaN;
+        const K2 = ok ? s.skips_by_field.ff_signed_working_days : NaN;
+        const F = ok ? s.fixtures.total : NaN;
+        const Fs = ok ? s.rows.filter((r) => r.skips > 0).length : NaN;
+        const A = ok ? s.checks_by_field.alert_count : NaN;
+        const T = ok ? s.checks_by_field['threw (both engines)'] : NaN;
+        const O = ok ? s.skips_by_kind.one_sided : NaN;
+        const M = ok ? s.skips_by_kind.mutual : NaN;
+        const sum = (k) => (ok ? s.rows.reduce((a, r) => a + r[k], 0) : NaN);
+        check(B10_JSON_CHECKS[0],
+            ok && X + K === S && s.checks.failed === 0 && s.fixtures.failed === 0 &&
+            K1 + K2 === K && O + M === K && s.rows.length === F &&
+            sum('checks') === X && sum('skips') === K &&
+            Object.keys(s.skips_by_field).every((k) => k === 'ff_signed' || k === 'ff_signed_working_days'),
+            ok ? JSON.stringify({ fixtures: s.fixtures, checks: s.checks, skips: s.skips_by_field })
+                : 'cannot read ' + summaryPath);
+        const d = E.buildDaubertDisclosure(null);
+        const p1 = d.prong_1_tested.evidence;
+        const p3a = d.prong_3_error_rate.answer;
+        const p3e = d.prong_3_error_rate.evidence;
+        const has = (txt, parts) => parts.filter((p) => txt.indexOf(p) < 0);
+        const miss1 = has(p1, [
+            F + ' cross-validation fixtures', 'defines ' + S + ' comparisons',
+            K + ' of them are never executed', '(' + K1 + ' ff_signed, ' + K2 + ' ff_signed_working_days,',
+            '"Checks: ' + X + ' / ' + X + '"', 'None of those ' + K + ' is a one-sided',
+            Fs + ' of the ' + F + ' fixtures contain at least one skipped',
+            'The ' + X + ' comparisons that did run', 'compared on ' + A + ' of the ' + F + ' fixtures']);
+        check(B10_JSON_CHECKS[1], ok && O === 0 && miss1.length === 0, 'missing: ' + JSON.stringify(miss1));
+        const miss3a = has(p3a, [
+            'so ' + K + ' checks are skipped', '(' + K1 + ' ff_signed, ' + K2 + ' ff_signed_working_days)',
+            'printed ' + X + ' / ' + X + ' therefore sits on a nominal surface of ' + S + ' checks',
+            'somewhere in ' + Fs + ' of the ' + F + ' fixtures', 'all ' + K + ' cases NEITHER engine emits',
+            O + ' skips hide a value', M + ' are comparisons where neither engine emits one']);
+        check(B10_JSON_CHECKS[2], ok && miss3a.length === 0, 'missing: ' + JSON.stringify(miss3a));
+        const miss3e = has(p3e, [
+            F + ' fixtures + 282-activity real XER', 'executed ' + X + ' comparisons with 0 mismatches',
+            'its ' + X + ' / ' + X + ' tally', 'Not executed: ' + K + ' node comparisons',
+            'on the ' + T + ' fixtures where both engines are required to throw',
+            'Alert parity runs on ' + A + ' of the ' + F + ' fixtures']);
+        check(B10_JSON_CHECKS[3], ok && miss3e.length === 0, 'missing: ' + JSON.stringify(miss3e));
+        // Whatever the figures become, the disclosure may not state two of them:
+        // every "N fixtures" is the fixture total or the throw count, and every
+        // "N / N" tally is the executed count.
+        const strays = [];
+        for (const txt of [p1, p3a, p3e]) {
+            for (const m of txt.matchAll(/\b(\d+) (?:cross-validation )?fixtures\b/g)) {
+                if (Number(m[1]) !== F && Number(m[1]) !== T) strays.push(m[0]);
+            }
+            for (const m of txt.matchAll(/\b(\d+) \/ (\d+)\b/g)) {
+                if (Number(m[1]) !== X || Number(m[2]) !== X) strays.push(m[0]);
+            }
+        }
+        check(B10_JSON_CHECKS[4], ok && strays.length === 0, 'stray figures: ' + JSON.stringify(strays));
+    }
+}
 {
     const src = require('fs').readFileSync(require.resolve('./cpm-engine.js'), 'utf8');
-    check('R-v298-B10: Daubert disclosure references 46 fixtures (current count)',
-        src.indexOf('46 fixtures + 282-activity') >= 0);
-    check('R-v298-B10: Daubert disclosure references 46 fixtures / 1009 checks, no stale 925 or 931',
-        src.indexOf('46 cross-validation fixtures. The harness defines 1015 node-field') >= 0
-        && src.indexOf('925 / 925') < 0
+    check('R-v298-B10: no stale 925 / 925 or 931 / 931 tally in source',
+        src.indexOf('925 / 925') < 0
         && src.indexOf('931 / 931') < 0);
     check('R-v298-B10: no remaining "× 747 checks" reference (stale pre-alignment-wave)',
         src.indexOf('× 747 checks') < 0);
@@ -6047,11 +6139,11 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         src.indexOf('16 fixtures') === -1);
     check('R-v298-B10: no remaining "25 fixtures" reference in source',
         src.indexOf('25 fixtures') === -1);
-    // NOTE: the stale-string list below is deliberately NOT extended for
-    // "45 fixtures + 282". The positive assertions above already fail if the
-    // disclosure regresses (they require the 46-fixture / 1015-comparison
-    // wording and forbid both the 925/925 and 931/931 bare ratios), and every
-    // added check() moves JS_UNIT_TEST_COUNT in engine_version.py.
+    // NOTE: this literal list is deliberately NOT extended for each retired
+    // count. The JSON block above fails on any fixture count or tally in the
+    // disclosure that the harness run does not carry, whichever release it
+    // came from, and every added check() moves JS_UNIT_TEST_COUNT in
+    // engine_version.py.
     check('R-v298-B10: no remaining "40 fixtures + 282" reference (stale)',
         src.indexOf('40 fixtures + 282') === -1);
     check('R-v298-B10: no remaining "× 416 checks" reference (stale)',
@@ -11202,6 +11294,89 @@ const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
         !faNone.alerts.some((a) => a.context === 'actual-after-data-date') &&
         startOf(faNoDd, 'S') === '2026-10-13',
         JSON.stringify(faW.map((a) => a.message.slice(0, 160))) + ' / ' + startOf(faNoDd, 'S'));
+}
+
+// ===========================================================================
+// LW — the last worked day of a COMPLETED activity (2026-09-27; paired with
+// the Python pins in _cpp_common/tests/test_completed_last_worked_2026_09_27.py).
+// ef_last_worked_date / lf_last_worked_date retreated one working day from
+// ef / lf on every activity. That is right where ef is the exclusive boundary,
+// which is every activity the engine schedules. A completed activity's ef is
+// its actual finish instead, and when the finish carries P6's closing time
+// ('2026-01-09 16:00') that date IS the last day worked, so the field printed
+// the day before the actual finish P6 prints. A date-only actual finish is the
+// documented boundary form (docs/api.md, V2942-13) and still retreats. The
+// rule reads the finish INSTANT the engine already schedules successors from:
+// an instant after the finish date means the work closed on that date. Only
+// the two display fields move; every computed date is pinned unchanged below.
+// ===========================================================================
+{
+    const lwCal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
+    const lwRel = (a, b, lag) => ({ from_code: a, to_code: b, type: 'FS', lag_days: lag || 0 });
+    const lwDone = (af) => E.computeCPM(
+        [{ code: 'A', duration_days: 5, actual_start: '2026-01-05 08:00',
+           actual_finish: af, is_complete: true, clndr_id: 'MF' },
+         { code: 'B', duration_days: 3, clndr_id: 'MF' }],
+        [lwRel('A', 'B', 2)], { dataDate: '2026-01-12', calMap: lwCal });
+    const lw = (n) => n.ef_last_worked_date + '/' + n.lf_last_worked_date;
+
+    // LW-1 — the reproduction: two completed activities with P6 finishes and an
+    // open successor, no calendar. P6 prints A 09-Jan and B 14-Jan (v2.9.47
+    // printed 08-Jan and 13-Jan).
+    const r1 = E.computeCPM(
+        [{ code: 'A', duration_days: 5, actual_start: '2026-01-05 08:00',
+           actual_finish: '2026-01-09 16:00', is_complete: true },
+         { code: 'B', duration_days: 3, actual_start: '2026-01-12 08:00',
+           actual_finish: '2026-01-14 16:00', is_complete: true },
+         { code: 'C', duration_days: 4 }],
+        [lwRel('A', 'B'), lwRel('B', 'C')], { dataDate: '2026-01-15' });
+    check('LW-1: a completed activity finished at the close prints its actual finish date as the last day worked',
+        lw(r1.nodes.A) === '2026-01-09/2026-01-09' && lw(r1.nodes.B) === '2026-01-14/2026-01-14',
+        'A ' + lw(r1.nodes.A) + ', B ' + lw(r1.nodes.B));
+
+    // LW-2 — nothing computed moves: the same run's dates, the open successor's
+    // own last worked day and the project finish are what v2.9.47 returned.
+    const dates = (n) => [n.es_date, n.ef_date, n.ls_date, n.lf_date, n.ef_instant_date, n.tf].join(' ');
+    check('LW-2: every computed date is unchanged, and an open activity still retreats from its boundary',
+        dates(r1.nodes.A) === '2026-01-05 2026-01-09 2026-01-05 2026-01-09 2026-01-10 0' &&
+        dates(r1.nodes.B) === '2026-01-12 2026-01-14 2026-01-12 2026-01-14 2026-01-15 0' &&
+        dates(r1.nodes.C) === '2026-01-15 2026-01-19 2026-01-15 2026-01-19 2026-01-19 0' &&
+        lw(r1.nodes.C) === '2026-01-18/2026-01-18' && r1.projectFinish === '2026-01-19',
+        [dates(r1.nodes.A), dates(r1.nodes.B), dates(r1.nodes.C), lw(r1.nodes.C), r1.projectFinish].join(' | '));
+
+    // LW-3 — on a Mon-Fri calendar: A closes Friday 16:00, prints Fri 01-09,
+    // and the FS+2 successor still starts Wed 01-14 (Mon and Tue are the lag).
+    const r3 = lwDone('2026-01-09 16:00');
+    check('LW-3: on a Mon-Fri calendar the Friday close prints Friday, and the lagged successor does not move',
+        lw(r3.nodes.A) === '2026-01-09/2026-01-09' && r3.nodes.B.es_date === '2026-01-14',
+        lw(r3.nodes.A) + ' / B ' + r3.nodes.B.es_date);
+
+    // LW-4 — work recorded on a Saturday of a Mon-Fri calendar prints the
+    // Saturday, as P6 prints an actual: the recorded day, not the Friday a
+    // working-day retreat lands on.
+    const r4 = lwDone('2026-01-10 16:00');
+    check('LW-4: an actual finish on a non-working day prints that day, not the working day before it',
+        lw(r4.nodes.A) === '2026-01-10/2026-01-10' && r4.nodes.B.es_date === '2026-01-14',
+        lw(r4.nodes.A) + ' / B ' + r4.nodes.B.es_date);
+
+    // LW-5 — the documented contract (docs/api.md, V2942-13): a date-only
+    // actual finish is the EXCLUSIVE boundary, the opening of Monday 01-12 for
+    // work that ended Friday. It names the same instant as '2026-01-09 16:00':
+    // same successor start, and now the same last worked day.
+    const r5 = lwDone('2026-01-12');
+    check('LW-5: a date-only actual finish is still read as the boundary and prints the Friday before it',
+        lw(r5.nodes.A) === '2026-01-09/2026-01-09' && r5.nodes.B.es_date === '2026-01-14' &&
+        r5.nodes.A.ef_date === '2026-01-12',
+        lw(r5.nodes.A) + ' / B ' + r5.nodes.B.es_date + ' / ef ' + r5.nodes.A.ef_date);
+
+    // LW-6 — a finish recorded before noon is the OPENING of its day to the
+    // engine (the FS+2 successor starts Tue 01-13, two working days from the
+    // Friday morning), so the last day worked is the Thursday: the display
+    // follows the instant the engine schedules from, never a different one.
+    const r6 = lwDone('2026-01-09 08:00');
+    check('LW-6: a morning actual finish is the opening of its day, so the last day worked is the day before',
+        lw(r6.nodes.A) === '2026-01-08/2026-01-08' && r6.nodes.B.es_date === '2026-01-13',
+        lw(r6.nodes.A) + ' / B ' + r6.nodes.B.es_date);
 }
 
 console.log('\n========================================');

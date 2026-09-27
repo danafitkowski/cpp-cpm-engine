@@ -2,15 +2,15 @@
 
 [![npm version](https://img.shields.io/npm/v/cpp-cpm-engine.svg)](https://www.npmjs.com/package/cpp-cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 1315 passing](https://img.shields.io/badge/tests-1315%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![tests: 1325 passing](https://img.shields.io/badge/tests-1325%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: JS↔Python 1957/2011](https://img.shields.io/badge/JS%E2%86%94Python-1957%2F2011-brightgreen.svg)](DAUBERT.md#31-independent-verification)
-[![coverage: 93%](https://img.shields.io/badge/coverage-93%25%20stmts%20%2F%2083%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2947-baseline)
+[![coverage: 94%](https://img.shields.io/badge/coverage-94%25%20stmts%20%2F%2083%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2948-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
-**Open source. AACE-aligned. Daubert-disclosed. 1,315 JS unit tests, plus JS/Python parity on 1957 of 2011 enumerated cross-validation comparisons; the remaining 54 are not compared because neither engine emits the field on a completed activity (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+**Open source. AACE-aligned. Daubert-disclosed. 1,325 JS unit tests, plus JS/Python parity on 1957 of 2011 enumerated cross-validation comparisons; the remaining 54 are not compared because neither engine emits the field on a completed activity (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
 
 Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
@@ -20,12 +20,12 @@ Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a fo
 
 ## Quick start
 
-**The npm package lags this repository.** npm `latest` is 2.9.19, published 2026-05-17 — that is the number the npm badge above renders, and nothing has been published to npm since, while 22 tagged releases have shipped here. `npm install cpp-cpm-engine` therefore does **not** give you the engine described by DAUBERT.md, by the [`release-evidence/`](release-evidence/) packets, or by any version reference in these docs. Install from the git tag:
+**The npm package lags this repository.** npm `latest` is 2.9.19, published 2026-05-17 — that is the number the npm badge above renders, and nothing has been published to npm since, while every later release has shipped here as a git tag. `npm install cpp-cpm-engine` therefore does **not** give you the engine described by DAUBERT.md, by the [`release-evidence/`](release-evidence/) packets, or by any version reference in these docs. Install from the git tag:
 
 ```bash
 git clone https://github.com/danafitkowski/cpp-cpm-engine.git
 cd cpp-cpm-engine
-git checkout v2.9.47
+git checkout v2.9.48
 ```
 
 The engine has zero runtime dependencies, so a clone is all it needs. This is the same install path [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md) gives an opposing expert.
@@ -51,7 +51,7 @@ const result = E.computeCPM(
 
 console.log('Project finish:', result.projectFinish);     // 2026-01-21
 console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
-console.log('Engine version:', result.manifest.engine_version); // 2.9.47
+console.log('Engine version:', result.manifest.engine_version); // 2.9.48
 ```
 
 That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
@@ -111,7 +111,7 @@ Every computation emits a manifest:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.47',
+    engine_version: '2.9.48',
     method_id: 'computeCPM',
     activity_count: 3,
     relationship_count: 2,
@@ -142,8 +142,8 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 46 fixtures, 1009 checks executed, 0 deviations, measured 2026-09-21.
-# A further 6 comparisons on the enumerated surface (1015 total) are skipped rather than failed by the harness field guards, all on ff_signed / ff_signed_working_days on completed activities, where NEITHER engine emits the field.
+# 82 fixtures, 1957 checks executed, 0 deviations, measured 2026-09-27.
+# A further 54 comparisons on the enumerated surface (2011 total) are skipped rather than failed by the harness field guards, all on ff_signed / ff_signed_working_days on completed activities, where NEITHER engine emits the field.
 ```
 
 Plus a 282-activity real-XER stress test reports 0 mismatches. That XER is a single non-public reference file, is not committed, and the run is not independently reproducible from this repo (see [DAUBERT.md §2](DAUBERT.md#2-methodology-tested)).
@@ -196,7 +196,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.47. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.48. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
@@ -218,13 +218,13 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.47.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.48.
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,315 unit tests and the cross-validation harness, in which 1957 of 2011 defined comparisons execute and are bit-identical with 0 failures across 82 fixtures (the remaining 54 are skipped rather than compared — 27 `ff_signed`, 27 `ff_signed_working_days`, all on completed activities where neither engine emits the field), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,325 unit tests and the cross-validation harness, in which 1957 of 2011 defined comparisons execute and are bit-identical with 0 failures across 82 fixtures (the remaining 54 are skipped rather than compared — 27 `ff_signed`, 27 `ff_signed_working_days`, all on completed activities where neither engine emits the field), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.47';
+const ENGINE_VERSION = '2.9.48';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -3988,11 +3988,23 @@ function computeCPM(activities, relationships, opts) {
         // means a consumer never has to re-derive it (and never has to guess
         // which convention it is looking at). Not a change to any computed
         // value: both fields are derived from the same ef/lf.
+        // v2.9.48 — a COMPLETED activity's ef is its actual finish, not a
+        // boundary the engine computed. When the finish carries P6's closing
+        // time ('2026-01-09 16:00') its instant is the opening of the next
+        // day, so the date itself is the last day worked, and retreating a
+        // working day printed the day before the actual finish P6 prints (and
+        // a Saturday finish on a Mon-Fri calendar as the Friday). lf equals ef
+        // there. A date-only or morning finish is the opening of that day, the
+        // documented boundary form (docs/api.md), and still retreats: the
+        // display follows the instant successors are scheduled from.
+        const _lwOnFinishDay = n.is_complete && n.ef > 0 && n.ef_instant > n.ef;
         n.ef_last_worked_date = (n.ef > 0)
-            ? numToDate(_retreatWithAlerts(n.ef, 1, nCal, [], 'ef last-worked ' + c))
+            ? (_lwOnFinishDay ? numToDate(n.ef)
+                : numToDate(_retreatWithAlerts(n.ef, 1, nCal, [], 'ef last-worked ' + c)))
             : '';
         n.lf_last_worked_date = (n.lf > 0)
-            ? numToDate(_retreatWithAlerts(n.lf, 1, nCal, [], 'lf last-worked ' + c))
+            ? (_lwOnFinishDay ? numToDate(n.lf)
+                : numToDate(_retreatWithAlerts(n.lf, 1, nCal, [], 'lf last-worked ' + c)))
             : '';
         // v2.9.42 — count over the window the selected float definition names,
         // not always over the finish window. FT_FF is unchanged.
@@ -8304,7 +8316,7 @@ function buildDaubertDisclosure(result, opts) {
         if (id === 'computeKinematicDelay')
             return 'Kinematic extension of slip velocity — velocity / acceleration / jerk via finite differences with Newtonian quadratic extrapolation for breach forecasting. Pre-publication; CPP first-mover. Not an AACE-cited method; companions AACE 29R-03 / 52R-06.';
         if (id === 'computeTopologyHash')
-            return 'SHA-256 of canonical-v2 form (sorted activity codes + deduplicated preds, JSON-encoded line per code). Industry-first schedule-topology fingerprint; no AACE precedent, intended as a provenance primitive.';
+            return 'SHA-256 of canonical-v2 form (sorted activity codes + deduplicated preds, JSON-encoded line per code). A schedule-topology fingerprint with no AACE precedent, intended as a provenance primitive.';
         if (id === 'computeFloatBurndown')
             return 'Float Burndown — per-snapshot total-float evolution + cumulative slip velocity (AACE 29R-03 §4.3.B historical rate of float consumption; Sanders 2024 IBA on retrospective TIA). Companion to MIP 3.3 windows analysis.';
         return 'CPM forward/backward pass per Kelley & Walker 1959 / AACE 29R-03';
@@ -8354,20 +8366,21 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '46 cross-validation fixtures. The harness defines 1015 node-field ' +
-                'comparisons; 6 of them are never executed because neither ' +
+                '82 cross-validation fixtures. The harness defines 2011 ' +
+                'comparisons; 54 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
-                '(3 ff_signed, 3 ff_signed_working_days, all on completed ' +
+                '(27 ff_signed, 27 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 1009 / 1009" counts executed comparisons only and ' +
-                'is not a coverage figure. None of those 6 is a one-sided parity ' +
+                'reported "Checks: 1957 / 1957" counts executed comparisons only and ' +
+                'is not a coverage figure. None of those 54 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 3 of the 46 fixtures contain at least one skipped ' +
-                'comparison. The 1009 comparisons that did run are bit-identical ' +
+                'branch. 23 of the 82 fixtures contain at least one skipped ' +
+                'comparison. The 1957 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity). Real XER (282 activities) 0 mismatches ' +
+                'severity-level alert parity, compared on 78 of the 82 fixtures). ' +
+                'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
                 testCountStr +
@@ -8405,34 +8418,38 @@ function buildDaubertDisclosure(result, opts) {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite actually executes. Coverage limit: the cross-validation harness ' +
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
-                'emit the field, so 6 checks are skipped rather than compared, counted, ' +
-                'or reported as failures (3 ff_signed, 3 ff_signed_working_days). The ' +
-                'printed 1009 / 1009 therefore sits on a nominal surface of 1015 checks, and ' +
-                'those two fields go uncompared somewhere in 3 of the 46 fixtures. In ' +
-                'all 6 cases NEITHER engine emits the field, so the skip is a ' +
+                'emit the field, so 54 checks are skipped rather than compared, counted, ' +
+                'or reported as failures (27 ff_signed, 27 ff_signed_working_days). The ' +
+                'printed 1957 / 1957 therefore sits on a nominal surface of 2011 checks, and ' +
+                'those two fields go uncompared somewhere in 23 of the 82 fixtures. In ' +
+                'all 54 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
-                'emit, 6 are nodes where neither engine emits one. Every ES/EF/LS/LF/TF ' +
-                'and date comparison is executed (107 of 107 activity groups). Epistemic ' +
+                'emit, 54 are comparisons where neither engine emits one. Every ' +
+                'ES/EF/LS/LF/TF and date comparison is executed, on every activity ' +
+                'comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '46 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '82 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '1009 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 1009 / 1009 tally cannot express ' +
-                'the following gaps. Not executed: 6 node comparisons on the signed ' +
+                '1957 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 1957 / 1957 tally cannot express ' +
+                'the following gaps. Not executed: 54 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on all 44 non-throwing fixtures: the former F20/F21/F27 ' +
-                'carve-out (out-of-sequence ALERT believed JS-only) was retired ' +
-                '2026-08-19, the Python reference having emitted that alert since ' +
-                'the v2.9.27 paired-fix wave. All ' +
+                'parity runs on 78 of the 82 fixtures: not on those 2, which have no ' +
+                'output to compare, and not on F65 and F67, where the JS engine also ' +
+                'emits its per-activity future-actual-finish ALERT, which the Python ' +
+                'reference has never carried (a pre-existing gap, disclosed rather ' +
+                'than hidden). The former F20/F21/F27 carve-out (out-of-sequence ' +
+                'ALERT believed JS-only) was retired 2026-08-19, the Python reference ' +
+                'having emitted that alert since the v2.9.27 paired-fix wave. All ' +
                 'ES/EF/LS/LF/TF, calendar-date, total-float-working-day, free-float ' +
-                'and free-float-working-day comparisons executed on all 107 activity ' +
-                'comparison groups. Edge-case torture audit ' +
+                'and free-float-working-day comparisons executed on every activity ' +
+                'comparison group. Edge-case torture audit ' +
                 'identified pre-flight conditions (NEGATIVE_DURATION, OUT_OF_SEQUENCE, ' +
                 'DISCONNECTED) where strict mode now throws; salvage mode logs and continues. ' +
                 'No silent wrong-answer paths after v2.1.0. Adversarial inputs (corrupt XER, ' +
