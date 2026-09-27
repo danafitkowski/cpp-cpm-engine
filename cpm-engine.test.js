@@ -278,14 +278,15 @@ console.log('\n=== Section D — parseXER captures progress markers + clndr_id (
     E.parseXER(xer);
     const tasks = E.getTasks();
 
-    // FIX 1.1 — actual_start truncated to YYYY-MM-DD (drops HH:mm)
+    // FIX 1.1 — actual_start as P6 wrote it, time included (v2.9.49; it was
+    // cut to YYYY-MM-DD, which computeCPM reads as the opening of the day)
     check('parseXER captures actual_start from act_start_date',
-        tasks['1'].actual_start === '2026-01-05',
+        tasks['1'].actual_start === '2026-01-05 08:00',
         'got ' + JSON.stringify(tasks['1'].actual_start));
 
-    // FIX 1.2 — actual_finish truncated to YYYY-MM-DD
+    // FIX 1.2 — actual_finish as P6 wrote it: '17:00' is the close of the day
     check('parseXER captures actual_finish from act_end_date',
-        tasks['2'].actual_finish === '2026-01-15',
+        tasks['2'].actual_finish === '2026-01-15 17:00',
         'got ' + JSON.stringify(tasks['2'].actual_finish));
 
     // FIX 1.3 — is_complete derived from non-empty act_end_date
@@ -11377,6 +11378,51 @@ const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
     check('LW-6: a morning actual finish is the opening of its day, so the last day worked is the day before',
         lw(r6.nodes.A) === '2026-01-08/2026-01-08' && r6.nodes.B.es_date === '2026-01-13',
         lw(r6.nodes.A) + ' / B ' + r6.nodes.B.es_date);
+}
+
+console.log('\n=== PX — parseXER hands computeCPM the actual dates P6 wrote (v2.9.49) ===');
+{
+    // parseXER cut act_start_date / act_end_date to YYYY-MM-DD. computeCPM
+    // reads a bare date as the OPENING of that day, one working day before a
+    // finish at its close, and since v2.9.47 lays only the lag the data date
+    // has not used up. A caller building computeCPM input from getTasks()
+    // therefore started a lagged successor of completed work a day early.
+    // Shape of P6 probe XFA1 case F04 (measured in P6 23.12, 2026-09-23), the
+    // predecessor a completed finish milestone because parseXER keeps
+    // completed milestones: finished Friday 2026-10-02 17:00, FS + 3 working
+    // days, data date Monday 2026-10-05. Nothing of the lag has run by the
+    // data date, so the successor starts Thursday 10-08 (cut: Wednesday 10-07).
+    E.resetMC();
+    const xer = [
+        '%T\tTASK',
+        '%F\ttask_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\ttarget_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id',
+        '%R\t1\tM\tDone\tTT_FinMile\t0\t0\t2026-10-02 17:00\t2026-10-02 17:00\tMF',
+        '%R\t2\tS\tNext\tTT_Task\t8\t8\t\t\tMF',
+        '%T\tTASKPRED',
+        '%F\ttask_id\tpred_task_id\tpred_type\tlag_hr_cnt',
+        '%R\t2\t1\tPR_FS\t24',
+    ].join('\n');
+    E.parseXER(xer);
+    const t = E.getTasks();
+    check('PX-1: parseXER keeps the completed milestone\'s finish with its closing time',
+        t['1'].actual_finish === '2026-10-02 17:00' && t['1'].is_complete === true,
+        JSON.stringify(t['1'].actual_finish));
+    const acts = Object.values(t).map((k) => ({
+        code: k.code, duration_days: k.remaining, clndr_id: k.clndr_id,
+        task_type: k.task_type, actual_start: k.actual_start,
+        actual_finish: k.actual_finish, is_complete: k.is_complete,
+    }));
+    const rels = E.getRelationships().map((p) => ({
+        from_code: t[p.predTaskId].code, to_code: t[p.taskId].code,
+        type: p.type, lag_days: p.lag,
+    }));
+    const px = E.computeCPM(acts, rels, {
+        dataDate: '2026-10-05',
+        calMap: { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } },
+    });
+    check('PX-2: through getTasks() the lagged successor of completed work starts on the P6 day',
+        px.nodes.S.es_date === '2026-10-08',
+        'S es ' + px.nodes.S.es_date + ' (P6 2026-10-08)');
 }
 
 console.log('\n========================================');

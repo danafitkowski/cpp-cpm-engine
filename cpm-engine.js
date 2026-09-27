@@ -4994,13 +4994,15 @@ function parseXER(content) {
                 if (!isDroppedType && (isMilestone || remaining > 0)) {
                     // Audit Alpha #1+#4: capture progress markers + per-activity
                     // calendar so Section C consumers (e.g. /try's
-                    // _buildSectionCInput) can propagate them. XER timestamps
-                    // are 'YYYY-MM-DD HH:mm'; truncate to 'YYYY-MM-DD' for
-                    // Section C consumption. Section D Monte Carlo
-                    // (runCPM) intentionally ignores these — it samples
-                    // per-iteration and re-derives criticality.
-                    const actStart = (row.act_start_date || '').slice(0, 10);
-                    const actFinish = (row.act_end_date || '').slice(0, 10);
+                    // _buildSectionCInput) can propagate them. v2.9.49 — kept
+                    // as P6 writes them, time included ('2026-10-02 17:00' is
+                    // the close of the day): computeCPM reads the INSTANT, and
+                    // cut to 'YYYY-MM-DD' it reads the opening of that day, so a
+                    // lagged successor of completed work started a working day
+                    // early (P6 probe XFA1 F04; PX-1/PX-2). dateToNum reads the
+                    // date part, so runCPM's actual-start pin is unchanged.
+                    const actStart = (row.act_start_date || '').trim();
+                    const actFinish = (row.act_end_date || '').trim();
                     // Primary constraint is cstr_type + cstr_date. Secondary is
                     // cstr_type2 + cstr_date2. Both pairs stay together.
                     //
