@@ -2,12 +2,12 @@
 
 This document is the **courtroom-exhibit-form** of the engine release verification chain. Cite **this file**, the **Sigstore-signed witness** attached to the [v2.9.48 release](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.48), and the [DAUBERT.md](DAUBERT.md) disclosure together — that triad is the engine's reliability record under FRE 702 / Daubert Prong 1 (testability).
 
-> **Status:** v2.9.48. Engine math is unchanged: every date, float, critical-path and driving-path value is identical to v2.9.47, and the cross-validation and P6 comparison results do not move.
+> **Status:** v2.9.48, a Class B (disclosure) release under the operator procedure, decided by Dana 27-Sep-2026: no computed value moves; the disclosure's validation figures were wrong. Engine math is unchanged: every date, float, critical-path and driving-path value is identical to v2.9.47, and the cross-validation and P6 comparison results do not move.
 >
 > - **A completed activity's last worked day.** `ef_last_worked_date` / `lf_last_worked_date` now print a completed activity's actual finish date when that finish carries its closing time (`'2026-01-09 16:00'`), as P6 prints it. They printed the working day before it. A date-only finish, the documented boundary form, prints as before.
 > - **The Daubert disclosure's validation figures.** `buildDaubertDisclosure` still described the cross-validation as of v2.9.42 (46 fixtures, 1009 of 1015 comparisons). It now states the harness's figures (82 fixtures, 1957 of 2011 executed, 54 skipped), and the unit gate that pins the text reads them from `validation/crossval-summary.json`.
 >
-> A deliverable that printed either field for a completed activity, or quoted the engine's own Daubert disclosure, carries the old values; nothing it computed changes. See [CHANGELOG.md](CHANGELOG.md).
+> A deliverable that printed either field for a completed activity, or quoted the engine's own Daubert disclosure, carries the old values; nothing it computed changes, so it needs the operator procedure's disclosure check, not a re-run of the analysis. See [CHANGELOG.md](CHANGELOG.md).
 
 
 ## What this file proves

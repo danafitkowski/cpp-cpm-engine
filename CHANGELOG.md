@@ -20,6 +20,11 @@ cross-validation and P6 comparison results do not move. Both fixes are to
 what the engine prints: two output fields that nothing inside the engine
 reads back, and the text of its Daubert disclosure.
 
+**Change class B (disclosure)** under PROCEDURE.md §12.1, decided by Dana
+27-Sep-2026: no computed value moves; the disclosure's validation figures
+were wrong. A deliverable already issued from an earlier tagged build needs
+the disclosure check in PROCEDURE.md §12.3, not a re-run of the analysis.
+
 **1. The last worked day of a completed activity.** `ef_last_worked_date`
 and `lf_last_worked_date`, the inclusive companions of the exclusive `ef` /
 `lf` added at v2.9.42, retreated one working day from `ef` / `lf` on every
