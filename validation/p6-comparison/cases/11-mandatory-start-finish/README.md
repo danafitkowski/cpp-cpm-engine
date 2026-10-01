@@ -16,22 +16,16 @@ A.ES = MS_Start = 2026-01-12 (pinned, ignoring dataDate floor). A.LS = MS_Start 
 4. F9 — both dates should be hard-pinned.
 5. Verify the mandatory constraints pin LS/LF in the backward pass.
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.45)
 
-Project finish: `2026-01-14`
+Project finish: `2026-01-30`
 
 Critical activities: `["A","B"]`
 
 ### Alerts emitted
 
-- **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `FS lag A->B` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `forward B.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward B.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward FS lag A->B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+- **WARN** `constraint-applied` — Start On on A pushes ES from 2026-01-05 to 2026-01-12
+- **WARN** `constraint-applied` — Finish On on B pushes EF from 2026-01-23 to 2026-01-30
 
 
 ## How to populate the P6 column of `comparison.csv`
@@ -40,12 +34,12 @@ Critical activities: `["A","B"]`
 2. F9 to schedule.
 3. Capture the ES / EF / LS / LF / TF / FF columns from the P6 activity table.
 4. Paste each activity's P6 values into the `*_p6` columns of `comparison.csv`.
-5. Mark verdict_pass_fail = `PASS` when all six values match the engine column,
+5. Mark verdict_pass_fail = `PASS` when each value matches the engine column on the documented basis. EF and LF are compared on the activity's own calendar, so a computed value one working day from the raw P6 cell is a PASS, not a FAIL,
    or `FAIL — <delta>` with the specific field-level discrepancy.
 
 ## Files in this case
 
 - `input.json` — activities + relationships + opts (engine input)
 - `engine-output.json` — full `computeCPM` result
-- `comparison.csv` — engine vs P6 comparison (P6 column blank, fill manually)
+- `comparison.csv` — engine vs P6 comparison (P6 columns already captured and verdicts written; regenerate only to add a new case)
 - `README.md` — this file

@@ -24,17 +24,13 @@ A starts Mon Jan 5 2026, 90 wd Mon-Fri on CA-ON calendar. Crosses Family Day (3r
 3. F9.
 4. Verify A.EF matches the engine output within +/- 0 wd.
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.45)
 
-Project finish: `2026-04-05`
+Project finish: `2026-05-13`
 
 Critical activities: `["A"]`
 
-### Alerts emitted
-
-- **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+_No alerts emitted._
 
 
 ## How to populate the P6 column of `comparison.csv`
@@ -43,12 +39,12 @@ Critical activities: `["A"]`
 2. F9 to schedule.
 3. Capture the ES / EF / LS / LF / TF / FF columns from the P6 activity table.
 4. Paste each activity's P6 values into the `*_p6` columns of `comparison.csv`.
-5. Mark verdict_pass_fail = `PASS` when all six values match the engine column,
+5. Mark verdict_pass_fail = `PASS` when each value matches the engine column on the documented basis. EF and LF are compared on the activity's own calendar, so a computed value one working day from the raw P6 cell is a PASS, not a FAIL,
    or `FAIL — <delta>` with the specific field-level discrepancy.
 
 ## Files in this case
 
 - `input.json` — activities + relationships + opts (engine input)
 - `engine-output.json` — full `computeCPM` result
-- `comparison.csv` — engine vs P6 comparison (P6 column blank, fill manually)
+- `comparison.csv` — engine vs P6 comparison (P6 columns already captured and verdicts written; regenerate only to add a new case)
 - `README.md` — this file

@@ -28,7 +28,7 @@
     "case_id": {
       "type": "string",
       "minLength": 1,
-      "description": "Internal case identifier (e.g., 'Mulock-Park-EOT-01')."
+      "description": "Internal case identifier (e.g., 'CASE-EOT-01')."
     },
     "deliverable_id": {
       "type": "string",

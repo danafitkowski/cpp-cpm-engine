@@ -5,25 +5,37 @@
       "name": "",
       "duration_days": 10,
       "es": 2203,
-      "ef": 2213,
-      "ls": 2189,
-      "lf": 2199,
-      "tf": -14,
+      "ef": 2217,
+      "ls": 2203,
+      "lf": 2217,
+      "tf": 0,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "",
       "actual_finish": "",
-      "clndr_id": "",
+      "clndr_id": "MONFRI",
+      "ef_instant": 2215,
+      "task_type": "",
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": null,
+      "_seedLF": 2220,
+      "tf_finish": 0,
+      "tf_start": 0,
       "es_date": "2026-01-12",
-      "ef_date": "2026-01-22",
-      "ls_date": "2025-12-29",
-      "lf_date": "2026-01-08",
-      "tf_working_days": -14,
-      "ff": -14,
-      "ff_working_days": -14
+      "ef_date": "2026-01-26",
+      "ef_instant_date": "2026-01-24",
+      "ls_date": "2026-01-12",
+      "lf_date": "2026-01-26",
+      "ef_last_worked_date": "2026-01-23",
+      "lf_last_worked_date": "2026-01-23",
+      "tf_finish_working_days": 0,
+      "tf_start_working_days": 0,
+      "tf_working_days": 0,
+      "ff_signed": 0,
+      "ff": 0,
+      "ff_signed_working_days": 0,
+      "ff_working_days": 0
     },
     "B": {
       "code": "B",
@@ -31,33 +43,49 @@
       "duration_days": 5,
       "remaining_duration": 3,
       "es": 2199,
-      "ef": 2206,
-      "ls": 2199,
-      "lf": 2206,
+      "ef": 2220,
+      "ls": 2217,
+      "lf": 2220,
       "tf": 0,
       "is_complete": false,
       "is_fragnet": false,
       "actual_start": "2026-01-08",
       "actual_finish": "",
-      "clndr_id": "",
+      "clndr_id": "MONFRI",
+      "ef_instant": 2220,
+      "task_type": "",
       "constraint": null,
       "constraint2": null,
+      "restart": 2217,
       "driving_predecessor": {
         "code": "A",
         "type": "FS",
         "lag_days": 0
       },
+      "_seedLF": 2220,
+      "remaining_late_start": 2217,
+      "tf_finish": 0,
+      "tf_start": 18,
       "es_date": "2026-01-08",
-      "ef_date": "2026-01-15",
+      "ef_date": "2026-01-29",
+      "ef_instant_date": "2026-01-29",
       "ls_date": "2026-01-08",
-      "lf_date": "2026-01-15",
+      "remaining_late_start_date": "2026-01-26",
+      "restart_date": "2026-01-26",
+      "lf_date": "2026-01-29",
+      "ef_last_worked_date": "2026-01-28",
+      "lf_last_worked_date": "2026-01-28",
+      "tf_finish_working_days": 0,
+      "tf_start_working_days": 12,
       "tf_working_days": 0,
+      "ff_signed": 0,
+      "ff_signed_working_days": 0,
       "ff": 0,
       "ff_working_days": 0
     }
   },
-  "projectFinishNum": 2213,
-  "projectFinish": "2026-01-22",
+  "projectFinishNum": 2220,
+  "projectFinish": "2026-01-29",
   "criticalCodes": {},
   "criticalCodesArray": [
     "A",
@@ -74,57 +102,23 @@
   "alerts": [
     {
       "severity": "ALERT",
-      "context": "forward A.EF",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "FS lag A->B",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "forward B.EF (retained-logic rem=3)",
-      "message": "Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "init-LS A",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "init-LS B",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward B.LS",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward FS lag A->B",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
-      "context": "backward A.LS",
-      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
-    },
-    {
-      "severity": "ALERT",
       "context": "out-of-sequence",
       "message": "Activity B is in progress but 1 predecessor(s) have no actual_start (retained-logic anomaly): A"
     }
   ],
+  "excluded_by_task_type": [],
+  "excludedByTaskType": [],
   "manifest": {
-    "engine_version": "2.9.34",
+    "engine_version": "2.9.45",
     "method_id": "computeCPM",
     "activity_count": 2,
     "relationship_count": 1,
     "data_date": "2026-01-12",
-    "calendar_count": 0,
-    "computed_at": "2026-05-24T16:16:01.029Z"
+    "calendar_count": 1,
+    "finish_boundary_convention": "exclusive",
+    "finish_boundary_note": "ef_date / lf_date are EXCLUSIVE (the opening of the first working day AFTER the last day worked). P6 prints the LAST WORKED DAY. Both name the same instant; ef_last_worked_date and lf_last_worked_date carry the inclusive form for reports.",
+    "relationship_lag_calendar": "successor",
+    "float_type": "FT_FF",
+    "computed_at": "2026-09-21T22:12:25.995Z"
   }
 }

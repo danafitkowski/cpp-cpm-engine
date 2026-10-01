@@ -17,12 +17,15 @@
       "constraint": null,
       "constraint2": null,
       "driving_predecessor": null,
+      "_seedLF": 2204,
       "es_date": "2026-01-05",
       "ef_date": "2026-01-10",
       "ls_date": "2026-01-05",
       "lf_date": "2026-01-10",
       "tf_working_days": 0,
+      "ff_signed": 0,
       "ff": 0,
+      "ff_signed_working_days": 0,
       "ff_working_days": 0
     },
     "B": {
@@ -46,11 +49,14 @@
         "type": "FS",
         "lag_days": 0
       },
+      "_seedLF": 2204,
       "es_date": "2026-01-10",
       "ef_date": "2026-01-13",
       "ls_date": "2026-01-10",
       "lf_date": "2026-01-13",
       "tf_working_days": 0,
+      "ff_signed": 0,
+      "ff_signed_working_days": 0,
       "ff": 0,
       "ff_working_days": 0
     }
@@ -93,6 +99,16 @@
     },
     {
       "severity": "ALERT",
+      "context": "seed last-worked A",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
+      "context": "seed last-worked B",
+      "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
+    },
+    {
+      "severity": "ALERT",
       "context": "init-LS A",
       "message": "Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic."
     },
@@ -118,12 +134,12 @@
     }
   ],
   "manifest": {
-    "engine_version": "2.9.31",
+    "engine_version": "2.9.41",
     "method_id": "computeCPM",
     "activity_count": 2,
     "relationship_count": 1,
     "data_date": "2026-01-05",
     "calendar_count": 0,
-    "computed_at": "2026-05-24T03:34:37.969Z"
+    "computed_at": "2026-08-19T20:00:28.831Z"
   }
 }

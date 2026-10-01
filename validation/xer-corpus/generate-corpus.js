@@ -147,7 +147,7 @@ CASES.push({
     relationship_count: 4,
     calendar_count: 1,
     known_issues: [],
-    expected_alerts: 'minimal (parsing INFOs only)',
+    expected_alerts: 'minimal (parsing INFOs only; see ALERT_TRIAGE.md for the triaged list actually observed)',
     strict_mode_pass: true,
     spec: () => ({
         calendars: [defaultMonFriCalendar(1)],

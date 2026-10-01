@@ -1,7 +1,7 @@
 # Case 01 — Alert Triage (all 23 alerts)
 
 **Case:** `01-small-clean-baseline` — 5 activities, FS chain, Mon-Fri calendar.
-**Engine version at capture:** v2.9.31 (per `corpus-summary.json:3`).
+**Engine version at capture:** v2.9.34 (per `corpus-summary.json:3`). Regenerating this case at v2.9.39 emits 28 alerts of the same two message classes, split 9 forward / 19 backward (the 5 extra come from a new `seed last-worked` emission site), so the enumeration and group totals below are the v2.9.34 capture and `scripts/verify-alert-triage-01.js` checks that stored output rather than the current engine.
 **Total alerts emitted:** **23**.
 **Triage date:** 2026-05-24.
 **Triage scope:** every single alert in `engine-output.json` opened and categorized.
