@@ -1,0 +1,31 @@
+# Rekor transparency-log entry — cpm-engine v2.9.32 witness
+
+logIndex:                   1623848107
+kind:                       dsse
+Sigstore certificate subject: https://github.com/danafitkowski/cpp-cpm-engine/.github/workflows/verify.yml@refs/tags/v2.9.32
+Source commit SHA:          a1097e548d... (full SHA in sigstore-attestation-output.txt)
+Workflow trigger:           push
+Source ref:                 refs/tags/v2.9.32
+Run invocation URL:         https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26363369806/attempts/1
+
+## Web lookup
+
+  https://search.sigstore.dev/?logIndex=1623848107
+
+## CLI lookup
+
+  gh attestation verify release-evidence/v2.9.32/witness-v2.9.32.json --owner danafitkowski
+
+## v2.9.31 → v2.9.32 — what changed under the chain
+
+The engine SHA-256 changed because v2.9.32 added Section Q strict-mode
+hardening (computeCPMSalvaging strict-mode refusal + SECTION R-v2.9.32
+test suite), audit-response language fixes, and the
+tests/no-stale-version-refs.test.js regression gate. The non-strict
+computeCPM path is byte-identical in behavior to v2.9.31.
+
+  Engine SHA-256 v2.9.31:  a6b9e8d93f156b4af487082c15e4141236a93f20e9bfa90b57a95521309ac7fe
+  Engine SHA-256 v2.9.32:  885947b5fa9eb6e84ebe500ee7472a4f6778244fcec3543398b5d58ea4fc5f69
+
+  Python ref SHA-256 (both v2.9.31 and v2.9.32):
+                           50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7

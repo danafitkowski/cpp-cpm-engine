@@ -1,0 +1,114 @@
+{
+  "nodes": {
+    "B": {
+      "code": "B",
+      "name": "",
+      "duration_days": 11,
+      "es": 2175,
+      "ef": 2190,
+      "ls": 2175,
+      "lf": 2190,
+      "tf": 0,
+      "is_complete": true,
+      "is_fragnet": false,
+      "actual_start": "2025-12-15",
+      "actual_finish": "2025-12-30",
+      "clndr_id": "MONFRI",
+      "ef_instant": 2190,
+      "task_type": "",
+      "constraint": null,
+      "constraint2": null,
+      "_seedLF": 2203,
+      "es_date": "2025-12-15",
+      "ef_date": "2025-12-30",
+      "ef_instant_date": "2025-12-30",
+      "ls_date": "2025-12-15",
+      "lf_date": "2025-12-30",
+      "ef_last_worked_date": "2025-12-29",
+      "lf_last_worked_date": "2025-12-29",
+      "tf_finish_working_days": 0,
+      "tf_start_working_days": 0,
+      "tf_working_days": 0,
+      "ff": 0,
+      "ff_working_days": 0
+    },
+    "A": {
+      "code": "A",
+      "name": "",
+      "duration_days": 5,
+      "es": 2196,
+      "ef": 2203,
+      "ls": 2196,
+      "lf": 2203,
+      "tf": 0,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "",
+      "actual_finish": "",
+      "clndr_id": "MONFRI",
+      "ef_instant": 2201,
+      "task_type": "",
+      "constraint": null,
+      "constraint2": null,
+      "driving_predecessor": null,
+      "_seedLF": 2203,
+      "tf_finish": 0,
+      "tf_start": 0,
+      "es_date": "2026-01-05",
+      "ef_date": "2026-01-12",
+      "ef_instant_date": "2026-01-10",
+      "ls_date": "2026-01-05",
+      "lf_date": "2026-01-12",
+      "ef_last_worked_date": "2026-01-09",
+      "lf_last_worked_date": "2026-01-09",
+      "tf_finish_working_days": 0,
+      "tf_start_working_days": 0,
+      "tf_working_days": 0,
+      "ff_signed": 0,
+      "ff": 0,
+      "ff_signed_working_days": 0,
+      "ff_working_days": 0
+    }
+  },
+  "projectFinishNum": 2203,
+  "projectFinish": "2026-01-12",
+  "criticalCodes": {},
+  "criticalCodesArray": [
+    "A"
+  ],
+  "topoOrder": [
+    "A",
+    "B"
+  ],
+  "topo_order": [
+    "A",
+    "B"
+  ],
+  "alerts": [
+    {
+      "severity": "INFO",
+      "context": "completed-succ-skipped-in-backward",
+      "message": "A: 1 completed successor(s) skipped in backward propagation (retained-logic semantics; completed activities do not pull predecessor LF backward through historical dates)."
+    },
+    {
+      "severity": "ALERT",
+      "context": "out-of-sequence",
+      "message": "Activity B is in progress but 1 predecessor(s) have no actual_start (retained-logic anomaly): A"
+    }
+  ],
+  "excluded_by_task_type": [],
+  "excludedByTaskType": [],
+  "manifest": {
+    "engine_version": "2.9.45",
+    "method_id": "computeCPM",
+    "activity_count": 2,
+    "relationship_count": 1,
+    "data_date": "2026-01-05",
+    "calendar_count": 1,
+    "finish_boundary_convention": "exclusive",
+    "finish_boundary_note": "ef_date / lf_date are EXCLUSIVE (the opening of the first working day AFTER the last day worked). P6 prints the LAST WORKED DAY. Both name the same instant; ef_last_worked_date and lf_last_worked_date carry the inclusive form for reports.",
+    "relationship_lag_calendar": "successor",
+    "float_type": "FT_FF",
+    "computed_at": "2026-09-21T22:12:25.993Z"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "_README": "Blank SOP checklist template. Copy and fill in. Run scripts/validate-sop.js <this-file> after filling.",
+  "sop_version": "2.9.34",
+  "engine_version": "2.9.34",
+  "case_id": "FILL-IN-CASE-ID",
+  "deliverable_id": "FILL-IN-DELIVERABLE-ID",
+  "analyst": {
+    "name": "FILL IN",
+    "credential": "FILL IN (PSP / PMP / PEng / CCM / etc.)",
+    "signature_date": "2026-01-01",
+    "signature_method": "wet ink"
+  },
+  "computed_at": "2026-01-01T00:00:00Z",
+  "steps": [
+    { "step_number": 1, "step_name": "Intake", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 2, "step_name": "Preserve + hash", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 3, "step_name": "Confirm data date", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 4, "step_name": "Confirm schedule mode", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 5, "step_name": "Confirm calendars", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 6, "step_name": "Run forensic strict validation", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 7, "step_name": "Review alerts", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 8, "step_name": "Compare to P6 if needed", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 9, "step_name": "Select AACE method", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 10, "step_name": "Record excluded activities", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 11, "step_name": "Record overrides", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 12, "step_name": "Generate output", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 13, "step_name": "QA output against manifest", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" },
+    { "step_number": 14, "step_name": "Analyst signoff", "status": "n/a", "na_reason": "TEMPLATE — not filled in yet" }
+  ]
+}

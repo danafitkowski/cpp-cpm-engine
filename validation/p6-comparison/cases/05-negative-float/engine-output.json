@@ -1,0 +1,122 @@
+{
+  "nodes": {
+    "A": {
+      "code": "A",
+      "name": "",
+      "duration_days": 8,
+      "es": 2196,
+      "ef": 2206,
+      "ls": 2185,
+      "lf": 2197,
+      "tf": -9,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "",
+      "actual_finish": "",
+      "clndr_id": "MONFRI",
+      "ef_instant": 2206,
+      "task_type": "",
+      "constraint": null,
+      "constraint2": null,
+      "driving_predecessor": null,
+      "_seedLF": 2212,
+      "tf_finish": -9,
+      "tf_start": -11,
+      "es_date": "2026-01-05",
+      "ef_date": "2026-01-15",
+      "ef_instant_date": "2026-01-15",
+      "ls_date": "2025-12-25",
+      "lf_date": "2026-01-06",
+      "ef_last_worked_date": "2026-01-14",
+      "lf_last_worked_date": "2026-01-05",
+      "tf_finish_working_days": -7,
+      "tf_start_working_days": -7,
+      "tf_working_days": -7,
+      "ff_signed": 0,
+      "ff": 0,
+      "ff_signed_working_days": 0,
+      "ff_working_days": 0
+    },
+    "B": {
+      "code": "B",
+      "name": "",
+      "duration_days": 4,
+      "es": 2206,
+      "ef": 2212,
+      "ls": 2197,
+      "lf": 2203,
+      "tf": -9,
+      "is_complete": false,
+      "is_fragnet": false,
+      "actual_start": "",
+      "actual_finish": "",
+      "clndr_id": "MONFRI",
+      "ef_instant": 2212,
+      "task_type": "",
+      "constraint": {
+        "type": "FNLT",
+        "date": "2026-01-12"
+      },
+      "constraint2": null,
+      "driving_predecessor": {
+        "code": "A",
+        "type": "FS",
+        "lag_days": 0
+      },
+      "_seedLF": 2212,
+      "tf_finish": -9,
+      "tf_start": -9,
+      "es_date": "2026-01-15",
+      "ef_date": "2026-01-21",
+      "ef_instant_date": "2026-01-21",
+      "ls_date": "2026-01-06",
+      "lf_date": "2026-01-12",
+      "ef_last_worked_date": "2026-01-20",
+      "lf_last_worked_date": "2026-01-09",
+      "tf_finish_working_days": -7,
+      "tf_start_working_days": -7,
+      "tf_working_days": -7,
+      "ff_signed": -9,
+      "ff_signed_working_days": -7,
+      "ff": 0,
+      "ff_working_days": 0
+    }
+  },
+  "projectFinishNum": 2212,
+  "projectFinish": "2026-01-21",
+  "criticalCodes": {},
+  "criticalCodesArray": [
+    "A",
+    "B"
+  ],
+  "topoOrder": [
+    "A",
+    "B"
+  ],
+  "topo_order": [
+    "A",
+    "B"
+  ],
+  "alerts": [
+    {
+      "severity": "ALERT",
+      "context": "constraint-violated",
+      "message": "FNLT on B violated: EF=2026-01-21 is after constraint date 2026-01-12"
+    }
+  ],
+  "excluded_by_task_type": [],
+  "excludedByTaskType": [],
+  "manifest": {
+    "engine_version": "2.9.45",
+    "method_id": "computeCPM",
+    "activity_count": 2,
+    "relationship_count": 1,
+    "data_date": "2026-01-05",
+    "calendar_count": 1,
+    "finish_boundary_convention": "exclusive",
+    "finish_boundary_note": "ef_date / lf_date are EXCLUSIVE (the opening of the first working day AFTER the last day worked). P6 prints the LAST WORKED DAY. Both name the same instant; ef_last_worked_date and lf_last_worked_date carry the inclusive form for reports.",
+    "relationship_lag_calendar": "successor",
+    "float_type": "FT_FF",
+    "computed_at": "2026-09-21T22:12:25.983Z"
+  }
+}

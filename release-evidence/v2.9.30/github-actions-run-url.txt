@@ -1,0 +1,50 @@
+# GitHub Actions verification workflow run — cpm-engine v2.9.30
+
+## Primary verify.yml run on tag v2.9.30
+
+  URL:           https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26350307830
+  Triggered by:  push to refs/tags/v2.9.30
+  Commit SHA:    e87f524b851fe0194ed77e65d62b4d13bc45e88f
+  Created at:    2026-05-24T03:02:22Z (UTC)
+  Conclusion:    success
+
+## Matrix coverage — 9 OS × Node combinations, all PASS
+
+  Ubuntu-latest  / Node 18      → success
+  Ubuntu-latest  / Node 20      → success
+  Ubuntu-latest  / Node 22      → success
+  macOS-latest   / Node 18      → success
+  macOS-latest   / Node 20      → success
+  macOS-latest   / Node 22      → success
+  Windows-latest / Node 18      → success
+  Windows-latest / Node 20      → success
+  Windows-latest / Node 22      → success
+
+## Sigstore signing job
+
+  Job name:      Sign witness (Sigstore via GitHub OIDC)
+  URL:           https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26350307830/job/77567259470
+  Started:       2026-05-24T03:03:13Z
+  Completed:     2026-05-24T03:03:35Z
+  Conclusion:    success
+  Subject:       attestations/latest.json (the canonical witness)
+  Provenance:    actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 (v1)
+
+## What this proves (Layer 1 of the verification chain)
+
+  - The verify.yml workflow ran on GitHub Actions infrastructure (not the
+    proponent's hardware).
+  - All 9 OS × Node combinations independently produced PASS.
+  - The witness was signed via GitHub OIDC and the signature is now in the
+    Sigstore transparency log (see rekor-entry.txt).
+
+## How a third party verifies this without trusting the proponent
+
+  gh run view 26350307830 --repo danafitkowski/cpp-cpm-engine
+  gh run download 26350307830 \\
+      --repo danafitkowski/cpp-cpm-engine \\
+      --name witness-canonical \\
+      --dir ./verify-out/
+
+  # The downloaded witness should match release-evidence/v2.9.30/witness-v2.9.30.json
+  # byte-for-byte (apart from filesystem differences).

@@ -1,0 +1,7949 @@
+{
+ "activities": [
+  {
+   "code": "A2240",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-10 08:00",
+   "actual_finish": "2025-06-16 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-16 17:00",
+   "suspend_date": "2025-06-16 17:00"
+  },
+  {
+   "code": "A3540",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4200",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_FinMile"
+  },
+  {
+   "code": "A4240",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4260",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_FinMile"
+  },
+  {
+   "code": "A1040",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-16 08:00",
+   "actual_finish": "2025-05-16 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-05-02 08:00"
+   }
+  },
+  {
+   "code": "A4220",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3750",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4340",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-14 08:00",
+   "actual_finish": "2025-07-18 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-18 17:00",
+   "suspend_date": "2025-07-18 17:00"
+  },
+  {
+   "code": "A3850",
+   "duration_days": 116.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-09-10 08:00"
+   }
+  },
+  {
+   "code": "A3860",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3870",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3880",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3890",
+   "duration_days": 25.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3900",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3910",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4150",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2026-04-13 08:00"
+   }
+  },
+  {
+   "code": "A4160",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4390",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-11 08:00",
+   "actual_finish": "2025-08-15 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-15 17:00",
+   "suspend_date": "2025-08-15 17:00"
+  },
+  {
+   "code": "A1000",
+   "duration_days": 0.0,
+   "actual_start": "2025-04-01 08:00",
+   "actual_finish": "2025-04-29 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-04-01 08:00"
+   },
+   "resume_date": "2025-04-29 17:00",
+   "suspend_date": "2025-04-29 17:00"
+  },
+  {
+   "code": "A1010",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-02 08:00",
+   "actual_finish": "2025-05-02 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-05-02 08:00"
+   },
+   "resume_date": "2025-05-02 17:00",
+   "suspend_date": "2025-05-02 17:00"
+  },
+  {
+   "code": "A1030",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-15 08:00",
+   "actual_finish": "2025-05-15 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-05-09 08:00"
+   },
+   "resume_date": "2025-05-15 17:00",
+   "suspend_date": "2025-05-15 17:00"
+  },
+  {
+   "code": "A1060",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-29 08:00",
+   "actual_finish": "2025-07-08 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-08 17:00",
+   "suspend_date": "2025-07-08 17:00"
+  },
+  {
+   "code": "A4520",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MEOA",
+    "date": "2025-06-27 17:00"
+   }
+  },
+  {
+   "code": "A2230",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-09 08:00",
+   "actual_finish": "2025-06-09 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MEOA",
+    "date": "2025-06-09 17:00"
+   },
+   "resume_date": "2025-06-09 17:00",
+   "suspend_date": "2025-06-09 17:00"
+  },
+  {
+   "code": "A2270",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-23 08:00",
+   "actual_finish": "2025-06-23 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-23 17:00",
+   "suspend_date": "2025-06-23 17:00"
+  },
+  {
+   "code": "A2250",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-17 08:00",
+   "actual_finish": "2025-06-17 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-17 17:00",
+   "suspend_date": "2025-06-17 17:00"
+  },
+  {
+   "code": "A2260",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-18 08:00",
+   "actual_finish": "2025-06-20 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-20 17:00",
+   "suspend_date": "2025-06-20 17:00"
+  },
+  {
+   "code": "A2300",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-17 08:00",
+   "actual_finish": "2025-06-18 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-18 17:00",
+   "suspend_date": "2025-06-18 17:00"
+  },
+  {
+   "code": "A2310",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-16 08:00",
+   "actual_finish": "2025-06-17 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-17 17:00",
+   "suspend_date": "2025-06-17 17:00"
+  },
+  {
+   "code": "A2320",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-18 08:00",
+   "actual_finish": "2025-06-25 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-25 17:00",
+   "suspend_date": "2025-06-25 17:00"
+  },
+  {
+   "code": "A2290",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-24 08:00",
+   "actual_finish": "2025-07-15 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-15 17:00",
+   "suspend_date": "2025-07-15 17:00"
+  },
+  {
+   "code": "A2330",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-17 08:00",
+   "actual_finish": "2025-06-19 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-19 17:00",
+   "suspend_date": "2025-06-19 17:00"
+  },
+  {
+   "code": "A2340",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-20 08:00",
+   "actual_finish": "2025-06-23 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-23 17:00",
+   "suspend_date": "2025-06-23 17:00"
+  },
+  {
+   "code": "A2350",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-23 08:00",
+   "actual_finish": "2025-07-07 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-07 17:00",
+   "suspend_date": "2025-07-07 17:00"
+  },
+  {
+   "code": "A2360",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-23 08:00",
+   "actual_finish": "2025-07-08 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-08 17:00",
+   "suspend_date": "2025-07-08 17:00"
+  },
+  {
+   "code": "A2610",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2650",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2640",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2630",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2670",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2680",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2730",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2750",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3110",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2970",
+   "duration_days": 14.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1020",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-05 08:00",
+   "actual_finish": "2025-06-02 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-02 17:00",
+   "suspend_date": "2025-06-02 17:00"
+  },
+  {
+   "code": "A2930",
+   "duration_days": 26.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2880",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2890",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2770",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2026-04-13 08:00"
+   }
+  },
+  {
+   "code": "A3060",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2840",
+   "duration_days": 21.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2960",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2870",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3010",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3040",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3050",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2790",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2900",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2980",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3140",
+   "duration_days": 25.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3070",
+   "duration_days": 6.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3260",
+   "duration_days": 4.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3430",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3280",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3270",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3410",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3290",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3300",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3320",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3350",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3330",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3360",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3390",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3720",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3740",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3710",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3370",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3440",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3450",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3480",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3500",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3460",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3490",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3510",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3520",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3530",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3670",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3770",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3560",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3660",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3650",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3630",
+   "duration_days": 7.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3620",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3590",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3580",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3570",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3640",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3610",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3920",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-04 08:00",
+   "actual_finish": "2025-07-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-04 17:00",
+   "suspend_date": "2025-07-04 17:00"
+  },
+  {
+   "code": "A4030",
+   "duration_days": 13.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3960",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-07 08:00",
+   "actual_finish": "2025-07-11 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-11 17:00",
+   "suspend_date": "2025-07-11 17:00"
+  },
+  {
+   "code": "A4040",
+   "duration_days": 23.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4540",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3940",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4010",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4760",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4060",
+   "duration_days": 7.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4070",
+   "duration_days": 8.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4080",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4090",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4110",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4100",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4120",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1050",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-16 08:00",
+   "actual_finish": "2025-06-30 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-30 17:00",
+   "suspend_date": "2025-06-30 17:00"
+  },
+  {
+   "code": "A1070",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-13 08:00",
+   "actual_finish": "2025-06-25 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-25 17:00",
+   "suspend_date": "2025-06-25 17:00"
+  },
+  {
+   "code": "A1090",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-10 08:00",
+   "actual_finish": "2025-08-18 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-18 17:00",
+   "suspend_date": "2025-08-18 17:00"
+  },
+  {
+   "code": "A1100",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-20 08:00",
+   "actual_finish": "2025-07-14 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-14 17:00",
+   "suspend_date": "2025-07-14 17:00"
+  },
+  {
+   "code": "A1120",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-26 08:00",
+   "actual_finish": "2025-07-23 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-23 17:00",
+   "suspend_date": "2025-07-23 17:00"
+  },
+  {
+   "code": "A1130",
+   "duration_days": 10.0,
+   "actual_start": "2025-08-26 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-08-26 08:00",
+   "remaining_duration": 10.0
+  },
+  {
+   "code": "A1140",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1150",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-19 08:00",
+   "actual_finish": "2025-07-09 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-09 17:00",
+   "suspend_date": "2025-07-09 17:00"
+  },
+  {
+   "code": "A1080",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-09 08:00",
+   "actual_finish": "2025-07-02 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-02 17:00",
+   "suspend_date": "2025-07-02 17:00"
+  },
+  {
+   "code": "A1170",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1180",
+   "duration_days": 18.0,
+   "actual_start": "2025-08-11 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-08-11 08:00",
+   "remaining_duration": 18.0
+  },
+  {
+   "code": "A1160",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-09 08:00",
+   "actual_finish": "2025-08-26 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-26 17:00",
+   "suspend_date": "2025-08-26 17:00"
+  },
+  {
+   "code": "A1190",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-27 08:00",
+   "actual_finish": "2025-07-09 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-09 17:00",
+   "suspend_date": "2025-07-09 17:00"
+  },
+  {
+   "code": "A1200",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1210",
+   "duration_days": 18.0,
+   "actual_start": "2025-07-25 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-07-25 08:00",
+   "remaining_duration": 18.0
+  },
+  {
+   "code": "A1220",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-26 08:00",
+   "actual_finish": "2025-08-27 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-27 17:00",
+   "suspend_date": "2025-08-27 17:00"
+  },
+  {
+   "code": "A1230",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-05 08:00",
+   "actual_finish": "2025-08-21 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-21 17:00",
+   "suspend_date": "2025-08-21 17:00"
+  },
+  {
+   "code": "A1240",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1250",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1260",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1270",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1280",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-23 08:00",
+   "actual_finish": "2025-08-27 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-27 17:00",
+   "suspend_date": "2025-08-27 17:00"
+  },
+  {
+   "code": "A1290",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-28 08:00",
+   "actual_finish": "2025-09-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-09-04 17:00",
+   "suspend_date": "2025-09-04 17:00"
+  },
+  {
+   "code": "A1300",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1310",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1320",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1330",
+   "duration_days": 31.0,
+   "actual_start": "2025-08-14 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-08-14 08:00",
+   "remaining_duration": 31.0
+  },
+  {
+   "code": "A1340",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-26 08:00",
+   "actual_finish": "2025-07-09 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-09 17:00",
+   "suspend_date": "2025-07-09 17:00"
+  },
+  {
+   "code": "A1350",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1610",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1620",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1630",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-28 08:00",
+   "actual_finish": "2025-05-28 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Mile",
+   "resume_date": "2025-06-03 17:00",
+   "suspend_date": "2025-06-03 17:00"
+  },
+  {
+   "code": "A1640",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-13 08:00",
+   "actual_finish": "2025-06-13 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Mile",
+   "resume_date": "2025-06-27 17:00",
+   "suspend_date": "2025-06-27 17:00"
+  },
+  {
+   "code": "A1650",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-26 08:00",
+   "actual_finish": "2025-06-27 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-27 17:00",
+   "suspend_date": "2025-06-27 17:00"
+  },
+  {
+   "code": "A1660",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-03 08:00",
+   "actual_finish": "2025-07-09 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-09 17:00",
+   "suspend_date": "2025-07-09 17:00"
+  },
+  {
+   "code": "A1670",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1680",
+   "duration_days": 20.0,
+   "actual_start": "2025-09-04 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-09-04 08:00",
+   "remaining_duration": 20.0
+  },
+  {
+   "code": "A1700",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1710",
+   "duration_days": 80.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1720",
+   "duration_days": 51.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1730",
+   "duration_days": 31.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1740",
+   "duration_days": 30.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1750",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1760",
+   "duration_days": 60.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1770",
+   "duration_days": 21.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1780",
+   "duration_days": 41.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1800",
+   "duration_days": 90.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1810",
+   "duration_days": 75.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1820",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1830",
+   "duration_days": 80.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1840",
+   "duration_days": 91.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1850",
+   "duration_days": 6.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1860",
+   "duration_days": 31.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1870",
+   "duration_days": 30.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1890",
+   "duration_days": 61.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1900",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1910",
+   "duration_days": 26.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1920",
+   "duration_days": 60.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1930",
+   "duration_days": 101.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1940",
+   "duration_days": 16.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2200",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2210",
+   "duration_days": 60.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3310",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3470",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3600",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4170",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4180",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4210",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_FinMile"
+  },
+  {
+   "code": "A4050",
+   "duration_days": 13.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3240",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3420",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3550",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4530",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3780",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-23 08:00",
+   "actual_finish": "2025-06-23 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3790",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-24 08:00",
+   "actual_finish": "2025-06-24 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3800",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-25 08:00",
+   "actual_finish": "2025-06-25 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3810",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3820",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3830",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3840",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1690",
+   "duration_days": 30.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1110",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-01 08:00",
+   "actual_finish": "2025-08-01 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-25 17:00",
+   "suspend_date": "2025-08-25 17:00"
+  },
+  {
+   "code": "A1790",
+   "duration_days": 61.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2710",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2690",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2700",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3210",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3190",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3690",
+   "duration_days": 30.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4190",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3220",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2660",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3150",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3160",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3170",
+   "duration_days": 30.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2850",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2820",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2830",
+   "duration_days": 19.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2860",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2910",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2920",
+   "duration_days": 19.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2940",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2950",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3000",
+   "duration_days": 21.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2990",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3020",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3030",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3090",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3100",
+   "duration_days": 21.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3120",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3130",
+   "duration_days": 20.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3760",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3200",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2220",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-06-26 08:00"
+   }
+  },
+  {
+   "code": "A2280",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-23 08:00",
+   "actual_finish": "2025-07-14 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-14 17:00",
+   "suspend_date": "2025-07-14 17:00"
+  },
+  {
+   "code": "A2760",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2740",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3680",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3730",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2780",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2810",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3230",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3380",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3700",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3340",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2720",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3400",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3180",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2620",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2800",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3080",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A3250",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4250",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_FinMile"
+  },
+  {
+   "code": "A4230",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1360",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-19 08:00",
+   "actual_finish": "2025-07-03 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-03 17:00",
+   "suspend_date": "2025-07-03 17:00"
+  },
+  {
+   "code": "A1370",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-26 08:00",
+   "actual_finish": "2025-07-21 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-21 17:00",
+   "suspend_date": "2025-07-21 17:00"
+  },
+  {
+   "code": "A1380",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-24 08:00",
+   "actual_finish": "2025-07-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-04 17:00",
+   "suspend_date": "2025-07-04 17:00"
+  },
+  {
+   "code": "A1390",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-24 08:00",
+   "actual_finish": "2025-07-03 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-03 17:00",
+   "suspend_date": "2025-07-03 17:00"
+  },
+  {
+   "code": "A1400",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-24 08:00",
+   "actual_finish": "2025-07-03 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-03 17:00",
+   "suspend_date": "2025-07-03 17:00"
+  },
+  {
+   "code": "A1410",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-24 08:00",
+   "actual_finish": "2025-07-03 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-03 17:00",
+   "suspend_date": "2025-07-03 17:00"
+  },
+  {
+   "code": "A1420",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-23 08:00",
+   "actual_finish": "2025-07-03 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-03 17:00",
+   "suspend_date": "2025-07-03 17:00"
+  },
+  {
+   "code": "A1430",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-19 08:00",
+   "actual_finish": "2025-07-03 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-03 17:00",
+   "suspend_date": "2025-07-03 17:00"
+  },
+  {
+   "code": "A1440",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-12 08:00",
+   "actual_finish": "2025-06-30 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-30 17:00",
+   "suspend_date": "2025-06-30 17:00"
+  },
+  {
+   "code": "A1450",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-27 08:00",
+   "actual_finish": "2025-06-02 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-02 17:00",
+   "suspend_date": "2025-06-02 17:00"
+  },
+  {
+   "code": "A1460",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-26 08:00",
+   "actual_finish": "2025-08-12 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-12 17:00",
+   "suspend_date": "2025-08-12 17:00"
+  },
+  {
+   "code": "A1470",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-15 08:00",
+   "actual_finish": "2025-08-14 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-14 17:00",
+   "suspend_date": "2025-08-14 17:00"
+  },
+  {
+   "code": "A1480",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-22 08:00",
+   "actual_finish": "2025-07-22 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Mile",
+   "resume_date": "2025-08-12 17:00",
+   "suspend_date": "2025-08-12 17:00"
+  },
+  {
+   "code": "A1490",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-22 08:00",
+   "actual_finish": "2025-07-22 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Mile",
+   "resume_date": "2025-08-12 17:00",
+   "suspend_date": "2025-08-12 17:00"
+  },
+  {
+   "code": "A1500",
+   "duration_days": 26.0,
+   "actual_start": "2025-09-12 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-09-12 08:00",
+   "remaining_duration": 26.0
+  },
+  {
+   "code": "A1510",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-22 08:00",
+   "actual_finish": "2025-08-12 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-12 17:00",
+   "suspend_date": "2025-08-12 17:00"
+  },
+  {
+   "code": "A1520",
+   "duration_days": 10.0,
+   "actual_start": "2025-06-26 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-06-26 08:00",
+   "remaining_duration": 10.0
+  },
+  {
+   "code": "A1530",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-09 08:00",
+   "actual_finish": "2025-08-12 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-12 17:00",
+   "suspend_date": "2025-08-12 17:00"
+  },
+  {
+   "code": "A1540",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-11 08:00",
+   "actual_finish": "2025-07-31 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-31 17:00",
+   "suspend_date": "2025-07-31 17:00"
+  },
+  {
+   "code": "A1950",
+   "duration_days": 109.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-07-04 08:00"
+   }
+  },
+  {
+   "code": "A1960",
+   "duration_days": 180.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1970",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1980",
+   "duration_days": 131.0,
+   "actual_start": "2025-07-04 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-07-04 08:00",
+   "remaining_duration": 131.0
+  },
+  {
+   "code": "A1990",
+   "duration_days": 91.0,
+   "actual_start": "2025-07-04 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-07-04 08:00",
+   "remaining_duration": 91.0
+  },
+  {
+   "code": "A2000",
+   "duration_days": 91.0,
+   "actual_start": "2025-07-04 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-07-04 08:00",
+   "remaining_duration": 91.0
+  },
+  {
+   "code": "A2010",
+   "duration_days": 91.0,
+   "actual_start": "2025-07-04 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-07-04 08:00",
+   "remaining_duration": 91.0
+  },
+  {
+   "code": "A2020",
+   "duration_days": 91.0,
+   "actual_start": "2025-07-04 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-07-04 08:00",
+   "remaining_duration": 91.0
+  },
+  {
+   "code": "A2030",
+   "duration_days": 97.0,
+   "actual_start": "2025-07-10 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-07-10 08:00",
+   "remaining_duration": 97.0
+  },
+  {
+   "code": "A2040",
+   "duration_days": 28.0,
+   "actual_start": "2025-06-19 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-06-19 08:00",
+   "remaining_duration": 28.0
+  },
+  {
+   "code": "A2060",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2070",
+   "duration_days": 72.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2080",
+   "duration_days": 78.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2090",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2100",
+   "duration_days": 90.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2110",
+   "duration_days": 224.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-03-24 08:00"
+   }
+  },
+  {
+   "code": "A2120",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2130",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1550",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-11 08:00",
+   "actual_finish": "2025-07-08 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-08 17:00",
+   "suspend_date": "2025-07-08 17:00"
+  },
+  {
+   "code": "A1560",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-27 08:00",
+   "actual_finish": "2025-07-29 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-29 17:00",
+   "suspend_date": "2025-07-29 17:00"
+  },
+  {
+   "code": "A1570",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-11 08:00",
+   "actual_finish": "2025-07-22 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-22 17:00",
+   "suspend_date": "2025-07-22 17:00"
+  },
+  {
+   "code": "A1580",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-01 08:00",
+   "actual_finish": "2025-08-18 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-18 17:00",
+   "suspend_date": "2025-08-18 17:00"
+  },
+  {
+   "code": "A1600",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-11 08:00",
+   "actual_finish": "2025-06-17 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-17 17:00",
+   "suspend_date": "2025-06-17 17:00"
+  },
+  {
+   "code": "A1590",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-01 08:00",
+   "actual_finish": "2025-08-18 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-18 17:00",
+   "suspend_date": "2025-08-18 17:00"
+  },
+  {
+   "code": "A2140",
+   "duration_days": 91.0,
+   "actual_start": "2025-07-09 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-06-12 08:00"
+   },
+   "early_start": "2025-07-09 08:00",
+   "remaining_duration": 91.0
+  },
+  {
+   "code": "A2190",
+   "duration_days": 82.0,
+   "actual_start": "2025-06-18 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-06-12 08:00"
+   },
+   "early_start": "2025-06-18 08:00",
+   "remaining_duration": 82.0
+  },
+  {
+   "code": "A2150",
+   "duration_days": 100.0,
+   "actual_start": "2025-08-19 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-06-30 08:00"
+   },
+   "early_start": "2025-08-19 08:00",
+   "remaining_duration": 100.0
+  },
+  {
+   "code": "A2180",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-06-18 08:00"
+   }
+  },
+  {
+   "code": "A2160",
+   "duration_days": 194.0,
+   "actual_start": "2025-07-23 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-07-14 08:00"
+   },
+   "early_start": "2025-07-23 08:00",
+   "remaining_duration": 194.0
+  },
+  {
+   "code": "2170",
+   "duration_days": 91.0,
+   "actual_start": "2025-07-30 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-06-30 08:00"
+   },
+   "early_start": "2025-07-30 08:00",
+   "remaining_duration": 91.0
+  },
+  {
+   "code": "A1360.1",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-22 08:00",
+   "actual_finish": "2025-08-12 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-12 17:00",
+   "suspend_date": "2025-08-12 17:00"
+  },
+  {
+   "code": "A1360.2",
+   "duration_days": 18.0,
+   "actual_start": "2025-08-25 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-08-25 08:00",
+   "remaining_duration": 18.0
+  },
+  {
+   "code": "A1370,1",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-08 08:00",
+   "actual_finish": "2025-08-28 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-28 17:00",
+   "suspend_date": "2025-08-28 17:00"
+  },
+  {
+   "code": "A12380.1",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-22 08:00",
+   "actual_finish": "2025-08-19 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-19 17:00",
+   "suspend_date": "2025-08-19 17:00"
+  },
+  {
+   "code": "A1450.1",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-09 08:00",
+   "actual_finish": "2025-06-18 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-18 17:00",
+   "suspend_date": "2025-06-18 17:00"
+  },
+  {
+   "code": "A1470.1",
+   "duration_days": 24.0,
+   "actual_start": "2025-09-05 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-09-05 08:00",
+   "remaining_duration": 24.0
+  },
+  {
+   "code": "A1480.1",
+   "duration_days": 15.0,
+   "actual_start": "2025-09-16 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-09-16 08:00",
+   "remaining_duration": 15.0
+  },
+  {
+   "code": "A1530.1",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1540.1",
+   "duration_days": 19.0,
+   "actual_start": "2025-08-14 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-08-14 08:00",
+   "remaining_duration": 19.0
+  },
+  {
+   "code": "A1590.1",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1100.1",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-08 08:00",
+   "actual_finish": "2025-08-25 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-25 17:00",
+   "suspend_date": "2025-08-25 17:00"
+  },
+  {
+   "code": "A4310",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-17 08:00",
+   "actual_finish": "2025-06-17 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-17 17:00",
+   "suspend_date": "2025-06-17 17:00"
+  },
+  {
+   "code": "A3930",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-21 08:00",
+   "actual_finish": "2025-09-02 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-09-02 17:00",
+   "suspend_date": "2025-09-02 17:00"
+  },
+  {
+   "code": "A4370",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4380",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4410",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-16 08:00",
+   "actual_finish": "2025-08-22 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-22 17:00",
+   "suspend_date": "2025-08-22 17:00"
+  },
+  {
+   "code": "A4420",
+   "duration_days": 8.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4430",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4040x",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4450",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4460",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4470",
+   "duration_days": 7.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4480",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4500",
+   "duration_days": 13.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4510",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4490",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4560",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4570",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4590",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4600",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4610",
+   "duration_days": 4.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4620",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4630",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4640",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4550",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4660",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MEOA",
+    "date": "2025-06-27 17:00"
+   }
+  },
+  {
+   "code": "A4670",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4680",
+   "duration_days": 6.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4700",
+   "duration_days": 0.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4730",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4740",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-17 08:00",
+   "actual_finish": "2025-06-23 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-06-23 17:00",
+   "suspend_date": "2025-06-23 17:00"
+  },
+  {
+   "code": "A4770",
+   "duration_days": 11.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4580",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4400",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4720",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4780",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4790",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4800",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4810",
+   "duration_days": 7.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4820",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1370x",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-23 08:00",
+   "actual_finish": "2025-06-23 08:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Mile",
+   "resume_date": "2025-07-09 17:00",
+   "suspend_date": "2025-07-09 17:00"
+  },
+  {
+   "code": "A2090x",
+   "duration_days": 21.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4650",
+   "duration_days": 2.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4690",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A4710",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2410x",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-11 08:00",
+   "actual_finish": "2025-07-11 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-11 17:00",
+   "suspend_date": "2025-07-11 17:00"
+  },
+  {
+   "code": "A2420x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-14 08:00",
+   "actual_finish": "2025-07-14 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-14 17:00",
+   "suspend_date": "2025-07-14 17:00"
+  },
+  {
+   "code": "A2430x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-15 08:00",
+   "actual_finish": "2025-07-24 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-24 17:00",
+   "suspend_date": "2025-07-24 17:00"
+  },
+  {
+   "code": "A2500x",
+   "duration_days": 0.0,
+   "actual_start": "2025-06-17 08:00",
+   "actual_finish": "2025-08-27 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MEOA",
+    "date": "2025-07-02 17:00"
+   },
+   "resume_date": "2025-08-27 17:00",
+   "suspend_date": "2025-08-27 17:00"
+  },
+  {
+   "code": "A2440x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-25 08:00",
+   "actual_finish": "2025-08-07 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-07 17:00",
+   "suspend_date": "2025-08-07 17:00"
+  },
+  {
+   "code": "A2470x",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-08 08:00",
+   "actual_finish": "2025-08-12 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-12 17:00",
+   "suspend_date": "2025-08-12 17:00"
+  },
+  {
+   "code": "A2490x",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-14 08:00",
+   "actual_finish": "2025-08-14 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-14 17:00",
+   "suspend_date": "2025-08-14 17:00"
+  },
+  {
+   "code": "A2450x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-18 08:00",
+   "actual_finish": "2025-07-18 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-18 17:00",
+   "suspend_date": "2025-07-18 17:00"
+  },
+  {
+   "code": "A2460x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-24 08:00",
+   "actual_finish": "2025-07-24 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-07-24 17:00",
+   "suspend_date": "2025-07-24 17:00"
+  },
+  {
+   "code": "A2480x",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-13 08:00",
+   "actual_finish": "2025-08-13 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-08-13 17:00",
+   "suspend_date": "2025-08-13 17:00"
+  },
+  {
+   "code": "A2510x",
+   "duration_days": 0.0,
+   "actual_start": "2025-05-22 08:00",
+   "actual_finish": "2025-06-09 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MEOA",
+    "date": "2025-06-09 17:00"
+   },
+   "resume_date": "2025-06-09 17:00",
+   "suspend_date": "2025-06-09 17:00"
+  },
+  {
+   "code": "A2520x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-31 08:00",
+   "actual_finish": "2025-09-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-07-31 08:00"
+   },
+   "resume_date": "2025-09-04 17:00",
+   "suspend_date": "2025-09-04 17:00"
+  },
+  {
+   "code": "A2540x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-17 08:00",
+   "actual_finish": "2025-09-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-07-17 08:00"
+   },
+   "resume_date": "2025-09-04 17:00",
+   "suspend_date": "2025-09-04 17:00"
+  },
+  {
+   "code": "A2530x",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-15 08:00",
+   "actual_finish": "2025-09-10 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-07-15 08:00"
+   },
+   "resume_date": "2025-09-10 17:00",
+   "suspend_date": "2025-09-10 17:00"
+  },
+  {
+   "code": "A2550x",
+   "duration_days": 41.0,
+   "actual_start": "2025-08-21 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-08-21 08:00"
+   },
+   "early_start": "2025-08-21 08:00",
+   "remaining_duration": 41.0
+  },
+  {
+   "code": "A1100.2",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-28 08:00",
+   "actual_finish": "2025-09-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-09-04 17:00",
+   "suspend_date": "2025-09-04 17:00"
+  },
+  {
+   "code": "A1110.1",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A1280.1",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-23 08:00",
+   "actual_finish": "2025-09-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "resume_date": "2025-09-04 17:00",
+   "suspend_date": "2025-09-04 17:00"
+  },
+  {
+   "code": "A1380x",
+   "duration_days": 10.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2560x",
+   "duration_days": 30.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-08-18 08:00"
+   }
+  },
+  {
+   "code": "A1460.1",
+   "duration_days": 17.0,
+   "actual_start": "2025-08-22 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "early_start": "2025-08-22 08:00",
+   "remaining_duration": 17.0
+  },
+  {
+   "code": "A2050",
+   "duration_days": 100.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2370",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-16 08:00",
+   "actual_finish": "2025-07-22 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2380",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-23 08:00",
+   "actual_finish": "2025-07-23 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-07-23 08:00"
+   }
+  },
+  {
+   "code": "A5070",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-14 08:00",
+   "actual_finish": "2025-07-14 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2390",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-22 08:00",
+   "actual_finish": "2025-07-22 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2400",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-23 08:00",
+   "actual_finish": "2025-07-23 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2410",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-24 08:00",
+   "actual_finish": "2025-07-24 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2420",
+   "duration_days": 23.0,
+   "actual_start": "2025-08-04 08:00",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task",
+   "constraint": {
+    "type": "CS_MSOA",
+    "date": "2025-08-04 08:00"
+   },
+   "early_start": "2025-08-04 08:00",
+   "remaining_duration": 23.0
+  },
+  {
+   "code": "A2430",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-23 08:00",
+   "actual_finish": "2025-07-23 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2440",
+   "duration_days": 3.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2450",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-23 08:00",
+   "actual_finish": "2025-07-24 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2460",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-25 08:00",
+   "actual_finish": "2025-07-25 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2470",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-28 08:00",
+   "actual_finish": "2025-07-28 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2480",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2490",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-28 08:00",
+   "actual_finish": "2025-07-28 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2500",
+   "duration_days": 0.0,
+   "actual_start": "2025-07-29 08:00",
+   "actual_finish": "2025-09-08 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2510",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-22 08:00",
+   "actual_finish": "2025-08-22 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2520",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-11 13:00",
+   "actual_finish": "2025-09-08 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A5220",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-28 08:00",
+   "actual_finish": "2025-08-28 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A5230",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2530",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-11 08:00",
+   "actual_finish": "2025-09-12 12:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A5250",
+   "duration_days": 0.0,
+   "actual_start": "2025-09-04 08:00",
+   "actual_finish": "2025-09-04 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2530.1",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2600",
+   "duration_days": 0.0,
+   "actual_start": "2025-08-15 08:00",
+   "actual_finish": "2025-08-15 17:00",
+   "is_complete": true,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2550",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2560",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2570",
+   "duration_days": 4.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2580",
+   "duration_days": 15.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2590",
+   "duration_days": 5.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  },
+  {
+   "code": "A2540",
+   "duration_days": 1.0,
+   "actual_start": "",
+   "actual_finish": "",
+   "is_complete": false,
+   "clndr_id": "6977",
+   "task_type": "TT_Task"
+  }
+ ],
+ "relationships": [
+  {
+   "from_code": "A4240",
+   "to_code": "A4260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3850",
+   "to_code": "A3860",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3860",
+   "to_code": "A3870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3880",
+   "to_code": "A3890",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3890",
+   "to_code": "A3900",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3900",
+   "to_code": "A3910",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2230",
+   "to_code": "A2240",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A2250",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2250",
+   "to_code": "A2260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2260",
+   "to_code": "A2270",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A2300",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A2310",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2300",
+   "to_code": "A2320",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2310",
+   "to_code": "A2320",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2320",
+   "to_code": "A2290",
+   "type": "FS",
+   "lag_days": -2.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A2330",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2330",
+   "to_code": "A2340",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2350",
+   "to_code": "A2360",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2260",
+   "to_code": "A2350",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2610",
+   "to_code": "A2650",
+   "type": "FS",
+   "lag_days": -5.0
+  },
+  {
+   "from_code": "A2610",
+   "to_code": "A2630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2610",
+   "to_code": "A2640",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2630",
+   "to_code": "A2640",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2650",
+   "to_code": "A2670",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2670",
+   "to_code": "A2680",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1010",
+   "to_code": "A1020",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2880",
+   "to_code": "A2890",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2880",
+   "to_code": "A2970",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2750",
+   "to_code": "A2880",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2750",
+   "to_code": "A2790",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2790",
+   "to_code": "A2870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2750",
+   "to_code": "A2770",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2880",
+   "to_code": "A2900",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2970",
+   "to_code": "A2980",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2980",
+   "to_code": "A3010",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2970",
+   "to_code": "A3060",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2790",
+   "to_code": "A2900",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2900",
+   "to_code": "A2980",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3060",
+   "to_code": "A3070",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2980",
+   "to_code": "A3070",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2610",
+   "to_code": "A2730",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3070",
+   "to_code": "A3260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3260",
+   "to_code": "A3430",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2610",
+   "to_code": "A3880",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4390",
+   "to_code": "A4520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1050",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1060",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1070",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1080",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1090",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1100",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1120",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A1100",
+   "to_code": "A1130",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1140",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1150",
+   "type": "FS",
+   "lag_days": 15.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1160",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1170",
+   "type": "FS",
+   "lag_days": 15.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1180",
+   "type": "FS",
+   "lag_days": 40.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1190",
+   "type": "FS",
+   "lag_days": 15.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1200",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1210",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1220",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1230",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1240",
+   "type": "FS",
+   "lag_days": 35.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1250",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1260",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1270",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1280",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1290",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1300",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1310",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1320",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1330",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1340",
+   "type": "FS",
+   "lag_days": 20.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1350",
+   "type": "FS",
+   "lag_days": 20.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1610",
+   "type": "FS",
+   "lag_days": 35.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1620",
+   "type": "FS",
+   "lag_days": 35.0
+  },
+  {
+   "from_code": "A3060",
+   "to_code": "A3240",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3240",
+   "to_code": "A3420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3420",
+   "to_code": "A3550",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2680",
+   "to_code": "A2690",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2690",
+   "to_code": "A2700",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2700",
+   "to_code": "A2710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2710",
+   "to_code": "A3260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3240",
+   "to_code": "A3260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3430",
+   "to_code": "A3560",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3260",
+   "to_code": "A3280",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3280",
+   "to_code": "A3440",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3440",
+   "to_code": "A3570",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3450",
+   "to_code": "A3580",
+   "type": "FS",
+   "lag_days": -15.0
+  },
+  {
+   "from_code": "A3280",
+   "to_code": "A3290",
+   "type": "FS",
+   "lag_days": -5.0
+  },
+  {
+   "from_code": "A3290",
+   "to_code": "A3450",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3450",
+   "to_code": "A3460",
+   "type": "SS",
+   "lag_days": 2.0
+  },
+  {
+   "from_code": "A3450",
+   "to_code": "A3470",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3290",
+   "to_code": "A3300",
+   "type": "SS",
+   "lag_days": 2.0
+  },
+  {
+   "from_code": "A3580",
+   "to_code": "A3590",
+   "type": "FS",
+   "lag_days": 2.0
+  },
+  {
+   "from_code": "A3580",
+   "to_code": "A3600",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3290",
+   "to_code": "A3310",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3460",
+   "to_code": "A3480",
+   "type": "FS",
+   "lag_days": 3.0
+  },
+  {
+   "from_code": "A3590",
+   "to_code": "A3610",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A3300",
+   "to_code": "A3320",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3280",
+   "to_code": "A3330",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3290",
+   "to_code": "A3350",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3300",
+   "to_code": "A3350",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3320",
+   "to_code": "A3350",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3330",
+   "to_code": "A3350",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2650",
+   "to_code": "A3270",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3350",
+   "to_code": "A3360",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3360",
+   "to_code": "A3370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3360",
+   "to_code": "A3390",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3360",
+   "to_code": "A3410",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3370",
+   "to_code": "A3410",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3440",
+   "to_code": "A3490",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3450",
+   "to_code": "A3500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3460",
+   "to_code": "A3500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3480",
+   "to_code": "A3500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3490",
+   "to_code": "A3500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3500",
+   "to_code": "A3510",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3490",
+   "to_code": "A3520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3510",
+   "to_code": "A3530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3510",
+   "to_code": "A3540",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2260",
+   "to_code": "A3780",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3780",
+   "to_code": "A3790",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3790",
+   "to_code": "A3800",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3810",
+   "to_code": "A3820",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3820",
+   "to_code": "A3830",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3830",
+   "to_code": "A3840",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3570",
+   "to_code": "A3620",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3580",
+   "to_code": "A3630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3590",
+   "to_code": "A3630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3610",
+   "to_code": "A3630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3620",
+   "to_code": "A3630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3630",
+   "to_code": "A3640",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3640",
+   "to_code": "A3650",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3640",
+   "to_code": "A3660",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3640",
+   "to_code": "A3670",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3060",
+   "to_code": "A3210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4010",
+   "to_code": "A4760",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4030",
+   "to_code": "A4040",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4070",
+   "to_code": "A4080",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1240",
+   "to_code": "A1830",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1150",
+   "to_code": "A1730",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1050",
+   "to_code": "A1630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1070",
+   "to_code": "A1650",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1080",
+   "to_code": "A1660",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1090",
+   "to_code": "A1670",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100",
+   "to_code": "A1680",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1110",
+   "to_code": "A1690",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1120",
+   "to_code": "A1700",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1130",
+   "to_code": "A1710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1140",
+   "to_code": "A1720",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1160",
+   "to_code": "A1740",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1170",
+   "to_code": "A1750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1180",
+   "to_code": "A1760",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1190",
+   "to_code": "A1770",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1200",
+   "to_code": "A1780",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1200",
+   "to_code": "A1790",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1210",
+   "to_code": "A1800",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1220",
+   "to_code": "A1810",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1230",
+   "to_code": "A1820",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1250",
+   "to_code": "A1840",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1260",
+   "to_code": "A1850",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1270",
+   "to_code": "A1860",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1280",
+   "to_code": "A1870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1300",
+   "to_code": "A1890",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1310",
+   "to_code": "A1900",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1320",
+   "to_code": "A1910",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1330",
+   "to_code": "A1920",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1340",
+   "to_code": "A1930",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1350",
+   "to_code": "A1940",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1610",
+   "to_code": "A2200",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1620",
+   "to_code": "A2210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1630",
+   "to_code": "A2360",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1680",
+   "to_code": "A2610",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1330",
+   "to_code": "A2630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1710",
+   "to_code": "A2730",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2840",
+   "to_code": "A2870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1700",
+   "to_code": "A2750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1850",
+   "to_code": "A2750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1670",
+   "to_code": "A2770",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1750",
+   "to_code": "A2790",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1760",
+   "to_code": "A2870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1740",
+   "to_code": "A3890",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1770",
+   "to_code": "A3240",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1350",
+   "to_code": "A3310",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1780",
+   "to_code": "A3330",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1710",
+   "to_code": "A3270",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1840",
+   "to_code": "A3370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1790",
+   "to_code": "A3370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1800",
+   "to_code": "A3390",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1900",
+   "to_code": "A3410",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3570",
+   "to_code": "A3690",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4090",
+   "to_code": "A4100",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4100",
+   "to_code": "A4110",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3890",
+   "to_code": "A4150",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4150",
+   "to_code": "A4160",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4120",
+   "to_code": "A4170",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3840",
+   "to_code": "A4170",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4180",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4210",
+   "to_code": "A4200",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4100",
+   "to_code": "A4120",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4120",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3840",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4170",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1060",
+   "to_code": "A1640",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4170",
+   "to_code": "A4190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4190",
+   "to_code": "A4210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1110",
+   "type": "FS",
+   "lag_days": 5.0
+  },
+  {
+   "from_code": "A3210",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3220",
+   "to_code": "A3300",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2650",
+   "to_code": "A2660",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2640",
+   "to_code": "A3150",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2640",
+   "to_code": "A3160",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1730",
+   "to_code": "A3170",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3170",
+   "to_code": "A3190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3150",
+   "to_code": "A3170",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2770",
+   "to_code": "A2890",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2750",
+   "to_code": "A2820",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2820",
+   "to_code": "A2830",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2830",
+   "to_code": "A2840",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2840",
+   "to_code": "A2850",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2850",
+   "to_code": "A2860",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2910",
+   "to_code": "A2920",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2920",
+   "to_code": "A2840",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2880",
+   "to_code": "A2910",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2920",
+   "to_code": "A2930",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2940",
+   "to_code": "A2950",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2930",
+   "to_code": "A2940",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2950",
+   "to_code": "A2960",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2970",
+   "to_code": "A2990",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2990",
+   "to_code": "A3000",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3010",
+   "to_code": "A3020",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3020",
+   "to_code": "A3030",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3030",
+   "to_code": "A3040",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3040",
+   "to_code": "A3050",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3060",
+   "to_code": "A3090",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3090",
+   "to_code": "A3100",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3100",
+   "to_code": "A3110",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3120",
+   "to_code": "A3130",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3110",
+   "to_code": "A3120",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3130",
+   "to_code": "A3140",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3160",
+   "to_code": "A3170",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3000",
+   "to_code": "A3010",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3070",
+   "to_code": "A3110",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2900",
+   "to_code": "A2930",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2790",
+   "to_code": "A2840",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3210",
+   "to_code": "A3300",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3190",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3760",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3560",
+   "to_code": "A3570",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3270",
+   "to_code": "A3280",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3710",
+   "to_code": "A3750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3710",
+   "to_code": "A3760",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3710",
+   "to_code": "A3770",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3720",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3740",
+   "to_code": "A4200",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3750",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3770",
+   "to_code": "A4200",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3800",
+   "to_code": "A3820",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3690",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4220",
+   "to_code": "A4210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4160",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4080",
+   "to_code": "A4090",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4110",
+   "to_code": "A4120",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4050",
+   "to_code": "A4120",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4520",
+   "to_code": "A4530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3870",
+   "to_code": "A3880",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3910",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3390",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3410",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3520",
+   "to_code": "A3540",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3530",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3540",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3670",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3660",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3650",
+   "to_code": "A3670",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2880",
+   "to_code": "A3210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2970",
+   "to_code": "A3210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3170",
+   "to_code": "A3210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3140",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3050",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2960",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2890",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2860",
+   "to_code": "A2870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2870",
+   "to_code": "A4220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2660",
+   "to_code": "A2670",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1000",
+   "to_code": "A1010",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1010",
+   "to_code": "A1030",
+   "type": "FS",
+   "lag_days": 7.0
+  },
+  {
+   "from_code": "A1720",
+   "to_code": "A3740",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1810",
+   "to_code": "A3370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1820",
+   "to_code": "A3370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1830",
+   "to_code": "A2840",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1860",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1890",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1910",
+   "to_code": "A3750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1920",
+   "to_code": "A2630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1930",
+   "to_code": "A3810",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1940",
+   "to_code": "A3310",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2200",
+   "to_code": "A4150",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2210",
+   "to_code": "A4160",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1030",
+   "to_code": "A1040",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1040",
+   "to_code": "A2240",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1010",
+   "to_code": "A2230",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3190",
+   "to_code": "A3200",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1920",
+   "to_code": "A3200",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3200",
+   "to_code": "A4210",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4180",
+   "to_code": "A4190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2730",
+   "to_code": "A3260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1030",
+   "to_code": "A2220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2220",
+   "to_code": "A2290",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2270",
+   "to_code": "A2280",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2280",
+   "to_code": "A2290",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2770",
+   "to_code": "A2760",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2760",
+   "to_code": "A2890",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2750",
+   "to_code": "A2740",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2740",
+   "to_code": "A2880",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3570",
+   "to_code": "A3680",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3680",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3740",
+   "to_code": "A3730",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3730",
+   "to_code": "A4200",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2790",
+   "to_code": "A2780",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2780",
+   "to_code": "A2870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2850",
+   "to_code": "A2810",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2810",
+   "to_code": "A2860",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3240",
+   "to_code": "A3230",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3230",
+   "to_code": "A3420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3390",
+   "to_code": "A3380",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3380",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3710",
+   "to_code": "A3700",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3700",
+   "to_code": "A3750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3350",
+   "to_code": "A3340",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3340",
+   "to_code": "A3360",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2730",
+   "to_code": "A2720",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2720",
+   "to_code": "A3260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3410",
+   "to_code": "A3400",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3400",
+   "to_code": "A3710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3170",
+   "to_code": "A3180",
+   "type": "FS",
+   "lag_days": -1.0
+  },
+  {
+   "from_code": "A3180",
+   "to_code": "A3190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2610",
+   "to_code": "A2620",
+   "type": "FS",
+   "lag_days": -1.0
+  },
+  {
+   "from_code": "A2620",
+   "to_code": "A2650",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2790",
+   "to_code": "A2800",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2800",
+   "to_code": "A2840",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3070",
+   "to_code": "A3080",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3080",
+   "to_code": "A3110",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3240",
+   "to_code": "A3250",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3250",
+   "to_code": "A3260",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4180",
+   "to_code": "A4230",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4230",
+   "to_code": "A4250",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4250",
+   "to_code": "A4260",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4200",
+   "to_code": "A4240",
+   "type": "FS",
+   "lag_days": 2.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1360",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1370",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1380",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1390",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1400",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1410",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1420",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1430",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1440",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1450",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1460",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1470",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1480",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1490",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1500",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1510",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1520",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1530",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1540",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1360",
+   "to_code": "A1480",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1370",
+   "to_code": "A1490",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1380",
+   "to_code": "A1500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1390",
+   "to_code": "A1510",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1400",
+   "to_code": "A1520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1410",
+   "to_code": "A1530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1420",
+   "to_code": "A1540",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2710",
+   "to_code": "A2750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1430",
+   "to_code": "A2020",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1440",
+   "to_code": "A2030",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1450",
+   "to_code": "A2040",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1470",
+   "to_code": "A2060",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1480",
+   "to_code": "A2070",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1490",
+   "to_code": "A2080",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1500",
+   "to_code": "A2090",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1510",
+   "to_code": "A2100",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1520",
+   "to_code": "A2110",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1530",
+   "to_code": "A2120",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1540",
+   "to_code": "A2130",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1360",
+   "to_code": "A1950",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1370",
+   "to_code": "A1960",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1380",
+   "to_code": "A1970",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1390",
+   "to_code": "A1980",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1400",
+   "to_code": "A1990",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1410",
+   "to_code": "A2000",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1420",
+   "to_code": "A2010",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1550",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1560",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1570",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1580",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1590",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1600",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1550",
+   "to_code": "A2140",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1560",
+   "to_code": "2170",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1570",
+   "to_code": "A2160",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1580",
+   "to_code": "A2150",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1590",
+   "to_code": "A2180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1600",
+   "to_code": "A2190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1960",
+   "to_code": "A3190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2070",
+   "to_code": "A3190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2110",
+   "to_code": "A3190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1950",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1970",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1980",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1990",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2000",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2010",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2020",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2040",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2080",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2090",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2100",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2140",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2190",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2030",
+   "to_code": "A3190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2030",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2060",
+   "to_code": "A3290",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2060",
+   "to_code": "A3450",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2060",
+   "to_code": "A3580",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2120",
+   "to_code": "A3190",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2130",
+   "to_code": "A3290",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2130",
+   "to_code": "A3450",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2130",
+   "to_code": "A3580",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "2170",
+   "to_code": "A3300",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "2170",
+   "to_code": "A3460",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "2170",
+   "to_code": "A3590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2150",
+   "to_code": "A3300",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2150",
+   "to_code": "A3460",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2150",
+   "to_code": "A3590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2180",
+   "to_code": "A3300",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2180",
+   "to_code": "A3460",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2180",
+   "to_code": "A3590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2160",
+   "to_code": "A4180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3550",
+   "to_code": "A3570",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3550",
+   "to_code": "A3560",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3670",
+   "to_code": "A3740",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3410",
+   "to_code": "A3810",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3670",
+   "to_code": "A3720",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3540",
+   "to_code": "A3720",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3410",
+   "to_code": "A3720",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3470",
+   "to_code": "A3500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3600",
+   "to_code": "A3630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3310",
+   "to_code": "A3350",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4200",
+   "to_code": "A4250",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4240",
+   "to_code": "A4250",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1360.1",
+   "to_code": "A1480",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1360.1",
+   "to_code": "A1950",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1360.2",
+   "to_code": "A1480",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1360.2",
+   "to_code": "A1950",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1450.1",
+   "to_code": "A2040",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1450",
+   "to_code": "A1450.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1380",
+   "to_code": "A12380.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1370",
+   "to_code": "A1370,1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1360",
+   "to_code": "A1360.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1360.1",
+   "to_code": "A1360.2",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1370,1",
+   "to_code": "A1490",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1370,1",
+   "to_code": "A1960",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A12380.1",
+   "to_code": "A1500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A12380.1",
+   "to_code": "A1970",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1470",
+   "to_code": "A1470.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1470.1",
+   "to_code": "A2060",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1480",
+   "to_code": "A1480.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1530",
+   "to_code": "A1530.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1530.1",
+   "to_code": "A2120",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1540",
+   "to_code": "A1540.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1540.1",
+   "to_code": "A2130",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1590",
+   "to_code": "A1590.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1590.1",
+   "to_code": "A2180",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100",
+   "to_code": "A1100.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100.1",
+   "to_code": "A1130",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1100.1",
+   "to_code": "A1680",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1870",
+   "to_code": "A3340",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A4560",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4560",
+   "to_code": "A4520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A4700",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4700",
+   "to_code": "A4520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A4310",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4310",
+   "to_code": "A3920",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3920",
+   "to_code": "A3960",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3960",
+   "to_code": "A4340",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4340",
+   "to_code": "A3930",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3930",
+   "to_code": "A3940",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3940",
+   "to_code": "A4370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4370",
+   "to_code": "A4380",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3930",
+   "to_code": "A4400",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1690",
+   "to_code": "A4400",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4390",
+   "to_code": "A4410",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4400",
+   "to_code": "A4420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1690",
+   "to_code": "A4420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4420",
+   "to_code": "A4430",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4430",
+   "to_code": "A4040x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4040x",
+   "to_code": "A4450",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4450",
+   "to_code": "A4460",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4460",
+   "to_code": "A4470",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4470",
+   "to_code": "A4480",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4480",
+   "to_code": "A4490",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4490",
+   "to_code": "A4500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1370x",
+   "type": "FS",
+   "lag_days": 60.0
+  },
+  {
+   "from_code": "A1370x",
+   "to_code": "A2090x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2090x",
+   "to_code": "A4510",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4500",
+   "to_code": "A4520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4510",
+   "to_code": "A4520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A4390",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4410",
+   "to_code": "A4420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2880",
+   "to_code": "A4550",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4530",
+   "to_code": "A4540",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4390",
+   "to_code": "A4570",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1690",
+   "to_code": "A4580",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4580",
+   "to_code": "A4590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4600",
+   "to_code": "A4610",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4610",
+   "to_code": "A4620",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4620",
+   "to_code": "A4630",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4630",
+   "to_code": "A4640",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4640",
+   "to_code": "A4650",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4650",
+   "to_code": "A4660",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4660",
+   "to_code": "A4670",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4670",
+   "to_code": "A4680",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4680",
+   "to_code": "A4690",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4690",
+   "to_code": "A4170",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4390",
+   "to_code": "A4700",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4700",
+   "to_code": "A4710",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1690",
+   "to_code": "A4720",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4710",
+   "to_code": "A4720",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4720",
+   "to_code": "A4730",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4730",
+   "to_code": "A2970",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A4740",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4740",
+   "to_code": "A4010",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4760",
+   "to_code": "A4770",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4770",
+   "to_code": "A4780",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4780",
+   "to_code": "A4790",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4790",
+   "to_code": "A4800",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4800",
+   "to_code": "A4810",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4810",
+   "to_code": "A4820",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4820",
+   "to_code": "A4030",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4040",
+   "to_code": "A4050",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4050",
+   "to_code": "A4060",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4060",
+   "to_code": "A4070",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A3260",
+   "to_code": "A4820",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2410x",
+   "to_code": "A2420x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2420x",
+   "to_code": "A2430x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2430x",
+   "to_code": "A2440x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2440x",
+   "to_code": "A2470x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2450x",
+   "to_code": "A2460x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2410x",
+   "to_code": "A2450x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2460x",
+   "to_code": "A2470x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2470x",
+   "to_code": "A2480x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2480x",
+   "to_code": "A2490x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2550x",
+   "to_code": "A3940",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2240",
+   "to_code": "A2500x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2520x",
+   "to_code": "A4370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4420",
+   "to_code": "A4590",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4420",
+   "to_code": "A4580",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4550",
+   "to_code": "A4600",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100.1",
+   "to_code": "A1100.2",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100.2",
+   "to_code": "A1130",
+   "type": "FS",
+   "lag_days": 10.0
+  },
+  {
+   "from_code": "A1100.2",
+   "to_code": "A1680",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100.2",
+   "to_code": "A1110",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1110",
+   "to_code": "A1110.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1110.1",
+   "to_code": "A1690",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1020",
+   "to_code": "A1280.1",
+   "type": "FS",
+   "lag_days": 30.0
+  },
+  {
+   "from_code": "A1280.1",
+   "to_code": "A1870",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1370x",
+   "to_code": "A1380x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1380x",
+   "to_code": "A2090x",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2560x",
+   "to_code": "A1950",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1460",
+   "to_code": "A1460.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1460",
+   "to_code": "A2050",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1460.1",
+   "to_code": "A2050",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2050",
+   "to_code": "A3220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4420",
+   "to_code": "A3060",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4520",
+   "to_code": "A4590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4590",
+   "to_code": "A2750",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A4590",
+   "to_code": "A4600",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2290",
+   "to_code": "A2370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2360",
+   "to_code": "A2370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2340",
+   "to_code": "A2370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5070",
+   "to_code": "A2370",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2370",
+   "to_code": "A2390",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2370",
+   "to_code": "A2380",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2380",
+   "to_code": "A2420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2500x",
+   "to_code": "A5070",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2390",
+   "to_code": "A2400",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2400",
+   "to_code": "A2430",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2400",
+   "to_code": "A2410",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2410",
+   "to_code": "A2420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1640",
+   "to_code": "A2420",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1650",
+   "to_code": "A2420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1660",
+   "to_code": "A2420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2510x",
+   "to_code": "A2420",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2420",
+   "to_code": "A2730",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1640",
+   "to_code": "A2430",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1650",
+   "to_code": "A2430",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1660",
+   "to_code": "A2430",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2430",
+   "to_code": "A2450",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2430",
+   "to_code": "A2470",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2530",
+   "to_code": "A2440",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5250",
+   "to_code": "A2440",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2440",
+   "to_code": "A2530.1",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1640",
+   "to_code": "A2450",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2450",
+   "to_code": "A2460",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2450",
+   "to_code": "A2470",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2460",
+   "to_code": "A2470",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1650",
+   "to_code": "A2470",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2470",
+   "to_code": "A2500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2470",
+   "to_code": "A2490",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2490",
+   "to_code": "A2500",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1640",
+   "to_code": "A2500",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2500",
+   "to_code": "A2520",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100",
+   "to_code": "A2510",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100.1",
+   "to_code": "A2510",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A1100.2",
+   "to_code": "A2510",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2510",
+   "to_code": "A2520",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2520",
+   "to_code": "A2530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2520",
+   "to_code": "A3850",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2520",
+   "to_code": "A2610",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2520",
+   "to_code": "A5220",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5220",
+   "to_code": "A2530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5220",
+   "to_code": "A3850",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5220",
+   "to_code": "A2610",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2490x",
+   "to_code": "A5230",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5230",
+   "to_code": "A2530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5230",
+   "to_code": "A2610",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2550x",
+   "to_code": "A2530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2520x",
+   "to_code": "A2530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2490x",
+   "to_code": "A2530",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2530",
+   "to_code": "A2550",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2530",
+   "to_code": "A5250",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5250",
+   "to_code": "A2550",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A5250",
+   "to_code": "A2600",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2530.1",
+   "to_code": "A2550",
+   "type": "FS",
+   "lag_days": 3.0
+  },
+  {
+   "from_code": "A2530",
+   "to_code": "A2600",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2600",
+   "to_code": "A2550",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2530x",
+   "to_code": "A2550",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2550",
+   "to_code": "A2590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2550",
+   "to_code": "A2570",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2550",
+   "to_code": "A2610",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2570",
+   "to_code": "A2560",
+   "type": "SS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2560",
+   "to_code": "A2590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2570",
+   "to_code": "A2590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2540x",
+   "to_code": "A2580",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2610",
+   "to_code": "A2580",
+   "type": "FS",
+   "lag_days": -10.0
+  },
+  {
+   "from_code": "A2580",
+   "to_code": "A2590",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2590",
+   "to_code": "A2540",
+   "type": "FF",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2590",
+   "to_code": "A2690",
+   "type": "FS",
+   "lag_days": 0.0
+  },
+  {
+   "from_code": "A2540",
+   "to_code": "A2710",
+   "type": "FS",
+   "lag_days": 0.0
+  }
+ ],
+ "opts": {
+  "dataDate": "2025-09-16 17:00",
+  "calMap": {
+   "6977": {
+    "work_days": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "holidays": [
+     "2024-09-02",
+     "2024-10-14",
+     "2024-12-25",
+     "2025-01-01",
+     "2025-02-17",
+     "2025-04-18",
+     "2025-05-19",
+     "2025-07-01",
+     "2025-09-01",
+     "2025-10-13",
+     "2025-12-25",
+     "2026-01-01",
+     "2026-02-16",
+     "2026-03-03",
+     "2026-05-18",
+     "2026-07-01",
+     "2026-09-07",
+     "2026-10-12",
+     "2026-12-25",
+     "2027-01-01"
+    ],
+    "special_workdays": [],
+    "hours_per_day": 8.0,
+    "raw": "(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()((0||0(d|45537)())(0||0(d|45579)())(0||0(d|45651)())(0||0(d|45658)())(0||0(d|45705)())(0||0(d|45765)())(0||0(d|45796)())(0||0(d|45839)())(0||0(d|45901)())(0||0(d|45943)())(0||0(d|46016)())(0||0(d|46023)())(0||0(d|46069)())(0||0(d|46084)())(0||0(d|46160)())(0||0(d|46204)())(0||0(d|46272)())(0||0(d|46307)())(0||0(d|46381)())(0||0(d|46388)())))))"
+   }
+  },
+  "scheduleMode": "retained_logic",
+  "relationshipLagCalendar": "rcal_Predecessor",
+  "ssLagFrom": "early_start",
+  "projectFinish": "2026-09-30 17:00"
+ }
+}
