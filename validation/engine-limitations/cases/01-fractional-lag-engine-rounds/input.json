@@ -1,0 +1,24 @@
+{
+  "activities": [
+    {
+      "code": "A",
+      "duration_days": 5
+    },
+    {
+      "code": "B",
+      "duration_days": 3
+    }
+  ],
+  "relationships": [
+    {
+      "from_code": "A",
+      "to_code": "B",
+      "type": "FS",
+      "lag_days": 0.5
+    }
+  ],
+  "opts": {
+    "dataDate": "2026-01-05",
+    "projectStart": "2026-01-05"
+  }
+}
