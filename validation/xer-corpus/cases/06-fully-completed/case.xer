@@ -1,0 +1,18 @@
+ERMHDR	20.12	2026-05-24	Project	CRITICAL_PATH_PARTNERS	cpp-cpm-engine	DB-Generated	NULL	A	CAD
+%T	CALENDAR
+%F	clndr_id	clndr_name	day_hr_cnt	clndr_type
+%R	1	Standard Mon-Fri	8	CA_Base
+%T	TASK
+%F	task_id	task_code	task_name	task_type	target_drtn_hr_cnt	remain_drtn_hr_cnt	clndr_id	cstr_type	cstr_date	cstr_type2	cstr_date2	act_start_date	act_end_date
+%R	501	AB1	Completed 1	TT_Task	40	0	1					2026-01-05 08:00	2026-01-09 17:00
+%R	502	AB2	Completed 2	TT_Task	40	0	1					2026-01-12 08:00	2026-01-16 17:00
+%R	503	AB3	Completed 3	TT_Task	40	0	1					2026-01-19 08:00	2026-01-23 17:00
+%R	504	AB4	Completed 4	TT_Task	40	0	1					2026-01-26 08:00	2026-01-30 17:00
+%R	505	AB5	Completed 5	TT_Task	40	0	1					2026-02-02 08:00	2026-02-06 17:00
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	pred_type	lag_hr_cnt
+%R	1	502	501	PR_FS	0
+%R	2	503	502	PR_FS	0
+%R	3	504	503	PR_FS	0
+%R	4	505	504	PR_FS	0
+%E

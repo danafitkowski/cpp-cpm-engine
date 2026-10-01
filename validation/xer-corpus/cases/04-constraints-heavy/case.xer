@@ -1,0 +1,15 @@
+ERMHDR	20.12	2026-05-24	Project	CRITICAL_PATH_PARTNERS	cpp-cpm-engine	DB-Generated	NULL	A	CAD
+%T	CALENDAR
+%F	clndr_id	clndr_name	day_hr_cnt	clndr_type
+%R	1	Standard Mon-Fri	8	CA_Base
+%T	TASK
+%F	task_id	task_code	task_name	task_type	target_drtn_hr_cnt	remain_drtn_hr_cnt	clndr_id	cstr_type	cstr_date	cstr_type2	cstr_date2	act_start_date	act_end_date
+%R	301	SNET	Start No Earlier Than	TT_Task	40	40	1	CS_MSOB			2026-02-15		
+%R	302	SNLT	Start No Later Than	TT_Task	40	40	1	CS_MSOA			2026-03-15		
+%R	303	FNET	Finish No Earlier Than	TT_Task	40	40	1	CS_MEOA			2026-02-28		
+%R	304	FNLT	Finish No Later Than	TT_Task	40	40	1	CS_MEOB			2026-03-28		
+%R	305	MSO	Must Start On	TT_Task	40	40	1	CS_MSO			2026-02-09		
+%R	306	MFO	Must Finish On	TT_Task	40	40	1	CS_MEO			2026-03-09		
+%R	307	MANS	Mandatory Start	TT_Task	40	40	1	CS_MANSTART			2026-02-23		
+%R	308	MANF	Mandatory Finish	TT_Task	40	40	1	CS_MANFINISH			2026-03-23		
+%E

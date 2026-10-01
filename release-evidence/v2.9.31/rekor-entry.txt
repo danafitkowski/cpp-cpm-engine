@@ -1,0 +1,85 @@
+# Rekor transparency-log entry — cpm-engine v2.9.31 witness
+
+The Sigstore-signed canonical witness (attestations/latest.json, signed via
+GitHub OIDC from the verify.yml workflow on the v2.9.31 tag) is recorded on
+the public Sigstore transparency log (Rekor).
+
+## Rekor log index
+
+  logIndex:                   1616950323
+  kind:                       dsse
+  version:                    0.0.1
+  integratedTime (UTC):       see sigstore-attestation-output.txt
+
+## Sigstore certificate subject
+
+  Subject:                    https://github.com/danafitkowski/cpp-cpm-engine/.github/workflows/verify.yml@refs/tags/v2.9.31
+  Issuer:                     https://token.actions.githubusercontent.com
+  Workflow trigger:           push
+  Workflow SHA:               a31adaee0d3d5c6c72507495387064bea596aa12
+  Workflow name:              verify
+  Source repo:                danafitkowski/cpp-cpm-engine
+  Source ref:                 refs/tags/v2.9.31
+  Source commit SHA:          a31adaee0d3d5c6c72507495387064bea596aa12
+  Runner environment:         github-hosted
+  Run invocation URL:         https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26350835546/attempts/1
+
+## Signed predicate (in-toto SLSA Provenance v1)
+
+  Subject:                    latest.json (the canonical witness)
+  Predicate type:             https://slsa.dev/provenance/v1
+  Builder ID:                 https://github.com/danafitkowski/cpp-cpm-engine/.github/workflows/verify.yml@refs/tags/v2.9.31
+  Build type:                 https://actions.github.io/buildtypes/workflow/v1
+  Resolved git commit:        a31adaee0d3d5c6c72507495387064bea596aa12
+
+## How a third party looks up the Rekor entry
+
+Option 1 — web UI:
+
+  Open: https://search.sigstore.dev/?logIndex=1616950323
+
+  The transparency log entry is publicly visible; no authentication
+  required. Anyone can confirm the entry exists, was signed at the
+  documented timestamp, and matches the certificate subject above.
+
+Option 2 — Rekor CLI:
+
+  rekor-cli get --log-index 1616950323
+
+Option 3 — `gh attestation verify` (recommended; pulls the full
+verification chain):
+
+  gh attestation verify release-evidence/v2.9.31/witness-v2.9.31.json \\
+      --owner danafitkowski --format json
+
+  Expected: exit 0 + a JSON dump containing the full attestation bundle.
+  The full captured output is in sigstore-attestation-output.txt
+  alongside this file.
+
+## What this proves (Layer 2 of the verification chain)
+
+  - The Sigstore-signed witness for v2.9.31 is publicly logged.
+  - The signature cannot be repudiated by the proponent without leaving
+    an audit trail.
+  - The certificate subject is bound to the verify.yml workflow on the
+    v2.9.31 tag — not to a developer machine, not to a credential under
+    the proponent's control.
+
+## v2.9.31 vs v2.9.30 — what changed under the chain
+
+The engine source SHA-256 changed because v2.9.31 ADDED the Section Q
+Forensic Strict Mode code (computeCPMForensicStrict, StrictForensicViolation,
+FATAL_STRICT_CONTEXTS, _applyForensicStrictValidation, runCPM strict-mode
+refusal). The non-strict path is byte-identical in behavior to v2.9.30 —
+strict mode is additive validation, not a math change.
+
+  Engine SHA-256 v2.9.30:  30c633e2c5850cfe24e4a42c146f62095295f5ac7193b04b10d37bde50c7ee94
+  Engine SHA-256 v2.9.31:  a6b9e8d93f156b4af487082c15e4141236a93f20e9bfa90b57a95521309ac7fe
+
+  Python ref SHA-256 (both v2.9.30 and v2.9.31):
+                            50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7
+  (unchanged — strict mode is JS-side validation; Python reference engine
+   continues to mirror the non-strict Section C math.)
+
+The Rekor log is operated by the Sigstore project (https://www.sigstore.dev),
+independent of Critical Path Partners.

@@ -12,6 +12,2814 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.49 — 2026-09-27 — the Must Finish By, the resume date and completed work, measured on P6's own F9
+
+**Engine math changed.** Primavera P6 Professional 23.12.1 scheduled the
+website demo update with F9 at three data dates, and the engine now
+reproduces every one of its 291 open activities on early and late dates and
+on total and free float at all three. Four rules moved to get there, and
+`parseXER` now hands on what they read. Once a caller passes the new inputs,
+the following can move:
+- every late date and total float of a schedule whose Must Finish By
+  (`PROJECT.plan_end_date`, `opts.projectFinish`) differs from its early
+  finish;
+- the reported project finish of a caller that already passed
+  `opts.projectFinish`: it is now the early finish;
+- under retained logic, anything downstream of a suspended activity whose
+  resume date is after the data date (`suspend_date`, `resume_date`);
+- any successor of a completed activity that a completed predecessor drives
+  through a lag not yet run out at the data date;
+- the free float of an activity whose successor is completed.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), decided
+by Dana 27-Sep-2026: late dates and total float move on schedules with a Must
+Finish By; early dates move where work was suspended and resumed after the
+data date; free float moves where a successor is complete. §12.2 re-check:
+none requested at release. What moves, and by how much, is measured below
+under "Who is affected".
+
+**How it was measured.** P6 Professional 23.12.1 (standalone) scheduled the
+website demo update (405 activities; 404 scheduled, 291 open and 113
+completed) with F9 on 27-Sep-2026, one project open, and exported it three
+times: at its filed data date, 01-Jul-2025 17:00, and at 16-Sep-2025 17:00
+and 16-Sep-2025 08:00. Engine against P6 on every open activity, each P6
+instant read as the working day it opens on (the p6-oracle convention):
+
+| Data date | v2.9.48 matching P6 (ES / EF / LS / LF / TF / FF) | v2.9.49 |
+|---|---|---|
+| 16-Sep-2025 08:00 | 291 / 291 / 0 / 0 / 0 / 290 | 291 on every field |
+| 16-Sep-2025 17:00 | 291 / 291 / 0 / 0 / 0 / 290 | 291 on every field |
+| 01-Jul-2025 17:00 | 67 / 67 / 0 / 0 / 0 / 217 | 291 on every field |
+
+The three are committed as `validation/p6-comparison/cases/16-18` and
+scored by `npm run test:p6-comparison`. They are fitted, not held out: the
+rules below were derived from these exports.
+
+**1. The Must Finish By.** P6 seeds every late date from the project's Must
+Finish By when one is set, on each activity's own calendar, instead of from
+the project's early finish. The demo's is 30-Sep-2026 17:00 against a P6
+finish of 3 to 13 Nov 2026: every open end's late finish sits on it, and
+the critical path carries -23 to -31 working days of total float. Seeded at
+its early finish, the engine matched none of the 291 late dates or total
+floats at any of the three data dates; seeded here it matches all of them.
+The two real P6 exports on the measuring machine whose Must Finish By
+differs from their early finish seed at it too.
+- `opts.projectFinish` (aliases `project_finish`, `mustFinishBy`; Python
+  `compute_cpm(project_finish=...)`) takes it, time included. Its time of
+  day is resolved on the shift close exactly as a finish constraint's is
+  (v2.9.45): at or after the close counts that day. A date on a day the
+  activity does not work falls back to the close of its last working day
+  before it.
+- The reported project finish stays the EARLY finish. v2.9.18 through
+  v2.9.48 reported the deadline itself, and seeded every activity from its
+  bare date.
+- Free float of an activity with no successor still runs to the early
+  finish: all 78 open ends of the three P6 files show it.
+- An applied value raises `project-deadline-applied` (ALERT when it is
+  earlier than the early finish, WARN otherwise); an unparseable one raises
+  `project-deadline-invalid` (WARN) and is ignored.
+- `parseXER` returns `plan_end_date` and `project_finish`, the value to
+  pass: the date when SCHEDOPTIONS `sched_use_project_end_date_for_float` is
+  `Y` or absent (P6's default, the setting measured), `''` under `N`
+  ("opened projects"), whose P6 handling is unmeasured. The CPP converters
+  follow the same rule.
+
+**2. The resume date.** Under retained logic P6 schedules no work on a
+suspended activity before its resume date. At the demo's filed data date 65
+completed activities carry a resume date after the data date, and P6 stamps
+none of them at the data date: 62 on the resume date, 3 later, where
+unfinished work carries them further. They drive their successors from
+there: A1100.2, finished and resumed 04-Sep-2025 17:00, holds its FS
+successor to 05-Sep and its FS + 80 h successor to 19-Sep, where the engine,
+reading no resume date, restarted both at the data date and finished the
+project on 27-Aug-2026 against P6's 03-Nov-2026. A started activity is held
+the same way: a probe suspended 28-Sep and resumed 12-Oct-2026, at data date
+05-Oct, restarts on 12-Oct in P6.
+- The activity fields are `suspend_date` and `resume_date`, time included;
+  `parseXER` and the CPP converters hand both on.
+- A resume date is applied only beside a suspend date. Every P6-scheduled
+  row it was measured on carries both, as P6 enters them. A resume date
+  with no suspend date is the shape MS Project conversions carry (restart =
+  resume, and never scheduled in P6 in any file found), so its P6 handling
+  is unmeasured: it is not applied, and one `resume-date-without-suspend`
+  WARN names every such row. On one job's 18 converted monthly updates on
+  the measuring machine, applying it would have moved the finish by up to
+  142 calendar days on that unmeasured shape.
+- One `resume-date-holds` INFO names every activity a resume date holds.
+- Under progress override P6's handling is unmeasured: the date is not
+  applied, and a `resume-date-not-applied` WARN names each one.
+- An actual date after the data date on a row with no resume date still
+  drives nothing (v2.9.47): the demo's A2530, finished 12-Sep 12:00, hands
+  its successor the carried 05-Sep.
+
+**3. Completed to completed.** A completed predecessor hands a completed
+successor its stamp with NO lag. v2.9.47 laid the unexpired lag on that link
+too, inferred from links into unfinished work. P6's own dates say otherwise
+on every discriminating link found: the demo's A1020 -> A1370x (FS + 60 d,
+40 d unexpired: A1370x is stamped on its resume date, 09-Jul, not on the
+lag), two SS links in another real P6 project (SS + 66 d and SS + 44 d, both
+successors stamped at the data date) and eleven FF links in a third job's P6
+exports. A lag out of completed work into unfinished work keeps the v2.9.47
+rule. Crossval F75 moves to the measured value and is re-described.
+
+**4. Free float into completed work.** Under retained logic with a data
+date, free float to a completed successor runs to that successor's stamp:
+the data date, the date it carries from unfinished work, or its resume date.
+v2.9.48 skipped a completed successor that carried no date and measured to
+the project finish instead. The demo's A2220 feeds the completed A2290: P6
+gives it 10 working days at the filed date and 0 at the corrected one;
+v2.9.48 gave 43.
+
+**5. `parseXER` keeps P6's actual dates** (engine commit `0e1943e`, approved
+by Dana). `getTasks()` hands on `act_start_date` / `act_end_date` as P6 wrote
+them, time included, where it cut them to `YYYY-MM-DD`. `computeCPM` reads a
+bare date as the opening of that day, one working day before a finish at its
+close, so a caller building input from `getTasks()` started a lagged
+successor of completed work a working day early (P6 probe XFA1 case F04:
+Wednesday against P6's Thursday). No shipped caller did that (`runCPM` never
+reads the actual finish, and the try page passes no actual dates), so
+nothing published moves. `validation/xer-corpus/generate-corpus.js` still
+cuts its own copy to the date, because it regenerates a fixed corpus.
+
+**Verified.**
+- The three P6 exports: 291 of 291 open activities on ES, EF, LS, LF, TF
+  and FF at each data date, and all 113 completed rows' actual dates pass
+  through (`tests/p6-demo-capture.test.js`).
+- JS unit suite: 1,345 checks green, up from 1,325: PX-1/PX-2 (the timed
+  actual dates), MFB-1..MFB-7, RES-1..RES-6, CC-1..CC-3, and PX-3/PX-4 (the
+  Must Finish By and the suspend and resume dates through `parseXER`).
+  FIX 1.1 / 1.2 expect the timed dates.
+- Cross-validation: 99 fixtures, 2465 of 2539 executed, 74 skipped (37
+  `ff_signed`, 37 `ff_signed_working_days`, all mutual on completed
+  activities), 0 failures. The 17 new fixtures (F87-F103) exercise every
+  rule above. Alert parity is not compared on F96, F99, F101 and F102, which
+  carry the JS-only future-actual-finish ALERT, as F65 and F67 already did.
+- The 13-case P6 comparison matrix, re-run on these bytes against the same
+  capture: 13 / 13 over 27 field checks, zero changed rows.
+- Coverage re-measured on these bytes: 94.30% statements (10,675 / 11,320),
+  83.43% branches (2,332 / 2,795), 95.30% functions (142 / 149).
+
+**Not measured, not claimed.**
+- A Must Finish By under "opened projects" (flag `N`), a resume date under
+  progress override, and a resume date with no suspend date: disclosed, not
+  applied.
+- The lag off a SUSPENDED predecessor: P6 counts only the working time
+  before the suspension (the probe's SS + 15 d successor starts 26-Oct in P6
+  and 19-Oct in the engine).
+- A Must Finish By inside the working day: the day-granular engine resolves
+  it to the day, so on the one real export found with one the engine reads
+  a working day of negative float where P6 reads an hour.
+- An SS link off a zero-duration activity drives from its start boundary,
+  the next working opening, where P6 drives from the close of the previous
+  working day. The two coincide unless the successor's calendar works in
+  between; no measured row is affected.
+- Without a Must Finish By, an open end whose late finish a constraint
+  pulls in still reports its total float as its free float. P6 measures an
+  open end's free float to the project's early finish whatever its
+  constraints (45 open ends under Finish On or Before and 18 under a
+  mandatory finish, in P6-scheduled exports on the measuring machine), and
+  the engine does so when a Must Finish By is passed. The case without one
+  is a pre-existing difference, not changed in this release.
+- Display: a finish milestone's `es_date` prints the opening after P6's
+  17:00, and a zero-duration task's `ef_last_worked_date` the working day
+  before P6's 08:00; the instant is the same. At the corrected data date
+  that is 4 finish milestones and 5 zero-duration tasks of the demo.
+- The Python engine counts working days one day at a time, so with a Must
+  Finish By far from the early finish every float is long to count: a
+  5,000-activity synthetic whose Must Finish By sits 16 years before its
+  finish runs in 155 s where v2.9.48 took 0.6 s. The largest increase on a
+  real export on the measuring machine is 3 s.
+
+**Who is affected.** Measured by running v2.9.48 and v2.9.49 through the CPP
+converter (`tia_builder._xer_to_canonical`) on every unique XER on the
+measuring machine: 371 files, 191,281 activities, 160,828 of them open.
+Client files are not named here.
+- 94 files move on at least one value. Early dates or the finish move in
+  13: the demo's own data in eleven copies (in each copy of the update
+  224 early dates move and the finish moves 48 to 68 calendar days later,
+  to P6's date wherever P6 scheduled the copy; the copies of the baseline
+  move 44 early dates and not the finish), 23 rows of one real export whose
+  suspended activity now waits for its resume date (finish unchanged), and
+  2 rows of a P6 probe.
+- Late dates and total float move in 64 of the 78 files that carry a Must
+  Finish By: 25,665 late finishes and 25,845 total floats in all. In 4 more
+  only free float moves, 3 of them copies of one contract schedule with no
+  relationships, whose 1,090 activities are open ends pinned by mandatory
+  constraints: the free float of 1,089 of them now runs to the early
+  finish, as P6 measures it (above). Nothing moves in the other 10.
+- Free float alone moves on 1 to 3 activities in 24 further files, through
+  rule 4.
+- On the 101 exports P6 scheduled at their own data date, every agreement
+  with P6's stored dates rises or holds except in one copy of the demo whose
+  stored dates do not come from scheduling the network it now holds (23 of
+  its 291 early starts match either engine): early starts 67 -> 291
+  and late finishes 0 -> 291 on the demo, and free float moves toward P6's
+  value on 605 activities and away on 22 (12 in that copy, 10 where P6
+  stored 0 against its own dates).
+- Where agreement with stored float falls, the files are generated test
+  fixtures that record no P6 schedule run, or exports P6 last scheduled
+  before their own data date.
+
+## v2.9.48 — 2026-09-27 — a completed activity's last worked day, and the disclosure's validation figures
+
+**Engine math is unchanged.** Every `es`, `ef`, `ls`, `lf`, float,
+critical-path and driving-path value is what v2.9.47 returns, and the
+cross-validation and P6 comparison results do not move. Both fixes are to
+what the engine prints: two output fields that nothing inside the engine
+reads back, and the text of its Daubert disclosure.
+
+**Change class B (disclosure)** under PROCEDURE.md §12.1, decided by Dana
+27-Sep-2026: no computed value moves; the disclosure's validation figures
+were wrong. A deliverable already issued from an earlier tagged build needs
+the disclosure check in PROCEDURE.md §12.3, not a re-run of the analysis.
+
+**1. The last worked day of a completed activity.** `ef_last_worked_date`
+and `lf_last_worked_date`, the inclusive companions of the exclusive `ef` /
+`lf` added at v2.9.42, retreated one working day from `ef` / `lf` on every
+activity. That is right wherever `ef` is the exclusive boundary, which is
+every activity the engine schedules. A completed activity's `ef` is its
+actual finish instead. When that finish carries P6's closing time
+(`'2026-01-09 16:00'`, as P6 writes `act_end_date`), its instant is the
+opening of the next day, so the date itself is the last day worked. The
+fields printed the working day before it:
+- 08-Jan for an activity P6 shows finished 09-Jan;
+- the Friday for a Saturday finish on a Mon-Fri calendar.
+
+`lf` equals `ef` on a completed activity, so the late field was out the
+same way.
+- The rule reads the finish instant the engine already schedules
+  successors from. A completed activity whose finish instant falls after
+  its finish date closed on that date, and both fields print it.
+- A date-only `actual_finish` is the exclusive boundary docs/api.md
+  documents, the opening of the next working day, and a time before noon is
+  the opening of its own day. Both still print the working day before,
+  because that is the instant successors are scheduled from. The same finish
+  written either way (`'2026-01-09 16:00'` or the boundary `'2026-01-12'`)
+  now prints the same day.
+- On the 82 cross-validation fixtures, 18 of the 27 completed activities
+  carry a closing-time finish and now print it. The other 9 are unchanged.
+- The harness does not compare these two display fields. A scratch run of
+  it that added them to its per-activity date comparison found both engines
+  agreeing on every activity of all 82 fixtures, 0 failures.
+- LW-1..LW-6 in `cpm-engine.test.js`, paired with the same six cases on
+  the Python side, pin the fix, the boundary and morning cases, and that no
+  computed date moves.
+- docs/api.md now lists both fields in the result schema and states how
+  each form of `actual_finish` prints.
+
+**2. The Daubert disclosure's validation figures.** `buildDaubertDisclosure`
+still described the cross-validation as it stood at the v2.9.42 tag: 46
+fixtures, 1009 of 1015 comparisons, 6 skipped over 3 fixtures, alert parity
+on all 44 non-throwing fixtures, 107 activity groups. Since v2.9.47 the
+harness runs 82 fixtures:
+- 1957 of 2011 comparisons executed, 0 failures;
+- 54 skipped (27 `ff_signed`, 27 `ff_signed_working_days`), all on
+  completed activities where neither engine emits the field, across 23
+  fixtures;
+- alert parity on 78 of the 82 fixtures.
+
+Prongs 1 and 3 now state those figures and, as DAUBERT.md already did, name
+the two fixtures (F65, F67) where alert parity is not compared because the
+JS engine's future-actual-finish ALERT has no Python counterpart. The
+surface is no longer called 2011 "node-field" comparisons: 478 of them are
+whole-schedule comparisons.
+- The gate that should have caught this, R-v298-B10, pinned the 46-fixture
+  wording as literals, so it held the stale text in place. It now reads
+  every figure from `validation/crossval-summary.json`, which
+  `node cpm-engine.crossval.js --json` writes from the run itself, and checks
+  the text the disclosure emits: fixture count, surface, skips and their
+  split, executed tally, fixtures carrying a skip, throw fixtures and alert
+  parity. A fifth check rejects any other fixture count or tally in the
+  three strings. In the `_cpp_common` mirror, which carries no
+  `validation/`, the same five checks report not applicable, as V2942-13
+  does, so the suite's count does not depend on where it runs.
+- Planting the old "3 of the 46 fixtures" wording in a scratch copy fails
+  the gate, and so does moving the summary's figures.
+- The Python reference's comments carried the same 1009 / 1015 figures and
+  now carry the measured ones.
+- The disclosure's methodology line for `computeTopologyHash` no longer
+  describes the fingerprint with a superlative CLAUDE.md forbids. It now
+  says what the line already went on to say: no AACE precedent, a
+  provenance primitive.
+
+**Verified.**
+- JS unit suite: 1,325 checks green, up from 1,315. LW-1..LW-6 are new.
+  R-v298-B10's two literal positive checks became five checks read from the
+  harness output, and its literal negative checks stay.
+- Cross-validation re-run on these bytes: 82 fixtures, 1957 of 2011
+  executed, 54 skipped, 0 failures. Every figure in
+  `validation/crossval-summary.json` is unchanged.
+- The 13-case P6 comparison matrix, re-run on these bytes against the same
+  capture: 13 / 13 over 27 field checks, zero changed rows.
+- Coverage re-measured on these bytes: 94.05% statements (10,442 / 11,102),
+  83.20% branches (2,259 / 2,715), 95.20% functions (139 / 146).
+
+**Who is affected.** A report that printed `ef_last_worked_date` or
+`lf_last_worked_date` for a completed activity whose finish carried its
+closing time printed the working day before that finish; nothing computed
+from it moved. A report that quoted the engine's own Daubert disclosure
+quoted the 46-fixture figures.
+
+## v2.9.47 — 2026-09-23 — only the unexpired part of a lag, measured in P6
+
+**Engine math changed.** Under retained logic P6 lays only the part of a
+relationship lag that has not already run out at the data date, and the
+engine now does the same off started and completed work. The following can
+move:
+- any SS/SF successor of a started predecessor;
+- any successor of completed work whose lag had not run out at the data
+  date, or whose actual date is after it;
+- any schedule whose SCHEDOPTIONS say "Calculate start-to-start lag from:
+  Actual Start".
+
+A result computed on v2.9.46 or earlier can differ on those shapes. A
+deliverable already issued from an earlier tagged build is inside the
+supersession window and needs the re-check step in PROCEDURE.md.
+
+**How it was measured.** P6 Professional 23.12, with probe projects
+scheduled one at a time and read back from the P6 database:
+- six projects for completed predecessors;
+- five for started ones: 19 cases each in three projects, 9 each in two.
+
+Each rule below was pinned there. The real exports that raised the
+questions are client schedules and are not named.
+
+**1. Off a STARTED predecessor: the unexpired lag.** An SS or SF link off a
+started, incomplete predecessor is laid from its restart plus the lag less
+the working time, on the lag calendar, from its actual start to the data
+date (`_unexpired_lag` / `_unexpiredLag`). None of the lag has run for a
+future actual start, and a lead lays nothing. The backward pass and free
+float mirror it.
+- It replaces SS_U, `max(actual_start + lag, restart)`. SS_U agreed with P6
+  only while the restart sat at the data date, the one shape it had been
+  measured on. Once logic holds the restart later, SS_U started the
+  successor early by the lag's unused part.
+- On a real P6 export of 1,196 incomplete activities, two SS links off such
+  predecessors moved 788 -> 1,139 rows matching P6's stored early dates.
+- On the probes it held on every case in both lag-calendar settings. That
+  includes SF, a lead, a successor lag calendar and a started successor.
+
+**2. "Calculate start-to-start lag from: Actual Start".** The option is
+SCHEDOPTIONS `sched_lag_early_start_flag = N`; pass it as
+`opts.ssLagFrom = 'actual_start'` or the raw `'N'`. P6 then lays an SS
+link off a started predecessor from the DATA DATE plus the unexpired lag,
+not from the restart (`_ssAnchorOf`). The successor can start before its
+predecessor restarts: in one probe, a week before.
+- SF links and the backward pass ignore the option: late restart =
+  successor late start less the unexpired lag, under both settings.
+- An unknown value raises an `unknown-ss-lag-from` ALERT and keeps Early
+  Start, P6's default.
+- The manifest reports what the run used (`ss_lag_from`).
+- 33 of 351 real exports on the machine the probes ran on use this option.
+  None of them contains the shape it changes.
+
+**3. Off a COMPLETED predecessor (FA).** Every link type drives from the
+completed activity's stamp plus the lag not yet run out since its actual
+date. The stamp is the data date, or under retained logic the later date
+the activity carries from unfinished work (`_doneDrive`).
+- An actual date recorded after the data date therefore drives nothing.
+  One `actual-after-data-date` WARN names each such activity.
+- This applies to not-started and started successors, and backward the
+  completed activity hands its successors' bounds back less the unexpired
+  lag.
+- Probes: 129 -> 182 of 182 starts and finishes, 84 -> 159 of 159 total
+  floats.
+- Real exports: 1,139 -> 1,196 of 1,196 and 1,057 -> 1,114 of 1,114 rows
+  matching P6.
+
+**4. Into a COMPLETED activity: no lag off started work.** An SS or SF link
+off a started predecessor into a completed activity (the retained-logic
+pass-through) lays no lag. The completed activity carries the anchor
+itself: the restart, or the data date for SS under Actual Start.
+- The probes separated this from the unexpired lag, from SS_U and from the
+  lag less the carrier's duration: SS +15 d and +18 d with 5 and 8 unused
+  days, SF +18 d, 5 d and 3 d carriers, both options.
+- Every other link into completed work keeps its lag: FS, FF, SS off
+  not-started work, FS off started work.
+- The backward pass still subtracts the unexpired lag, so the predecessor
+  that drives through the completed activity has zero float, as in P6.
+
+**Zero regressions, proven rather than asserted.**
+- The 53 existing fixtures all stay bit-identical between the two engines.
+  F53, whose lag out of a completed activity now counts only its unexpired
+  part, moves by one working day and is re-described.
+- 29 new fixtures (F58-F86) exercise every rule above and are bit-identical
+  between the JS engine and the Python reference: 82 fixtures, 1957 of 2011
+  checks, 0 failures. The 54 skipped are mutual `ff_signed` pairs on
+  completed activities, as before.
+- With only the Python reference patched, every new fixture that pins a
+  changed behaviour fails, 2 to 18 checks each. The others pin what must
+  not move.
+- The 13-case real P6 comparison matrix, re-run on these bytes against the
+  same capture, still reads 13 / 13 over 27 field checks with zero changed
+  rows.
+- JS unit suite: 1,315 checks green, up from 1,307. FA-1..FA-8 are added.
+  RL-5/RL-6/RL-7 keep their values (their restart sits at the data date)
+  and are re-described for the unexpired lag.
+- Coverage re-measured on these bytes: 93.95% statements (10,415 / 11,085),
+  83.08% branches (2,249 / 2,707), 95.20% functions (139 / 146).
+- Alert parity is not compared on F65 and F67. The JS engine's
+  per-activity future-actual-finish ALERT has never had a Python
+  counterpart; this is a pre-existing gap, disclosed.
+
+**Deliberately not in this wave.**
+- A SUSPENDED predecessor is not modelled. P6 counts only the time worked
+  before the suspension and restarts at the resume date; the engine reads
+  neither date.
+- The project finish when a future actual finish is itself the latest date
+  in the project is unmeasured.
+- Progress override's restart still ignores an FF link into started work,
+  which P6 honours.
+
+## v2.9.46 — 2026-09-22 — retained-logic pass-through, and P6 parity for started predecessors
+
+**Engine math changed.** Under retained logic, a network with a completed
+activity that is itself out of sequence (its own predecessor still
+unfinished) now schedules differently, and any SS/SF successor of a
+started, incomplete predecessor can move. A result computed on v2.9.45 or
+earlier can differ on either shape, so a deliverable already issued from an
+earlier tagged build is inside the supersession window and needs the
+re-check step in PROCEDURE.md. `progress_override` restart anchors also
+move whenever the data date falls on a non-working instant of the
+activity's own calendar.
+
+**What P6 does (pass-through).** Retained logic does not stop scheduling at
+a COMPLETED activity: P6 schedules it like any other, with zero remaining
+duration. A completed activity whose own predecessor is still unfinished —
+completed out of sequence — therefore still carries that predecessor's
+controlling date, and P6 hands the date on to the completed activity's
+successors exactly as if the completed activity were not there.
+
+**What the engine did.** Both ports skipped a completed node outright in
+the forward pass, the backward pass and free float. The unfinished
+predecessor's finish died at the first completed activity on the path, and
+everything downstream of it floated free at the data date instead.
+
+**Empirical basis.** Measured on a 503-activity real schedule with 24
+out-of-sequence activities, scheduled in P6 Professional 23.12 (F9) and
+read back from the P6 database (the file is not named, it is a client
+schedule): P6 stamps early start = early finish on all 302 completed rows,
+84 of them LATER than the data date, each on the latest date its
+predecessors hand it. A rule written from P6's own stored dates alone (no
+engine) reproduces 503 of 503 early starts and 503 of 503 late finishes to
+the minute under retained logic; under progress override there is no
+pass-through and 201 of 201 incomplete rows reproduce with none. With the
+pass-through, incomplete rows matching P6 go 83 -> 146 of 201 on early
+start/finish and 55 -> 141 on total float, and free float 159 -> 190.
+
+**The rule.** A completed node records the instant it carries from
+unfinished work (`rl_passthrough` forward, `rl_late_passthrough`
+backward). A successor's FS/SS/FF/SF drive is floored by that instant
+WITHOUT the relationship's lag applied — the lag belongs to the completed
+activity's own actual finish, which the existing drive already counts it
+from. A started successor's restart takes the carried instant too (D2
+stood for the completed predecessor's actual finish; the date it carries
+from unfinished work is not history). Free float is measured at it. The
+`driving_predecessor` on the FIRST live activity downstream gets
+`passthrough: true` and the completed carrier in between gets its own
+driver, so a chain walk reaches the unfinished work rather than stopping
+at the completed node. One new INFO alert, `retained-logic-passthrough`,
+names the completed carrier whenever it is the final driver of a
+not-started activity's start.
+
+**SS_U — P6 parity for a started, incomplete predecessor.** For an SS/SF
+successor, drive = `max(actual_start + lag, restart)`, the restart
+contributing WITHOUT its own lag applied (the backward mirror: the
+effective backward lag is only the portion of `actual_start + lag` that
+extends past the data date, clamped to 0 otherwise). Measured on 9 SS+5d
+links on the same file: this closes all 55 date differences remaining
+after the pass-through fix alone. Combined result: 201/201/201/201 on
+ES/EF/TF/FF.
+
+**PO_SNAP — the D3 calendar snap now applies to progress_override too.**
+`retained_logic`'s restart anchor has snapped forward on the activity's
+own calendar since v2.9.43 (D3); `progress_override` did not. A data date
+encoded at a non-working instant (the close of a Saturday) left the
+progress_override remaining-bar walk starting on it and landing one
+working day early on 194 of 201 in-progress rows on the same file; with
+the snap, 201/201.
+
+**Zero regressions, proven rather than asserted.** The 46-fixture harness
+stays at 1009 of 1015 executed and bit-identical; 7 new fixtures (F51-F57)
+exercise pass-through, SS_U and PO_SNAP directly and are bit-identical
+between the JS engine and the Python reference (53 fixtures, 1167 of 1167
+checks). The 13-case real P6 comparison matrix, re-run against these
+bytes against the same capture, still reads 13 / 13 over 27 field checks
+with zero changed rows. JS unit suite: 1,307 checks green (up from 1,306;
+RL-5/RL-6/RL-7 in `cpm-engine.test.js` re-pinned to the SS_U-correct
+values, one fixture widened to keep discriminating which calendar an SS
+lag walks on now that SS_U's restart-wins branch would otherwise collapse
+it). Coverage re-measured on these bytes: 93.81% statements (10,128 /
+10,796), 82.63% branches (2,156 / 2,609), 94.96% functions (132 / 139).
+
+**Deliberately not in this wave** (measured, and recorded alongside the
+proposal): the progress-override backward pass keeping links into started
+successors that P6 drops; a downstream validator's longest-path check
+shares this exact completed-node blind spot and inherits false positives
+from it on out-of-sequence files until it is updated separately.
+
+## v2.9.45 — 2026-09-21 — finish constraints clamp on the instant P6 stored, not the bare date
+
+**Engine math changed.** Every finish-side constraint clamp moves, in both
+passes, on any network whose constraint dates carry a time of day. A result
+computed on v2.9.44 or earlier can differ on any constrained activity, so a
+deliverable already issued from an earlier tagged build is inside the
+supersession window and needs the re-check step in PROCEDURE.md.
+
+What P6 does: a constraint date is an INSTANT, and the time of day is
+load-bearing. "Finish no later than 2026-01-16 17:00" on a calendar that
+closes at 17:00 names the END of Friday, which in this engine's boundary
+space is Monday's opening.
+
+What the engine did: `_normalizeConstraint` truncated the stored value with
+`slice(0, 10)` and threw the time away, and the clamp then compared that bare
+date against `ef` / `lf`, which since v2.9.44 are EXCLUSIVE boundaries — the
+opening of the working day AFTER the last day worked. A finish constraint
+written at the close of its own working day therefore bound on that day's
+boundary instead of the next one: one working day early, in both passes. An
+activity finishing exactly ON its own finish-no-later-than was reported at
+tf -1 — a constraint violation on a schedule that meets it.
+
+**The rule.** The bare constraint date, advanced ONE working day on the
+activity's own calendar if and only if the constraint instant falls at or
+after the close of that day's shift. The close is read hour-accurately out of
+`CALENDAR.clndr_data`, which production already carries on every
+`calendar_info` under `raw`; the day model the caller supplied stays
+authoritative and `raw` is read for the shift close and nothing else.
+
+This is not the clock. The same 16:00 is the close on an `08:00-16:00`
+calendar and one working hour INSIDE the day on an `08:00-12:00 + 13:00-17:00`
+calendar, and both shapes occur: 128 rows of the first and 28 of the second
+in the measured population. A noon heuristic gets the second group wrong,
+which is why the discriminator is the calendar's own shift close.
+
+Where no hour detail is available the engine returns the v2.9.44 answer and
+emits `constraint-instant-unresolved` rather than guessing. A constraint with
+no time at all is untouched, so every hand-built fixture keeps its meaning.
+`date` on the normalised constraint is still P6's own date, so driver chains,
+DCMA-12 and the constraint register read back what the scheduler set.
+
+**Start constraints were measured over the same population, found already
+correct, and are not touched** — `es` / `ls` ARE the start instant. Mandatory
+start tokens do not occur in the measured population and are untouched.
+
+**Empirical basis.** Measured P6 against P6 over 205 real exports and 2,032
+constrained rows (private oracle memo, 2026-09-21; the exports are client
+files and are not part of this repository). Before the change, 113 of the 796
+rows whose early finish P6 pinned at a constraint, and 151 of the 254 whose
+late finish it pinned there, were exactly one working day out. The new rule
+fixes all 264 and regresses none. On the 36 gate-strict files — the only ones
+whose stored dates are an exact solution of their own network — it fixes 603
+es, 603 ef, 1,018 ls, 1,022 lf, 807 tf and 109 ff cells and regresses none.
+
+**Zero regressions, proven rather than asserted.** The corpus was re-run in
+the configuration v2.9.44 was validated under and diffed cell by cell: 0
+differences in 278,868 cells across every gate-strict and gate-pass file.
+
+Changes, paired in `cpm-engine.js` and the Python reference:
+
+- `_normalizeConstraint` / `_normalizeConstraint2` carry `time_minutes`
+  beside the unchanged `date`.
+- `_constraintFinishNum` resolves a finish-side constraint (FNET, FNLT, FO,
+  MS_Finish, MFO) onto the activity's own exclusive boundary using the shift
+  close decoded from `clndr_data`. The forward EF clamp, the backward LF
+  clamp and the finish-pin back-compute all read that one number, so the two
+  walks stay inverses.
+- The `clndr_data` grammar helpers (`blockAfter`, `segmentsOf`, `hhmm`,
+  `serialToDateString`, the exception-date regex) were local closures inside
+  `decodeClndrData`. They are hoisted to module level verbatim so one parser
+  serves both the decoder and the resolver; `decodeClndrData` keeps the local
+  names as aliases and is otherwise untouched.
+
+Three JS-only sites the Python reference does not have:
+
+- `_checkFinalEFDeadline` compared `node.ef` (an exclusive boundary) against
+  the bare constraint date and so raised `constraint-violated` on every
+  schedule that MEETS an end-of-day finish constraint exactly. It now uses
+  the resolved number.
+- `_preResolveCalendars` rebuilt each calendar struct and dropped `raw`, so
+  the resolver saw no shift hours and silently fell back to the bare date on
+  every real file. `raw` is now preserved.
+- `parseXER` truncated `cstr_date` / `cstr_date2` with `slice(0, 10)` before
+  the engine ever saw them, and did not keep `clndr_data` on its calMap
+  entries. Both fixed.
+
+Tests: CI-1..CI-18 added to `cpm-engine.test.js` (1,306 checks green, up from
+1,288); the public 46-fixture harness reads 1009 of 1015 comparisons executed
+and bit-identical, the 6 mutual skips unchanged; the 13-case P6 comparison
+matrix recomputed under these bytes against the same 2026-08-11 capture and
+still reads 13 / 13 over 27 field checks, with every engine column identical
+to v2.9.44's; coverage re-measured on these bytes 2026-09-21: 93.87%
+statements (9,939 / 10,588), 83.09% branches (2,129 / 2,562), 94.92%
+functions (131 / 138).
+
+## v2.9.44 — 2026-09-15 — cross-calendar finish instants: successors driven from the predecessor's finish instant on their own calendar; backward pass mirrored
+
+**Engine math changed.** The forward and backward passes both move on any
+network whose relationships cross calendars, so a deliverable already issued
+from a tagged build is inside the supersession window and needs the re-check
+step in PROCEDURE.md.
+
+What P6 does: an early finish is an INSTANT, the close of the last working
+period of the activity's own calendar (Friday 17:00 on Mon-Fri). A successor
+starts at the first working instant of ITS OWN calendar at or after that
+instant plus lag, the lag consumed as working time on the relationship-lag
+calendar from the instant.
+
+What the engine did: it carried a finish as the opening of the next working
+day on the FINISHING activity's calendar (Monday for a Friday finish), handed
+that boundary to the successor as-is, walked the lag on the lag calendar from
+it, and never snapped the result onto the successor's calendar. Measured on a
+2,898-activity real export with five active calendars (a Mon-Fri design
+calendar, a 680-exception blackout calendar, an installation calendar, a
+seven-day calendar and the project calendar), once the 40 activities whose
+stored dates the file's own logic cannot produce were pinned, every one of
+the 25 residual root divergences from P6's stored early dates was one of:
+
+- a successor starting on a day its own calendar does not work (a
+  blackout-calendar successor inside its blackout, engine 2027-08-05 against
+  P6 2027-09-15, early finish equal because the duration walk skipped the
+  blackout anyway; a Mon-Fri successor of a seven-day predecessor on a Sunday);
+- a seven-day successor of a Friday finish starting Monday, two days after
+  P6's Saturday (20 of the export's 109 seven-day activities);
+- a successor whose calendar works the predecessor calendar's holiday
+  starting the day after it (Victoria Day and New Year's Day between the
+  design and installation calendars);
+- a completed predecessor's successors starting on its finish day.
+
+Changes, paired in `cpm-engine.js` and the Python reference:
+
+- `ef_instant` / `ef_instant_date` on every node: the calendar day whose
+  opening the finish is (Saturday for a Friday 17:00 finish). `ef` /
+  `ef_date` stay the boundary on the activity's own calendar.
+- FS / SS / FF / SF drives are computed as instants (`_lagFromInstant`) and
+  snapped onto the successor's calendar (`_snapFwd`); FF / SF anchors likewise.
+- A positive lag is working time on the lag calendar counted FROM the
+  instant (Thursday 17:00 + one Mon-Fri day is Friday 17:00; Friday 17:00 +
+  one is Monday 17:00); a negative lag retreats from it.
+- A finish milestone (`task_type` TT_FinMile) sits at the instant that drove
+  it; a start milestone at its own calendar's next working start; a
+  zero-duration node without a task type keeps the snapped instant.
+- A completed predecessor's instant comes from the TIME of its actual finish
+  ('2027-03-05 17:00' is the close of Friday); a date-only value keeps the
+  legacy reading. The node keeps the date part for display.
+- The data date is an instant too: 'YYYY-MM-DD 17:00' floors remaining work
+  on the next day.
+- The backward pass mirrors it (`_lagBackFromInstant`, `_snapBwd`,
+  `_lfInstantOf`): a successor's late start is the instant the predecessor
+  must finish before, and the bound is expressed on the predecessor's own
+  calendar. Without this mirror the new forward instants manufactured
+  negative float on cross-calendar links (a Mon-Fri predecessor of a
+  seven-day successor was handed a Saturday late finish against its Monday
+  early-finish boundary, tf -2, no constraint anywhere); with it, forward
+  and backward walks are inverses again and the V2942-7 fixture that used
+  to manufacture tf -1 now reports the two seven-day days of float P6 does.
+
+Same-calendar networks are byte-identical to v2.9.43 (every crossval fixture
+except the mixed-calendar F11 was unchanged; F11 now agrees between the
+engines on the instant reading). Tests: XC-1..XC-10 in `cpm-engine.test.js`
+(1,288 checks green), `test_cross_calendar_finish_instants_2026_09_15.py` on
+the Python side (21 pins); the in-suite smoke crossvals 153/153 and 86/86; the
+public harness 46 fixtures, 1009 of 1015 comparisons executed and bit-identical
+(the 6 mutual skips unchanged); coverage re-measured on these bytes 2026-09-15:
+93.79% statements, 83.32% branches, 94.69% functions. Three existing
+expectations that pinned the boundary walker's under-count were updated with
+their derivation (V2942-7 successor-walk date and negative-float checks, RL-7
+Saturday start of a Mon-Fri activity).
+
+## v2.9.43 — 2026-09-02 — retained-logic P6 semantics: SS/SF drive from restart; restart snapped, always defined, not floored by a future actual start; corrupt-calendar P6 fallback (two-conjunct predicate)
+
+**Engine math changed.** The retained-logic forward pass, free-float slack
+anchors and `parseXER`'s calendar decode all move, so a deliverable already
+issued from a tagged build is inside the supersession window and needs the
+re-check step in PROCEDURE.md.
+
+Every change in this wave was derived from P6's own stored `restart_date` /
+`reend_date` (in-progress rows) and `early_start_date` / `early_end_date`
+(not-started rows) measured on a private oracle corpus of real progressed
+P6 exports — 380 in-progress rows and 148 not-started probe rows across the
+files that pass an oracle-validity gate. The measured results, stated
+precisely:
+
+- The RULE this wave implements is exact at minute resolution: replayed on
+  the corpus's own hour-accurate calendars it reproduces all 380 stored
+  restart and reend instants and all 148 not-started probe instants
+  (that is the specification's 380/380 figure — a property of the rule,
+  not of this engine's output).
+- This ENGINE is day-granular, so it realizes the rule at day level:
+  after the wave it matches 375/380 stored restarts, 368/380 stored reends
+  and 140/148 not-started probe starts on the gated corpus. The entire
+  shortfall is sub-day quantization — P6 hands remaining work off mid-day
+  (16:00 finish-to-start handoffs, fractional-day remaining durations
+  landing mid-morning) and a day-granular engine cannot represent the
+  intra-day instant; every residual row is off by exactly one working
+  day with the OTHER bar of the same activity exact, and no residual
+  mechanism beyond that exists in the gated set.
+- The TRUE pre-wave engine (v2.9.42, measured by running the actual old
+  tree through the identical harness) already scored 370/380 restarts,
+  365/380 reends and 135/148 probe starts — the "wrong on 96/380 and
+  137/148" figures quoted in earlier drafts of this entry belong to a
+  data-date-anchor MODEL of the engine, not to the engine itself, and are
+  withdrawn. The wave's honest engine-level delta is therefore modest
+  (+5 restarts, +3 reends, +5 probe starts, with 19 row-graded values
+  fixed and ZERO rows regressed old-to-new), while its real value is the
+  rule now being exact where the engine was previously wrong in KIND
+  (drives from historical actual starts, completed-pred pushes, unsnapped
+  anchors, future-actual-start floors, corrupt-calendar decodes).
+
+No client-identifying material from that corpus enters this repository;
+fixtures replicate the discriminating topologies under neutral names with
+real value shapes.
+
+### D1 — SS/SF drives from a started predecessor read its restart
+
+`startDriveSrcFor(pred)`: under `retained_logic`, an SS drive (and an SF
+anchor) from a STARTED, incomplete predecessor now reads the predecessor's
+`restart` — where its remaining work begins — never its historical actual
+start. Applies in the main pred loop (not-started successors) and in the
+restart-drive accumulator (started successors), and the SS/SF free-float
+slack measurement uses the same anchor so a driving started SS predecessor
+no longer reports phantom positive float. Measured for SS (the
+discriminating corpus exhibit stores restart = the predecessor's restart,
+seven weeks after its recorded actual start); INFERRED for SF by symmetry —
+the corpus carries no discriminating SF instance. `progress_override` keeps
+the historical-es drive everywhere (unmeasured; deliberately untouched).
+
+### D2 — completed predecessors do not drive a started successor's restart
+
+The restart-drive accumulator now skips completed predecessors entirely.
+Measured: a predecessor whose actual finish lands AFTER the data date
+leaves the started successor's stored restart at the data date — P6 treats
+finished work as history. For a NOT-started successor the completed
+predecessor's actual finish (+lag) keeps driving ES (P6-documented
+behaviour; the corpus is silent either way — marked INFERRED).
+
+### D3 — the in-progress restart anchor snaps forward on the activity calendar
+
+`max(actual_start, data_date)` (and the folded restart drives) now snap
+forward to the next working instant of the activity's own calendar, the
+same treatment the not-started data-date floor already received. P6's
+stored restarts sit on working instants corpus-wide. A weekend data date
+previously undercounted the remaining bar by the non-worked anchor day.
+
+### D5 — a started activity with no remaining_duration gets a defined restart
+
+`restart = snap_fwd(max(data_date, actual_start))`, stamped under
+retained_logic only, so SS/SF successors of such a predecessor have a drive
+source. The activity's OWN legacy EF (actual_start + full duration) and the
+`completion-data-incomplete` ALERT are unchanged — the engine still refuses
+to invent a remaining duration.
+
+### F4 — a future actual_start does not floor the restart anchor
+
+Under `retained_logic`, an actual_start recorded AFTER the data date no
+longer floors the restart anchor: `restart = snap_fwd(max(data_date,
+restart drives))`. Measured on the corpus's future-actual-start rows — P6
+keeps the stored restart at the data date even when the recorded actual
+start (and a since-started start constraint) sits days after it; the
+engine previously anchored at the future actual start and pushed restart,
+reend and every downstream drive late by the gap. ES display stays pinned
+to the recorded actual_start (unchanged display convention);
+`progress_override` keeps its documented `max(actual_start, data_date)`
+anchor untouched.
+
+### F6 — hammock duration_working_days is now calendar-aware (disclosure)
+
+A dormant v2.9.12 branch is resurrected by this wave as a side effect of
+D7: hammock `duration_working_days` was designed to count on the hammock's
+own calendar via `_MC.calMap[h.clndr_id]`, but `_MC.calMap` was never
+populated before D7 decoded `CALENDAR.clndr_data`, so every hammock
+silently fell back to the ordinal (calendar-day) span count. After D7, any
+hammock whose calendar record decodes now reports calendar-aware working
+days (weekends and the calendar's own holidays excluded); hammocks whose
+calendar has no decodable record keep the ordinal fallback. This is a
+behaviour change on parsed XER files with hammocks and decodable
+calendars, pinned by an explicit test (RL-16: a two-week Mon-Fri hammock
+with one holiday reports 7 working days where it previously reported the
+10-day ordinal span).
+
+### D7 — clndr_data decoder + P6 Standard-calendar fallback emulation (forensic)
+
+`decodeClndrData` (exported, with `getCalMap()`) decodes CALENDAR
+`clndr_data` blobs into day-level calendars, closing three grammar gaps
+measured on the corpus: finish-first slot pairs `(f|HH:MM|s|HH:MM)`,
+`f|00:00` as a midnight shift END (1440 min), and `s|00:00|f|00:00` as a
+full 24-hour day. After the fixes all 51 corpus calendars decode with
+hours/day matching their own `day_hr_cnt`.
+
+When a record's DaysOfWeek block carries a finish-first slot pair AND its
+`CALENDAR.clndr_type` is not a legal P6 token (CA_Base / CA_Rsrc /
+CA_Project), the engine emulates what P6 demonstrably did on four
+independent real exports carrying such a record (130/130 Mon-Fri forecast
+spans, zero Saturday stamps, statutory holidays worked, closes at the
+default calendar's closing time): it schedules on P6's internal Standard
+calendar (Mon-Fri, 8 h/day, no exceptions) and emits a new parse-time
+forensic ALERT, `calendar-corrupt-p6-fallback`, citing the observed
+illegal type token. Both conjuncts are required — a stored-date census
+over every finish-first record in the operating corpus (38 instances, 7
+distinct records) proved finish-first serialization alone is a legitimate
+export variant (two finish-first default base calendars adjudicated
+GENUINE by P6's own stored dates, their declared weeks and their own
+holiday lists honoured), while the one proven-corrupt record — and only
+it, corpus-wide — carries the illegal token `CT_Project`. The mangled type
+field is the corruption: P6 cannot bind the record and schedules its
+activities on the project default instead. Legal-typed finish-first
+records decode as their genuine declared week; the predicate cannot
+trigger on any record that decodes cleanly today. A caller invoking
+`decodeClndrData` without a clndr_type keeps the fallback behaviour (the
+legality conjunct fails by definition). The alert lives on the parse
+surface in both engines, so the computeCPM crossval alert-count parity
+surface is untouched.
+
+### Python reference
+
+`python_reference/cpm.py` receives the byte-semantic twin of every change
+above (D1/D2/D3/D5 in `compute_cpm`; D7 as `decode_clndr_data` /
+`decode_calendar_record`), and the SHA-256 pin in `python_reference/README.md`
+is rotated. Crossval: 46 fixtures, 0 failed; 1009 of the 1015-comparison
+surface executed (the 6 skips are null-vs-undefined artifacts on completed
+activities that neither engine populates).
+
+### Tests
+
+57 new checks (RL-1..RL-16) pin the wave: each D-delta and F4 proven with
+a planted-defect fixture that failed before the change, the D7 decoder
+grammar cases, the two-conjunct corrupt-record predicate (corrupt fixture
+plants the illegal type token; a genuine legal-typed finish-first fixture
+must decode as its declared week with no alert), the end-to-end fallback
+ALERT through `runCPM`, the clean-decode regression, and the resurrected
+calendar-aware hammock working-day count (F6). The full prior suite passes
+unmodified — zero golden expectations moved (no committed test exercised
+the changed topologies). `validation/p6-comparison` remains 13/13 against
+the 2026-08-11 P6 capture; no captured case contains a topology this wave
+moves. Also fixed in passing: a committed SyntaxError in
+`validation/p6-comparison/generate-cases.js` (unescaped apostrophe) that
+made the generator unrunnable at HEAD.
+
+---
+
+## v2.9.42 — 2026-08-27 — constraint pairing corrected; SS/SF late-finish conversion restored
+
+Four commits touch `cpm-engine.js` above `v2.9.41`: `1916c4f`, `7b68c2d`,
+`7a3790f` and `b375cb6`, plus the input-contract fix described under "Release
+steps closed" at the end of this entry.
+
+**Engine math changed.** The forward pass, the backward pass, free float,
+relationship-lag arithmetic and constraint handling all move, and `parseXER`
+now reads the constraint date columns differently. A result computed on
+`v2.9.41` or earlier can differ from a result computed on `main`, so a
+deliverable already issued from a tagged build is inside the supersession window
+and needs the re-check step in PROCEDURE.md.
+
+Two of these are corrections to calculations that were plainly wrong, and they
+are described first.
+
+### Constraint pairing: the primary constraint took the secondary date column (`1916c4f`)
+
+`parseXER` read the primary constraint TYPE from `cstr_type` but its DATE from
+`cstr_date2`, and read the secondary type from `cstr_type2` with its date from
+`cstr_date`. The two pairs now stay together: `cstr_type` with `cstr_date`,
+`cstr_type2` with `cstr_date2`.
+
+Most real schedules carry a primary constraint and no secondary one. Under the
+transposition the primary date came back empty, `_normalizeConstraint` dropped
+the constraint with a `constraint-incomplete` WARN, and the network was
+scheduled as though it carried no constraints at all. Where a secondary
+constraint did exist the two dates were swapped instead, which pinned a start
+constraint to the finish date.
+
+The count that settles which column is which is recorded in the fix comment in
+`parseXER`, measured across the author's `.xer` files: with `cstr_type` set the
+date is in `cstr_date` 6,394 times against 9 in `cstr_date2`, and with
+`cstr_type2` set the date is in `cstr_date2` 3,270 times against 0 in
+`cstr_date`.
+
+The unit suite could not see this. Seventeen fixture headers declared
+`cstr_type` alongside `cstr_date2`, so the fixtures fed the parser the shape the
+defect expected, and two assertions in section R-v297-3 asserted the crossed
+pairing outright and labelled it the XER convention. Fixture VALUES are
+unchanged; only the `%F` header column names and those two expectations moved.
+Two guards now fail if either constraint carries the other's date, even when the
+two dates coincide.
+
+### Backward pass: an SS or SF successor bounds late finish again (`7b68c2d`)
+
+An activity whose successors are all SS or SF kept the backward-pass seed as its
+late finish, so `TF = LF - EF` was measured to project end. Those activities
+reported float they did not have and dropped off the critical path.
+
+A bound on late start is equally a bound on late finish, one duration later. The
+tightest SS/SF start bound is now advanced by the activity's own duration on its
+own calendar and folded into the same `min()` as every other drive. It is
+applied after the seed fallback and only when it tightens, so a start bound that
+falls later than the seed can never push LF outward. The tightened LS is still
+clamped directly as well, because advance and retreat are not exact inverses
+when either endpoint lands on a non-working day.
+
+The B2 alignment wave released in v2.9.39 had removed that conversion and
+applied SS/SF bounds to LS only. The two P6 capture cases it was fitted to
+(case 02 SS, case 04 SF) cannot tell the two rules apart: in both, the SS/SF
+predecessor is the last activity in the network, so its EF equals the maximum EF
+and its total float is zero whichever rule applies. That is why every existing
+SS/SF test passed before and after. The new regression blocks put the SS/SF
+predecessor mid-network (`A --SS0--> B --FS0--> C`), where the rules disagree,
+and one of them asserts that a start bound later than the seed does not push LF
+outward.
+
+### Constraint types: CS_MSO and CS_MEO are Start On and Finish On (`7a3790f`)
+
+`CS_MSO` and `CS_MEO` mapped to `MS_Start` and `MS_Finish`, the same canonical
+tokens `CS_MANDSTART` and `CS_MANDFIN` take, so the engine could not tell a
+Start On from a Mandatory Start and gave both the hard pin that overrides
+predecessor logic. On a `P (60 d) -FS+0-> X` network with `{CS_MSO, 2026-01-05}`
+the engine returned `X.es_date` sixty working days before `P.ef_date`, with only
+a `constraint-violated` ALERT to show for it.
+
+They now map to two new soft canonical types, `SO` and `FO`, each a two-sided
+soft constraint on the same date: `SO` carries the SNET half forward and the
+SNLT half backward, `FO` carries FNET forward and FNLT backward. They push a
+date out and never pull it in ahead of the driving logic, and when logic wins
+the constraint reports as violated. `StartOn` and `FinishOn`, the GUI labels,
+move with them. Only `MS_Start`, `MS_Finish` and `MFO` keep mandatory treatment:
+`SO` is dropped from `_isMandatoryConstraint`, from the primary and secondary
+mandatory-start guards and from Section D's `isStartMandatory`.
+
+`FO` also joins the finish-pin back-compute list, so a Finish On that holds EF
+shifts ES to `EF - duration` instead of stretching the activity. On a
+zero-duration finish milestone the previous routing left ES on the logic date
+and EF on the constraint date, which cannot both be true.
+
+### The file's own scheduling settings are read instead of assumed (`7a3790f`)
+
+`parseXER` now captures the first `SCHEDOPTIONS` row verbatim and returns it as
+`sched_options`, with `sched_calendar_on_relationship_lag` and
+`sched_float_type` pre-extracted. Before this, a search for `SCHEDOPTIONS` over
+the whole engine returned nothing: the settings that decide which answer is
+correct sat in the same file as the schedule and were never read.
+
+- **Relationship-lag calendar.** `computeCPM` takes
+  `opts.relationshipLagCalendar` (`predecessor` | `successor`, plus the P6
+  `rcal_Predecessor` / `rcal_Successor` tokens). The lag walk now runs on the
+  chosen calendar in the forward pass, in the backward pass and in the free-float
+  slack measurement, which keeps the three consistent with each other. The
+  duration walk still runs on the activity's own calendar, which is a different
+  question. **The default stays `successor`.** Switching the default to
+  `predecessor` was tried and measured against P6's stored dates on real
+  multi-calendar exports and it regressed, so the file's setting is now
+  honoured when a caller passes it rather than being assumed either way.
+  `rcal_Project` and `rcal_24Hour` are unimplemented and raise
+  `lag-calendar-mode-unsupported` rather than being guessed at.
+- **Float definition.** `computeCPM` takes `opts.floatType` (`FT_FF` |
+  `FT_Start` | `FT_Min`). `node.tf_finish` (`LF - EF`) and `node.tf_start`
+  (`LS - ES`) are now both always published, and `node.tf` takes whichever
+  definition was selected. The default `FT_FF` is the engine's historical
+  hardcode, so `tf` is unchanged for every caller that does not pass the option.
+  An unrecognised value raises `float-type-unsupported` and falls back to
+  `FT_FF`. `tf_working_days` counts over the window the selected definition
+  names, with `tf_finish_working_days` and `tf_start_working_days` published
+  alongside.
+
+### Free float is converted over the window the slack was measured on (`7a3790f`)
+
+The free-float slack is a calendar-day difference between a predecessor anchor
+and a successor anchor, but the working-day conversion counted over
+`[n.ef, n.ef + slack]`. That window starts at the activity's early finish rather
+than at the instant the slack was measured from, and for SS and SF links it
+starts from a different field entirely, because that slack is measured from
+`n.es`. The engine now keeps both endpoints of the winning measurement
+(`bindingPredAnchor`, `bindingSuccAnchor`) and counts over them.
+
+The defect could make free float exceed total float, which is impossible: a
+six-day activity with one `FS+3` successor returned `ff_working_days` 3 against
+`tf_working_days` 1. On zero-lag FS links the two windows coincide, which is why
+it stayed hidden.
+
+### Section C applies the task-type rule Section D already applied (`7a3790f`)
+
+Section C had no `task_type` field on its node record and nothing between the
+node build and `criticalCodes` excluded `TT_LOE` or `TT_WBS`, so a
+level-of-effort bar could become the sole critical path and set the project
+finish date with no alert. Section D's `parseXER` has dropped both since v2.9.3,
+so the two ingestion routes disagreed. Section C now applies the same policy and
+raises one ALERT per excluded activity on Section D's existing `task-dropped`
+context, which is already a member of `FATAL_STRICT_CONTEXTS`, so a court-grade
+run stops on an LOE bar instead of letting it drive. Every excluded activity is
+returned in `excluded_by_task_type` in input order. Nothing is truncated and
+there is no top-N.
+
+### Inputs that used to give a quiet wrong answer now raise an alert (`7a3790f`)
+
+- **Missing data date.** With no parseable `opts.dataDate` the forward pass
+  seeds early start at offset 0 and `addWorkDays` short-circuits below that
+  offset, switching the whole network from calendar arithmetic to ordinal
+  seven-day arithmetic anchored on the 2020-01-01 epoch.
+  `computeCPMForensicStrict` returned epoch-anchored dates and an empty alert
+  list, reporting a clean run from the function the documentation nominates for
+  expert testimony. `missing-data-date` now fires, and only when the epoch seed
+  is actually reachable, so an all-actuals as-built is not flagged for a date it
+  does not use. It is a member of `FATAL_STRICT_CONTEXTS`.
+- **In-progress work with no remaining duration.** The retained-logic restart
+  applies only when `remaining_duration` is finite, so without it EF fell
+  through to `actual_start + duration_days` and could forecast remaining work
+  months before the data date, silently. The engine does not invent a remaining
+  duration, which would be fabricating an input. It raises
+  `completion-data-incomplete`, already a strict-mode fatal.
+- **Impossible negative float.** With no imposed project finish and no
+  date-bearing constraint anywhere, a maxEF-seeded backward pass makes `TF >= 0`
+  an arithmetic identity, so a negative total float there is an engine artifact
+  and not a schedule fact. `impossible-negative-float` enumerates every affected
+  activity and stays silent the moment any constraint or imposed finish exists,
+  because negative float is then legitimate. The known cause is the
+  relationship-lag walk not being its own inverse across two calendars. It is a
+  member of `FATAL_STRICT_CONTEXTS`.
+- **`TT_Rsrc` false positive removed.** `TT_Rsrc` (Resource Dependent) was
+  missing from the canonical P6 task-type list, so ordinary clean files raised
+  `unrecognized-task-type`, which is itself a strict-mode fatal. It is real work
+  and keeps the `TT_Task` treatment it already had; only the false warning is
+  gone.
+
+### Attribution and parse state (`7a3790f`)
+
+- **`driving_predecessor` on a tied data-date floor.** A predecessor whose drive
+  exactly equalled the current `maxES` could never be recorded as the driver,
+  because the tie-break required an incumbent. When `maxES` was still the
+  data-date seed, the node was stamped with the `DATA_DATE` sentinel instead,
+  and because the longest-path walk stops at any sentinel with no `code` field,
+  `computeCPMWithStrategies` truncated the LPM path there. This branch sets
+  attribution only: it deliberately does not capture `finishAnchorEF`, so it
+  cannot move a date.
+- **`parseXER` cross-file state leak.** `calendarHoursPerDay` and `taskClndrId`
+  were cleared only by `resetMC()`, not by `parseXER`, so a second file parsed
+  in the same process could inherit the first file's `day_hr_cnt` and, worse,
+  bind its relationships to the first file's calendar, since P6 `task_id` values
+  are database-scoped and collide freely across exports. Every forensic workflow
+  parses two or three files in one process. `parseXER` now clears both, plus the
+  new `schedOptions`.
+
+### Calendar exception dates and the finish-pin selection (`b375cb6`)
+
+This commit's message records the client-name scrub only; it also changes engine
+math, which is why both items are recorded here.
+
+- **Forced-ON exception dates.** Calendars now carry `special_workdays`, the
+  forced-ON exception dates P6 uses for a worked Saturday or a shift added to a
+  normally idle day. The engine dropped them and treated every such date as
+  non-working, while the upstream XER parser has honoured them since 2.8.0.
+  Precedence follows that parser: an explicit holiday wins, then an explicit
+  special workday, then the weekly pattern. A calendar carrying one is no longer
+  eligible for the O(1) Mon-Fri fast path, because the modular walk cannot add
+  the extra worked day back in.
+- **`FNET` joins the finish-pin back-compute, and the pin is selected by which
+  date held EF.** `_applyForwardEFConstraint` returns EF only and never moves
+  ES, so a binding `FNET` stretched the activity instead of shifting it. On a
+  zero-duration finish milestone that is impossible, since ES must equal EF. The
+  selection loop now picks the constraint slot whose date actually held EF
+  rather than the first slot carrying a finish-pin type, so a soft primary
+  cannot shadow a mandatory secondary and skip the back-compute.
+
+### New output fields
+
+None of these change a computed value.
+
+- `node.ef_last_worked_date` and `node.lf_last_worked_date`: the inclusive form
+  of the exclusive `ef_date` / `lf_date` boundary, so a report never has to
+  re-derive it or guess which convention it is reading.
+- `node.tf_finish`, `node.tf_start`, `node.tf_finish_working_days`,
+  `node.tf_start_working_days`.
+- `manifest.finish_boundary_convention`, `manifest.finish_boundary_note`,
+  `manifest.relationship_lag_calendar`, `manifest.float_type`: the finish
+  boundary, the lag calendar and the float definition, each of which was
+  computed and never declared. Each is a live source of a one-day or
+  one-definition argument with an opposing expert.
+- `result.excluded_by_task_type` (and the `excludedByTaskType` alias).
+- `parseXER` returns `sched_options`, `sched_calendar_on_relationship_lag` and
+  `sched_float_type`.
+
+### Documented rather than changed
+
+`actual_finish` is an EF boundary, not the last worked day. The engine's early
+finish is exclusive everywhere, so an `actual_finish` supplied as the last
+worked day makes a lagged FS successor of completed work start one working day
+early. The arithmetic is unchanged and stays exclusive; what changed is that
+`docs/api.md` now states the input contract, its example uses the exclusive
+form, and the engine publishes the inclusive companion fields above.
+
+### Test state
+
+Measured on this tree by `npm run test:all`:
+
+- Unit self-tests: **1213 / 0**.
+- Cross-validation: **46 fixtures, 1009 of 1009 comparisons executed, 0 failed**;
+  1009 of a 1015-comparison surface, with 6 guarded comparisons skipped (3
+  `ff_signed`, 3 `ff_signed_working_days`).
+- All gates PASS: cites, client-names, truncation, version-refs, SOP, reissue,
+  crypto, p6-comparison, corpus-dag.
+
+The P6 oracle agreement figures quoted in the commit messages for these changes
+are deliberately not restated here. That harness lives outside this repository
+because its corpus manifest and per-file results carry client names, and its
+output on disk predates three of the four commits above, so it does not measure
+this tree. The figures need a fresh run against these bytes before they are
+published anywhere.
+
+### Release steps closed
+
+All three items this entry previously listed as owed are done.
+
+- **`ENGINE_VERSION` bumped to `2.9.42`** in `cpm-engine.js`, `package.json`,
+  `python_reference/cpm.py` (which was a further release behind at `2.9.40`)
+  and the `_cpp_common` SSOT.
+- **The crossed schema is gone from the fallback resolvers and the public input
+  contract.** `_normalizeConstraint` resolved a primary date as
+  `c.date || c.cstr_date2 || c.cstr_date`, preferring the SECONDARY column, and
+  `_normalizeConstraint2` resolved a secondary date as `c.date || c.cstr_date`
+  and never looked at `cstr_date2`. `parseXER` always sets `.date` so its own
+  path never reached them, but a caller handing `computeCPM` a constraint object
+  carrying the raw P6 column names did, and got exactly the transposition
+  `1916c4f` was for. Measured on a fixture with a primary Start-On at
+  `2026-03-02` and a secondary at `2026-04-01`, the primary resolved to
+  `2026-04-01` and moved the early start 30 days. Both now prefer their own
+  column and keep the crossed one as a last fallback, so a caller built against
+  the old JSDoc still resolves rather than silently dropping the constraint.
+  The JSDoc itself and six comment blocks that documented the crossed pairing
+  are corrected, as is the R-v297-3 section heading in the test file, whose
+  assertions underneath were already right. Three regression checks added, each
+  proven by planting its own defect.
+- **The `excluded_by_task_type` comment named an alert context that is never
+  emitted.** It described `task-type-excluded`; the code emits `task-dropped`.
+  A consumer filtering on the documented string caught nothing.
+
+---
+
+## v2.9.41 — 2026-08-19 — alert-parity carve-outs retired; citation withdrawal released; validation-doc corrections
+
+**Engine math is unchanged.** No forward-pass, backward-pass or Section D
+calculation moves. This release ships three things: the retirement of a stale
+cross-validation carve-out, the previously-unreleased withdrawal of a
+fabricated AACE citation (below, authored 2026-08-18), and corrections to
+validation documents that blamed P6 for a divergence that is the engine's own.
+
+### Alert-parity carve-outs retired (crossval 925 → 931 of 995)
+
+The 2026-08-16 external audit re-ran the cross-validation harness with the
+three `skip_alert_parity` flags off and all six additional comparisons passed.
+Investigation confirmed why: the flags on F20, F21 and F27 said the
+OUT_OF_SEQUENCE ALERT was "JS-only (Python parity gap — INTENTIONAL)", but the
+Python reference has emitted that alert since the v2.9.27 paired-fix wave. The
+carve-outs were guarding against a divergence that no longer existed, and every
+run since v2.9.27 has been under-counting proven parity. The three flags are
+removed, alert parity now runs on 43 of 45 fixtures (the two cycle fixtures
+compare refusal only), and the executed count moves from 925 of a
+989-comparison surface to **931 of 995**. The 64 ff_signed /
+ff_signed_working_days skips are unchanged and still disclosed. All published
+figures (README badge, DAUBERT §2/§3, VERIFY_RELEASE, CONTRIBUTING,
+METHODOLOGY, python_reference/README, the engine's embedded disclosure strings
+and the unit test that pins them) move together in this release.
+
+### Validation-doc corrections: the sub-day divergence is the engine's, not P6's
+
+`comparison-matrix.md` (and the `apply-p6-capture.py` lines that generate it),
+DAUBERT §2, `docs/cross-exam-prep.md` and `FORENSIC_USE_SOP.md` all described
+the two excluded cases as "by-construction divergences that P6 cannot
+represent". That is true of only one of them (a relationship to a non-existent
+activity, which P6 cannot author). For sub-day lags it is backwards: P6 stores
+lags in hours and honors sub-day precision natively, and the ENGINE is the side
+that deliberately rounds to whole days — as `validation/engine-limitations/`
+itself already said. All four now state the two cases with the blame pointing
+the right way, and the limitations README's comparison-table heading no longer
+reads "Why P6 cannot compare". The two limitation-case READMEs, which still
+carried "Engine output (v2.9.31)" headers, were re-run at v2.9.41: same project
+finish and critical set, two additional calendar-fallback alerts from the newer
+seed pass, `engine-output.json` regenerated, and the alert lists are now quoted
+in full rather than truncated mid-word.
+
+### Withdrawal of a fabricated AACE citation on actual-start pinning (authored 2026-08-18)
+
+**Engine math is unchanged.** No forward-pass, backward-pass or Section D
+calculation moves. What changes is the justification attached to one existing
+behaviour, the text of the WARN messages that describe it, and the disclosure
+around the cross-validation of it.
+
+#### What was wrong
+
+The engine attributed its recorded-actual-start pinning rule to "AACE 29R-03 §4.3 immutability". That rule does not exist. §4.3 of the 25 April 2011 revision is "Critical Path and Float" (identifying the critical path, quantifying near-critical, identifying the as-built critical path, common critical path alteration techniques, ownership of float). Across the full §4.3 span there is no occurrence of "early start", "actual start", "pin" or "immutable", and across all 134 pages "immutable", "historical fact" and "already happened" return nothing. The RP's only treatment of an actual start later than the data date is source validation at §2.2.B.1.c, which tells the analyst to ensure activities to the right of the data date do not carry actual start or finish dates. That is a data defect to rectify at intake, not a calculation rule, and it points the other way from the pinning behaviour.
+
+#### What replaced it
+
+- The behaviour is now described as what it is: Oracle P6 / CPM forward-pass
+  semantics, in which a recorded actual start governs over the data-date floor
+  and over predecessor-driven early start. It is defensible as software
+  behaviour and needs no Recommended Practice citation. The Oracle P6
+  documentation is the anchor if one is wanted.
+- §1.5.B.2 was considered as a substitute and rejected. It addresses the data
+  date concept and says critical path and float are computable only forward of
+  the data date, which is silent on actual starts and arguably cuts against the
+  pinning rule, so substituting it would trade one mis-citation for another.
+- The emitted `constraint-noop` WARN strings changed text in both engines, in
+  Section C and Section D. These reach client deliverables. The old text named a
+  rule that does not exist: `<TYPE> on <CODE> suppressed by actual_start (AACE 29R-03 §4.3 immutability)`.
+  The new text reads `<TYPE> on <CODE> suppressed by actual_start (P6 forward-pass
+  semantics: a recorded actual start governs ES)`. The
+  `actual-start-not-anchored` WARN was reworded the same way.
+- Crossval fixture F27 was renamed from `actual_start AFTER data_date pins ES
+  (AACE 29R-03 §4.3)`, naming a rule that does not exist, to `actual_start AFTER
+  data_date pins ES (P6 forward-pass semantics)`.
+
+#### Disclosure added
+
+The same non-existent rule was the stated reason for changing the Python
+reference implementation to mirror the JS engine on this behaviour. That matters
+because the cross-validation and the Daubert disclosure rest on the two
+implementations being separately maintained. `python_reference/cpm.py` honoured
+`actual_start` only on complete activities until the backport introduced in
+v2.9.10 extended it to match the JS engine. DAUBERT.md now records, in both the
+validator-independence section and the known-limitations list, that on this
+behaviour the reference was aligned to the engine, so fixtures F27 and F21 show
+the two implementations agreeing rather than corroborating the rule
+independently. The crossval source comment says the same thing.
+
+#### Release steps still owed
+
+- `python_reference/cpm.py` changed (comments only). Its SHA-256 pin and the
+  Expected-output figures in `python_reference/README.md` still name the
+  committed bytes and must be rotated when this work is committed. The new
+  values are `65306f701f177eaf04effadf8bc09f9c7e653a4a88c25486517d04a93e664bf8`
+  and 84,947 bytes, assuming the file commits as LF.
+- `ENGINE_VERSION` still reads 2.9.40 while the tree no longer matches what was
+  released in v2.9.40 (2026-08-16). This needs a version bump before anything
+  ships, for the same reason that release exists.
+- The published `validation.html` fixture table on the CPP site carried F27's old
+  label. No generator for that page exists in the site mirror, the engine repo or
+  the viewer repo, so the label was corrected in place on 2026-08-19 to match the
+  harness fixture name. The page should still be regenerated from the harness the
+  next time one exists.
+
+---
+## v2.9.40 — 2026-08-16 — disclosure corrections; no engine math change
+
+Supersedes v2.9.39 (v2.9.39 → v2.9.40). **Engine math is unchanged.** `computeCPM`,
+`computeTIA` and the Section-D behaviours are byte-identical in behaviour to
+v2.9.39; the only edits inside `cpm-engine.js` are to the embedded Daubert and
+FAQ answer strings it serves. Cross-validation, the P6 comparison matrix and the
+unit suite all produce identical results.
+
+This version exists because those string edits landed after v2.9.39 was tagged
+while the file still declared `ENGINE_VERSION = '2.9.39'`. The tagged bytes hash
+to `8dc37455…` and the tree's to `3cd673e8…`, so a build from `main` shipped an
+engine that was not the tagged v2.9.39 and reported that it was. A version
+number whose bytes are ambiguous is the defect this project audits itself for,
+so it gets a release rather than a footnote.
+
+### Disclosure corrections
+
+- **The v2.9.39 evidence packet published v2.9.38's hashes.** Every prose file in
+  `release-evidence/v2.9.39/` named engine SHA `6bf24fb0` and python-reference
+  `fefc9811`, against actual tagged values `8dc37455` and `da792b52`, plus
+  v2.9.38's commit, date, Rekor logIndex and CI run. An expert following the
+  packet's own verification instructions got a mismatch, whose adverse reading is
+  tampering. All three files now carry values resolved from the tag and the
+  signed witness.
+- **The packet's SHA sidecars were never published.** `.gitignore` carried bare
+  filenames matching at any depth, so a clean clone received 9 of the packet's 10
+  files while the strict gate's `existsSync` check passed against the local copy.
+- **The gate now verifies content, not existence.** It hashes the engine at the
+  tag and fails if the sidecar pin or any `Engine SHA-256` published in the
+  packet's prose disagrees. A wrong pin is fatal, never a warning.
+- **`VERIFY_RELEASE.md` claimed the math never changed.** The v2.9.39 exhibit said
+  "byte-identical to v2.9.37" when `cpm-engine.js` differs from that tag by 228
+  insertions and 37 deletions and all three alignment commits post-date it.
+- **Cross-validation is reported as a surface, not a ratio.** Published figures
+  now read 925 of 989 defined comparisons executed with 0 failures across 45
+  fixtures, and disclose the 64 skipped (61 `ff_signed_working_days`, 3
+  `ff_signed`) rather than printing `925 / 925` as though it were a pass rate.
+
+## v2.9.39 — 2026-08-11 — P6 23.12 alignment wave + first P6-native capture
+
+Supersedes v2.9.38 (v2.9.38 → v2.9.39). Engine math changed in this release. It is the first one whose scheduling rules were altered to match answers captured from Primavera P6 Professional 23.12. The first P6-native capture (commit `9b748cc`, 13 cases scheduled by a human operator through an automated import and a single F9 round trip) scored 6 PASS / 7 FAIL. Five divergence families were then fixed against P6's pinned answers in commits `23ffeca`, `264de84`, `bf442d5` and `05dc8b4`, and the comparison matrix was regenerated to 13 / 13. That 13 / 13 is fitted to the one capture: the engine was changed to match the cases it failed, and no held-out capture exists, so it is not an independent accuracy figure.
+
+### Engine and comparator
+
+- **B1 / comparator float units (`23ffeca`).** TF and FF are compared in working days, and the constraint day-start versus day-end boundary is documented. Comparator and docs only; no engine math.
+- **B2 / per-calendar backward seed and SS/SF bounds (`264de84`).** The backward pass seeded every open activity's LF from a scalar `maxEF`. It now seeds each one from the project-finish instant expressed on that activity's own calendar, matching P6 with `sched_use_project_end_date_for_float=Y`. Single-calendar networks are invariant; multi-calendar networks move. Separately, SS/SF successors no longer bound LF by re-adding the predecessor's duration. They bound LS only, which removes the dangling-finish divergence where a start-only successor dragged the finish past project end. New `opts.useProjectEndDateForFloat` defaults to true; `false` is disclosed by a WARN alert and still computed with true semantics, because P6's off-behavior was not captured.
+- **B3 / Mandatory Finish pins both ends (`bf442d5`).** An `MS_Finish` / `MFO` pin now anchors EF at the mandatory date and back-computes ES as EF minus duration on the activity's own calendar, overriding predecessor logic in the early pass. Applied only where the pin actually holds EF, never on started work, and never below the data date. The infeasible side, where predecessor logic pushes EF past the pin, keeps the existing alert.
+- **B4 / retained logic and schedule modes (`05dc8b4`).** Remaining work on an in-progress activity now restarts at max(data date, driving predecessor logic). It previously continued from the data date regardless of mode, which is progress-override behavior carrying a retained-logic label. The v2.9.12 T3.19 pin that forced LS = ES and LF = EF on every in-progress activity is deleted, so started work keeps real float, and `remaining_late_start(_date)` plus `restart(_date)` are emitted. `opts.scheduleMode` accepts `retained_logic` (default) and `progress_override`, both implemented; unknown values raise `unknown-schedule-mode` and fall back to retained logic. Free-float slack against an in-progress successor measures to that successor's restart. Progress-override output is engine self-consistency only, never asserted as P6 truth, until an override-mode capture exists.
+- **B5 / free-float conventions (`05dc8b4`).** Published `ff` and `ff_working_days` now floor at zero, matching P6. The signed forensic value survives as `ff_signed` and `ff_signed_working_days`. Completed successors are excluded from free float, mirroring their v2.9.27 exclusion from backward propagation.
+- **Out-of-sequence detector ported to Python.** Crossval fixture F48 exposed a pre-existing gap: the JS out-of-sequence detector had no Python counterpart. It is ported to both twins with identical severities.
+
+### Test state
+
+- Unit self-tests: **1134 / 0**.
+- Cross-validation: **45 fixtures / 925 checks executed, 0 failed** (was 43 / 747; fixtures F48 retained-logic and F49 progress-override added, and the `ff_signed` fields brought into comparison). The printed `925 / 925` is executed over executed, not agreement over the comparison surface: the harness increments its total only inside `eq()`, which the field guards can skip. 64 further comparisons on the 989-comparison surface are not executed, so agreement over the full surface is 925 of 989. Of those 64, 61 are `ff_signed_working_days` and 3 are `ff_signed`. 58 arise because the Python reference assigns `ff_signed_working_days` only on the no-successors path and emits nothing for it on the has-successors path; the remaining 6 fall on completed activities where neither engine emits the field.
+- P6 comparison: 13 / 13 cases, fitted to capture `9b748cc` as described above. The capture sheet is gitignored (`.gitignore` line 70), so the matrix cannot be regenerated from a clean clone. The per-case `comparison.csv` files are tracked and do carry the P6 columns.
+- All audit gates green (cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG).
+
+`computeCPM`'s signature is unchanged, but output values move: `ff` and `ff_working_days` are no longer signed, and in-progress activities no longer report LS = ES and LF = EF. Consumers that read a signed free float must read `ff_signed` / `ff_signed_working_days`.
+
+Supersedes the v2.9.38 figures of 43 fixtures / 747 checks / 1129 unit tests.
+
+---
+
+## v2.9.38 — 2026-07-04 — attestation SHA chain fix + count reconciliation + DAUBERT §E accuracy
+
+Supersedes v2.9.37 (v2.9.37 → v2.9.38). No engine math changed — `computeCPM`, `computeTIA`, and the Section-D hot loop are byte-identical to v2.9.37, and cross-validation stays 43 / 747 byte-identical against the Python reference. This is a release-integrity and disclosure-accuracy release.
+
+### Attestation and provenance
+
+- **Attestation SHA chain corrected.** The prior attestation chain pinned a stale engine SHA-256 that no longer matched the shipped `cpm-engine.js` bytes. The engine hash is recomputed so `shasum -c` succeeds against the committed source, and the v2.9.38 release-evidence packet (`release-evidence/v2.9.38/`) is built with the correct pin. CI-only fields (commit SHA, Sigstore bundle, Rekor entry, GitHub Actions run URL) carry `PENDING-CI` placeholders in the local packet; they are populated by `verify.yml` on tag push.
+
+### Documentation accuracy
+
+- **Unit-test counts reconciled to 1,129.** Every current-state unit-test count across DAUBERT.md, README.md, VERIFY_RELEASE.md, FORENSIC_USE_SOP.md, METHODOLOGY.md, and CONTRIBUTING.md is reconciled to the live `node cpm-engine.test.js` result of 1,129 (prior docs carried stale 1,128 / 1,104 / 1,071 / 1,112 values).
+- **DAUBERT §E corrected.** §E previously described a `methodology_status` field and a `woet_classifier` surface that the engine does not emit. §E now documents the fields the engine actually carries: a `method_caveat` string on `computeKinematicDelay` and a `methodology` descriptor on `computeBayesianUpdate`. The stray `woet_classifier` reference is removed and the §E heading is retitled accordingly.
+- **Real-XER claim caveated.** The 282-activity real-XER stress claim in §2 / §4 is marked as resting on a single non-public reference XER that is not committed and not independently reproducible from this repo.
+- **Non-public Python-suite peer-review line reworded.** The §3 peer-review bullet now states plainly that the parallel Python implementation is an internal, non-public codebase whose test suite is not distributed in this repository and is therefore not independently reproducible from this artifact.
+- **Derived counts corrected.** Engine line count 6,137 → 8,764, strict-mode fatal-context count 36 → 37 (matching `FATAL_STRICT_CONTEXTS.size`), and the "verifications" derived total 1,875 → 1,876 (1,129 + 747).
+- **Stale coverage anchors fixed.** The `#21-test-coverage-v2932-baseline` links in README.md and VERIFY_RELEASE.md now point at `#21-test-coverage-v2933-baseline`.
+
+### Test state
+
+- Unit self-tests: **1129 / 0**.
+- Cross-validation: **43 fixtures / 747 checks**, byte-identical to the Python reference.
+- All audit gates green (cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG).
+
+The `computeCPM` public API is unchanged; no breaking changes.
+
+---
+
+## v2.9.37 — 2026-06-27 — engine sync: computeTIA alerts + unresolved-finish guard
+
+Brings the public engine current with the maintained source line, which had advanced to v2.9.37 while this mirror was pinned at v2.9.34. `cpm-engine.js` and the self-test suite are synced verbatim from the source. The v2.9.34 engine math is a strict subset of v2.9.37 — the cross-validation (43 / 747) and the P6-comparison / corpus-dag captures are byte-identical at v2.9.37, so no validation data was re-captured; only the version labels advanced.
+
+### Engine (the v2.9.35–v2.9.37 deltas absorbed here)
+
+- **`computeTIA` `alerts` channel** — `computeTIA` now returns an `alerts` array (matching the `computeCPM` convention). It surfaces `tia-working-days-fallback` when `impact_working_days` is computed as calendar days because no usable project calendar was supplied, and `tia-calendar-mismatch` when a requested `opts.projectCalendar` is absent from `calMap`.
+- **`computeTIA` unresolved-finish guard** — a baseline or post-impact run that cannot resolve a valid project finish now returns `status:'error'` with a `tia-unresolved-finish` alert, instead of a fabricated `impact_days` derived from a coerced epoch fallback.
+
+### Test state
+
+- Unit self-tests: **1128 / 0**.
+- Cross-validation: **43 fixtures / 747 checks**, byte-identical to the Python reference.
+- All audit gates green (cites, truncation, version-refs, SOP, crypto-signoff, P6-comparison, corpus-DAG).
+
+The `computeCPM` public API is unchanged; no breaking changes.
+
+---
+
+## v2.9.34 — 2026-05-24 — Audit-ledger closure wave + CLAUDE.md operating contract
+
+Closes 4 of 7 carryover items from the `AUDIT_LEDGER_v2.9.34.md` v2.9.33-rollover plus the HS3 hard stop. Engine math byte-identical to v2.9.33; this is a docs + closures + test-gates release.
+
+### HS closes (hard-stop conditions on the audit ledger)
+
+- **HS3 / `CLAUDE.md` operating contract missing.** The v2.9.34 audit ledger
+  referenced `CLAUDE.md` three times (lines 6, 27, 63) as the source of
+  the four Definition-of-Done criteria, but no such file existed in the
+  repo. `CLAUDE.md` now lives in the repo root with the DoD, status
+  taxonomy, hard-stop conditions, ledger operating rules, forbidden
+  phrases, and the three-artifact `/ship-audit` output contract. The
+  file becomes the citable contract for every future ledger.
+
+### Ledger-row closes
+
+- **#9 / Alert investigation — 23 baseline alerts.**
+  `validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md`
+  enumerates all 23 alerts and identifies the single root cause: the
+  corpus harness does not pass `cal_map` through `runEngineOnXer`, so
+  the engine falls back to 7-day ordinal arithmetic and emits one
+  alert per arithmetic site (9 forward variants + 14 backward
+  variants = 23). Verification: `node scripts/verify-alert-triage-01.js`.
+- **#10 / 1k DAG fixture extension.** New corpus case
+  `13-large-1000-dag-branching` — 10-phase diamond cascade, 5-way
+  fan-out from each phase-start milestone + 5-way fan-in to each
+  phase-end milestone, 1020 activities / 1059 relationships /
+  strict-mode PASS. Closes the "trivial FS chain only" gap on the
+  existing 1k case (#02). Topology regression in
+  `tests/corpus-dag-fixture.test.js`.
+- **#16 / Cryptographic analyst signoff stub + schema v2.**
+  `scripts/crypto-signoff.js` ships real Ed25519 signing + verification
+  via Node's built-in `crypto` (zero external deps). The
+  `cpp-skill-manifest/v2` wire format documented at
+  `docs/crypto-signoff-schema-v2.md` covers canonicalization, threat
+  model, and the forward path to Sigstore Rekor (stubbed — the
+  transparency block carries a documented `_note` placeholder).
+  7-sub-suite regression: round-trip, payload tamper, signature
+  zeroing, public-key swap, full key swap, schema mismatch,
+  cross-keypair. Test gate `test:crypto`.
+- **#17 / Machine-readable SOP checklist + validator.**
+  `schemas/sop-checklist.schema.json` (JSON Schema draft-07) +
+  `scripts/validate-sop.js` (per-step semantic binding from
+  FORENSIC_USE_SOP.md's "Capture in manifest" sections) +
+  `validation/sop-examples/` (template, passing, failing fixtures).
+  Documentation at `docs/sop-checklist-schema.md`. 4-fixture regression
+  gate `test:sop`.
+
+### Partial close — engineering portion only
+
+- **#6 / P6 expected-value population.** Engineering scaffolding shipped:
+  `scripts/validate-p6-comparison.js` validates each `comparison.csv`
+  for header schema, engine-column accuracy against the case's
+  `engine-output.json`, P6-discipline (all-filled or all-blank, no
+  partial), and verdict-format grammar (`PASS` or `FAIL — <delta>`).
+  7-scenario regression `tests/p6-comparison-validator.test.js`.
+  Matrix-doc cleanup: stale row-14/15 references removed from
+  `validation/p6-comparison/comparison-matrix.md` after their move to
+  `validation/engine-limitations/` in the v2.9.33 audit cycle.
+  Schema doc at `docs/p6-comparison-schema.md`. The P6-VALUES portion
+  (filling `*_p6` columns from native P6 capture) remains user-blocked
+  on Dana's P6 access.
+
+### Carryover (unchanged status)
+
+- **#5 / Third-party reproduction memo** — BLOCKED on identifying an
+  outside reviewer.
+- **#8 / Real-XER sourcing** — ACCEPTED-LIMITATION; requires client
+  consent.
+
+### New test gates (release-blocking, wired into `test:all`)
+
+- `test:sop` → `tests/sop-validator.test.js`
+- `test:crypto` → `tests/crypto-signoff.test.js`
+- `test:p6-comparison` → `tests/p6-comparison-validator.test.js`
+- `test:corpus-dag` → `tests/corpus-dag-fixture.test.js`
+
+`scripts/attestation.js` continues to invoke the 5 pre-existing gates
+(unit, crossval, citation, truncation, version-drift); the new gates
+are exercised by `npm run test:all` separately. A v2.9.35+
+enhancement may extend `attestation.js` to include the new gates in
+the witness JSON; not in scope for this release.
+
+### Engine code
+
+- `cpm-engine.js:151` — `ENGINE_VERSION` bumped `'2.9.33'` → `'2.9.34'`.
+  No math-side edits. SHA-256 rotates as a consequence of the string
+  bump.
+- `python_reference/cpm.py:91` — `ENGINE_VERSION` bumped from a stale
+  pin (had not been updated since the v2.9.27 audit cycle — 7-version
+  drift). Behaviorally byte-identical; crossval 747/747 holds.
+
+### Tests modified
+
+- `cpm-engine.test.js` — 5 hard-coded `=== '2.9.33'` assertions
+  refreshed to `'2.9.34'` (lines 1316, 1353, 1606, 2065, 2085).
+- `cpm-engine.test.js` SECTION R historical narration preserved
+  (v2.9.33 section header references intentionally retained).
+
+### Files added (17 new)
+
+`CLAUDE.md`, `schemas/sop-checklist.schema.json`, `scripts/validate-sop.js`,
+`scripts/crypto-signoff.js`, `scripts/verify-alert-triage-01.js`,
+`scripts/validate-p6-comparison.js`, `tests/sop-validator.test.js`,
+`tests/crypto-signoff.test.js`, `tests/corpus-dag-fixture.test.js`,
+`tests/p6-comparison-validator.test.js`,
+`validation/sop-examples/{01-template-blank,02-passing-fully-filled,03-failing-incomplete}.json`,
+`validation/xer-corpus/cases/13-large-1000-dag-branching/{case.xer, engine-output.json, README.md}`,
+`validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md`,
+`docs/sop-checklist-schema.md`, `docs/crypto-signoff-schema-v2.md`,
+`docs/p6-comparison-schema.md`, `release-evidence/v2.9.34/`.
+
+### Files modified
+
+`package.json` (version + test gates + files list), `cpm-engine.js`
+(ENGINE_VERSION), `python_reference/cpm.py` (ENGINE_VERSION),
+`cpm-engine.test.js` (5 assertion refreshes),
+`validation/xer-corpus/generate-corpus.js` (case 13 + helper),
+`validation/p6-comparison/comparison-matrix.md` (row cleanup +
+version stamps), all `validation/**/engine-output.json` +
+`corpus-summary.json` + `engine-outputs-summary.json` (regenerated
+under new engine version stamp), `ROADMAP_OPEN.md` (status flips for
+#9 / #10 / #16 / #17), and version-header sweep across README,
+DAUBERT, VERIFY_RELEASE, FORENSIC_USE_SOP, docs/jurisdictions,
+docs/api, validation/p6-comparison/README, validation/xer-corpus/README.
+
+### Verification chain
+
+```
+Tag:                    v2.9.34
+Engine SHA-256:         5a6abd78fac05bde9951b17f9ca27d2fd163b85ef956df18ced84cc214cc1f78
+Python ref SHA-256:     fefc98115060ecc7aec6e9fe2cf01a758f795ccd35631b84d1e80e367e6b1f68
+Unit tests:             1,128 / 1,128
+Crossval:               747 / 747 across 43 fixtures
+New gates:              4 / 4 (sop, crypto, p6-comparison, corpus-dag)
+npm run verify:         PASS
+npm run test:all:       PASS
+```
+
+Sigstore Rekor entry + GitHub Actions workflow URL populate post-tag.
+
+---
+
+## v2.9.33 — 2026-05-24 — Audit-response wave pass 2 (closes ChatGPT fourth-pass findings)
+
+Fourth-pass ChatGPT audit on v2.9.32 surfaced 19 items. v2.9.33 closes 14
+genuinely-shippable items (8 fatal/high audit findings + 6 medium). The
+remaining 5 are tracked in the new [`ROADMAP_OPEN.md`](ROADMAP_OPEN.md)
+file as either ACCEPTED-LIMITATION (with canned cross-exam responses)
+or OPEN (roadmap / Dana's action). No more silent open items.
+
+### FATAL closes
+
+- **F1 / VERIFY_RELEASE.md test-count contradictions.** The v2.9.32 file
+  carried three different test counts in one file (1,071 / 1,104 /
+  1,112). v2.9.33 sweeps all to 1,128 and adds the test-count check to
+  the regression surface (the version-drift gate now flags numeric
+  test-count drift as well as version-string drift via the unified
+  attestation-time witness comparison).
+- **F2 / release-evidence/v2.9.32/ packet missing.** The v2.9.32 release
+  was claimed in VERIFY_RELEASE.md without the matching packet committed.
+  v2.9.33 backfills `release-evidence/v2.9.32/` retroactively from the
+  v2.9.32 CI canonical witness (logIndex 1623848107, run
+  26363369806) AND builds `release-evidence/v2.9.33/` for the new tag.
+
+### HIGH closes
+
+- **#3 / SHA sidecar wording.** Reframed in VERIFY_RELEASE.md as
+  "gitignored generated artifact, not committed source-tree pin" —
+  matches `scripts/attestation.js` reality. Sidecars live under
+  `release-evidence/v<TAG>/` per release.
+- **#4 / `npm run verify` did not invoke the new gates.** `scripts/
+  attestation.js` now runs unit tests, crossval, citation regression,
+  truncation regression, AND version-drift regression. All five
+  results are recorded in the witness JSON; the verdict is PASS only
+  if all five pass.
+- **#5 / version-refs gate silently skipped missing release-evidence.**
+  Two-phase release workflow accommodation: WARN-by-default at
+  commit-time (so the version-bump commit can ship), FATAL when
+  `CHECK_RELEASE_EVIDENCE=1` is set (CI / pre-tag hooks). Set this
+  env var in any pre-release process to enforce packet existence.
+- **#7 / Cases 14/15 are not P6-comparable.** Moved from
+  `validation/p6-comparison/cases/` to
+  `validation/engine-limitations/cases/` with explanatory README. The
+  P6 matrix is now 13 P6-comparable cases plus a separate 2-case
+  engine-limitations folder. Cross-exam response (Q11) updated.
+- **#8 / Synthetic-only XER corpus.** Added
+  `validation/real-xer-corpus/README.md` placeholder folder with full
+  sanitization-checklist documentation. Real-XER population is
+  Dana-action; the placeholder is honest disclosure that the slot
+  exists but is empty pending sourcing + consent.
+
+### MEDIUM closes
+
+- **#11 / `docs/jurisdictions.md` bottom "What the engine guarantees".**
+  Was still describing `getHolidays()` as returning `{date, name,
+  jurisdiction}` objects; corrected to "sorted array of ISO-8601 date
+  strings" matching the top-of-doc API example fixed in v2.9.32.
+- **#12 / "No silent wrong-answer paths exist".** Absolute language
+  softened to "No known silent wrong-answer paths remain on the
+  disclosed validation surface" with explicit scoping to the 1,128-
+  test suite + 747-fixture crossval + 82% branch-coverage instrumentation.
+- **#13 / DAUBERT disclosure-format paragraph.** Refreshed for v2.9.33
+  with what actually changed in this release (and the prior several).
+- **#14 / Strict-mode dead-context test was weak.** Replaced the
+  v2.9.32 "string appears twice" check with a table-driven test that
+  documents the emission-path INTENT for every fatal context, verifies
+  the context appears in source beyond the set definition, AND checks
+  that the documented-intent table and the set membership are
+  symmetric. Future engine refactors that remove an emission path or
+  silently add a context to the set will surface here.
+- **#15 / Override rationale accepts free-form garbage.** Structured
+  override schema added: `{rationale, authority_source, analyst, date,
+  exhibit_reference}`. The `rationale` field is REQUIRED (must be
+  non-empty trimmed string); other fields are recorded verbatim when
+  provided. Legacy non-empty-string form still accepted with
+  `legacy_string_form: true` flag in the audit trail so the schema
+  version is visible.
+- **#18 / README competitor table.** Removed vendor-comparison columns.
+  Single-column capability list retained. "closed-engine competitors
+  cannot match this move because their valuations require the engine
+  stay proprietary" paragraph rewritten without vendor naming.
+- **#19 / Cross-exam prep is not a fix.** Added `ROADMAP_OPEN.md` at
+  repo root that machine-readably categorizes every audit-flagged
+  item as CLOSED / ACCEPTED-LIMITATION / OPEN. Items not present in
+  this file are by definition silently outstanding.
+
+### OPEN (tracked in ROADMAP_OPEN.md)
+
+- **#6 / P6 columns** — Dana's action; per-case native P6 capture for
+  cases 1-13.
+- **#8 / Real-XER corpus** — Dana's action; sanitization + consent
+  process. Placeholder folder ready.
+- **#9 / Clean baseline 23 alerts** — accepted limitation; the parser
+  logs every event (INFO/WARN/ALERT) by forensic-discipline design.
+  Cross-exam response Q6.
+- **#10 / 1k DAG fixture** — engineering roadmap; expand
+  `validation/xer-corpus/` beyond linear chains in v2.9.34+.
+- **#16 / Cryptographic analyst signoff** — schema-v2 roadmap (Q2, Q9).
+- **#17 / Machine-readable SOP checklist** — schema-v2 roadmap (Q8).
+
+### Engine code
+
+- `cpm-engine.js` SECTION Q gains `_normalizeForensicStrictOverride()`
+  helper that handles both string and structured override forms with
+  backward compat (closes #15).
+- `_applyForensicStrictValidation()` refactored to use the normalizer;
+  audit-trail entries now carry the structured fields plus a
+  `legacy_string_form` flag for schema-version visibility.
+
+### Tests
+
+- 1,128 / 1,128 unit tests (was 1,112; +16 new in SECTION R-v2.9.33).
+- 747 / 747 crossval across 43 fixtures.
+- Citation regression PASS.
+- Truncation regression PASS.
+- Version-drift regression PASS (warn-on-missing-release-evidence by
+  default; fatal under CHECK_RELEASE_EVIDENCE=1).
+- `npm run verify` PASS — witness JSON now includes all five gates.
+
+### Engine math
+
+Byte-identical to v2.9.27 - v2.9.32 on non-strict path. Strict-mode
+override schema extended with backward-compatibility; existing v1
+callers see no behavior change. v2.9.32 strict-mode salvage refusal
+preserved.
+
+---
+
+## v2.9.32 — 2026-05-24 — Audit-response wave + version-drift regression gate
+
+Third adversarial-audit pass on v2.9.31 surfaced 35 findings. Roughly
+21 were genuine bugs / drift / overclaim-language issues. The remaining
+12-14 were ChatGPT being adversarial about honest disclosures the
+engine deliberately published — those stay as published, with canned
+cross-exam responses now captured in docs/cross-exam-prep.md (internal
+analyst material, not court-cited).
+
+This release closes all 21 genuine findings PLUS installs the
+machine-enforced regression gate that should have shipped after v2.9.28
+(when the same drift bug first surfaced).
+
+### Added — tests/no-stale-version-refs.test.js + npm run test:version-refs
+
+The recurring problem: v2.9.28 / 29 / 30 / 31 each shipped with at
+least one current-state version reference still pointing at the prior
+release. Fourth-time-in-a-row regression. Manual sweeps were not
+catching it.
+
+New test scans every doc surface (DAUBERT.md, README.md, VERIFY_RELEASE.md,
+FORENSIC_USE_SOP.md, CONTRIBUTING.md, docs/*.md, validation/*/README.md,
+validation/*/comparison-matrix.md, release-evidence/v<TAG>/*.md) for
+v2.9.X references, distinguishes current-state from historic narration
+via a whitelist of inline-context patterns, and fails the build if any
+current-state reference does not equal ENGINE_VERSION.
+
+Wired into test:all. The drift class of bug cannot recur in this form
+on v2.9.32 or later without the build failing.
+
+### Fixed — version-drift sweep (closes audit findings #1, #2, #3, #5, #6, #7, #18, #30)
+
+- DAUBERT.md header: "cpm-engine v2.9.29" -> "cpm-engine v2.9.32"
+- DAUBERT.md S3.1 baseline narration: "carried forward through the
+  v2.9.27 / v2.9.28 / v2.9.29 baseline" -> "carried forward through
+  every release since"
+- DAUBERT.md Layer 2 sigstore example: "v2.9.29/attestations-latest.json"
+  -> "v<TAG>/attestations-latest.json" (tag-agnostic)
+- VERIFY_RELEASE.md: full sweep from v2.9.30 -> v2.9.32 (header, manifest
+  table, checkout block, Layer-4 expected output, citation block, doc
+  version footer; internal contradiction closed)
+- FORENSIC_USE_SOP.md: 3 spots v2.9.31 -> v2.9.32
+- docs/jurisdictions.md footer: v2.9.30 -> v2.9.32
+- docs/api.md ENGINE_VERSION sample value: '2.9.27' -> '2.9.32' (at
+  current tag)
+- validation/p6-comparison/{README.md, comparison-matrix.md}: full sweep
+- validation/xer-corpus/README.md: full sweep
+- Coverage baseline regenerated at v2.9.32: 93.33% stmts / 82.39%
+  branches / 93.75% funcs / 93.33% lines (up from v2.9.31 baseline
+  thanks to 8 new strict-mode hardening tests).
+
+### Fixed — overclaim language pass (closes audit findings #4, #19, #20, #26, #27, #28, #29)
+
+- DAUBERT.md S4 + S5: "is satisfied by the disclosure above" ->
+  "is addressed by the disclosure above. Whether the disclosure is
+  sufficient for admissibility in a specific case is a determination
+  for the trier of fact."
+- DAUBERT.md S3.1: "The challenger can no longer claim untestability"
+  -> "The infrastructure substantially weakens an untestability
+  objection; whether it eliminates that objection is a determination
+  for the trier of fact." Header reworded "What this closes" ->
+  "What this addresses".
+- FORENSIC_USE_SOP.md: "The engine is reliable." -> "The engine has
+  a documented validation record (see DAUBERT.md, VERIFY_RELEASE.md,
+  the per-release release-evidence/ folders)."
+- package.json description: "Forensically-defensible CPM engine" ->
+  "Open-source CPM engine" (the substance — AACE-canonical, Daubert-
+  disclosed, JS/Python parity — stays; the "forensically-defensible"
+  positioning was a court-citation-vulnerability per the audit).
+- validation/p6-comparison/README.md: dropped time-estimate
+  ("roughly one work session" -> "Completion time depends on analyst
+  P6 familiarity"); replaced "Layer-5-equivalent" coinage with plain-
+  language "additional external comparison evidence."
+
+### Fixed — API doc bug (closes audit finding #17)
+
+- docs/jurisdictions.md: getHolidays() example documentation showed
+  the wrong return shape. The function actually returns an array of
+  ISO-8601 date STRINGS (e.g. ["2026-01-01", "2026-04-03", ...]),
+  not objects with {date, name, jurisdiction}. Documentation corrected
+  + getJurisdictionCalendar() example added showing the typed shape
+  it returns for cal_map consumption.
+
+### Engine code — Section Q strict-mode hardening (closes audit findings #21, #22, #31)
+
+- computeCPMSalvaging now refuses forensic_strict mode at function
+  entry, throwing StrictForensicViolation with context
+  'salvage-mode-not-forensic'. Mirrors runCPM's strict-mode refusal.
+  Salvage mode and strict mode are categorically incompatible by
+  design; this closes the route-around path the audit flagged.
+- FATAL_STRICT_CONTEXTS gains 'salvage-mode-not-forensic'.
+- New SECTION R-v2.9.32 in cpm-engine.test.js: 8 new strict-mode
+  hardening tests covering:
+  - computeCPMSalvaging strict-mode refusal (3 tests)
+  - FATAL_STRICT_CONTEXTS registration of salvage-mode-not-forensic
+  - **Dead-context regression test** — every entry in
+    FATAL_STRICT_CONTEXTS must appear at least twice in cpm-engine.js
+    source (once as set member, once as emission/throw site). Closes
+    the false-coverage risk where a fatal-context entry corresponded
+    to no emission path.
+  - Override edge cases: string "false" accepted as non-empty
+    rationale; array value rejected as non-string.
+
+### Added — docs/cross-exam-prep.md (internal analyst material)
+
+17 pre-drafted defensive responses to the cross-examination questions
+that the engine's published disclosures predictably invite. The
+remaining 12-14 audit findings that were not bugs (synthetic-only XER
+corpus, framework-pending P6 matrix, procedural SOP enforcement,
+analyst-signoff is not cryptographic, etc.) get canned responses
+ready for the witness stand here. Document is explicitly marked
+INTERNAL ANALYST RESOURCE — not cited in court-facing reports.
+
+### Bumped — ENGINE_VERSION 2.9.31 -> 2.9.32
+
+cpm-engine.js, package.json, cpm-engine.test.js fixtures, sample
+manifest examples in DAUBERT/README/VERIFY_RELEASE/SOP.
+
+### Tests
+
+- 1,112 / 1,112 unit tests (was 1,104; 8 new strict-mode hardening tests)
+- 747 / 747 crossval across 43 fixtures
+- Citation regression PASS
+- Truncation regression PASS
+- **Version-drift regression PASS (new gate)**
+- npm run verify PASS
+
+### Engine math
+
+- computeCPM non-strict path: byte-identical to v2.9.27 through v2.9.31.
+- Strict mode (Section Q): tightened with computeCPMSalvaging refusal +
+  dead-context coverage proof. Additive validation; no math change.
+
+### What v2.9.32 explicitly does NOT close
+
+ChatGPT-3 audit findings #8, #9, #10, #11, #12, #13, #14, #15, #16, #32,
+#33, #34, #35 — these were not bugs. They were the auditor being
+adversarial about the engine's honest disclosures (synthetic-only XER
+corpus, framework-pending P6 columns, procedural-only SOP enforcement,
+analyst-signoff not cryptographic in v1, etc.). Those disclosures are
+correct posture; v2.9.32 captures canned defensive responses to each
+in docs/cross-exam-prep.md and otherwise leaves the disclosures as
+published. Schema v2 (cryptographic analyst signoff, structured
+override fields) is roadmap.
+
+---
+
+## v2.9.31 — 2026-05-23 — Forensic Strict Mode (court-grade run gate)
+
+Closes ChatGPT third-pass directive item #3: "Add a strict forensic run
+mode. Do not let 'court mode' limp through with warnings. For triage,
+warnings are fine. For an expert report, hard stop."
+
+This is the first ChatGPT-list item that adds a public-API surface
+rather than docs / tooling. New: forensic strict mode shipped as a
+court-grade run gate over the existing computeCPM (Section C) engine.
+
+### Added — Section Q: Forensic Strict Mode
+
+New public-API surface in cpm-engine.js:
+
+- `computeCPM(activities, relationships, { forensic_strict: true })` —
+  flag on the existing primary function.
+- `computeCPMForensicStrict(activities, relationships, opts)` —
+  convenience wrapper that forces forensic_strict: true.
+- `StrictForensicViolation` — labeled Error class with `name`,
+  `code: 'STRICT_FORENSIC_VIOLATION'`, `.context`, `.alert`.
+- `FATAL_STRICT_CONTEXTS` — Set of 36 fatal alert contexts grouped by
+  hazard class (calendar/progress-mode, logic integrity, schema/input,
+  constraints, topology hash, progress/actuals, ALAP, hammocks,
+  degenerate).
+- `FATAL_STRICT_MESSAGE_PATTERNS` — message-prefix patterns for alerts
+  with dynamic context fields (e.g. SUB_DAY_LAG_ROUNDED).
+
+### Semantics
+
+When forensic_strict === true, the engine walks `result.alerts` and
+throws StrictForensicViolation on any alert whose context (real or
+virtual via message-pattern) is in the fatal set — UNLESS the analyst
+has provided a written override in `opts.forensic_strict_overrides`:
+
+```js
+const result = E.computeCPMForensicStrict(acts, rels, {
+    dataDate: '2026-01-05',
+    forensic_strict_overrides: {
+        'invalid-calendar-falling-back':
+            'Project uses shop-floor 5x10 calendar declared in Schedule H ' +
+            'cover memo. Engine Mon-Fri fallback matches contract calendar ' +
+            'by construction. Verified by analyst, 2026-05-23.',
+    },
+});
+```
+
+Override discipline:
+- Each override key must match a fatal context (real or virtual).
+  Unrelated keys are ignored.
+- Rationale must be a non-empty string after trimming. Whitespace-only
+  rationales throw. Non-string rationales throw.
+- Override applications are recorded in
+  `result.manifest.forensic_strict_overrides_applied[]` with the full
+  alert and the analyst's rationale.
+
+Strict equality on the flag: only literal `true` enables strict mode
+(string 'true', number 1, truthy objects are all rejected).
+
+### Section D / runCPM is blocked in strict mode
+
+runCPM (Section D, the lightweight 5-day Mon-Fri Monte Carlo engine)
+is intentionally not calendar-aware. Calling it with
+opts.forensic_strict === true throws StrictForensicViolation
+immediately with context 'section-d-ordinal-only'. Section D is not
+appropriate for forensic opinion regardless of input — strict mode
+makes that posture mechanical.
+
+### Tests — 33 new (1,071 -> 1,104 total)
+
+`cpm-engine.test.js` SECTION R-v2.9.31 covers:
+- API surface (8 tests): exports, FATAL_STRICT_CONTEXTS membership,
+  FATAL_STRICT_MESSAGE_PATTERNS shape.
+- Clean input pass-through: manifest.forensic_strict === true,
+  empty overrides_applied array.
+- Convenience wrapper computeCPMForensicStrict.
+- Duplicate-activity-code throws + error.context shape (3 tests).
+- Override with valid rationale: result + manifest + alerts preserved (4).
+- Override with empty string: throws + error message specifies issue (2).
+- Override with whitespace-only: throws.
+- Override with non-string (number): throws.
+- Unrelated override key: ignored, original fatal alert still throws.
+- runCPM strict-mode refusal: throws with section-d-ordinal-only (3).
+- Default off: alert recorded, no throw, manifest unset (2).
+- Truthy-not-true ('true' string): does NOT enable strict mode.
+
+### DAUBERT.md
+
+New `§9 Forensic Strict Mode (shipped v2.9.31)` with full design
+documentation: rationale, API examples, fatal-context taxonomy,
+override discipline, Section D refusal, what strict mode does and
+does not do. §2.1 coverage line updated to reflect strict mode as
+shipped rather than roadmap.
+
+### Bumped — ENGINE_VERSION 2.9.30 -> 2.9.31
+
+cpm-engine.js, package.json, 4 test fixtures, sample manifest
+examples in DAUBERT.md / README.md / VERIFY_RELEASE.md.
+
+### Verification
+
+- 1,104 / 1,104 unit tests
+- 747 / 747 crossval across 43 fixtures
+- Citation regression PASS
+- npm run verify PASS, witness regenerated for v2.9.31
+
+### Engine math
+
+- computeCPM (Section C) byte-identical to v2.9.27 / v2.9.28 / v2.9.29
+  / v2.9.30 by design on the non-strict path. Strict mode is an
+  additive validation gate; existing callers see no behavior change.
+- runCPM (Section D) is unchanged on the non-strict path. Strict
+  mode is a refusal.
+
+### Engine SHA-256 (v2.9.31)
+
+cpm-engine.js: a6b9e8d93f156b4af487082c15e4141236a93f20e9bfa90b57a95521309ac7fe
+python_reference/cpm.py: 50ddea54d9098395199e808a037b4dde70b13e1373db79bcf12957c05e80d8d7
+  (Python reference unchanged — strict mode is JS-side validation;
+   the Python reference engine continues to mirror the non-strict
+   Section C math.)
+
+---
+
+## v2.9.30 — 2026-05-23 — Daubert verification packaging + coverage + calendar citations
+
+Third pass on the adversarial-audit response. ChatGPT's third-pass review
+declared the engine "defensible as an open-source CPM calculation engine"
+and laid out ten level-up items beyond the in-engine fixes already in
+v2.9.27 / v2.9.28 / v2.9.29. v2.9.30 closes the four items shippable
+without external action (verification packaging, coverage, calendar
+citations, language discipline). The remaining six are tracked as
+analyst / project-management workstreams outside the engine repo.
+
+### Added — verification packaging
+
+- **`VERIFY_RELEASE.md`** — top-level forensic verification packet. Four-
+  layer integrity chain documented end to end: (1) source-code SHA-256
+  hashing, (2) Sigstore-signed witness with `gh attestation verify`
+  exact commands and expected output, (3) Rekor transparency-log lookup,
+  (4) one-command `npm run verify` reproduction with expected verdict.
+  Includes the v2.9.30 SHA manifest (engine `30c633e2...50c7ee94`,
+  Python reference `50ddea54...e80d8d7`), test/crossval/coverage counts,
+  citation template for expert reports, and an explicit "what this packet
+  does not claim" section. Designed to be cited as an exhibit in FRCP
+  26(a)(2)(B) reports alongside DAUBERT.md.
+
+### Added — coverage tooling and reporting
+
+- **`c8` devDependency + `npm run coverage` script.** Runtime remains
+  zero-dep; `c8` is a development-only tool for instrumenting the
+  unit-test suite. The coverage script emits text + json-summary + HTML
+  reports for stmt/branch/function/line coverage over `cpm-engine.js`.
+- **DAUBERT.md §2.1 Test Coverage section.** Reports the v2.9.30 baseline
+  with line/statement/branch/function percentages, names the uncovered
+  clusters (salvage-mode defensive paths, Bayesian/kinematic CI edge
+  cases, Section L Daubert-renderer fallback branches, rare-observance
+  holiday edges), and ties branch-coverage expansion to the v3.0
+  `forensic_strict` mode roadmap. **Coverage v2.9.30:** 93.15% stmts,
+  82.29% branches, 93.51% funcs, 93.15% lines.
+- **README.md coverage badge.** New shield: `coverage: 93% stmts / 82% branches`.
+
+### Added — per-jurisdiction calendar reference
+
+- **`docs/jurisdictions.md`** — full per-jurisdiction reference table for
+  the 66 default holiday rule sets. Federal jurisdictions (CA-FED,
+  US-FED) carry verified authoritative citations: *Canada Labour Code*
+  R.S.C. 1985 c. L-2 Part III, and 5 U.S.C. § 6103. Provincial Canadian
+  and US-state rule sets list framework-citation pointers (Employment
+  Standards Act / state code) with an explicit "verify against current
+  statute" caveat. Includes forensic-use guidance: state calendar source,
+  override defaults for contract calendars, verify against operative
+  statute for the analysis year, document calendar selection in the
+  manifest.
+- **Relabeling.** README §4 calendar bullet and the competitor-comparison
+  table now read "66 default holiday rule sets … framework-aligned
+  defaults, not legally certified". DAUBERT.md §2 unit-test row updated
+  to match. The overclaim "legally certified calendars" was preemptively
+  scoped — the engine repo did not previously contain that phrasing, but
+  the level of disclosure was insufficient for forensic use.
+
+### Changed — language discipline
+
+- **README.md.** "The forensically-defensible CPM engine" → "An
+  open-source CPM engine with AACE-aligned methodology and a published
+  Daubert disclosure". "competitive moat" → "what carries a forensic
+  schedule analysis is the workflow, the methodology discipline, and the
+  Daubert disclosure posture". Citation framing softened from
+  "forensically-defensible critical-path-method engine" → "open-source
+  critical-path-method engine with AACE-canonical method labels and a
+  published Daubert disclosure". `Bit-identical between JavaScript and
+  Python` headline now carries the scoping clause: `JS/Python parity
+  across 1,071 unit tests + 747 cross-validation checks on the enumerated
+  CPM comparison surface`.
+- **DAUBERT.md.** §E heading "Methodology status flags for industry-first
+  features" → "Methodology status flags for pre-publication and JS-only
+  public-API surfaces". (Matches §2 "Public-API surfaces" row already
+  introduced in v2.9.28.)
+
+### Bumped
+
+- `ENGINE_VERSION`: 2.9.29 → 2.9.30 (cpm-engine.js + package.json + 4
+  test fixtures + sample manifest examples in DAUBERT.md / README.md /
+  CHANGELOG.md / VERIFY_RELEASE.md).
+
+### Tests
+
+- 1,071 / 1,071 unit tests passing
+- 747 / 747 crossval across 43 fixtures bit-identical
+- Citation regression PASS
+- `npm run verify` PASS, witness regenerated
+- **`npm run coverage`** new: 93.15% stmts / 82.29% branches / 93.51% funcs
+
+### Engine math
+
+Byte-identical to v2.9.27 / v2.9.28 / v2.9.29 by design. This is a
+verification-packaging + tooling + docs release.
+
+### Not yet closed (tracked, requires external action)
+
+These ChatGPT third-pass items are not shippable from inside the engine
+repo and are tracked in the v3.0 / Daubert-roadmap workstream:
+
+- **Independent third-party reproduction memo** — biggest single
+  credibility step beyond Layers 1-3 of `VERIFY_RELEASE.md`. Requires
+  outreach to a non-CPP scheduler / programmer / academic for a signed
+  Layer 4 attestation.
+- **Oracle P6 comparison evidence matrix.** Requires P6 access to capture
+  native dates/float on a representative case suite (FS/SS/FF/SF/lags/
+  constraints/multi-calendar/OoS/in-progress/negative-float). Roadmap-
+  tagged for the v3.0 release wave.
+- **Anonymized XER corpus (10-20).** Requires source-XER decisions
+  (synthetic generation vs. real-XER sanitization with anonymization).
+- **Strict forensic-run mode (`opts.forensic_strict: true`).** Real
+  engine API surface. Deliberate v3.0 / v2.10.0 release; not a docs-
+  patch item. Tracked at DAUBERT.md §10.
+- **Skills-suite per-skill manifest / audit trail.** Separate workstream
+  from the engine repo — applies to claim-workbench, forensic-delay-
+  analysis, claims-preparation, etc.
+- **Expert SOP.** Analyst process document (intake → hash capture →
+  strict-mode run → signoff). Not engine code.
+
+---
+
+## v2.9.29 — 2026-05-23 — Adversarial-audit second-pass residual cleanup
+
+Same-day follow-on to v2.9.28. The v2.9.28 sweep closed the headline
+findings of the adversarial audit (header, badges, contributing,
+disclosure title defaults, topology JSDoc), but a second-pass verification
+flagged six residual stale spots in DAUBERT.md §6, the Validator
+Independence section, the Disclosure Format Version section, and three
+spots in README.md (quick-start example, provenance block, citation).
+v2.9.29 closes all six.
+
+DAUBERT.md
+- §6 sample manifest: `engine_version: '2.9.12'` → `'2.9.29'`. Comment
+  clarifies the field is synchronized with `package.json` and bumps per
+  release (the sample is illustrative; runtime emits the literal current
+  `ENGINE_VERSION`).
+- §6 topology-hash overclaim closed: prior text *"Two XERs that produce
+  the same topology_hash are the same schedule"* replaced with the scoped
+  statement now consistent across DAUBERT.md, the engine header comment,
+  and the `computeTopologyHash` JSDoc — identical hashes mean identical
+  canonicalized topology under the hashed-field set (codes, durations,
+  predecessor links + types + lags); **not a forensic-equivalence
+  statement** since calendars, resources, WBS, names, and constraints are
+  excluded and can still produce different schedules.
+- Validator Independence: `792 + 416 = 1,208 verifications` → `1,071 unit
+  tests + 747 cross-validation checks across 43 fixtures = 1,818
+  verifications`.
+- Disclosure Format Version: `engine_version: 2.9.12` → `2.9.29`. The
+  v2.9.12-historic narrative paragraph in this block replaced with the
+  v2.9.29 refresh note (FRE 702 lead, scoped bit-identical, topology-hash
+  language scope, "Industry-first" row removed). Prior milestones
+  preserved chronologically.
+- §D constraint-disclosure pairing: `result.manifest.engine_version ===
+  '2.9.12'` → `=== '2.9.29'` to confirm constraint-module version on
+  current builds.
+
+README.md
+- Quick-start example: `// 2.9.27` → `// 2.9.29`.
+- Provenance block sample manifest: `engine_version: '2.9.27'` →
+  `'2.9.29'`.
+- Topology-hash quick-start comment: prior text *"Two XERs with identical
+  hashes ARE the same schedule, regardless of UID rotation"* replaced
+  with the scoped four-line statement matching the engine JSDoc.
+- Citation: `Version 2.9.27` → `Version 2.9.29`.
+- Badges: `npm v2.9.28` → `v2.9.29`.
+- "Release history through" pointer: `v2.9.28` → `v2.9.29`.
+
+cpm-engine.js / package.json / tests
+- ENGINE_VERSION 2.9.28 → 2.9.29 (engine constant + package.json + 4 test
+  fixtures pinning the literal).
+
+Engine math byte-identical to v2.9.27 / v2.9.28 by design — no math, no
+behavior change. The Sigstore witness will regenerate against v2.9.29 on
+push.
+
+### Tests
+- 1,071 / 1,071 unit tests passing
+- 747 / 747 crossval across 43 fixtures bit-identical
+- Citation regression PASS
+- `npm run verify` PASS
+
+### Residual v2.9.12 references that are now correctly historic
+- README.md "Release history" line for v2.9.12 (Round 9 engine math fix
+  wave) intentionally retained — it is historic release-notes content
+  describing what v2.9.12 actually shipped (792 unit tests / 416 crossval
+  at that snapshot). Editing it would revise history. Marked here so
+  future audits do not flag it as a current-state miss.
+
+---
+
+## v2.9.28 — 2026-05-23 — Adversarial-audit response (Daubert disclosure hygiene + docs sweep)
+
+Docs-only release in response to a third-party adversarial audit of the
+Daubert disclosure surface. No engine math changes. Tightens the documentation
+surface that opposing counsel would attack first: stale version/test-count
+references, marketing language inside a Daubert disclosure, topology-hash
+overclaim, FRE 707 leading the wrapper instead of operative FRE 702, and the
+"bit-identical" headline missing an explicit scope statement.
+
+### DAUBERT.md — disclosure hygiene
+
+- **Header refreshed.** `# Daubert / Proposed FRE 707 Disclosure — cpm-engine v2.9.12` →
+  `# Daubert / FRE 702 Disclosure — cpm-engine v2.9.28`. Operative rule is
+  FRE 702 (Dec 1, 2023 amendment); FRE 707 demoted to forward-compatibility
+  note.
+- **Stale test/crossval counts swept.** `792 unit tests` → `1,071 unit tests`
+  (2 locations); `416 / 416 = 0% deviation across 40 fixtures` →
+  `747 / 747 = 0% observed deviation across 43 fixtures on the enumerated
+  CPM comparison surface` (§4); `1,064 / 1,064 passing` → `1,071 / 1,071
+  passing` (§2 unit-test row).
+- **"Industry-first features" row removed.** Marketing language inside a
+  Daubert disclosure is courtroom-fragile. Replaced with `Public-API
+  surfaces` row that names Bayesian + kinematic as pre-publication and
+  JS-only with cross-reference to §11.
+- **§3.1 "bit-identical" scoped.** The crossval row now reads
+  `747 / 747 bit-identical across enumerated CPM comparison fields` and
+  enumerates the surface (ES/EF/LS/LF, Kahn topo, Tarjan SCC, FF/SF
+  working-day arithmetic, TF, FF, FF working days). Bayesian and
+  kinematic surfaces are explicitly excluded with cross-reference to §11.
+- **§3.1 header de-versioned.** `### §3.1 Independent Verification (v2.9.12 — Round 9 Daubert hardening)` →
+  `### §3.1 Independent Verification`. The infrastructure (Sigstore witness,
+  one-command reproduction, public CI matrix) carries forward through every
+  version; the section anchor no longer drifts.
+- **`attestations/latest.json` clarifier added.** The gitignored
+  per-machine artifact vs. the public Sigstore-signed release asset is
+  explicitly disclosed in §3.1 Layer 2, closing the "where's the witness"
+  confusion any adversarial auditor will hit.
+- **§4 Error Rate framing tightened.** Now explicitly labeled as the
+  **observed** error rate on the disclosed validation suite, not a
+  general error-rate claim.
+
+### cpm-engine.js — disclosure-wrapper defaults
+
+- **Default Daubert disclosure title.** `renderDaubertHTML` /
+  `renderDaubertMarkdown` defaults: `'Daubert / FRE 707 Expert Disclosure'`
+  → `'Daubert / FRE 702 Expert Disclosure'`. The user-visible title now
+  matches the operative rule.
+- **`d.rule` fallback.** `d.rule || 'Daubert / FRE 707'` →
+  `d.rule || 'Daubert / FRE 702'` (2 locations).
+- **Topology-hash overclaim scoped.** Header doc-comment (§7 public-API
+  notes) and `computeTopologyHash` JSDoc: the prior text *"Two XERs with
+  identical hashes ARE the same schedule"* is replaced with an explicit
+  scope statement — identical hashes mean identical canonicalized topology
+  under the hashed-field set (codes, durations, predecessor links + types
+  + lags); **not a forensic-equivalence statement** since calendars,
+  resources, WBS, names, and constraints are excluded from the hash and
+  can still produce different schedules.
+- **Section L header comment updated.** `(E3 — FRE 707 compliance wrapper)`
+  → `(FRE 702 disclosure wrapper; forward-compatible with proposed FRE 707)`.
+
+### README.md + CONTRIBUTING.md — count + badge sync
+
+- **Badges:** `tests: 792 passing` → `tests: 1071 passing`; `crossval: 416/416` →
+  `crossval: 747/747`; `npm: v2.9.27` → `v2.9.28`.
+- **§4 contributing paragraph:** "every commit must pass 792 unit tests and
+  416 cross-validation checks" → "every commit must pass 1,071 unit tests
+  and 747/747 cross-validation checks across 43 fixtures".
+- **§3.1 anchor link:** `DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening` →
+  `DAUBERT.md#31-independent-verification` (2 locations; matches the
+  de-versioned header).
+- **CONTRIBUTING.md quick-rules:** `792 unit tests, 0 fail` → `1,071 unit
+  tests, 0 fail`; `416/416 cross-validation checks (40 fixtures)` →
+  `747/747 cross-validation checks (43 fixtures)`.
+
+### package.json
+
+- `version`: `2.9.27` → `2.9.28`.
+- `keywords`: `fre-707` → `fre-702` (operative rule).
+
+### Tests
+
+- 1,071 / 1,071 unit tests passing
+- 747 / 747 crossval checks across 43 fixtures bit-identical
+- Citation regression PASS
+- `npm run verify` PASS
+
+Engine math byte-identical to v2.9.27 by design — this is a docs +
+disclosure-wrapper-defaults release. The math attestation chain
+(engine SHA-256 + python_reference SHA-256) is unaffected.
+
+---
+
+## v2.9.27 — 2026-05-18 — Audit closeout (13 items) + crossval 444→747
+
+Final addressable-scope release before v3.0. Closes 13 specific audit
+findings by direct file:line cross-reference, including all three
+longest-standing deferred paired-fix items (R6, R12, R21). Crossval
+JS↔Python bit-identical surface expanded from 444 → 747 checks via
+backporting tf_working_days, ff, and ff_working_days to Python
+(F24 documented JS-only gap LIFTED).
+
+### Paired JS+Python fixes (the three deferred items)
+
+- **R6 MED** — Skip completed successors in backward propagation.
+  Per SCL Protocol §4 / AACE 29R-03 §4 retained-logic, completed
+  succs do not pull predecessor LF backward through historical-fact
+  dates. Both engines now emit `completed-succ-skipped-in-backward`
+  INFO per affected code. Crossval F47 now passes with TF=0 instead
+  of the prior negative-TF artifact.
+- **R12 HIGH** — data_date floor snaps forward to next workday when
+  the date falls on a non-workday for the activity's calendar.
+  Mirrors v2.9.12 F2.1 zero-advance snap convention. Both engines
+  in lockstep.
+- **R21 (perf)** — Python `add_work_days` / `subtract_work_days`
+  MonFri fast path (port of JS `_walkFromMon` / `_walkFromFirstFw`
+  formulas). Bit-identical to the day-by-day walker on clean Mon-Fri
+  with no holidays; ~13×/250×/900× speedup at 5d/30d/120d walks.
+  Holiday Set cached on `calendar_info['_holidays_set_cache']`
+  (~73M list-to-set operations eliminated on 50k×365-holiday).
+
+### Python parity backports (F24 gap LIFTED)
+
+- **R9 LOW** — `tf_working_days` (working-day TF on each activity's
+  calendar) now in Python. New `_count_work_days_between` helper.
+- **F24** — `ff` and `ff_working_days` now in Python. Full FF loop
+  ported including FF/SF-binding-successor calendar correction.
+- **A12-M1/M2/M4** — Python `compute_topology_hash` gets the v2.9.20
+  JS hardenings: `str()` coercion of codes (numeric `1` and string
+  `'1'` hash identically), `input_relationship_count` vs
+  `hashed_relationship_count` distinction, `algorithm: null` for
+  empty-schedule branch.
+
+### Crossval harness extended
+
+Per-node comparison now includes `tf_working_days`, `ff`,
+`ff_working_days`. Both extractors (PY_HARNESS + JS) emit the fields.
+F24 fixture comment rewritten: "gap LIFTED in v2.9.27."
+
+Result: **JS↔Python crossval went from 444 → 747 bit-identical checks
+across 43 fixtures.**
+
+### Engine MED/LOW
+
+- **R10 HIGH** — Python `_cal_for` honors `project_calendar` fallback
+  (was JS-only via opts.projectCalendar; Python's _cal_for hard-fell
+  to 7-day ordinal even when a project-default calendar was supplied).
+- **R6 HIGH** — Paired MS_Start/SO `constraint-widens-lf` WARN. Was
+  emitted only for MS_Finish/MFO (v2.9.14 F5 Bug F); symmetric branch
+  for MS_Start/SO was silent. Now both engines emit the WARN on all
+  four mandatory constraint types when a hard pin widens minLF.
+- **R18 HIGH** — Five `method_id`s gained explicit AACE-canonical
+  methodology labels: computeScheduleHealth (DCMA 14-Point + AACE
+  49R-06 §4 [2026-08-19: that section number was fabricated; 49R-06 has
+  no numbered sections, and the label now presents the CP-ratio
+  thresholds as CPP-derived]), computeBayesianUpdate (Carlin & Louis 2008 §5.4;
+  Elshaer 2013 IJPM 31:579-588), computeKinematicDelay (pre-pub;
+  AACE 29R-03 / 52R-06 companions), computeTopologyHash (industry-
+  first), computeFloatBurndown (AACE 29R-03 §4 + Sanders 2024 IBA).
+
+### Disclosure / docs / test gaps
+
+- **R16 HIGH** — DAUBERT.md + CONTRIBUTING.md crossval counts
+  refreshed (792/416/40 → 1071/747/43).
+- **R14 LOW** — `buildDaubertDisclosure` topology-hash gate switched
+  from `opts.activities && opts.relationships` truthiness to
+  `Array.isArray(opts.activities)`. Empty `relationships: []` no
+  longer silently no-ops the hash. New coverage-gap caveat fires
+  in the disclosure when activities are absent so verifiers see
+  WHY `input_topology_hash` is null.
+- **R8 LOW** — T3.18 in-progress test extended to assert
+  `tf === 0`, `lf_date === ef_date`, and `criticalCodesArray`
+  membership. New T3.18-pair test asserts criticality propagates
+  through an in-progress predecessor.
+- **R7 LOW** — docs/api.md activity-code field documents the
+  recommended `/^[\w.-]+$/` pattern + the engine's coercion
+  behavior at hash and rel-endpoint boundaries.
+
+### Test state
+
+| Metric | v2.9.26 | v2.9.27 |
+|---|---|---|
+| Unit tests | 1056 / 0 | **1071 / 0** (+15 regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | **444 / 444** | **747 / 747** (+303 new comparisons) |
+
+### Audit ledger status
+
+This release closes every patchable engineering item from the
+20-agent audit ledger. Remaining items are all v3.0 architectural
+scope:
+
+1. Section D full calendar-awareness (fold Section C into runCPM)
+2. Welford's online variance for Bayesian group evidence
+3. Lognormal/Beta exact-quantile inverse-CDF CIs
+4. Sub-day lag precision (would change every date-arithmetic
+   call signature; engine-wide ripple)
+5. Python TT_Hammock + TT_LOE implementation
+6. Engine epoch move 2020-01-01 → 1900-01-01 (fixes R12 epoch
+   collision)
+7. Hammock-of-hammocks LS_CEIL walker class
+
+Plus two v3.0-adjacent items:
+- Python `compute_cpm_with_strategies` (LPM/TFM/MFP entry point)
+- Larger-schedule crossval fixture (procedurally generated 1k-10k)
+
+The audit-driven engineering wave is complete. v3.0 will be a
+design-and-implement cycle, not a patch wave.
+
+---
+
+## v2.9.26 — 2026-05-18 — Provenance + citation polish (3 items)
+
+### Provenance
+- **R20 LOW** — `npm run attest` writes `cpm-engine.js.sha256` and
+  `python_reference/cpm.py.sha256` sidecar files for mechanical
+  `shasum -c` verification. Sidecars gitignored; canonical pinned
+  values remain in DAUBERT.md §3.1 prose.
+
+### Bayesian citations
+- **R22 LOW** — Elshaer (2013) citation expanded to full publication
+  reference (IJPM 31(4):579-588, DOI). "38% PERT improvement"
+  paraphrased percentage removed.
+- **R22 LOW** — Bayesian + kinematic Python parity gap explicitly
+  disclosed in DAUBERT.md Known Limitations. Bit-identical Python
+  parity claim in §3.1 now scoped to core CPM math only.
+
+### Test state
+| Metric | v2.9.25 | v2.9.26 |
+|---|---|---|
+| Unit tests | 1056 / 0 | 1056 / 0 |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit ledger
+- Cumulative closed v2.9.13–v2.9.26: ~98 findings
+- Still open: ~12 (Python F4/F6 backports, hammock-of-hammocks LS
+  walker, MCP-side items, ~7 v3.0 architectural deferrals)
+
+---
+
+## v2.9.25 — 2026-05-18 — Perf wave + Python parity partial (4 items)
+
+### Engine perf (3)
+- **R21 LOW** — OoS detector memoizes `actual_start` offsets (saves
+  ~500k Date constructions on a 25k-activity × 5-pred schedule).
+- **R21 LOW** — `_isCleanMonFri` uses bitmask not Set allocation
+  (saves ~200k throw-away Sets per CPM run).
+- **R21 LOW** — Section D `_cstrDayOffset` / `_actOffset` hoist
+  projectStart parse (saves ~300k redundant Date constructions).
+
+### Python parity (1 partial)
+- **R21** — `python_reference/cpm.py` add_work_days caches the
+  holiday Set on calendar_info (avoids 73M list-to-set ops on 50k×
+  365-holiday). MonFri fast-path attempt reverted (parity broke
+  444/444 → 440/444); inline comment documents the paired-fix
+  requirement.
+
+### Daubert doc (1)
+- **R8 HIGH** — DAUBERT.md notes `progress_override` schedule mode
+  is unsupported (retained-logic only). Already enforced by alert;
+  now also surfaced in the public disclosure docs.
+
+### Test state
+| Metric | v2.9.24 | v2.9.25 |
+|---|---|---|
+| Unit tests | 1056 / 0 | 1056 / 0 |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit ledger
+- Cumulative closed v2.9.13–v2.9.25: ~95 findings
+- Still open: ~15-20 (Python F4/F6 backports, hammock FS hard-
+  precedence, MCP-side, ~7 v3.0 architectural)
+
+---
+
+## v2.9.24 — 2026-05-18 — Continued small-batch fix wave (5 items)
+
+Five more audit findings closed/documented. Same per-fix-per-commit
+cadence as v2.9.23.
+
+### Engine
+
+- **R7 HIGH** — `_mcTopologicalSort` fallback uses codepoint sort.
+  Legacy hand-constructed `_MC.tasks` without `taskIdsOrdered` now
+  iterates in deterministic codepoint order instead of JS's integer-
+  hoisted `for...in` order.
+- **R8 HIGH** — OoS detector flags `pred.actual_start > data_date` as
+  retroactive-edit signature. New `post-data-date-actual` WARN with
+  the offending pred codes + dates.
+- **R12 HIGH** — data_date floor calendar-aware attempt → reverted as
+  Python-parity blocker. Documented inline. Paired JS+Python patch
+  required.
+- **R15 HIGH** — Hammock-of-hammocks FS-succ all-hammock chain edge
+  case documented as v3.0 architectural fix candidate (very low real-
+  world likelihood; zero-float hammocks are unaffected).
+
+### Five investigations that turned out already-closed
+
+R6 LF backward pin, R9 FF clamp, R9 _findLatestFinish, R10 lag math,
+R12 actual_start>actual_finish, R13 parseInt, R14 verifyReport,
+R14 delimiter escape, R14 float roundoff, R16 fixture-count stale,
+R17 rule string FRE 707, R18 prong-4 firm names, R19 self-loop —
+all checked against current code state; were already addressed in
+v2.9.13–v2.9.22 waves. Not double-counted.
+
+### Test state
+
+| Metric | v2.9.23 | v2.9.24 |
+|---|---|---|
+| Unit tests | 1056 / 0 | 1056 / 0 |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit ledger
+
+- Cumulative closed v2.9.13–v2.9.24: ~90 findings
+- Still open: ~20-25 (perf optimizations, Python parity backports for
+  R6 + R12, MCP-side items, hammock FS hard-precedence)
+- Deferred to v3.0 (architectural): ~7
+
+---
+
+## v2.9.23 — 2026-05-18 — Small-batch fix wave (16 audit items closed)
+
+Continuing the per-fix-per-commit cadence. Each commit cites the audit
+finding it closes by R-number; each was tested + crossval-verified
+before moving to the next. Single-writer protocol.
+
+### Engine math + correctness
+
+- **R12 MED** — `SUB_DAY_LAG_ROUNDED` alert dedup. A schedule with 500
+  4-hour lags fired 500 identical alerts; the helper now dedupes per
+  (value, ctx) pair.
+- **R13 MED** — `_codepointCmp` string comparator for non-ASCII JS↔
+  Python sort parity. Default JS sort uses UTF-16 code units; Python
+  uses codepoints. The hash sort site now uses the codepoint comparator.
+- **R15 MED** — `TARGET_DRTN_MISSING` WARN when target_drtn_hr_cnt is
+  absent on an in-progress activity. originalRemaining falls back to
+  the shortened post-progress duration; FF/SF successors could shift
+  earlier without diagnostic.
+- **R6 MED** — completed-successor LF-backward-pull documented as
+  Python-parity blocker. Attempted JS-only fix broke 444/444 → 442/444
+  crossval bit-identity; reverted with inline comment so it lands as
+  a paired JS+Python patch.
+- **R9 LOW** — ALAP-slide emits `alap-slide-violates-succ` WARN
+  per affected successor when the slide creates pred.EF > succ.ES (no
+  forward-pass rerun).
+- **R21 LOW** — Stable quadratic-formula form for kinematic breach
+  forecast. Avoids `(-b ± √disc)/(2a)` cancellation when 4ac « b².
+- **R13 LOW** — `Math.min(...candidates)` invariant comment so the
+  length guard isn't silently removed.
+
+### Bayesian
+
+- **R22 MED** — `opts.sigma_shrinkage_factor` (range [0,1], default 0.5)
+  configurable empirical-Bayes σ shrinkage. Surfaced in
+  manifest.sigma_shrinkage_factor for forensic traceability.
+- **R22 LOW** — `opts.computed_at` override on Bayesian manifest for
+  byte-identical determinism across reruns.
+
+### Holiday rules
+
+- **R11 HIGH** — CA-AB Family Day `effective_from: 1990`,
+  CA-SK Family Day `effective_from: 2007`. Pre-enactment historical
+  claims no longer emit a fabricated holiday.
+
+### Daubert / brand polish
+
+- **R17 HIGH** — README MIP 3.3/3.6/3.7/3.8 claims rescoped from
+  "engine implements" to "engine provides the CPM math primitives
+  supporting" — accurate against actual scope.
+- **R17 LOW** — `docs/citations.md` MIP 3.3 descriptor acknowledges
+  both "Contemporaneous As-Is" and "Modified Schedule / Windows
+  Analysis" synonyms.
+- **R17 LOW** — Sanders, M.C. citation date format normalized from
+  ISO `2024-07-25` to `(July 2024)` matching the year-only convention
+  used by every other citation.
+- **R18 LOW** — Kinematic `method_caveat` label tokens use backticks
+  not escaped straight-quotes (cleaner DOCX / markdown rendering).
+
+### Test infrastructure
+
+- **R21 LOW** — Crossval exits 1 if EITHER fixture-level OR per-check
+  counter is non-zero (belt-and-suspenders against future refactor
+  that breaks counter linkage).
+- **R21 LOW** — `close()` epsilon helper retention rationale documented.
+
+### Supply chain / docs
+
+- **R20 MED** — `package.json` `files` whitelist narrowed from
+  `attestations/` (wholesale) to `attestations/README.md` only.
+  Canonical Sigstore witness ships as a GitHub Release asset, not
+  inside the npm tarball.
+- **R20 MED** — `SECURITY.md` adds Forked-PR isolation note
+  documenting the `pull_request` + push-only Sigstore gating.
+- **R8 MED + R12 HIGH** — `DAUBERT.md` Known Limitations expanded
+  with percent_complete, Section D cal-awareness, and epoch=2020-01-01
+  collision (all 3 explicitly documented as engineering limitations
+  rather than silent gaps).
+
+### Test state
+
+| Metric | v2.9.22 | v2.9.23 |
+|---|---|---|
+| Unit tests | 1056 / 0 | **1056 / 0** (no assertions removed) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+| `test:cites` | PASS | PASS |
+| `test:truncation` | PASS | PASS |
+
+### Audit ledger status
+
+- Closed v2.9.13–v2.9.22 (cumulative): ~85 audit findings
+- Closed in v2.9.23: 16 (real, per-commit cross-reference; some R-codes
+  were "investigate" findings that turned out already-closed and are
+  not double-counted)
+- Still open: ~25-35 (mostly Python parity backports, hammock FS
+  hard-precedence, MCP-side, perf, R6 paired backport)
+- Deferred to v3.0 (architectural): ~7
+
+The ledger is still NOT closed. Per-commit honest progress; the
+"engineering label vs audit closure" distinction from v2.9.20
+correction note continues to hold — each v2.9.23 commit cites the
+specific R-number by file:line.
+
+---
+
+## v2.9.22 — 2026-05-18 — Audit HIGH wave (10 real items)
+
+Closes 10 specific HIGH-priority findings from the 20-agent audit by
+direct file:line cross-reference. No "X/X closed" framing.
+
+### Engine correctness
+
+- **R19/cpm-engine.js:994** — Relationship endpoint whitespace trim.
+  `' A '`→`'B'` rel now matches activity coded `'A'` instead of
+  silently dropping as DANGLING.
+- **R19/cpm-engine.js:1309, 1528** — `_strictParseFloat` helper rejects
+  partial-parse poison (`'5abc'` → NaN instead of silently 5). Wired
+  into `duration_days` and `lag_days`.
+- **R19/cpm-engine.js:1180** — `computeCPM` with non-array
+  `activities`/`relationships` now throws typed `INVALID_INPUT` error
+  (with `err.argument`) instead of leaky V8 `TypeError`.
+- **R11/cpm-engine.js:7884** — `getHolidays` clamps cascade-collision
+  escapees that rolled past the requested year window.
+- **R12/cpm-engine.js:1379** — `_alertOnSilentDateCoerce` no longer
+  false-positives on the literal string `'2020-01-01'` (the engine's
+  epoch). Regex-validates YYYY-MM-DD shape first.
+- **R12/cpm-engine.js:1627** — Documented limitation: an activity
+  legitimately started on 2020-01-01 (engine epoch) silently misses
+  the actual-start gate. Fix requires epoch move; deferred to v3.0.
+
+### Daubert disclosure
+
+- **R16/cpm-engine.js** — `provenance.engine_sha256` and
+  `provenance.python_reference_sha256` added (caller-supplied, default
+  null — no fake hashes).
+- **R16/cpm-engine.js** — `prong_2_peer_review.answer` is now binary
+  `"Yes"` matching the other three prongs (was a non-binary
+  self-narration).
+- **R18/cpm-engine.js** — `manifest.tia_mode` switches methodology
+  description between MIP 3.6 (single-base prospective),
+  MIP 3.7 (multi-base prospective), and the retrospective variants
+  with SCL Protocol §4 caveat. Default (no mode) carries an inline
+  `[DEFAULT: caller did not specify tia_mode]` warning so the analyst
+  sees the assumption.
+
+### Bayesian
+
+- **R22/cpm-engine.js:6203** — Lognormal `mu = dur · exp(0.5·σ_ln²)`
+  convention now documented in JSDoc: `duration_days` is treated as
+  the MEDIAN. Math unchanged (would break existing users); v3.0 may
+  add `lognormal_param: 'median'|'mean'` switch.
+- **R22/cpm-engine.js:6312** — `prior_strength` docstring corrected.
+  It's NOT a Bayesian pseudocount — true pseudocount would divide
+  likelihood-variance; engine multiplies. Renamed conceptually as a
+  prior-confidence knob with `strength→0/1/∞` limit semantics.
+
+### Test infrastructure
+
+- **R18/tests/no-truncation.test.js** — New regression guard against
+  silent `[:N]` / "top 10" / `first` truncation in engine output
+  surfaces. Exercises a 60-activity all-critical schedule and asserts
+  full counts in `result.nodes`, `criticalCodesArray`,
+  `strategy_summary.TFM.codes`, alerts (100-entry probe), and Daubert
+  `provenance.activity_count`. Wired into `npm run test:all`.
+- **R18/tests/no-fabricated-citations.test.js** — `SCAN_DIRS` now
+  includes `python_reference/` so cmp.py docstrings are scanned for
+  the same forbidden-citation patterns as the JS sources.
+
+### Test state
+
+| Metric | v2.9.21 | v2.9.22 |
+|---|---|---|
+| Unit tests | 1037 / 0 | **1056 / 0** (+19 assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+| `test:cites` | PASS | PASS (now scans python_reference/) |
+| `test:truncation` | (new) | PASS (new gate) |
+
+### Audit ledger status
+
+- Closed in v2.9.13–v2.9.18: 27 CRITICAL
+- Closed in v2.9.19: 9 HIGH
+- Closed in v2.9.20: ~15 MED (the rest of the v2.9.20 claims were
+  fabricated — see v2.9.20 correction note)
+- Closed in v2.9.21: 13 MED + LOW (real, cross-referenced)
+- Closed in v2.9.22: **10 HIGH** (real, cross-referenced)
+- Still open: ~50 (per v2.9.21 cross-reference, minus ~10 closed here,
+  plus ~10 stale findings rediscovered to already be closed)
+- Deferred to v3.0 (architectural): ~6
+
+The ledger is still NOT closed. v2.9.22 is honest progress, not a
+closeout. ~50 engineering items remain (mostly Python parity backports,
+perf optimizations, hammock FS hard-precedence, doc updates).
+
+---
+
+## v2.9.21 — 2026-05-18 — Real audit cross-reference (post-v2.9.20 correction)
+
+The v2.9.20 release was framed as "218/218 audit ledger closed". That
+framing was wrong (see the v2.9.20 entry's Correction note). v2.9.21
+closes specific, verifiable findings from the 20-agent audit by
+cross-referencing each finding's file:line citation against current
+code state.
+
+### Closed in v2.9.21
+
+**Daubert evidence-prose (court-exhibit-critical, 3 audit MED items):**
+
+- **Prong 1** — added Sigstore + Rekor transparency-log + GitHub Actions
+  public-CI references plus the `npm run verify` one-command third-party
+  reproduction path. Fixture count refreshed 40×416 → 43×444 to match
+  current suite state.
+- **Prong 2** — added FRE 702 (Dec 1, 2023 amendment) leading clause
+  tying methodology + error rate + provenance to Rule 702(c)/(d).
+  Stripped the hardcoded "8-lens forensic audit 2026-05-09" line
+  (same fabricated-date class as the audit_date provenance default
+  the same release removed).
+- **Prong 3** — answer + evidence now separate **computational** error
+  rate (engine math, 0 on suite) from **epistemic** error (causation
+  attribution, concurrency assessment, fragnet selection, method
+  selection — analyst's responsibility, NOT characterized by engine).
+
+**XSS escaper hardening (1 audit MED):**
+
+- `esc()` and `_svgEsc()` previously escaped only `& < > "`. Activity
+  names come from user-supplied XER content; a malicious name like
+  `' onmouseover=alert(1) '` rendered into an HTML attribute was a
+  stored-XSS surface in court-exhibit HTML. Both now escape `'` →
+  `&#39;` and `/` → `&#x2F;` per OWASP defense-in-depth.
+
+**Real correctness (3 audit MED items):**
+
+- **REMAINING_EXCEEDS_DURATION WARN.** Activities with `remaining_duration
+  > duration_days` were silently accepted (engine uses RD for the
+  EF anchor under retained-logic semantics). Now emits a WARN naming
+  both values so the analyst sees the inconsistency.
+- **Salvage cycle determinism.** Tarjan returns SCCs in node-iteration
+  order, which depends on relationship-insertion order. Same XER with
+  rels in different orders → salvage drops a different edge → different
+  CPM dates. Cycles now sorted deterministically (size ascending, then
+  alpha by min-code) before picking the cycle to break. Reproducibility
+  preserved across input shuffling.
+- **Salvage `maxSalvageIterations` cap robustness.** Already partial in
+  v2.9.20 (Infinity/NaN); kept the negative-value behavior as it was.
+
+**Bayesian (3 audit MED items):**
+
+- **Analyst-supplied 0 respected.** The `(!isNaN(x) && x > 0) ? x :
+  heuristic` pattern silently rewrote legitimate zero (e.g. a milestone
+  with theoretical zero floor) to `dur*0.7/0.15/...`. Changed all four
+  distributions (normal, lognormal, beta, PERT) to `>= 0`.
+- **Dirac priors throw INVALID_PRIOR.** Collapsed bands (a==b on
+  PERT/beta; std=0 on normal; sigma_ln=0 on lognormal) were silently
+  clamped to σ = 1e-6 — a Dirac dressed as Normal with CI=[μ, μ].
+  Now throws with the analyst's specific Dirac condition.
+- **`_normalQuantile` Acklam docstring.** Comment said "Beasley-
+  Springer-Moro approximation (accurate to ~3e-4)". Coefficient table
+  is Acklam (2003); accuracy is ~1.15e-9 in [pLow, pHigh] — 5 orders
+  of magnitude better. Comment is depo-citable; correctness matters.
+
+**Polish (2 audit MED + 1 LOW):**
+
+- Em-dash (U+2014) replaced with ASCII hyphen in 3 alert messages.
+  result.alerts flows into Daubert disclosure JSON; forensic-deliverable
+  discipline calls for ASCII-only in machine-emitted strings.
+- `hammock_unsupported_rel_count` fossil documented as v3.0 removal
+  candidate (always 0/empty since v2.9.9 SS/FF/SF semantics).
+- AACE 10S-90 citation in crossval comment replaced with AACE 29R-03
+  §4 + Wickwire (3rd ed., 2010) — the methodology-level forensic-FF
+  sources rather than the Cost Engineering Terminology glossary.
+
+### Test state
+
+| Metric | v2.9.20 | v2.9.21 |
+|---|---|---|
+| Unit tests | 1018 / 0 | **1037 / 0** (+19 regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Audit findings closed by this release
+
+13 verified one-to-one matches against the 20-agent audit's MED+LOW
+backlog. The full backlog has ~98 enumerated MED+LOW findings; of
+those:
+
+- **Closed before v2.9.21:** ~15 (calendar observance fixes, hash
+  determinism, input-validation alerts; all in v2.9.20)
+- **Closed in v2.9.21:** ~13 (Daubert prongs, XSS, salvage determinism,
+  Bayesian, em-dash, fossil field, citation)
+- **Stale findings (already addressed pre-audit-cross-ref):** ~5
+  (TF JS↔Python parity via `_round_half_up_to`, LPM via driving_pred
+  backwalk, inverted actuals via v2.9.13 F1-Bug4, etc.)
+- **Still open:** ~65 (genuine work, mostly hammock FS hard-precedence,
+  perf, Python parity backports, doc updates)
+- **Deferred to v3.0 (architectural):** ~6 (Section D cal-awareness,
+  Welford, lognormal/beta exact-quantile CIs, Python F4/F6, sub-day
+  precision, hammock+LOE crossval parity)
+
+The audit ledger is **NOT** closed. v2.9.21 closes 13 specific items;
+~65 remain on the backlog as documented engineering work. The
+"engineering label vs audit closure" distinction set up in the v2.9.20
+correction note holds — v2.9.21 commits cite the specific findings by
+file:line for traceability.
+
+---
+
+## v2.9.20 — 2026-05-17 — Full MED + LOW sweep (218-audit closeout)
+
+Closes every remaining MEDIUM and LOW finding from the 218-finding hardcore audit. The previous 36 CRITICAL + 69 HIGH waves closed the forensic-correctness ship-blockers; v2.9.20 closes the polish surface so the audit ledger is now down to genuine v3.0 architectural-scope items.
+
+Ten batches, single-writer sequential execution (no parallel agents — the v2.9.13/14 parallel-agent race-condition class is permanently retired). One bug → one commit → tests after each.
+
+### Batch 1 — Calendars (A6-M1/M2/M3/M4, A6-L1/L2)
+
+- `monday_if_sunday` and `nearest_monday` observance types harmonized; Easter algorithm now guards `year < 1583` (Gregorian boundary); calendar dedup uses canonical key composition.
+
+### Batch 2 — Hash + provenance (A12-M1/M2/M4, A14-L3)
+
+- Topology hash exposes `hashed_relationship_count`; `disclosure_schema_url` field added; non-string codes coerced via `String()` for hash determinism; `algorithm: null` for empty schedules.
+
+### Batch 3 — Input validation (A16-M2/M4/M5, A16-L2/L3/L4)
+
+- New ALERT contexts: `constraint-invalid-date`, `empty-schedule`, `activity-missing-code`, `activity-name-control-chars`, `self-loop`. Salvage mode handles self-loops as `DROPPED_EDGE` (not strict-mode ALERT path).
+
+### Batch 4 — Daubert disclosure (A13-M1, A14-M1/M2/M4)
+
+- `disclosure_format_version` bumped 1.0 → 1.1 (additive only).
+- `provenance.test_count` numeric exposure; `provenance.audit_date` structured field.
+- `provenance.commit_sha`, `repository_url`, `release_tag`, `release_url` — source-control provenance so an opposing expert can fetch the exact commit.
+- `provenance.computed_at` ISO fallback when manifest doesn't carry one.
+- `provenance.verification_command` + `attestation_url` — one-command reproduction + Sigstore witness pointer.
+
+### Batch 5 — Numeric robustness (A15-M3/M4/M5/M6, A15-L1/L2)
+
+- `parseFloat()||0` replaced with `Number.isFinite()` guards everywhere ±Infinity could leak: salvager cycle-break sort, MFP predMap, Bayesian actuals, XER hours-per-day, addWorkDays / subtractWorkDays / _advanceWithAlerts / _retreatWithAlerts.
+- `_roundHalfUp` half-up convention locked in via regression tests at boundary cases.
+
+### Batch 6 — Bayesian (A19-M1/M2/M3/M4)
+
+- Negative actual durations emit `invalid-actual-duration` WARN + skip update.
+- `result.alerts[]` channel for forensic audit trail.
+- `actual_applied` / `actuals_applied` / `actuals_rejected` distinguishes supplied vs applied.
+- Infinity `prior_strength` rejected; `credible_interval` range-validated.
+- Small-denominator (|mu| < 1e-6) percentage emits `null` with `mean_delta_abs` / `std_delta_abs` companion fields.
+
+### Batch 7 — Security (A20-M1/M2/M5)
+
+- Prototype-pollution hardening on caller-supplied `wbs_groups` (`hasOwnProperty` guard on `for...in`).
+- `maxSalvageIterations` capped at hard 1000; `maxPaths` capped at hard 100. Infinity / NaN / negative inputs revert to defaults.
+- Module-level DOS caps: `MAX_ENGINE_ACTIVITIES=100_000`, `MAX_ENGINE_RELATIONSHIPS=500_000`. Throws `CAP_EXCEEDED` with structured error fields. Enforced at `computeCPM`, `computeCPMSalvaging`, `computeTopologyHash`, `computeBayesianUpdate`.
+
+### Batch 8 — Brand discipline (A18-M1/M2/M3, A18-L1)
+
+- Daubert HTML body font: Georgia → CPP canonical Inter + system fallback (no CDN).
+- `_CPP_BODY_FONT` / `_CPP_MONO_FONT` module constants link to the canonical brand spec.
+- `_CPP_NAVY` / `_CPP_RED` uppercased to `#0F2540` / `#C8392F` (canonical brand). SVG renderer's local color constants now alias the canonical constants — single source of truth.
+
+### Batch 9 — Public-API test coverage (A17-M1/M2/M3, A17-L1/L2/L3)
+
+- Regression tests covering: `computeCPMWithStrategies([], [], {})`, `computeTIA` with empty fragnets, `computeBayesianUpdate` with empty actuals, `buildDaubertDisclosure(undefined)`, `computeTopologyHash(null, null)`, `renderDaubertMarkdown(undefined)`.
+
+### Batch 10 — Engine math edge cases (A1-A11 MED/LOW)
+
+- One regression test per subsystem covering edge behavior: actual_start precedence (A1); terminal milestone TF=0 (A2); parallel SNETs (A3); no-calendar 7-day fallback (A4); parallel hammocks (A5); MS_Finish pin (A7); cal_map + missing clndr_id (A8); TIA result shape (A9); linear-chain CP (A10); JSON round-trip parity (A11).
+
+### Deferred to v3.0 (architectural scope)
+
+- **Section D calendar-awareness.** Section D ordinal-arithmetic path is design-locked; v3.0 will fold Section C's `_resolveCalendar` into Section D so `runCPM` is calendar-aware end-to-end without splitting the API.
+- **Welford's online algorithm for Bayesian group variance.** Current two-pass formula is adequate for typical forensic durations (1-200d, group size <50); v3.0 swap to Welford's for ill-conditioned inputs (very large means with very small spread).
+- **Lognormal / Beta exact-quantile CIs.** Current implementation uses Normal-symmetric CI with `max(0, ci_low)` clamp on strictly-non-negative distributions. v3.0 will add distribution-specific inverse-CDF for forensically-rigorous bounds.
+- **Python `compute_cpm` parity backports.** Several v2.9.13 - v2.9.15 fixes are JS-only; v3.0 will close the JS↔Python parity gap. F2 zero-snap-to-workday and F14 driving_predecessor were backported in v2.9.16; the remainder (F4 LPM via driving_predecessor backwalk, F6 iterative hammock walker) are tracked but require Python refactoring.
+- **Sub-day lag precision.** Engine is day-granular; fractional lags emit `SUB_DAY_LAG_ROUNDED` ALERT and round half-up. P6 hour-level precision is a v3.0 architectural decision (would change every date arithmetic call signature).
+- **Full hammock crossval parity.** Python `compute_cpm` doesn't implement hammocks (TT_Hammock). Cross-validation parity for hammocks requires a Python hammock implementation first — v3.0 scope.
+- **LOE crossval parity.** Same parity gap as hammocks for Level-of-Effort activities.
+
+### Test state
+
+| Metric | v2.9.19 | v2.9.20 |
+|---|---|---|
+| Unit tests | 913 / 0 | **1018 / 0** (+105 new regression assertions) |
+| Crossval fixtures | 43 / 0 | 43 / 0 |
+| Crossval checks | 444 / 444 | 444 / 444 |
+
+### Correction (2026-05-18)
+
+The original v2.9.20 release framed this release as "218/218 audit
+ledger closed (70 MEDIUM + 43 LOW)". That framing overstated what
+shipped: this release reflects natural MED/LOW improvements to the
+engine surfaces (Daubert provenance, numeric robustness, Bayesian
+validation, security caps, brand polish, edge-case test coverage),
+not a one-to-one closure of the 20-agent audit's MED+LOW backlog.
+
+The 36 CRITICAL (v2.9.18) and 69 HIGH (v2.9.19) closures were
+direct one-to-one fixes against the audit's enumerated findings.
+For v2.9.20 the per-batch `A1x-Mx`-style labels in the commit
+messages are descriptive of the change made, not a cross-reference
+to a specific audit finding. Treat them as engineering labels, not
+audit closures.
+
+A proper one-to-one cross-reference of v2.9.20 changes against the
+audit's enumerated MED+LOW backlog is open work, not done.
+
+---
+
 ## v2.9.19 — 2026-05-17 — 9 HIGH-priority sweep
 
 Single sequential pass closes the long-tail HIGH findings prior fix-wave agents never attempted.
@@ -353,9 +3161,9 @@ Hardcore audit identified ~30 engine math defects across constraint handling, ca
 ### T1 — Constraint handling
 
 - **T1.1 — MS_Start backward LF clamp.** `_applyBackwardLFConstraint` previously only honored MS_Finish / MFO / FNLT / SNLT on the backward pass. MS_Start / SO were silently ignored, allowing LS to drift later than the pinned ES — breaking the P6 invariant that MS_Start is always on the critical path. Both engines now emit `LF = cstr.date + duration` so the post-clamp LS recompute lands on cstr.date and TF = 0.
-- **T1.2 — `constraint-noop` WARN on actual_start suppression.** When an activity has an `actual_start`, AACE 29R-03 §4.3 makes the historical fact immutable; ES-side constraints (SNET, MS_Start, SO) cannot override it. Both engines now emit a `constraint-noop` WARN per suppressed constraint so the forensic record shows what was skipped.
+- **T1.2 — `constraint-noop` WARN on actual_start suppression.** When an activity has an `actual_start`, that recorded actual governs ES under Oracle P6 / CPM forward-pass semantics; ES-side constraints (SNET, MS_Start, SO) cannot override it. Both engines now emit a `constraint-noop` WARN per suppressed constraint so the forensic record shows what was skipped. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the citation-withdrawal section under v2.9.41.]
 - **T1.3 — Section C ES-side constraint gate.** Section C's forward pass now gates `_applyForwardESConstraint` calls on `!hasActualStart`, matching Python reference behavior. Was a JS-only divergence.
-- **T1.4 — Section D Monte Carlo pins ES to actual_start.** `runCPM` previously ignored `task.actual_start` entirely — predecessor logic overrode the historical fact. Section D now pins `task.ES = actual_start_offset` (relative to `opts.projectStart`) when present, suppresses ES-side constraint clamps with `constraint-noop` WARN, and emits a one-time `actual-start-not-anchored` WARN if `projectStart` was missing.
+- **T1.4 — Section D Monte Carlo pins ES to actual_start.** `runCPM` previously ignored `task.actual_start` entirely — predecessor logic overrode the recorded actual start. Section D now pins `task.ES = actual_start_offset` (relative to `opts.projectStart`) when present, suppresses ES-side constraint clamps with `constraint-noop` WARN, and emits a one-time `actual-start-not-anchored` WARN if `projectStart` was missing. [Citation corrected 2026-08-19: this entry originally described the recorded actual start as "the historical fact", the characterisation withdrawn with "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the citation-withdrawal section under v2.9.41.]
 - **T1.5 — `task-dropped` + `relationship-dropped` INFO alerts.** TT_LOE / TT_WBS / completed / zero-remaining activity drops + dangling-relationship drops in `parseXER` were silent. v2.9.12 surfaces every drop as an INFO alert propagated to `result.alerts` (via a new `_MC.parseAlerts` collector). Non-finite `lag_hr_cnt` (e.g. `Infinity`) is now rejected with an ALERT instead of propagating to `projectFinish: Infinity`.
 - **T1.6 — `constraint-unrecognized` / `constraint-incomplete` WARN.** `_normalizeConstraint` previously returned null silently on unknown tokens and empty dates. Both engines now emit a WARN identifying the activity and the offending token / missing date.
 - **T1.7 — `CS_MANSTART` / `CS_MANFINISH` aliases.** Older P6 R8.x XER variants emit these tokens without the "D" of "MANDATORY". Added to `CONSTRAINT_TYPE_MAP` in both engines as aliases for `MS_Start` / `MS_Finish`.
@@ -426,7 +3234,7 @@ Four T1 engine-math bugs identified by the Round 8 R8A audit. Each was a silent-
 
 ## v2.9.10 — 2026-05-16 — Round 7 independent-verification infrastructure (Daubert Angle 5 closer)
 
-Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification-v2910--round-7-daubert-hardening). No engine math changed; the engine bytes at v2.9.9 are unchanged in this docs/infra release — `cpm-engine.js` byte content is identical apart from the `ENGINE_VERSION` constant bump and a few v2.9.9-era inline comments rewritten to cite v2.9.10. The verification + attestation infrastructure landed in this release.
+Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification). No engine math changed; the engine bytes at v2.9.9 are unchanged in this docs/infra release — `cpm-engine.js` byte content is identical apart from the `ENGINE_VERSION` constant bump and a few v2.9.9-era inline comments rewritten to cite v2.9.10. The verification + attestation infrastructure landed in this release.
 
 ### New
 
@@ -437,14 +3245,14 @@ Adds the third-party reproduction harness called out in [DAUBERT.md §3.1](DAUBE
 - DAUBERT.md §3.1 "Independent Verification" — full Daubert framing: Layer 1 (public CI), Layer 2 (Sigstore attestation), Layer 3 (one-command local reproduction). Documents what this closes (Prong 1 testing objection) and what it does not (peer review).
 - DAUBERT.md §10 "Roadmap — Forward-looking Daubert hardening" — near-term (real third-party attestation, MPXJ Java-bridge crossval, Coq / TLA+ formal verification), mid-term (AACE TCM Forum peer review, CPP-house-heuristic threshold sourcing, branch coverage, DCMA-14 alignment with PPG #20 2024), long-term v3.0 (`_MC` Section D thread-safety, MPXJ XER round-trip, MS Project / Synchro / Asta cross-engine validation), and continuously-updated citation regression list.
 - `attestations/README.md` — explains the witness shape + how to use it.
-- Round 8 crossval expansion: F26-F32 edge-case fixtures (multi-id calendar fallback, actual_start AACE-immutability with matching Python reference extension, ALAP+FNLT secondary compound, mixed FF+SS predecessors, negative-lag ordinal arithmetic, cycle-in-sub-network detection, far-future date arithmetic stress). Crossval suite: 25 → 32 fixtures, 281 → 346 checks (all bit-identical between JS and Python).
+- Round 8 crossval expansion: F26-F32 edge-case fixtures (multi-id calendar fallback, actual_start pinning with matching Python reference extension, ALAP+FNLT secondary compound, mixed FF+SS predecessors, negative-lag ordinal arithmetic, cycle-in-sub-network detection, far-future date arithmetic stress). Crossval suite: 25 → 32 fixtures, 281 → 346 checks (all bit-identical between JS and Python).
 - Round 8 hot-loop perf bench (`scripts/bench.js`) — synthetic 100 / 1k / 10k / 25k / 50k benchmark driver, min/median/max across 5 runs each, suitable for tracking the cost of the OPT-1 head-index Kahn queue and OPT-2 hoisted-`_MC.tasks` micro-optimizations across versions.
 - OSS hygiene: `SECURITY.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/{bug_report,feature_request,citation_correction,config}.{md,yml}`.
 
 ### Notes
 
 - The engine math is byte-identical to v2.9.9 — this is a docs + infrastructure release. Only `ENGINE_VERSION` and the inline comments tied to it are bumped to `'2.9.10'` (plus the consequent test version-pin assertions and disclosure-string updates, plus a Round 8 hot-loop perf pass — OPT-1/OPT-2 — that is bit-identical at the manifest level and verified by 728/728 unit + 346/346 crossval).
-- `package.json` + `cpm-engine.js` ENGINE_VERSION bumped 2.9.9 → 2.9.10. Python reference `cpm.py` ENGINE_VERSION bumped 2.9.8 → 2.9.10 to track the JS engine (Round 8 also backported F27 in-progress immutability per AACE 29R-03 §4.3 — the Python file legitimately changes in this release and the bundled SHA-256 pin is rotated accordingly in `python_reference/README.md`). `__init__.py` re-exports `ENGINE_VERSION` from `cpm`, so `from python_reference import ENGINE_VERSION` returns `'2.9.10'`.
+- `package.json` + `cpm-engine.js` ENGINE_VERSION bumped 2.9.9 → 2.9.10. Python reference `cpm.py` ENGINE_VERSION bumped 2.9.8 → 2.9.10 to track the JS engine (Round 8 also backported F27 in-progress actual-start pinning — the Python file legitimately changes in this release and the bundled SHA-256 pin is rotated accordingly in `python_reference/README.md`). `__init__.py` re-exports `ENGINE_VERSION` from `cpm`, so `from python_reference import ENGINE_VERSION` returns `'2.9.10'`.
 - DAUBERT.md title, §1 footer, §3.1 anchor, §6 manifest sample, §8 header, footer disclosure-format-version bumped to v2.9.10. New §10 Roadmap section added (near-term: third-party attest, MPXJ crossval, Coq formal verification; mid-term: AACE peer review, threshold sourcing, branch coverage; long-term: `_MC` thread-safety, cross-engine validation).
 - `attestations/latest.json` is gitignored (locally regenerated on every `npm run verify`); CI-generated witnesses are published as workflow artifacts (90-day retention) + release assets on tag pushes (permanent).
 
@@ -581,9 +3389,9 @@ Round-5 Wave-2 audit follow-through — five deferred features shipped together 
 
 ## v2.9.6 — 2026-05-14
 
-Round-4 audit fix wave — citation cleanup. One inline-comment AACE RP citation in `cpm-engine.js` referenced a fabricated `49R-03` (the false-CP threshold comment escaped the v2.9.5 truncation sweep because the regression test scans rendered narrative, not source comments — fixed to `49R-06`, the AACE RP for critical-path identification, citing §6). Two documentation files (`docs/algorithm.md`, `README.md`, `docs/api.md`) cited AACE RPs without the "rev." annotations used elsewhere in the suite (`docs/citations.md`, `DAUBERT.md`) — normalized to `29R-03 (2003, rev. 2011)` and `49R-06 (2006, rev. 2010)`. TIA documentation now disambiguates MIP 3.6 (Single Base, `mode='isolated'`) vs MIP 3.7 (Multiple Base, `mode='cumulative-additive'`) instead of citing only MIP 3.6 — matches the manifest output the engine has emitted since v2.2.
+Round-4 audit fix wave — citation cleanup. One inline-comment AACE RP citation in `cpm-engine.js` referenced a fabricated `49R-03` (the false-CP threshold comment escaped the v2.9.5 truncation sweep because the regression test scans rendered narrative, not source comments — fixed to `49R-06`, the AACE RP for critical-path identification, citing §6 [2026-08-19: the §6 itself was later removed as fabricated; 49R-06 has no numbered sections]). Two documentation files (`docs/algorithm.md`, `README.md`, `docs/api.md`) cited AACE RPs without the "rev." annotations used elsewhere in the suite (`docs/citations.md`, `DAUBERT.md`) — normalized to `29R-03 (2003, rev. 2011)` and `49R-06 (2006, rev. 2010)`. TIA documentation now disambiguates MIP 3.6 (Single Base, `mode='isolated'`) vs MIP 3.7 (Multiple Base, `mode='cumulative-additive'`) instead of citing only MIP 3.6 — matches the manifest output the engine has emitted since v2.2.
 
-- **`cpm-engine.js:2267` (T1) — false-CP threshold comment now cites `AACE 49R-06 §6`** (was `AACE 49R-03 §6`, a fabricated RP). DAUBERT.md §7 and `daubert_docx.py` already cited 49R-06; the inline comment is now consistent.
+- **`cpm-engine.js:2267` (T1) — false-CP threshold comment now cites `AACE 49R-06 §6`** (was `AACE 49R-03 §6`, a fabricated RP). DAUBERT.md §7 and `daubert_docx.py` already cited 49R-06; the inline comment is now consistent. [2026-08-19: the §6 was itself a fabricated section number; 49R-06 has no numbered sections. The comment now presents the 30% trigger as CPP-derived, informed by the RP.]
 - **`docs/algorithm.md:179-180` (T2) — AACE 29R-03 and 49R-06 reference entries now carry rev. annotations** (`(2003, rev. 2011)` and `(2006, rev. 2010)` respectively), matching `docs/citations.md:45,54` and `DAUBERT.md:140-141`.
 - **`README.md:71` + `README.md:88` (T2) — TIA disambiguation.** Bullet now says "MIP 3.6 Single Base or MIP 3.7 Multiple Base, depending on mode"; RP-table row now says "MIP 3.6 (Single Base) / MIP 3.7 (Multiple Base)". v2.9.5 flat-cited MIP 3.6 in both places even though the engine has supported both modes since v2.2.
 - **`docs/api.md:175` (T2) — `computeTIA` description now names both modes** with their AACE labels and references AACE 52R-06 as the umbrella RP.
@@ -597,8 +3405,8 @@ No code-path changes; documentation and one source comment only. 584 tests + 13 
 Round-3a audit fix wave. v2.9.3 added a Section C constraint-clamping path but never wired the XER reader to populate `task.constraint`, so every constrained XER silently lost its constraint mid-pipeline. v2.9.3's in-progress ES pin used the wrong pin order — `data_date` floored ES before `actual_start` was considered, so any schedule updated after work began clamped ES to data_date instead of the recorded historical start. Both gaps closed here. Two T2 follow-ups also shipped: finish-milestones are no longer silently dropped, and FF/SF anchor retreat now uses target (original) duration rather than progressed remaining.
 
 - **parseXER reads `cstr_type` / `cstr_date2` (T1 #1).** The Section C constraint code added in v2.9.3 was unreachable from real XER files — `parseXER()` populated no constraint field. The XER reader now extracts `cstr_type` and `cstr_date2` (and `cstr_date` as fallback) into a normalized `constraint = {type, date}` on each task. `CS_MSOA` / `CS_MSOB` / `CS_MEOA` / `CS_MEOB` are remapped per the Oracle P6 Database Reference (TASK.cstr_type column) — v2.9.3 had them as mandatory variants, but per the P6 spec they are deadline-style soft constraints (SNET / SNLT / FNET / FNLT respectively). `ALAP` constraint now honored.
-- **Actual-start ES pin order corrected (T1 #2).** v2.9.3 computed `maxES = Math.max(node.es, ddNum)` first and only then applied `actual_start` via `Math.max`. When `data_date > actual_start` (the common case — schedule updated days after work began), ES was pinned to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins immutably (per AACE 29R-03 §4.3 — historical facts are not rescheduled); only when no `actual_start` is recorded does the data_date floor apply. Predecessor-driven ES also cannot push past `actual_start` (the post-pass OoS detector still flags retained-logic anomalies); `driving_predecessor` is still surfaced for forensic traceability even when actual_start dominates.
-- **ALAP forward-pass support added.** Activities with `constraint.type === 'ALAP'` (or `CS_ALAP` from XER) now slide ES/EF to LS/LF in a post-backward-pass sweep (consuming float). Skipped when the activity has `actual_start` or `is_complete` (historical facts are immutable). Emits `WARN constraint-applied` recording the float consumed.
+- **Actual-start ES pin order corrected (T1 #2).** v2.9.3 computed `maxES = Math.max(node.es, ddNum)` first and only then applied `actual_start` via `Math.max`. When `data_date > actual_start` (the common case — schedule updated days after work began), ES was pinned to data_date instead of the recorded actual. v2.9.5 reorders: when `actual_start` is set, it wins over the data_date floor (Oracle P6 / CPM forward-pass semantics: a recorded actual start governs the early start); only when no `actual_start` is recorded does the data_date floor apply. Predecessor-driven ES also cannot push past `actual_start` (the post-pass OoS detector still flags retained-logic anomalies); `driving_predecessor` is still surfaced for forensic traceability even when actual_start dominates. [Citation corrected 2026-08-19: this entry originally attributed the behaviour to "AACE 29R-03 §4.3 immutability", a rule that does not exist in the RP. See the citation-withdrawal section under v2.9.41.]
+- **ALAP forward-pass support added.** Activities with `constraint.type === 'ALAP'` (or `CS_ALAP` from XER) now slide ES/EF to LS/LF in a post-backward-pass sweep (consuming float). Skipped when the activity has `actual_start` or `is_complete` (a recorded actual start governs ES). Emits `WARN constraint-applied` recording the float consumed.
 - **TT_Hammock dropped (T1 #3, Option B — documented gap).** Implementing real hammock semantics (duration computed from `last_predecessor.EF − first_successor.ES` then re-running CPM) was non-trivial and out of scope for v2.9.5. TT_Hammock activities now appear in `dropped_activities` with `reason: 'hammock-unsupported'`. Caller is informed; no silent corruption. DAUBERT.md §8 documents the gap as a known limitation.
 - **Finish milestones retained (T2 #1).** `parseXER` previously dropped any row with `remaining <= 0`. Finish milestones (`TT_FinMile`) and start milestones (`TT_Mile`) legitimately have zero duration; the v2.9.4 rule silently removed the project's terminal/CP endpoint from the network. v2.9.5 retains milestones with `remaining = 0` and only drops zero-remaining rows that are not milestones. The dropped reason is also split: `'completed'` (has `act_end_date`) vs `'zero-remaining'` (no actual finish).
 - **PR_FF / PR_SF use target duration (T2 #2).** Section D Monte Carlo previously computed `predContribution = predTask.EF + lag - task.remaining` for FF/SF anchor retreat. On in-progress activities, `remaining` is the post-progress hour count — using it shrinks the anchor and pulls the successor earlier than physically possible. v2.9.5 uses `task.originalRemaining` (parsed from `target_drtn_hr_cnt`) which is the at-baseline planned duration. Falls back to `remaining` when `originalRemaining` is unavailable (e.g., synthetic inputs lacking target_drtn_hr_cnt).
@@ -640,7 +3448,7 @@ Audit round-2 fix wave. Adds P6 constraint handling — the engine previously ha
 - **In-progress activity ES pin (T1).** Activities with `actual_start` set but `actual_finish` empty now pin ES to `actual_start` in the forward pass. Previously `actual_start` on in-progress work was silently ignored, allowing predecessor logic to override the recorded start.
 - **OoS scanner covers in-progress (T1).** Out-of-sequence detection at `cpm-engine.js:881` previously skipped in-progress activities (`if (!a.is_complete) continue;`). The guard is now `if (!a.actual_start && !a.is_complete) continue;` and the ALERT message distinguishes between "is complete" and "is in progress".
 - **parseXER `dropped_activities` surfaced (T1).** `parseXER()` previously discarded `TT_LOE`, `TT_WBS`, and zero-remaining rows without trace. The return object now includes `dropped_activities: [{task_code, task_type, reason}]` with `reason ∈ {'level-of-effort','wbs-summary','completed-or-zero-remaining'}`. Caller decides whether to surface; previously hidden from any audit.
-- **Disclosed heuristic thresholds (T1 — Daubert risk).** Every magic number in `computeScheduleHealth()` (alert/salvage/CP-pct/orphan/oos/letter-grade) and the default `nearCriticalThreshold = 5` are now named constants with comments citing source (SmartPM whitepaper, AACE 49R-06 §5/§6, DCMA-14 §1/§10, or "CPP house heuristic"). DAUBERT.md adds a new §7 "Disclosed Heuristic Thresholds" enumerating each. The headline "no hidden heuristics" claim is now true.
+- **Disclosed heuristic thresholds (T1 — Daubert risk).** Every magic number in `computeScheduleHealth()` (alert/salvage/CP-pct/orphan/oos/letter-grade) and the default `nearCriticalThreshold = 5` are now named constants with comments citing source (SmartPM whitepaper, AACE 49R-06 §5/§6, DCMA-14 §1/§10, or "CPP house heuristic"). DAUBERT.md adds a new §7 "Disclosed Heuristic Thresholds" enumerating each. The headline "no hidden heuristics" claim is now true. [2026-08-19: the 49R-06 §5/§6 section numbers were fabricated; the RP has no numbered sections. Both thresholds are now presented as CPP-derived, informed by the RP.]
 - **Constraint Handling disclosed.** DAUBERT.md adds §8 "Constraint Handling" documenting which P6 constraint types are honored, the forward / backward semantics, and which alert contexts mark each.
 - **FF / SF relationship coverage (T1).** New Section Q-3 (8 tests) covers forward FF lag-0 + lag>0, forward SF lag-0 + lag>0, and backward FF / SF chains. The v14 SF forward-pass fix (`predTask.ES`, not `EF`) now has regression coverage.
 - **Section R — constraints (10 tests).** Hand-computed expected ES/EF/LS/LF for SNET, SNLT, FNET, FNLT, MS_Start, MS_Finish, XER long-form normalization, in-progress ES pin, in-progress OoS detection, and `dropped_activities` enumeration.

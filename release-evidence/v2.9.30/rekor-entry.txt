@@ -1,0 +1,80 @@
+# Rekor transparency-log entry — cpm-engine v2.9.30 witness
+
+The Sigstore-signed canonical witness (attestations/latest.json, signed via
+GitHub OIDC from the verify.yml workflow on the v2.9.30 tag) is recorded on
+the public Sigstore transparency log (Rekor) at the entries below.
+
+## Rekor log index
+
+  logIndex:                   1616686744
+  logId.keyId:                wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0=
+  kind:                       dsse
+  version:                    0.0.1
+  integratedTime (Unix):      1779591805
+  integratedTime (ISO):       2026-05-23T23:03:25-04:00 (UTC -04:00)
+
+## Inclusion proof (Merkle path to signed checkpoint)
+
+  rootHash:                   0bnEP2h9qBI0l92qm27rlNgl2p2htwwbGfHjghR7Pe8=
+  treeSize:                   1494782566
+  checkpoint envelope:        rekor.sigstore.dev - 1193050959916656506
+                              1494782566
+                              0bnEP2h9qBI0l92qm27rlNgl2p2htwwbGfHjghR7Pe8=
+
+## Sigstore certificate subject
+
+  Subject:                    https://github.com/danafitkowski/cpp-cpm-engine/.github/workflows/verify.yml@refs/tags/v2.9.30
+  Issuer:                     https://token.actions.githubusercontent.com
+  Workflow trigger:           push
+  Workflow SHA:               e87f524b851fe0194ed77e65d62b4d13bc45e88f
+  Workflow name:              verify
+  Source repo:                danafitkowski/cpp-cpm-engine
+  Source ref:                 refs/tags/v2.9.30
+  Source commit SHA:          e87f524b851fe0194ed77e65d62b4d13bc45e88f
+  Runner environment:         github-hosted
+  Run invocation URL:         https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/26350307830/attempts/1
+
+## Signed predicate (in-toto SLSA Provenance v1)
+
+  Subject:                    latest.json
+  Subject SHA-256:            2eb668f46e71d496690d3f48f87d600493b04bbbeb342a43bc44d634b3b51afc
+  Predicate type:             https://slsa.dev/provenance/v1
+  Builder ID:                 https://github.com/danafitkowski/cpp-cpm-engine/.github/workflows/verify.yml@refs/tags/v2.9.30
+  Build type:                 https://actions.github.io/buildtypes/workflow/v1
+  Resolved git commit:        e87f524b851fe0194ed77e65d62b4d13bc45e88f
+
+## How a third party looks up the Rekor entry
+
+Option 1 — web UI:
+
+  Open: https://search.sigstore.dev/?logIndex=1616686744
+
+  The transparency log entry is publicly visible; no authentication
+  required. Anyone can confirm the entry exists, was signed at the
+  documented timestamp, and matches the certificate subject above.
+
+Option 2 — Rekor CLI:
+
+  rekor-cli get --log-index 1616686744
+
+Option 3 — `gh attestation verify` (recommended; pulls the full
+verification chain):
+
+  gh attestation verify release-evidence/v2.9.30/witness-v2.9.30.json \\
+      --owner danafitkowski --format json
+
+  Expected: exit 0 + a JSON dump containing the full attestation bundle.
+  The full captured output is in sigstore-attestation-output.txt
+  alongside this file.
+
+## What this proves (Layer 2 of the verification chain)
+
+  - The Sigstore-signed witness for v2.9.30 is publicly logged.
+  - The signature cannot be repudiated by the proponent without leaving
+    an audit trail (any tampering would fail the inclusion-proof check).
+  - The certificate subject is bound to the verify.yml workflow on the
+    v2.9.30 tag — not to a developer machine, not to a credential under
+    the proponent's control.
+
+The Rekor log is operated by the Sigstore project (https://www.sigstore.dev),
+independent of Critical Path Partners.

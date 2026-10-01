@@ -1,0 +1,2088 @@
+ERMHDR	20.12	2026-05-24	Project	CRITICAL_PATH_PARTNERS	cpp-cpm-engine	DB-Generated	NULL	A	CAD
+%T	CALENDAR
+%F	clndr_id	clndr_name	day_hr_cnt	clndr_type
+%R	1	Standard Mon-Fri	8	CA_Base
+%T	TASK
+%F	task_id	task_code	task_name	task_type	target_drtn_hr_cnt	remain_drtn_hr_cnt	clndr_id	cstr_type	cstr_date	cstr_type2	cstr_date2	act_start_date	act_end_date
+%R	5000	P01_START	Phase 1 start milestone	TT_Mile	0	0	1						
+%R	5002	P01T1S01	Phase 1 track 1 step 1	TT_Task	8	8	1						
+%R	5003	P01T1S02	Phase 1 track 1 step 2	TT_Task	8	8	1						
+%R	5004	P01T1S03	Phase 1 track 1 step 3	TT_Task	8	8	1						
+%R	5005	P01T1S04	Phase 1 track 1 step 4	TT_Task	8	8	1						
+%R	5006	P01T1S05	Phase 1 track 1 step 5	TT_Task	8	8	1						
+%R	5007	P01T1S06	Phase 1 track 1 step 6	TT_Task	8	8	1						
+%R	5008	P01T1S07	Phase 1 track 1 step 7	TT_Task	8	8	1						
+%R	5009	P01T1S08	Phase 1 track 1 step 8	TT_Task	8	8	1						
+%R	5010	P01T1S09	Phase 1 track 1 step 9	TT_Task	8	8	1						
+%R	5011	P01T1S10	Phase 1 track 1 step 10	TT_Task	8	8	1						
+%R	5012	P01T1S11	Phase 1 track 1 step 11	TT_Task	8	8	1						
+%R	5013	P01T1S12	Phase 1 track 1 step 12	TT_Task	8	8	1						
+%R	5014	P01T1S13	Phase 1 track 1 step 13	TT_Task	8	8	1						
+%R	5015	P01T1S14	Phase 1 track 1 step 14	TT_Task	8	8	1						
+%R	5016	P01T1S15	Phase 1 track 1 step 15	TT_Task	8	8	1						
+%R	5017	P01T1S16	Phase 1 track 1 step 16	TT_Task	8	8	1						
+%R	5018	P01T1S17	Phase 1 track 1 step 17	TT_Task	8	8	1						
+%R	5019	P01T1S18	Phase 1 track 1 step 18	TT_Task	8	8	1						
+%R	5020	P01T1S19	Phase 1 track 1 step 19	TT_Task	8	8	1						
+%R	5021	P01T1S20	Phase 1 track 1 step 20	TT_Task	8	8	1						
+%R	5022	P01T2S01	Phase 1 track 2 step 1	TT_Task	8	8	1						
+%R	5023	P01T2S02	Phase 1 track 2 step 2	TT_Task	8	8	1						
+%R	5024	P01T2S03	Phase 1 track 2 step 3	TT_Task	8	8	1						
+%R	5025	P01T2S04	Phase 1 track 2 step 4	TT_Task	8	8	1						
+%R	5026	P01T2S05	Phase 1 track 2 step 5	TT_Task	8	8	1						
+%R	5027	P01T2S06	Phase 1 track 2 step 6	TT_Task	8	8	1						
+%R	5028	P01T2S07	Phase 1 track 2 step 7	TT_Task	8	8	1						
+%R	5029	P01T2S08	Phase 1 track 2 step 8	TT_Task	8	8	1						
+%R	5030	P01T2S09	Phase 1 track 2 step 9	TT_Task	8	8	1						
+%R	5031	P01T2S10	Phase 1 track 2 step 10	TT_Task	8	8	1						
+%R	5032	P01T2S11	Phase 1 track 2 step 11	TT_Task	8	8	1						
+%R	5033	P01T2S12	Phase 1 track 2 step 12	TT_Task	8	8	1						
+%R	5034	P01T2S13	Phase 1 track 2 step 13	TT_Task	8	8	1						
+%R	5035	P01T2S14	Phase 1 track 2 step 14	TT_Task	8	8	1						
+%R	5036	P01T2S15	Phase 1 track 2 step 15	TT_Task	8	8	1						
+%R	5037	P01T2S16	Phase 1 track 2 step 16	TT_Task	8	8	1						
+%R	5038	P01T2S17	Phase 1 track 2 step 17	TT_Task	8	8	1						
+%R	5039	P01T2S18	Phase 1 track 2 step 18	TT_Task	8	8	1						
+%R	5040	P01T2S19	Phase 1 track 2 step 19	TT_Task	8	8	1						
+%R	5041	P01T2S20	Phase 1 track 2 step 20	TT_Task	8	8	1						
+%R	5042	P01T3S01	Phase 1 track 3 step 1	TT_Task	8	8	1						
+%R	5043	P01T3S02	Phase 1 track 3 step 2	TT_Task	8	8	1						
+%R	5044	P01T3S03	Phase 1 track 3 step 3	TT_Task	8	8	1						
+%R	5045	P01T3S04	Phase 1 track 3 step 4	TT_Task	8	8	1						
+%R	5046	P01T3S05	Phase 1 track 3 step 5	TT_Task	8	8	1						
+%R	5047	P01T3S06	Phase 1 track 3 step 6	TT_Task	8	8	1						
+%R	5048	P01T3S07	Phase 1 track 3 step 7	TT_Task	8	8	1						
+%R	5049	P01T3S08	Phase 1 track 3 step 8	TT_Task	8	8	1						
+%R	5050	P01T3S09	Phase 1 track 3 step 9	TT_Task	8	8	1						
+%R	5051	P01T3S10	Phase 1 track 3 step 10	TT_Task	8	8	1						
+%R	5052	P01T3S11	Phase 1 track 3 step 11	TT_Task	8	8	1						
+%R	5053	P01T3S12	Phase 1 track 3 step 12	TT_Task	8	8	1						
+%R	5054	P01T3S13	Phase 1 track 3 step 13	TT_Task	8	8	1						
+%R	5055	P01T3S14	Phase 1 track 3 step 14	TT_Task	8	8	1						
+%R	5056	P01T3S15	Phase 1 track 3 step 15	TT_Task	8	8	1						
+%R	5057	P01T3S16	Phase 1 track 3 step 16	TT_Task	8	8	1						
+%R	5058	P01T3S17	Phase 1 track 3 step 17	TT_Task	8	8	1						
+%R	5059	P01T3S18	Phase 1 track 3 step 18	TT_Task	8	8	1						
+%R	5060	P01T3S19	Phase 1 track 3 step 19	TT_Task	8	8	1						
+%R	5061	P01T3S20	Phase 1 track 3 step 20	TT_Task	8	8	1						
+%R	5062	P01T4S01	Phase 1 track 4 step 1	TT_Task	8	8	1						
+%R	5063	P01T4S02	Phase 1 track 4 step 2	TT_Task	8	8	1						
+%R	5064	P01T4S03	Phase 1 track 4 step 3	TT_Task	8	8	1						
+%R	5065	P01T4S04	Phase 1 track 4 step 4	TT_Task	8	8	1						
+%R	5066	P01T4S05	Phase 1 track 4 step 5	TT_Task	8	8	1						
+%R	5067	P01T4S06	Phase 1 track 4 step 6	TT_Task	8	8	1						
+%R	5068	P01T4S07	Phase 1 track 4 step 7	TT_Task	8	8	1						
+%R	5069	P01T4S08	Phase 1 track 4 step 8	TT_Task	8	8	1						
+%R	5070	P01T4S09	Phase 1 track 4 step 9	TT_Task	8	8	1						
+%R	5071	P01T4S10	Phase 1 track 4 step 10	TT_Task	8	8	1						
+%R	5072	P01T4S11	Phase 1 track 4 step 11	TT_Task	8	8	1						
+%R	5073	P01T4S12	Phase 1 track 4 step 12	TT_Task	8	8	1						
+%R	5074	P01T4S13	Phase 1 track 4 step 13	TT_Task	8	8	1						
+%R	5075	P01T4S14	Phase 1 track 4 step 14	TT_Task	8	8	1						
+%R	5076	P01T4S15	Phase 1 track 4 step 15	TT_Task	8	8	1						
+%R	5077	P01T4S16	Phase 1 track 4 step 16	TT_Task	8	8	1						
+%R	5078	P01T4S17	Phase 1 track 4 step 17	TT_Task	8	8	1						
+%R	5079	P01T4S18	Phase 1 track 4 step 18	TT_Task	8	8	1						
+%R	5080	P01T4S19	Phase 1 track 4 step 19	TT_Task	8	8	1						
+%R	5081	P01T4S20	Phase 1 track 4 step 20	TT_Task	8	8	1						
+%R	5082	P01T5S01	Phase 1 track 5 step 1	TT_Task	8	8	1						
+%R	5083	P01T5S02	Phase 1 track 5 step 2	TT_Task	8	8	1						
+%R	5084	P01T5S03	Phase 1 track 5 step 3	TT_Task	8	8	1						
+%R	5085	P01T5S04	Phase 1 track 5 step 4	TT_Task	8	8	1						
+%R	5086	P01T5S05	Phase 1 track 5 step 5	TT_Task	8	8	1						
+%R	5087	P01T5S06	Phase 1 track 5 step 6	TT_Task	8	8	1						
+%R	5088	P01T5S07	Phase 1 track 5 step 7	TT_Task	8	8	1						
+%R	5089	P01T5S08	Phase 1 track 5 step 8	TT_Task	8	8	1						
+%R	5090	P01T5S09	Phase 1 track 5 step 9	TT_Task	8	8	1						
+%R	5091	P01T5S10	Phase 1 track 5 step 10	TT_Task	8	8	1						
+%R	5092	P01T5S11	Phase 1 track 5 step 11	TT_Task	8	8	1						
+%R	5093	P01T5S12	Phase 1 track 5 step 12	TT_Task	8	8	1						
+%R	5094	P01T5S13	Phase 1 track 5 step 13	TT_Task	8	8	1						
+%R	5095	P01T5S14	Phase 1 track 5 step 14	TT_Task	8	8	1						
+%R	5096	P01T5S15	Phase 1 track 5 step 15	TT_Task	8	8	1						
+%R	5097	P01T5S16	Phase 1 track 5 step 16	TT_Task	8	8	1						
+%R	5098	P01T5S17	Phase 1 track 5 step 17	TT_Task	8	8	1						
+%R	5099	P01T5S18	Phase 1 track 5 step 18	TT_Task	8	8	1						
+%R	5100	P01T5S19	Phase 1 track 5 step 19	TT_Task	8	8	1						
+%R	5101	P01T5S20	Phase 1 track 5 step 20	TT_Task	8	8	1						
+%R	5001	P01_END	Phase 1 end milestone	TT_FinMile	0	0	1						
+%R	5102	P02_START	Phase 2 start milestone	TT_Mile	0	0	1						
+%R	5104	P02T1S01	Phase 2 track 1 step 1	TT_Task	8	8	1						
+%R	5105	P02T1S02	Phase 2 track 1 step 2	TT_Task	8	8	1						
+%R	5106	P02T1S03	Phase 2 track 1 step 3	TT_Task	8	8	1						
+%R	5107	P02T1S04	Phase 2 track 1 step 4	TT_Task	8	8	1						
+%R	5108	P02T1S05	Phase 2 track 1 step 5	TT_Task	8	8	1						
+%R	5109	P02T1S06	Phase 2 track 1 step 6	TT_Task	8	8	1						
+%R	5110	P02T1S07	Phase 2 track 1 step 7	TT_Task	8	8	1						
+%R	5111	P02T1S08	Phase 2 track 1 step 8	TT_Task	8	8	1						
+%R	5112	P02T1S09	Phase 2 track 1 step 9	TT_Task	8	8	1						
+%R	5113	P02T1S10	Phase 2 track 1 step 10	TT_Task	8	8	1						
+%R	5114	P02T1S11	Phase 2 track 1 step 11	TT_Task	8	8	1						
+%R	5115	P02T1S12	Phase 2 track 1 step 12	TT_Task	8	8	1						
+%R	5116	P02T1S13	Phase 2 track 1 step 13	TT_Task	8	8	1						
+%R	5117	P02T1S14	Phase 2 track 1 step 14	TT_Task	8	8	1						
+%R	5118	P02T1S15	Phase 2 track 1 step 15	TT_Task	8	8	1						
+%R	5119	P02T1S16	Phase 2 track 1 step 16	TT_Task	8	8	1						
+%R	5120	P02T1S17	Phase 2 track 1 step 17	TT_Task	8	8	1						
+%R	5121	P02T1S18	Phase 2 track 1 step 18	TT_Task	8	8	1						
+%R	5122	P02T1S19	Phase 2 track 1 step 19	TT_Task	8	8	1						
+%R	5123	P02T1S20	Phase 2 track 1 step 20	TT_Task	8	8	1						
+%R	5124	P02T2S01	Phase 2 track 2 step 1	TT_Task	8	8	1						
+%R	5125	P02T2S02	Phase 2 track 2 step 2	TT_Task	8	8	1						
+%R	5126	P02T2S03	Phase 2 track 2 step 3	TT_Task	8	8	1						
+%R	5127	P02T2S04	Phase 2 track 2 step 4	TT_Task	8	8	1						
+%R	5128	P02T2S05	Phase 2 track 2 step 5	TT_Task	8	8	1						
+%R	5129	P02T2S06	Phase 2 track 2 step 6	TT_Task	8	8	1						
+%R	5130	P02T2S07	Phase 2 track 2 step 7	TT_Task	8	8	1						
+%R	5131	P02T2S08	Phase 2 track 2 step 8	TT_Task	8	8	1						
+%R	5132	P02T2S09	Phase 2 track 2 step 9	TT_Task	8	8	1						
+%R	5133	P02T2S10	Phase 2 track 2 step 10	TT_Task	8	8	1						
+%R	5134	P02T2S11	Phase 2 track 2 step 11	TT_Task	8	8	1						
+%R	5135	P02T2S12	Phase 2 track 2 step 12	TT_Task	8	8	1						
+%R	5136	P02T2S13	Phase 2 track 2 step 13	TT_Task	8	8	1						
+%R	5137	P02T2S14	Phase 2 track 2 step 14	TT_Task	8	8	1						
+%R	5138	P02T2S15	Phase 2 track 2 step 15	TT_Task	8	8	1						
+%R	5139	P02T2S16	Phase 2 track 2 step 16	TT_Task	8	8	1						
+%R	5140	P02T2S17	Phase 2 track 2 step 17	TT_Task	8	8	1						
+%R	5141	P02T2S18	Phase 2 track 2 step 18	TT_Task	8	8	1						
+%R	5142	P02T2S19	Phase 2 track 2 step 19	TT_Task	8	8	1						
+%R	5143	P02T2S20	Phase 2 track 2 step 20	TT_Task	8	8	1						
+%R	5144	P02T3S01	Phase 2 track 3 step 1	TT_Task	8	8	1						
+%R	5145	P02T3S02	Phase 2 track 3 step 2	TT_Task	8	8	1						
+%R	5146	P02T3S03	Phase 2 track 3 step 3	TT_Task	8	8	1						
+%R	5147	P02T3S04	Phase 2 track 3 step 4	TT_Task	8	8	1						
+%R	5148	P02T3S05	Phase 2 track 3 step 5	TT_Task	8	8	1						
+%R	5149	P02T3S06	Phase 2 track 3 step 6	TT_Task	8	8	1						
+%R	5150	P02T3S07	Phase 2 track 3 step 7	TT_Task	8	8	1						
+%R	5151	P02T3S08	Phase 2 track 3 step 8	TT_Task	8	8	1						
+%R	5152	P02T3S09	Phase 2 track 3 step 9	TT_Task	8	8	1						
+%R	5153	P02T3S10	Phase 2 track 3 step 10	TT_Task	8	8	1						
+%R	5154	P02T3S11	Phase 2 track 3 step 11	TT_Task	8	8	1						
+%R	5155	P02T3S12	Phase 2 track 3 step 12	TT_Task	8	8	1						
+%R	5156	P02T3S13	Phase 2 track 3 step 13	TT_Task	8	8	1						
+%R	5157	P02T3S14	Phase 2 track 3 step 14	TT_Task	8	8	1						
+%R	5158	P02T3S15	Phase 2 track 3 step 15	TT_Task	8	8	1						
+%R	5159	P02T3S16	Phase 2 track 3 step 16	TT_Task	8	8	1						
+%R	5160	P02T3S17	Phase 2 track 3 step 17	TT_Task	8	8	1						
+%R	5161	P02T3S18	Phase 2 track 3 step 18	TT_Task	8	8	1						
+%R	5162	P02T3S19	Phase 2 track 3 step 19	TT_Task	8	8	1						
+%R	5163	P02T3S20	Phase 2 track 3 step 20	TT_Task	8	8	1						
+%R	5164	P02T4S01	Phase 2 track 4 step 1	TT_Task	8	8	1						
+%R	5165	P02T4S02	Phase 2 track 4 step 2	TT_Task	8	8	1						
+%R	5166	P02T4S03	Phase 2 track 4 step 3	TT_Task	8	8	1						
+%R	5167	P02T4S04	Phase 2 track 4 step 4	TT_Task	8	8	1						
+%R	5168	P02T4S05	Phase 2 track 4 step 5	TT_Task	8	8	1						
+%R	5169	P02T4S06	Phase 2 track 4 step 6	TT_Task	8	8	1						
+%R	5170	P02T4S07	Phase 2 track 4 step 7	TT_Task	8	8	1						
+%R	5171	P02T4S08	Phase 2 track 4 step 8	TT_Task	8	8	1						
+%R	5172	P02T4S09	Phase 2 track 4 step 9	TT_Task	8	8	1						
+%R	5173	P02T4S10	Phase 2 track 4 step 10	TT_Task	8	8	1						
+%R	5174	P02T4S11	Phase 2 track 4 step 11	TT_Task	8	8	1						
+%R	5175	P02T4S12	Phase 2 track 4 step 12	TT_Task	8	8	1						
+%R	5176	P02T4S13	Phase 2 track 4 step 13	TT_Task	8	8	1						
+%R	5177	P02T4S14	Phase 2 track 4 step 14	TT_Task	8	8	1						
+%R	5178	P02T4S15	Phase 2 track 4 step 15	TT_Task	8	8	1						
+%R	5179	P02T4S16	Phase 2 track 4 step 16	TT_Task	8	8	1						
+%R	5180	P02T4S17	Phase 2 track 4 step 17	TT_Task	8	8	1						
+%R	5181	P02T4S18	Phase 2 track 4 step 18	TT_Task	8	8	1						
+%R	5182	P02T4S19	Phase 2 track 4 step 19	TT_Task	8	8	1						
+%R	5183	P02T4S20	Phase 2 track 4 step 20	TT_Task	8	8	1						
+%R	5184	P02T5S01	Phase 2 track 5 step 1	TT_Task	8	8	1						
+%R	5185	P02T5S02	Phase 2 track 5 step 2	TT_Task	8	8	1						
+%R	5186	P02T5S03	Phase 2 track 5 step 3	TT_Task	8	8	1						
+%R	5187	P02T5S04	Phase 2 track 5 step 4	TT_Task	8	8	1						
+%R	5188	P02T5S05	Phase 2 track 5 step 5	TT_Task	8	8	1						
+%R	5189	P02T5S06	Phase 2 track 5 step 6	TT_Task	8	8	1						
+%R	5190	P02T5S07	Phase 2 track 5 step 7	TT_Task	8	8	1						
+%R	5191	P02T5S08	Phase 2 track 5 step 8	TT_Task	8	8	1						
+%R	5192	P02T5S09	Phase 2 track 5 step 9	TT_Task	8	8	1						
+%R	5193	P02T5S10	Phase 2 track 5 step 10	TT_Task	8	8	1						
+%R	5194	P02T5S11	Phase 2 track 5 step 11	TT_Task	8	8	1						
+%R	5195	P02T5S12	Phase 2 track 5 step 12	TT_Task	8	8	1						
+%R	5196	P02T5S13	Phase 2 track 5 step 13	TT_Task	8	8	1						
+%R	5197	P02T5S14	Phase 2 track 5 step 14	TT_Task	8	8	1						
+%R	5198	P02T5S15	Phase 2 track 5 step 15	TT_Task	8	8	1						
+%R	5199	P02T5S16	Phase 2 track 5 step 16	TT_Task	8	8	1						
+%R	5200	P02T5S17	Phase 2 track 5 step 17	TT_Task	8	8	1						
+%R	5201	P02T5S18	Phase 2 track 5 step 18	TT_Task	8	8	1						
+%R	5202	P02T5S19	Phase 2 track 5 step 19	TT_Task	8	8	1						
+%R	5203	P02T5S20	Phase 2 track 5 step 20	TT_Task	8	8	1						
+%R	5103	P02_END	Phase 2 end milestone	TT_FinMile	0	0	1						
+%R	5204	P03_START	Phase 3 start milestone	TT_Mile	0	0	1						
+%R	5206	P03T1S01	Phase 3 track 1 step 1	TT_Task	8	8	1						
+%R	5207	P03T1S02	Phase 3 track 1 step 2	TT_Task	8	8	1						
+%R	5208	P03T1S03	Phase 3 track 1 step 3	TT_Task	8	8	1						
+%R	5209	P03T1S04	Phase 3 track 1 step 4	TT_Task	8	8	1						
+%R	5210	P03T1S05	Phase 3 track 1 step 5	TT_Task	8	8	1						
+%R	5211	P03T1S06	Phase 3 track 1 step 6	TT_Task	8	8	1						
+%R	5212	P03T1S07	Phase 3 track 1 step 7	TT_Task	8	8	1						
+%R	5213	P03T1S08	Phase 3 track 1 step 8	TT_Task	8	8	1						
+%R	5214	P03T1S09	Phase 3 track 1 step 9	TT_Task	8	8	1						
+%R	5215	P03T1S10	Phase 3 track 1 step 10	TT_Task	8	8	1						
+%R	5216	P03T1S11	Phase 3 track 1 step 11	TT_Task	8	8	1						
+%R	5217	P03T1S12	Phase 3 track 1 step 12	TT_Task	8	8	1						
+%R	5218	P03T1S13	Phase 3 track 1 step 13	TT_Task	8	8	1						
+%R	5219	P03T1S14	Phase 3 track 1 step 14	TT_Task	8	8	1						
+%R	5220	P03T1S15	Phase 3 track 1 step 15	TT_Task	8	8	1						
+%R	5221	P03T1S16	Phase 3 track 1 step 16	TT_Task	8	8	1						
+%R	5222	P03T1S17	Phase 3 track 1 step 17	TT_Task	8	8	1						
+%R	5223	P03T1S18	Phase 3 track 1 step 18	TT_Task	8	8	1						
+%R	5224	P03T1S19	Phase 3 track 1 step 19	TT_Task	8	8	1						
+%R	5225	P03T1S20	Phase 3 track 1 step 20	TT_Task	8	8	1						
+%R	5226	P03T2S01	Phase 3 track 2 step 1	TT_Task	8	8	1						
+%R	5227	P03T2S02	Phase 3 track 2 step 2	TT_Task	8	8	1						
+%R	5228	P03T2S03	Phase 3 track 2 step 3	TT_Task	8	8	1						
+%R	5229	P03T2S04	Phase 3 track 2 step 4	TT_Task	8	8	1						
+%R	5230	P03T2S05	Phase 3 track 2 step 5	TT_Task	8	8	1						
+%R	5231	P03T2S06	Phase 3 track 2 step 6	TT_Task	8	8	1						
+%R	5232	P03T2S07	Phase 3 track 2 step 7	TT_Task	8	8	1						
+%R	5233	P03T2S08	Phase 3 track 2 step 8	TT_Task	8	8	1						
+%R	5234	P03T2S09	Phase 3 track 2 step 9	TT_Task	8	8	1						
+%R	5235	P03T2S10	Phase 3 track 2 step 10	TT_Task	8	8	1						
+%R	5236	P03T2S11	Phase 3 track 2 step 11	TT_Task	8	8	1						
+%R	5237	P03T2S12	Phase 3 track 2 step 12	TT_Task	8	8	1						
+%R	5238	P03T2S13	Phase 3 track 2 step 13	TT_Task	8	8	1						
+%R	5239	P03T2S14	Phase 3 track 2 step 14	TT_Task	8	8	1						
+%R	5240	P03T2S15	Phase 3 track 2 step 15	TT_Task	8	8	1						
+%R	5241	P03T2S16	Phase 3 track 2 step 16	TT_Task	8	8	1						
+%R	5242	P03T2S17	Phase 3 track 2 step 17	TT_Task	8	8	1						
+%R	5243	P03T2S18	Phase 3 track 2 step 18	TT_Task	8	8	1						
+%R	5244	P03T2S19	Phase 3 track 2 step 19	TT_Task	8	8	1						
+%R	5245	P03T2S20	Phase 3 track 2 step 20	TT_Task	8	8	1						
+%R	5246	P03T3S01	Phase 3 track 3 step 1	TT_Task	8	8	1						
+%R	5247	P03T3S02	Phase 3 track 3 step 2	TT_Task	8	8	1						
+%R	5248	P03T3S03	Phase 3 track 3 step 3	TT_Task	8	8	1						
+%R	5249	P03T3S04	Phase 3 track 3 step 4	TT_Task	8	8	1						
+%R	5250	P03T3S05	Phase 3 track 3 step 5	TT_Task	8	8	1						
+%R	5251	P03T3S06	Phase 3 track 3 step 6	TT_Task	8	8	1						
+%R	5252	P03T3S07	Phase 3 track 3 step 7	TT_Task	8	8	1						
+%R	5253	P03T3S08	Phase 3 track 3 step 8	TT_Task	8	8	1						
+%R	5254	P03T3S09	Phase 3 track 3 step 9	TT_Task	8	8	1						
+%R	5255	P03T3S10	Phase 3 track 3 step 10	TT_Task	8	8	1						
+%R	5256	P03T3S11	Phase 3 track 3 step 11	TT_Task	8	8	1						
+%R	5257	P03T3S12	Phase 3 track 3 step 12	TT_Task	8	8	1						
+%R	5258	P03T3S13	Phase 3 track 3 step 13	TT_Task	8	8	1						
+%R	5259	P03T3S14	Phase 3 track 3 step 14	TT_Task	8	8	1						
+%R	5260	P03T3S15	Phase 3 track 3 step 15	TT_Task	8	8	1						
+%R	5261	P03T3S16	Phase 3 track 3 step 16	TT_Task	8	8	1						
+%R	5262	P03T3S17	Phase 3 track 3 step 17	TT_Task	8	8	1						
+%R	5263	P03T3S18	Phase 3 track 3 step 18	TT_Task	8	8	1						
+%R	5264	P03T3S19	Phase 3 track 3 step 19	TT_Task	8	8	1						
+%R	5265	P03T3S20	Phase 3 track 3 step 20	TT_Task	8	8	1						
+%R	5266	P03T4S01	Phase 3 track 4 step 1	TT_Task	8	8	1						
+%R	5267	P03T4S02	Phase 3 track 4 step 2	TT_Task	8	8	1						
+%R	5268	P03T4S03	Phase 3 track 4 step 3	TT_Task	8	8	1						
+%R	5269	P03T4S04	Phase 3 track 4 step 4	TT_Task	8	8	1						
+%R	5270	P03T4S05	Phase 3 track 4 step 5	TT_Task	8	8	1						
+%R	5271	P03T4S06	Phase 3 track 4 step 6	TT_Task	8	8	1						
+%R	5272	P03T4S07	Phase 3 track 4 step 7	TT_Task	8	8	1						
+%R	5273	P03T4S08	Phase 3 track 4 step 8	TT_Task	8	8	1						
+%R	5274	P03T4S09	Phase 3 track 4 step 9	TT_Task	8	8	1						
+%R	5275	P03T4S10	Phase 3 track 4 step 10	TT_Task	8	8	1						
+%R	5276	P03T4S11	Phase 3 track 4 step 11	TT_Task	8	8	1						
+%R	5277	P03T4S12	Phase 3 track 4 step 12	TT_Task	8	8	1						
+%R	5278	P03T4S13	Phase 3 track 4 step 13	TT_Task	8	8	1						
+%R	5279	P03T4S14	Phase 3 track 4 step 14	TT_Task	8	8	1						
+%R	5280	P03T4S15	Phase 3 track 4 step 15	TT_Task	8	8	1						
+%R	5281	P03T4S16	Phase 3 track 4 step 16	TT_Task	8	8	1						
+%R	5282	P03T4S17	Phase 3 track 4 step 17	TT_Task	8	8	1						
+%R	5283	P03T4S18	Phase 3 track 4 step 18	TT_Task	8	8	1						
+%R	5284	P03T4S19	Phase 3 track 4 step 19	TT_Task	8	8	1						
+%R	5285	P03T4S20	Phase 3 track 4 step 20	TT_Task	8	8	1						
+%R	5286	P03T5S01	Phase 3 track 5 step 1	TT_Task	8	8	1						
+%R	5287	P03T5S02	Phase 3 track 5 step 2	TT_Task	8	8	1						
+%R	5288	P03T5S03	Phase 3 track 5 step 3	TT_Task	8	8	1						
+%R	5289	P03T5S04	Phase 3 track 5 step 4	TT_Task	8	8	1						
+%R	5290	P03T5S05	Phase 3 track 5 step 5	TT_Task	8	8	1						
+%R	5291	P03T5S06	Phase 3 track 5 step 6	TT_Task	8	8	1						
+%R	5292	P03T5S07	Phase 3 track 5 step 7	TT_Task	8	8	1						
+%R	5293	P03T5S08	Phase 3 track 5 step 8	TT_Task	8	8	1						
+%R	5294	P03T5S09	Phase 3 track 5 step 9	TT_Task	8	8	1						
+%R	5295	P03T5S10	Phase 3 track 5 step 10	TT_Task	8	8	1						
+%R	5296	P03T5S11	Phase 3 track 5 step 11	TT_Task	8	8	1						
+%R	5297	P03T5S12	Phase 3 track 5 step 12	TT_Task	8	8	1						
+%R	5298	P03T5S13	Phase 3 track 5 step 13	TT_Task	8	8	1						
+%R	5299	P03T5S14	Phase 3 track 5 step 14	TT_Task	8	8	1						
+%R	5300	P03T5S15	Phase 3 track 5 step 15	TT_Task	8	8	1						
+%R	5301	P03T5S16	Phase 3 track 5 step 16	TT_Task	8	8	1						
+%R	5302	P03T5S17	Phase 3 track 5 step 17	TT_Task	8	8	1						
+%R	5303	P03T5S18	Phase 3 track 5 step 18	TT_Task	8	8	1						
+%R	5304	P03T5S19	Phase 3 track 5 step 19	TT_Task	8	8	1						
+%R	5305	P03T5S20	Phase 3 track 5 step 20	TT_Task	8	8	1						
+%R	5205	P03_END	Phase 3 end milestone	TT_FinMile	0	0	1						
+%R	5306	P04_START	Phase 4 start milestone	TT_Mile	0	0	1						
+%R	5308	P04T1S01	Phase 4 track 1 step 1	TT_Task	8	8	1						
+%R	5309	P04T1S02	Phase 4 track 1 step 2	TT_Task	8	8	1						
+%R	5310	P04T1S03	Phase 4 track 1 step 3	TT_Task	8	8	1						
+%R	5311	P04T1S04	Phase 4 track 1 step 4	TT_Task	8	8	1						
+%R	5312	P04T1S05	Phase 4 track 1 step 5	TT_Task	8	8	1						
+%R	5313	P04T1S06	Phase 4 track 1 step 6	TT_Task	8	8	1						
+%R	5314	P04T1S07	Phase 4 track 1 step 7	TT_Task	8	8	1						
+%R	5315	P04T1S08	Phase 4 track 1 step 8	TT_Task	8	8	1						
+%R	5316	P04T1S09	Phase 4 track 1 step 9	TT_Task	8	8	1						
+%R	5317	P04T1S10	Phase 4 track 1 step 10	TT_Task	8	8	1						
+%R	5318	P04T1S11	Phase 4 track 1 step 11	TT_Task	8	8	1						
+%R	5319	P04T1S12	Phase 4 track 1 step 12	TT_Task	8	8	1						
+%R	5320	P04T1S13	Phase 4 track 1 step 13	TT_Task	8	8	1						
+%R	5321	P04T1S14	Phase 4 track 1 step 14	TT_Task	8	8	1						
+%R	5322	P04T1S15	Phase 4 track 1 step 15	TT_Task	8	8	1						
+%R	5323	P04T1S16	Phase 4 track 1 step 16	TT_Task	8	8	1						
+%R	5324	P04T1S17	Phase 4 track 1 step 17	TT_Task	8	8	1						
+%R	5325	P04T1S18	Phase 4 track 1 step 18	TT_Task	8	8	1						
+%R	5326	P04T1S19	Phase 4 track 1 step 19	TT_Task	8	8	1						
+%R	5327	P04T1S20	Phase 4 track 1 step 20	TT_Task	8	8	1						
+%R	5328	P04T2S01	Phase 4 track 2 step 1	TT_Task	8	8	1						
+%R	5329	P04T2S02	Phase 4 track 2 step 2	TT_Task	8	8	1						
+%R	5330	P04T2S03	Phase 4 track 2 step 3	TT_Task	8	8	1						
+%R	5331	P04T2S04	Phase 4 track 2 step 4	TT_Task	8	8	1						
+%R	5332	P04T2S05	Phase 4 track 2 step 5	TT_Task	8	8	1						
+%R	5333	P04T2S06	Phase 4 track 2 step 6	TT_Task	8	8	1						
+%R	5334	P04T2S07	Phase 4 track 2 step 7	TT_Task	8	8	1						
+%R	5335	P04T2S08	Phase 4 track 2 step 8	TT_Task	8	8	1						
+%R	5336	P04T2S09	Phase 4 track 2 step 9	TT_Task	8	8	1						
+%R	5337	P04T2S10	Phase 4 track 2 step 10	TT_Task	8	8	1						
+%R	5338	P04T2S11	Phase 4 track 2 step 11	TT_Task	8	8	1						
+%R	5339	P04T2S12	Phase 4 track 2 step 12	TT_Task	8	8	1						
+%R	5340	P04T2S13	Phase 4 track 2 step 13	TT_Task	8	8	1						
+%R	5341	P04T2S14	Phase 4 track 2 step 14	TT_Task	8	8	1						
+%R	5342	P04T2S15	Phase 4 track 2 step 15	TT_Task	8	8	1						
+%R	5343	P04T2S16	Phase 4 track 2 step 16	TT_Task	8	8	1						
+%R	5344	P04T2S17	Phase 4 track 2 step 17	TT_Task	8	8	1						
+%R	5345	P04T2S18	Phase 4 track 2 step 18	TT_Task	8	8	1						
+%R	5346	P04T2S19	Phase 4 track 2 step 19	TT_Task	8	8	1						
+%R	5347	P04T2S20	Phase 4 track 2 step 20	TT_Task	8	8	1						
+%R	5348	P04T3S01	Phase 4 track 3 step 1	TT_Task	8	8	1						
+%R	5349	P04T3S02	Phase 4 track 3 step 2	TT_Task	8	8	1						
+%R	5350	P04T3S03	Phase 4 track 3 step 3	TT_Task	8	8	1						
+%R	5351	P04T3S04	Phase 4 track 3 step 4	TT_Task	8	8	1						
+%R	5352	P04T3S05	Phase 4 track 3 step 5	TT_Task	8	8	1						
+%R	5353	P04T3S06	Phase 4 track 3 step 6	TT_Task	8	8	1						
+%R	5354	P04T3S07	Phase 4 track 3 step 7	TT_Task	8	8	1						
+%R	5355	P04T3S08	Phase 4 track 3 step 8	TT_Task	8	8	1						
+%R	5356	P04T3S09	Phase 4 track 3 step 9	TT_Task	8	8	1						
+%R	5357	P04T3S10	Phase 4 track 3 step 10	TT_Task	8	8	1						
+%R	5358	P04T3S11	Phase 4 track 3 step 11	TT_Task	8	8	1						
+%R	5359	P04T3S12	Phase 4 track 3 step 12	TT_Task	8	8	1						
+%R	5360	P04T3S13	Phase 4 track 3 step 13	TT_Task	8	8	1						
+%R	5361	P04T3S14	Phase 4 track 3 step 14	TT_Task	8	8	1						
+%R	5362	P04T3S15	Phase 4 track 3 step 15	TT_Task	8	8	1						
+%R	5363	P04T3S16	Phase 4 track 3 step 16	TT_Task	8	8	1						
+%R	5364	P04T3S17	Phase 4 track 3 step 17	TT_Task	8	8	1						
+%R	5365	P04T3S18	Phase 4 track 3 step 18	TT_Task	8	8	1						
+%R	5366	P04T3S19	Phase 4 track 3 step 19	TT_Task	8	8	1						
+%R	5367	P04T3S20	Phase 4 track 3 step 20	TT_Task	8	8	1						
+%R	5368	P04T4S01	Phase 4 track 4 step 1	TT_Task	8	8	1						
+%R	5369	P04T4S02	Phase 4 track 4 step 2	TT_Task	8	8	1						
+%R	5370	P04T4S03	Phase 4 track 4 step 3	TT_Task	8	8	1						
+%R	5371	P04T4S04	Phase 4 track 4 step 4	TT_Task	8	8	1						
+%R	5372	P04T4S05	Phase 4 track 4 step 5	TT_Task	8	8	1						
+%R	5373	P04T4S06	Phase 4 track 4 step 6	TT_Task	8	8	1						
+%R	5374	P04T4S07	Phase 4 track 4 step 7	TT_Task	8	8	1						
+%R	5375	P04T4S08	Phase 4 track 4 step 8	TT_Task	8	8	1						
+%R	5376	P04T4S09	Phase 4 track 4 step 9	TT_Task	8	8	1						
+%R	5377	P04T4S10	Phase 4 track 4 step 10	TT_Task	8	8	1						
+%R	5378	P04T4S11	Phase 4 track 4 step 11	TT_Task	8	8	1						
+%R	5379	P04T4S12	Phase 4 track 4 step 12	TT_Task	8	8	1						
+%R	5380	P04T4S13	Phase 4 track 4 step 13	TT_Task	8	8	1						
+%R	5381	P04T4S14	Phase 4 track 4 step 14	TT_Task	8	8	1						
+%R	5382	P04T4S15	Phase 4 track 4 step 15	TT_Task	8	8	1						
+%R	5383	P04T4S16	Phase 4 track 4 step 16	TT_Task	8	8	1						
+%R	5384	P04T4S17	Phase 4 track 4 step 17	TT_Task	8	8	1						
+%R	5385	P04T4S18	Phase 4 track 4 step 18	TT_Task	8	8	1						
+%R	5386	P04T4S19	Phase 4 track 4 step 19	TT_Task	8	8	1						
+%R	5387	P04T4S20	Phase 4 track 4 step 20	TT_Task	8	8	1						
+%R	5388	P04T5S01	Phase 4 track 5 step 1	TT_Task	8	8	1						
+%R	5389	P04T5S02	Phase 4 track 5 step 2	TT_Task	8	8	1						
+%R	5390	P04T5S03	Phase 4 track 5 step 3	TT_Task	8	8	1						
+%R	5391	P04T5S04	Phase 4 track 5 step 4	TT_Task	8	8	1						
+%R	5392	P04T5S05	Phase 4 track 5 step 5	TT_Task	8	8	1						
+%R	5393	P04T5S06	Phase 4 track 5 step 6	TT_Task	8	8	1						
+%R	5394	P04T5S07	Phase 4 track 5 step 7	TT_Task	8	8	1						
+%R	5395	P04T5S08	Phase 4 track 5 step 8	TT_Task	8	8	1						
+%R	5396	P04T5S09	Phase 4 track 5 step 9	TT_Task	8	8	1						
+%R	5397	P04T5S10	Phase 4 track 5 step 10	TT_Task	8	8	1						
+%R	5398	P04T5S11	Phase 4 track 5 step 11	TT_Task	8	8	1						
+%R	5399	P04T5S12	Phase 4 track 5 step 12	TT_Task	8	8	1						
+%R	5400	P04T5S13	Phase 4 track 5 step 13	TT_Task	8	8	1						
+%R	5401	P04T5S14	Phase 4 track 5 step 14	TT_Task	8	8	1						
+%R	5402	P04T5S15	Phase 4 track 5 step 15	TT_Task	8	8	1						
+%R	5403	P04T5S16	Phase 4 track 5 step 16	TT_Task	8	8	1						
+%R	5404	P04T5S17	Phase 4 track 5 step 17	TT_Task	8	8	1						
+%R	5405	P04T5S18	Phase 4 track 5 step 18	TT_Task	8	8	1						
+%R	5406	P04T5S19	Phase 4 track 5 step 19	TT_Task	8	8	1						
+%R	5407	P04T5S20	Phase 4 track 5 step 20	TT_Task	8	8	1						
+%R	5307	P04_END	Phase 4 end milestone	TT_FinMile	0	0	1						
+%R	5408	P05_START	Phase 5 start milestone	TT_Mile	0	0	1						
+%R	5410	P05T1S01	Phase 5 track 1 step 1	TT_Task	8	8	1						
+%R	5411	P05T1S02	Phase 5 track 1 step 2	TT_Task	8	8	1						
+%R	5412	P05T1S03	Phase 5 track 1 step 3	TT_Task	8	8	1						
+%R	5413	P05T1S04	Phase 5 track 1 step 4	TT_Task	8	8	1						
+%R	5414	P05T1S05	Phase 5 track 1 step 5	TT_Task	8	8	1						
+%R	5415	P05T1S06	Phase 5 track 1 step 6	TT_Task	8	8	1						
+%R	5416	P05T1S07	Phase 5 track 1 step 7	TT_Task	8	8	1						
+%R	5417	P05T1S08	Phase 5 track 1 step 8	TT_Task	8	8	1						
+%R	5418	P05T1S09	Phase 5 track 1 step 9	TT_Task	8	8	1						
+%R	5419	P05T1S10	Phase 5 track 1 step 10	TT_Task	8	8	1						
+%R	5420	P05T1S11	Phase 5 track 1 step 11	TT_Task	8	8	1						
+%R	5421	P05T1S12	Phase 5 track 1 step 12	TT_Task	8	8	1						
+%R	5422	P05T1S13	Phase 5 track 1 step 13	TT_Task	8	8	1						
+%R	5423	P05T1S14	Phase 5 track 1 step 14	TT_Task	8	8	1						
+%R	5424	P05T1S15	Phase 5 track 1 step 15	TT_Task	8	8	1						
+%R	5425	P05T1S16	Phase 5 track 1 step 16	TT_Task	8	8	1						
+%R	5426	P05T1S17	Phase 5 track 1 step 17	TT_Task	8	8	1						
+%R	5427	P05T1S18	Phase 5 track 1 step 18	TT_Task	8	8	1						
+%R	5428	P05T1S19	Phase 5 track 1 step 19	TT_Task	8	8	1						
+%R	5429	P05T1S20	Phase 5 track 1 step 20	TT_Task	8	8	1						
+%R	5430	P05T2S01	Phase 5 track 2 step 1	TT_Task	8	8	1						
+%R	5431	P05T2S02	Phase 5 track 2 step 2	TT_Task	8	8	1						
+%R	5432	P05T2S03	Phase 5 track 2 step 3	TT_Task	8	8	1						
+%R	5433	P05T2S04	Phase 5 track 2 step 4	TT_Task	8	8	1						
+%R	5434	P05T2S05	Phase 5 track 2 step 5	TT_Task	8	8	1						
+%R	5435	P05T2S06	Phase 5 track 2 step 6	TT_Task	8	8	1						
+%R	5436	P05T2S07	Phase 5 track 2 step 7	TT_Task	8	8	1						
+%R	5437	P05T2S08	Phase 5 track 2 step 8	TT_Task	8	8	1						
+%R	5438	P05T2S09	Phase 5 track 2 step 9	TT_Task	8	8	1						
+%R	5439	P05T2S10	Phase 5 track 2 step 10	TT_Task	8	8	1						
+%R	5440	P05T2S11	Phase 5 track 2 step 11	TT_Task	8	8	1						
+%R	5441	P05T2S12	Phase 5 track 2 step 12	TT_Task	8	8	1						
+%R	5442	P05T2S13	Phase 5 track 2 step 13	TT_Task	8	8	1						
+%R	5443	P05T2S14	Phase 5 track 2 step 14	TT_Task	8	8	1						
+%R	5444	P05T2S15	Phase 5 track 2 step 15	TT_Task	8	8	1						
+%R	5445	P05T2S16	Phase 5 track 2 step 16	TT_Task	8	8	1						
+%R	5446	P05T2S17	Phase 5 track 2 step 17	TT_Task	8	8	1						
+%R	5447	P05T2S18	Phase 5 track 2 step 18	TT_Task	8	8	1						
+%R	5448	P05T2S19	Phase 5 track 2 step 19	TT_Task	8	8	1						
+%R	5449	P05T2S20	Phase 5 track 2 step 20	TT_Task	8	8	1						
+%R	5450	P05T3S01	Phase 5 track 3 step 1	TT_Task	8	8	1						
+%R	5451	P05T3S02	Phase 5 track 3 step 2	TT_Task	8	8	1						
+%R	5452	P05T3S03	Phase 5 track 3 step 3	TT_Task	8	8	1						
+%R	5453	P05T3S04	Phase 5 track 3 step 4	TT_Task	8	8	1						
+%R	5454	P05T3S05	Phase 5 track 3 step 5	TT_Task	8	8	1						
+%R	5455	P05T3S06	Phase 5 track 3 step 6	TT_Task	8	8	1						
+%R	5456	P05T3S07	Phase 5 track 3 step 7	TT_Task	8	8	1						
+%R	5457	P05T3S08	Phase 5 track 3 step 8	TT_Task	8	8	1						
+%R	5458	P05T3S09	Phase 5 track 3 step 9	TT_Task	8	8	1						
+%R	5459	P05T3S10	Phase 5 track 3 step 10	TT_Task	8	8	1						
+%R	5460	P05T3S11	Phase 5 track 3 step 11	TT_Task	8	8	1						
+%R	5461	P05T3S12	Phase 5 track 3 step 12	TT_Task	8	8	1						
+%R	5462	P05T3S13	Phase 5 track 3 step 13	TT_Task	8	8	1						
+%R	5463	P05T3S14	Phase 5 track 3 step 14	TT_Task	8	8	1						
+%R	5464	P05T3S15	Phase 5 track 3 step 15	TT_Task	8	8	1						
+%R	5465	P05T3S16	Phase 5 track 3 step 16	TT_Task	8	8	1						
+%R	5466	P05T3S17	Phase 5 track 3 step 17	TT_Task	8	8	1						
+%R	5467	P05T3S18	Phase 5 track 3 step 18	TT_Task	8	8	1						
+%R	5468	P05T3S19	Phase 5 track 3 step 19	TT_Task	8	8	1						
+%R	5469	P05T3S20	Phase 5 track 3 step 20	TT_Task	8	8	1						
+%R	5470	P05T4S01	Phase 5 track 4 step 1	TT_Task	8	8	1						
+%R	5471	P05T4S02	Phase 5 track 4 step 2	TT_Task	8	8	1						
+%R	5472	P05T4S03	Phase 5 track 4 step 3	TT_Task	8	8	1						
+%R	5473	P05T4S04	Phase 5 track 4 step 4	TT_Task	8	8	1						
+%R	5474	P05T4S05	Phase 5 track 4 step 5	TT_Task	8	8	1						
+%R	5475	P05T4S06	Phase 5 track 4 step 6	TT_Task	8	8	1						
+%R	5476	P05T4S07	Phase 5 track 4 step 7	TT_Task	8	8	1						
+%R	5477	P05T4S08	Phase 5 track 4 step 8	TT_Task	8	8	1						
+%R	5478	P05T4S09	Phase 5 track 4 step 9	TT_Task	8	8	1						
+%R	5479	P05T4S10	Phase 5 track 4 step 10	TT_Task	8	8	1						
+%R	5480	P05T4S11	Phase 5 track 4 step 11	TT_Task	8	8	1						
+%R	5481	P05T4S12	Phase 5 track 4 step 12	TT_Task	8	8	1						
+%R	5482	P05T4S13	Phase 5 track 4 step 13	TT_Task	8	8	1						
+%R	5483	P05T4S14	Phase 5 track 4 step 14	TT_Task	8	8	1						
+%R	5484	P05T4S15	Phase 5 track 4 step 15	TT_Task	8	8	1						
+%R	5485	P05T4S16	Phase 5 track 4 step 16	TT_Task	8	8	1						
+%R	5486	P05T4S17	Phase 5 track 4 step 17	TT_Task	8	8	1						
+%R	5487	P05T4S18	Phase 5 track 4 step 18	TT_Task	8	8	1						
+%R	5488	P05T4S19	Phase 5 track 4 step 19	TT_Task	8	8	1						
+%R	5489	P05T4S20	Phase 5 track 4 step 20	TT_Task	8	8	1						
+%R	5490	P05T5S01	Phase 5 track 5 step 1	TT_Task	8	8	1						
+%R	5491	P05T5S02	Phase 5 track 5 step 2	TT_Task	8	8	1						
+%R	5492	P05T5S03	Phase 5 track 5 step 3	TT_Task	8	8	1						
+%R	5493	P05T5S04	Phase 5 track 5 step 4	TT_Task	8	8	1						
+%R	5494	P05T5S05	Phase 5 track 5 step 5	TT_Task	8	8	1						
+%R	5495	P05T5S06	Phase 5 track 5 step 6	TT_Task	8	8	1						
+%R	5496	P05T5S07	Phase 5 track 5 step 7	TT_Task	8	8	1						
+%R	5497	P05T5S08	Phase 5 track 5 step 8	TT_Task	8	8	1						
+%R	5498	P05T5S09	Phase 5 track 5 step 9	TT_Task	8	8	1						
+%R	5499	P05T5S10	Phase 5 track 5 step 10	TT_Task	8	8	1						
+%R	5500	P05T5S11	Phase 5 track 5 step 11	TT_Task	8	8	1						
+%R	5501	P05T5S12	Phase 5 track 5 step 12	TT_Task	8	8	1						
+%R	5502	P05T5S13	Phase 5 track 5 step 13	TT_Task	8	8	1						
+%R	5503	P05T5S14	Phase 5 track 5 step 14	TT_Task	8	8	1						
+%R	5504	P05T5S15	Phase 5 track 5 step 15	TT_Task	8	8	1						
+%R	5505	P05T5S16	Phase 5 track 5 step 16	TT_Task	8	8	1						
+%R	5506	P05T5S17	Phase 5 track 5 step 17	TT_Task	8	8	1						
+%R	5507	P05T5S18	Phase 5 track 5 step 18	TT_Task	8	8	1						
+%R	5508	P05T5S19	Phase 5 track 5 step 19	TT_Task	8	8	1						
+%R	5509	P05T5S20	Phase 5 track 5 step 20	TT_Task	8	8	1						
+%R	5409	P05_END	Phase 5 end milestone	TT_FinMile	0	0	1						
+%R	5510	P06_START	Phase 6 start milestone	TT_Mile	0	0	1						
+%R	5512	P06T1S01	Phase 6 track 1 step 1	TT_Task	8	8	1						
+%R	5513	P06T1S02	Phase 6 track 1 step 2	TT_Task	8	8	1						
+%R	5514	P06T1S03	Phase 6 track 1 step 3	TT_Task	8	8	1						
+%R	5515	P06T1S04	Phase 6 track 1 step 4	TT_Task	8	8	1						
+%R	5516	P06T1S05	Phase 6 track 1 step 5	TT_Task	8	8	1						
+%R	5517	P06T1S06	Phase 6 track 1 step 6	TT_Task	8	8	1						
+%R	5518	P06T1S07	Phase 6 track 1 step 7	TT_Task	8	8	1						
+%R	5519	P06T1S08	Phase 6 track 1 step 8	TT_Task	8	8	1						
+%R	5520	P06T1S09	Phase 6 track 1 step 9	TT_Task	8	8	1						
+%R	5521	P06T1S10	Phase 6 track 1 step 10	TT_Task	8	8	1						
+%R	5522	P06T1S11	Phase 6 track 1 step 11	TT_Task	8	8	1						
+%R	5523	P06T1S12	Phase 6 track 1 step 12	TT_Task	8	8	1						
+%R	5524	P06T1S13	Phase 6 track 1 step 13	TT_Task	8	8	1						
+%R	5525	P06T1S14	Phase 6 track 1 step 14	TT_Task	8	8	1						
+%R	5526	P06T1S15	Phase 6 track 1 step 15	TT_Task	8	8	1						
+%R	5527	P06T1S16	Phase 6 track 1 step 16	TT_Task	8	8	1						
+%R	5528	P06T1S17	Phase 6 track 1 step 17	TT_Task	8	8	1						
+%R	5529	P06T1S18	Phase 6 track 1 step 18	TT_Task	8	8	1						
+%R	5530	P06T1S19	Phase 6 track 1 step 19	TT_Task	8	8	1						
+%R	5531	P06T1S20	Phase 6 track 1 step 20	TT_Task	8	8	1						
+%R	5532	P06T2S01	Phase 6 track 2 step 1	TT_Task	8	8	1						
+%R	5533	P06T2S02	Phase 6 track 2 step 2	TT_Task	8	8	1						
+%R	5534	P06T2S03	Phase 6 track 2 step 3	TT_Task	8	8	1						
+%R	5535	P06T2S04	Phase 6 track 2 step 4	TT_Task	8	8	1						
+%R	5536	P06T2S05	Phase 6 track 2 step 5	TT_Task	8	8	1						
+%R	5537	P06T2S06	Phase 6 track 2 step 6	TT_Task	8	8	1						
+%R	5538	P06T2S07	Phase 6 track 2 step 7	TT_Task	8	8	1						
+%R	5539	P06T2S08	Phase 6 track 2 step 8	TT_Task	8	8	1						
+%R	5540	P06T2S09	Phase 6 track 2 step 9	TT_Task	8	8	1						
+%R	5541	P06T2S10	Phase 6 track 2 step 10	TT_Task	8	8	1						
+%R	5542	P06T2S11	Phase 6 track 2 step 11	TT_Task	8	8	1						
+%R	5543	P06T2S12	Phase 6 track 2 step 12	TT_Task	8	8	1						
+%R	5544	P06T2S13	Phase 6 track 2 step 13	TT_Task	8	8	1						
+%R	5545	P06T2S14	Phase 6 track 2 step 14	TT_Task	8	8	1						
+%R	5546	P06T2S15	Phase 6 track 2 step 15	TT_Task	8	8	1						
+%R	5547	P06T2S16	Phase 6 track 2 step 16	TT_Task	8	8	1						
+%R	5548	P06T2S17	Phase 6 track 2 step 17	TT_Task	8	8	1						
+%R	5549	P06T2S18	Phase 6 track 2 step 18	TT_Task	8	8	1						
+%R	5550	P06T2S19	Phase 6 track 2 step 19	TT_Task	8	8	1						
+%R	5551	P06T2S20	Phase 6 track 2 step 20	TT_Task	8	8	1						
+%R	5552	P06T3S01	Phase 6 track 3 step 1	TT_Task	8	8	1						
+%R	5553	P06T3S02	Phase 6 track 3 step 2	TT_Task	8	8	1						
+%R	5554	P06T3S03	Phase 6 track 3 step 3	TT_Task	8	8	1						
+%R	5555	P06T3S04	Phase 6 track 3 step 4	TT_Task	8	8	1						
+%R	5556	P06T3S05	Phase 6 track 3 step 5	TT_Task	8	8	1						
+%R	5557	P06T3S06	Phase 6 track 3 step 6	TT_Task	8	8	1						
+%R	5558	P06T3S07	Phase 6 track 3 step 7	TT_Task	8	8	1						
+%R	5559	P06T3S08	Phase 6 track 3 step 8	TT_Task	8	8	1						
+%R	5560	P06T3S09	Phase 6 track 3 step 9	TT_Task	8	8	1						
+%R	5561	P06T3S10	Phase 6 track 3 step 10	TT_Task	8	8	1						
+%R	5562	P06T3S11	Phase 6 track 3 step 11	TT_Task	8	8	1						
+%R	5563	P06T3S12	Phase 6 track 3 step 12	TT_Task	8	8	1						
+%R	5564	P06T3S13	Phase 6 track 3 step 13	TT_Task	8	8	1						
+%R	5565	P06T3S14	Phase 6 track 3 step 14	TT_Task	8	8	1						
+%R	5566	P06T3S15	Phase 6 track 3 step 15	TT_Task	8	8	1						
+%R	5567	P06T3S16	Phase 6 track 3 step 16	TT_Task	8	8	1						
+%R	5568	P06T3S17	Phase 6 track 3 step 17	TT_Task	8	8	1						
+%R	5569	P06T3S18	Phase 6 track 3 step 18	TT_Task	8	8	1						
+%R	5570	P06T3S19	Phase 6 track 3 step 19	TT_Task	8	8	1						
+%R	5571	P06T3S20	Phase 6 track 3 step 20	TT_Task	8	8	1						
+%R	5572	P06T4S01	Phase 6 track 4 step 1	TT_Task	8	8	1						
+%R	5573	P06T4S02	Phase 6 track 4 step 2	TT_Task	8	8	1						
+%R	5574	P06T4S03	Phase 6 track 4 step 3	TT_Task	8	8	1						
+%R	5575	P06T4S04	Phase 6 track 4 step 4	TT_Task	8	8	1						
+%R	5576	P06T4S05	Phase 6 track 4 step 5	TT_Task	8	8	1						
+%R	5577	P06T4S06	Phase 6 track 4 step 6	TT_Task	8	8	1						
+%R	5578	P06T4S07	Phase 6 track 4 step 7	TT_Task	8	8	1						
+%R	5579	P06T4S08	Phase 6 track 4 step 8	TT_Task	8	8	1						
+%R	5580	P06T4S09	Phase 6 track 4 step 9	TT_Task	8	8	1						
+%R	5581	P06T4S10	Phase 6 track 4 step 10	TT_Task	8	8	1						
+%R	5582	P06T4S11	Phase 6 track 4 step 11	TT_Task	8	8	1						
+%R	5583	P06T4S12	Phase 6 track 4 step 12	TT_Task	8	8	1						
+%R	5584	P06T4S13	Phase 6 track 4 step 13	TT_Task	8	8	1						
+%R	5585	P06T4S14	Phase 6 track 4 step 14	TT_Task	8	8	1						
+%R	5586	P06T4S15	Phase 6 track 4 step 15	TT_Task	8	8	1						
+%R	5587	P06T4S16	Phase 6 track 4 step 16	TT_Task	8	8	1						
+%R	5588	P06T4S17	Phase 6 track 4 step 17	TT_Task	8	8	1						
+%R	5589	P06T4S18	Phase 6 track 4 step 18	TT_Task	8	8	1						
+%R	5590	P06T4S19	Phase 6 track 4 step 19	TT_Task	8	8	1						
+%R	5591	P06T4S20	Phase 6 track 4 step 20	TT_Task	8	8	1						
+%R	5592	P06T5S01	Phase 6 track 5 step 1	TT_Task	8	8	1						
+%R	5593	P06T5S02	Phase 6 track 5 step 2	TT_Task	8	8	1						
+%R	5594	P06T5S03	Phase 6 track 5 step 3	TT_Task	8	8	1						
+%R	5595	P06T5S04	Phase 6 track 5 step 4	TT_Task	8	8	1						
+%R	5596	P06T5S05	Phase 6 track 5 step 5	TT_Task	8	8	1						
+%R	5597	P06T5S06	Phase 6 track 5 step 6	TT_Task	8	8	1						
+%R	5598	P06T5S07	Phase 6 track 5 step 7	TT_Task	8	8	1						
+%R	5599	P06T5S08	Phase 6 track 5 step 8	TT_Task	8	8	1						
+%R	5600	P06T5S09	Phase 6 track 5 step 9	TT_Task	8	8	1						
+%R	5601	P06T5S10	Phase 6 track 5 step 10	TT_Task	8	8	1						
+%R	5602	P06T5S11	Phase 6 track 5 step 11	TT_Task	8	8	1						
+%R	5603	P06T5S12	Phase 6 track 5 step 12	TT_Task	8	8	1						
+%R	5604	P06T5S13	Phase 6 track 5 step 13	TT_Task	8	8	1						
+%R	5605	P06T5S14	Phase 6 track 5 step 14	TT_Task	8	8	1						
+%R	5606	P06T5S15	Phase 6 track 5 step 15	TT_Task	8	8	1						
+%R	5607	P06T5S16	Phase 6 track 5 step 16	TT_Task	8	8	1						
+%R	5608	P06T5S17	Phase 6 track 5 step 17	TT_Task	8	8	1						
+%R	5609	P06T5S18	Phase 6 track 5 step 18	TT_Task	8	8	1						
+%R	5610	P06T5S19	Phase 6 track 5 step 19	TT_Task	8	8	1						
+%R	5611	P06T5S20	Phase 6 track 5 step 20	TT_Task	8	8	1						
+%R	5511	P06_END	Phase 6 end milestone	TT_FinMile	0	0	1						
+%R	5612	P07_START	Phase 7 start milestone	TT_Mile	0	0	1						
+%R	5614	P07T1S01	Phase 7 track 1 step 1	TT_Task	8	8	1						
+%R	5615	P07T1S02	Phase 7 track 1 step 2	TT_Task	8	8	1						
+%R	5616	P07T1S03	Phase 7 track 1 step 3	TT_Task	8	8	1						
+%R	5617	P07T1S04	Phase 7 track 1 step 4	TT_Task	8	8	1						
+%R	5618	P07T1S05	Phase 7 track 1 step 5	TT_Task	8	8	1						
+%R	5619	P07T1S06	Phase 7 track 1 step 6	TT_Task	8	8	1						
+%R	5620	P07T1S07	Phase 7 track 1 step 7	TT_Task	8	8	1						
+%R	5621	P07T1S08	Phase 7 track 1 step 8	TT_Task	8	8	1						
+%R	5622	P07T1S09	Phase 7 track 1 step 9	TT_Task	8	8	1						
+%R	5623	P07T1S10	Phase 7 track 1 step 10	TT_Task	8	8	1						
+%R	5624	P07T1S11	Phase 7 track 1 step 11	TT_Task	8	8	1						
+%R	5625	P07T1S12	Phase 7 track 1 step 12	TT_Task	8	8	1						
+%R	5626	P07T1S13	Phase 7 track 1 step 13	TT_Task	8	8	1						
+%R	5627	P07T1S14	Phase 7 track 1 step 14	TT_Task	8	8	1						
+%R	5628	P07T1S15	Phase 7 track 1 step 15	TT_Task	8	8	1						
+%R	5629	P07T1S16	Phase 7 track 1 step 16	TT_Task	8	8	1						
+%R	5630	P07T1S17	Phase 7 track 1 step 17	TT_Task	8	8	1						
+%R	5631	P07T1S18	Phase 7 track 1 step 18	TT_Task	8	8	1						
+%R	5632	P07T1S19	Phase 7 track 1 step 19	TT_Task	8	8	1						
+%R	5633	P07T1S20	Phase 7 track 1 step 20	TT_Task	8	8	1						
+%R	5634	P07T2S01	Phase 7 track 2 step 1	TT_Task	8	8	1						
+%R	5635	P07T2S02	Phase 7 track 2 step 2	TT_Task	8	8	1						
+%R	5636	P07T2S03	Phase 7 track 2 step 3	TT_Task	8	8	1						
+%R	5637	P07T2S04	Phase 7 track 2 step 4	TT_Task	8	8	1						
+%R	5638	P07T2S05	Phase 7 track 2 step 5	TT_Task	8	8	1						
+%R	5639	P07T2S06	Phase 7 track 2 step 6	TT_Task	8	8	1						
+%R	5640	P07T2S07	Phase 7 track 2 step 7	TT_Task	8	8	1						
+%R	5641	P07T2S08	Phase 7 track 2 step 8	TT_Task	8	8	1						
+%R	5642	P07T2S09	Phase 7 track 2 step 9	TT_Task	8	8	1						
+%R	5643	P07T2S10	Phase 7 track 2 step 10	TT_Task	8	8	1						
+%R	5644	P07T2S11	Phase 7 track 2 step 11	TT_Task	8	8	1						
+%R	5645	P07T2S12	Phase 7 track 2 step 12	TT_Task	8	8	1						
+%R	5646	P07T2S13	Phase 7 track 2 step 13	TT_Task	8	8	1						
+%R	5647	P07T2S14	Phase 7 track 2 step 14	TT_Task	8	8	1						
+%R	5648	P07T2S15	Phase 7 track 2 step 15	TT_Task	8	8	1						
+%R	5649	P07T2S16	Phase 7 track 2 step 16	TT_Task	8	8	1						
+%R	5650	P07T2S17	Phase 7 track 2 step 17	TT_Task	8	8	1						
+%R	5651	P07T2S18	Phase 7 track 2 step 18	TT_Task	8	8	1						
+%R	5652	P07T2S19	Phase 7 track 2 step 19	TT_Task	8	8	1						
+%R	5653	P07T2S20	Phase 7 track 2 step 20	TT_Task	8	8	1						
+%R	5654	P07T3S01	Phase 7 track 3 step 1	TT_Task	8	8	1						
+%R	5655	P07T3S02	Phase 7 track 3 step 2	TT_Task	8	8	1						
+%R	5656	P07T3S03	Phase 7 track 3 step 3	TT_Task	8	8	1						
+%R	5657	P07T3S04	Phase 7 track 3 step 4	TT_Task	8	8	1						
+%R	5658	P07T3S05	Phase 7 track 3 step 5	TT_Task	8	8	1						
+%R	5659	P07T3S06	Phase 7 track 3 step 6	TT_Task	8	8	1						
+%R	5660	P07T3S07	Phase 7 track 3 step 7	TT_Task	8	8	1						
+%R	5661	P07T3S08	Phase 7 track 3 step 8	TT_Task	8	8	1						
+%R	5662	P07T3S09	Phase 7 track 3 step 9	TT_Task	8	8	1						
+%R	5663	P07T3S10	Phase 7 track 3 step 10	TT_Task	8	8	1						
+%R	5664	P07T3S11	Phase 7 track 3 step 11	TT_Task	8	8	1						
+%R	5665	P07T3S12	Phase 7 track 3 step 12	TT_Task	8	8	1						
+%R	5666	P07T3S13	Phase 7 track 3 step 13	TT_Task	8	8	1						
+%R	5667	P07T3S14	Phase 7 track 3 step 14	TT_Task	8	8	1						
+%R	5668	P07T3S15	Phase 7 track 3 step 15	TT_Task	8	8	1						
+%R	5669	P07T3S16	Phase 7 track 3 step 16	TT_Task	8	8	1						
+%R	5670	P07T3S17	Phase 7 track 3 step 17	TT_Task	8	8	1						
+%R	5671	P07T3S18	Phase 7 track 3 step 18	TT_Task	8	8	1						
+%R	5672	P07T3S19	Phase 7 track 3 step 19	TT_Task	8	8	1						
+%R	5673	P07T3S20	Phase 7 track 3 step 20	TT_Task	8	8	1						
+%R	5674	P07T4S01	Phase 7 track 4 step 1	TT_Task	8	8	1						
+%R	5675	P07T4S02	Phase 7 track 4 step 2	TT_Task	8	8	1						
+%R	5676	P07T4S03	Phase 7 track 4 step 3	TT_Task	8	8	1						
+%R	5677	P07T4S04	Phase 7 track 4 step 4	TT_Task	8	8	1						
+%R	5678	P07T4S05	Phase 7 track 4 step 5	TT_Task	8	8	1						
+%R	5679	P07T4S06	Phase 7 track 4 step 6	TT_Task	8	8	1						
+%R	5680	P07T4S07	Phase 7 track 4 step 7	TT_Task	8	8	1						
+%R	5681	P07T4S08	Phase 7 track 4 step 8	TT_Task	8	8	1						
+%R	5682	P07T4S09	Phase 7 track 4 step 9	TT_Task	8	8	1						
+%R	5683	P07T4S10	Phase 7 track 4 step 10	TT_Task	8	8	1						
+%R	5684	P07T4S11	Phase 7 track 4 step 11	TT_Task	8	8	1						
+%R	5685	P07T4S12	Phase 7 track 4 step 12	TT_Task	8	8	1						
+%R	5686	P07T4S13	Phase 7 track 4 step 13	TT_Task	8	8	1						
+%R	5687	P07T4S14	Phase 7 track 4 step 14	TT_Task	8	8	1						
+%R	5688	P07T4S15	Phase 7 track 4 step 15	TT_Task	8	8	1						
+%R	5689	P07T4S16	Phase 7 track 4 step 16	TT_Task	8	8	1						
+%R	5690	P07T4S17	Phase 7 track 4 step 17	TT_Task	8	8	1						
+%R	5691	P07T4S18	Phase 7 track 4 step 18	TT_Task	8	8	1						
+%R	5692	P07T4S19	Phase 7 track 4 step 19	TT_Task	8	8	1						
+%R	5693	P07T4S20	Phase 7 track 4 step 20	TT_Task	8	8	1						
+%R	5694	P07T5S01	Phase 7 track 5 step 1	TT_Task	8	8	1						
+%R	5695	P07T5S02	Phase 7 track 5 step 2	TT_Task	8	8	1						
+%R	5696	P07T5S03	Phase 7 track 5 step 3	TT_Task	8	8	1						
+%R	5697	P07T5S04	Phase 7 track 5 step 4	TT_Task	8	8	1						
+%R	5698	P07T5S05	Phase 7 track 5 step 5	TT_Task	8	8	1						
+%R	5699	P07T5S06	Phase 7 track 5 step 6	TT_Task	8	8	1						
+%R	5700	P07T5S07	Phase 7 track 5 step 7	TT_Task	8	8	1						
+%R	5701	P07T5S08	Phase 7 track 5 step 8	TT_Task	8	8	1						
+%R	5702	P07T5S09	Phase 7 track 5 step 9	TT_Task	8	8	1						
+%R	5703	P07T5S10	Phase 7 track 5 step 10	TT_Task	8	8	1						
+%R	5704	P07T5S11	Phase 7 track 5 step 11	TT_Task	8	8	1						
+%R	5705	P07T5S12	Phase 7 track 5 step 12	TT_Task	8	8	1						
+%R	5706	P07T5S13	Phase 7 track 5 step 13	TT_Task	8	8	1						
+%R	5707	P07T5S14	Phase 7 track 5 step 14	TT_Task	8	8	1						
+%R	5708	P07T5S15	Phase 7 track 5 step 15	TT_Task	8	8	1						
+%R	5709	P07T5S16	Phase 7 track 5 step 16	TT_Task	8	8	1						
+%R	5710	P07T5S17	Phase 7 track 5 step 17	TT_Task	8	8	1						
+%R	5711	P07T5S18	Phase 7 track 5 step 18	TT_Task	8	8	1						
+%R	5712	P07T5S19	Phase 7 track 5 step 19	TT_Task	8	8	1						
+%R	5713	P07T5S20	Phase 7 track 5 step 20	TT_Task	8	8	1						
+%R	5613	P07_END	Phase 7 end milestone	TT_FinMile	0	0	1						
+%R	5714	P08_START	Phase 8 start milestone	TT_Mile	0	0	1						
+%R	5716	P08T1S01	Phase 8 track 1 step 1	TT_Task	8	8	1						
+%R	5717	P08T1S02	Phase 8 track 1 step 2	TT_Task	8	8	1						
+%R	5718	P08T1S03	Phase 8 track 1 step 3	TT_Task	8	8	1						
+%R	5719	P08T1S04	Phase 8 track 1 step 4	TT_Task	8	8	1						
+%R	5720	P08T1S05	Phase 8 track 1 step 5	TT_Task	8	8	1						
+%R	5721	P08T1S06	Phase 8 track 1 step 6	TT_Task	8	8	1						
+%R	5722	P08T1S07	Phase 8 track 1 step 7	TT_Task	8	8	1						
+%R	5723	P08T1S08	Phase 8 track 1 step 8	TT_Task	8	8	1						
+%R	5724	P08T1S09	Phase 8 track 1 step 9	TT_Task	8	8	1						
+%R	5725	P08T1S10	Phase 8 track 1 step 10	TT_Task	8	8	1						
+%R	5726	P08T1S11	Phase 8 track 1 step 11	TT_Task	8	8	1						
+%R	5727	P08T1S12	Phase 8 track 1 step 12	TT_Task	8	8	1						
+%R	5728	P08T1S13	Phase 8 track 1 step 13	TT_Task	8	8	1						
+%R	5729	P08T1S14	Phase 8 track 1 step 14	TT_Task	8	8	1						
+%R	5730	P08T1S15	Phase 8 track 1 step 15	TT_Task	8	8	1						
+%R	5731	P08T1S16	Phase 8 track 1 step 16	TT_Task	8	8	1						
+%R	5732	P08T1S17	Phase 8 track 1 step 17	TT_Task	8	8	1						
+%R	5733	P08T1S18	Phase 8 track 1 step 18	TT_Task	8	8	1						
+%R	5734	P08T1S19	Phase 8 track 1 step 19	TT_Task	8	8	1						
+%R	5735	P08T1S20	Phase 8 track 1 step 20	TT_Task	8	8	1						
+%R	5736	P08T2S01	Phase 8 track 2 step 1	TT_Task	8	8	1						
+%R	5737	P08T2S02	Phase 8 track 2 step 2	TT_Task	8	8	1						
+%R	5738	P08T2S03	Phase 8 track 2 step 3	TT_Task	8	8	1						
+%R	5739	P08T2S04	Phase 8 track 2 step 4	TT_Task	8	8	1						
+%R	5740	P08T2S05	Phase 8 track 2 step 5	TT_Task	8	8	1						
+%R	5741	P08T2S06	Phase 8 track 2 step 6	TT_Task	8	8	1						
+%R	5742	P08T2S07	Phase 8 track 2 step 7	TT_Task	8	8	1						
+%R	5743	P08T2S08	Phase 8 track 2 step 8	TT_Task	8	8	1						
+%R	5744	P08T2S09	Phase 8 track 2 step 9	TT_Task	8	8	1						
+%R	5745	P08T2S10	Phase 8 track 2 step 10	TT_Task	8	8	1						
+%R	5746	P08T2S11	Phase 8 track 2 step 11	TT_Task	8	8	1						
+%R	5747	P08T2S12	Phase 8 track 2 step 12	TT_Task	8	8	1						
+%R	5748	P08T2S13	Phase 8 track 2 step 13	TT_Task	8	8	1						
+%R	5749	P08T2S14	Phase 8 track 2 step 14	TT_Task	8	8	1						
+%R	5750	P08T2S15	Phase 8 track 2 step 15	TT_Task	8	8	1						
+%R	5751	P08T2S16	Phase 8 track 2 step 16	TT_Task	8	8	1						
+%R	5752	P08T2S17	Phase 8 track 2 step 17	TT_Task	8	8	1						
+%R	5753	P08T2S18	Phase 8 track 2 step 18	TT_Task	8	8	1						
+%R	5754	P08T2S19	Phase 8 track 2 step 19	TT_Task	8	8	1						
+%R	5755	P08T2S20	Phase 8 track 2 step 20	TT_Task	8	8	1						
+%R	5756	P08T3S01	Phase 8 track 3 step 1	TT_Task	8	8	1						
+%R	5757	P08T3S02	Phase 8 track 3 step 2	TT_Task	8	8	1						
+%R	5758	P08T3S03	Phase 8 track 3 step 3	TT_Task	8	8	1						
+%R	5759	P08T3S04	Phase 8 track 3 step 4	TT_Task	8	8	1						
+%R	5760	P08T3S05	Phase 8 track 3 step 5	TT_Task	8	8	1						
+%R	5761	P08T3S06	Phase 8 track 3 step 6	TT_Task	8	8	1						
+%R	5762	P08T3S07	Phase 8 track 3 step 7	TT_Task	8	8	1						
+%R	5763	P08T3S08	Phase 8 track 3 step 8	TT_Task	8	8	1						
+%R	5764	P08T3S09	Phase 8 track 3 step 9	TT_Task	8	8	1						
+%R	5765	P08T3S10	Phase 8 track 3 step 10	TT_Task	8	8	1						
+%R	5766	P08T3S11	Phase 8 track 3 step 11	TT_Task	8	8	1						
+%R	5767	P08T3S12	Phase 8 track 3 step 12	TT_Task	8	8	1						
+%R	5768	P08T3S13	Phase 8 track 3 step 13	TT_Task	8	8	1						
+%R	5769	P08T3S14	Phase 8 track 3 step 14	TT_Task	8	8	1						
+%R	5770	P08T3S15	Phase 8 track 3 step 15	TT_Task	8	8	1						
+%R	5771	P08T3S16	Phase 8 track 3 step 16	TT_Task	8	8	1						
+%R	5772	P08T3S17	Phase 8 track 3 step 17	TT_Task	8	8	1						
+%R	5773	P08T3S18	Phase 8 track 3 step 18	TT_Task	8	8	1						
+%R	5774	P08T3S19	Phase 8 track 3 step 19	TT_Task	8	8	1						
+%R	5775	P08T3S20	Phase 8 track 3 step 20	TT_Task	8	8	1						
+%R	5776	P08T4S01	Phase 8 track 4 step 1	TT_Task	8	8	1						
+%R	5777	P08T4S02	Phase 8 track 4 step 2	TT_Task	8	8	1						
+%R	5778	P08T4S03	Phase 8 track 4 step 3	TT_Task	8	8	1						
+%R	5779	P08T4S04	Phase 8 track 4 step 4	TT_Task	8	8	1						
+%R	5780	P08T4S05	Phase 8 track 4 step 5	TT_Task	8	8	1						
+%R	5781	P08T4S06	Phase 8 track 4 step 6	TT_Task	8	8	1						
+%R	5782	P08T4S07	Phase 8 track 4 step 7	TT_Task	8	8	1						
+%R	5783	P08T4S08	Phase 8 track 4 step 8	TT_Task	8	8	1						
+%R	5784	P08T4S09	Phase 8 track 4 step 9	TT_Task	8	8	1						
+%R	5785	P08T4S10	Phase 8 track 4 step 10	TT_Task	8	8	1						
+%R	5786	P08T4S11	Phase 8 track 4 step 11	TT_Task	8	8	1						
+%R	5787	P08T4S12	Phase 8 track 4 step 12	TT_Task	8	8	1						
+%R	5788	P08T4S13	Phase 8 track 4 step 13	TT_Task	8	8	1						
+%R	5789	P08T4S14	Phase 8 track 4 step 14	TT_Task	8	8	1						
+%R	5790	P08T4S15	Phase 8 track 4 step 15	TT_Task	8	8	1						
+%R	5791	P08T4S16	Phase 8 track 4 step 16	TT_Task	8	8	1						
+%R	5792	P08T4S17	Phase 8 track 4 step 17	TT_Task	8	8	1						
+%R	5793	P08T4S18	Phase 8 track 4 step 18	TT_Task	8	8	1						
+%R	5794	P08T4S19	Phase 8 track 4 step 19	TT_Task	8	8	1						
+%R	5795	P08T4S20	Phase 8 track 4 step 20	TT_Task	8	8	1						
+%R	5796	P08T5S01	Phase 8 track 5 step 1	TT_Task	8	8	1						
+%R	5797	P08T5S02	Phase 8 track 5 step 2	TT_Task	8	8	1						
+%R	5798	P08T5S03	Phase 8 track 5 step 3	TT_Task	8	8	1						
+%R	5799	P08T5S04	Phase 8 track 5 step 4	TT_Task	8	8	1						
+%R	5800	P08T5S05	Phase 8 track 5 step 5	TT_Task	8	8	1						
+%R	5801	P08T5S06	Phase 8 track 5 step 6	TT_Task	8	8	1						
+%R	5802	P08T5S07	Phase 8 track 5 step 7	TT_Task	8	8	1						
+%R	5803	P08T5S08	Phase 8 track 5 step 8	TT_Task	8	8	1						
+%R	5804	P08T5S09	Phase 8 track 5 step 9	TT_Task	8	8	1						
+%R	5805	P08T5S10	Phase 8 track 5 step 10	TT_Task	8	8	1						
+%R	5806	P08T5S11	Phase 8 track 5 step 11	TT_Task	8	8	1						
+%R	5807	P08T5S12	Phase 8 track 5 step 12	TT_Task	8	8	1						
+%R	5808	P08T5S13	Phase 8 track 5 step 13	TT_Task	8	8	1						
+%R	5809	P08T5S14	Phase 8 track 5 step 14	TT_Task	8	8	1						
+%R	5810	P08T5S15	Phase 8 track 5 step 15	TT_Task	8	8	1						
+%R	5811	P08T5S16	Phase 8 track 5 step 16	TT_Task	8	8	1						
+%R	5812	P08T5S17	Phase 8 track 5 step 17	TT_Task	8	8	1						
+%R	5813	P08T5S18	Phase 8 track 5 step 18	TT_Task	8	8	1						
+%R	5814	P08T5S19	Phase 8 track 5 step 19	TT_Task	8	8	1						
+%R	5815	P08T5S20	Phase 8 track 5 step 20	TT_Task	8	8	1						
+%R	5715	P08_END	Phase 8 end milestone	TT_FinMile	0	0	1						
+%R	5816	P09_START	Phase 9 start milestone	TT_Mile	0	0	1						
+%R	5818	P09T1S01	Phase 9 track 1 step 1	TT_Task	8	8	1						
+%R	5819	P09T1S02	Phase 9 track 1 step 2	TT_Task	8	8	1						
+%R	5820	P09T1S03	Phase 9 track 1 step 3	TT_Task	8	8	1						
+%R	5821	P09T1S04	Phase 9 track 1 step 4	TT_Task	8	8	1						
+%R	5822	P09T1S05	Phase 9 track 1 step 5	TT_Task	8	8	1						
+%R	5823	P09T1S06	Phase 9 track 1 step 6	TT_Task	8	8	1						
+%R	5824	P09T1S07	Phase 9 track 1 step 7	TT_Task	8	8	1						
+%R	5825	P09T1S08	Phase 9 track 1 step 8	TT_Task	8	8	1						
+%R	5826	P09T1S09	Phase 9 track 1 step 9	TT_Task	8	8	1						
+%R	5827	P09T1S10	Phase 9 track 1 step 10	TT_Task	8	8	1						
+%R	5828	P09T1S11	Phase 9 track 1 step 11	TT_Task	8	8	1						
+%R	5829	P09T1S12	Phase 9 track 1 step 12	TT_Task	8	8	1						
+%R	5830	P09T1S13	Phase 9 track 1 step 13	TT_Task	8	8	1						
+%R	5831	P09T1S14	Phase 9 track 1 step 14	TT_Task	8	8	1						
+%R	5832	P09T1S15	Phase 9 track 1 step 15	TT_Task	8	8	1						
+%R	5833	P09T1S16	Phase 9 track 1 step 16	TT_Task	8	8	1						
+%R	5834	P09T1S17	Phase 9 track 1 step 17	TT_Task	8	8	1						
+%R	5835	P09T1S18	Phase 9 track 1 step 18	TT_Task	8	8	1						
+%R	5836	P09T1S19	Phase 9 track 1 step 19	TT_Task	8	8	1						
+%R	5837	P09T1S20	Phase 9 track 1 step 20	TT_Task	8	8	1						
+%R	5838	P09T2S01	Phase 9 track 2 step 1	TT_Task	8	8	1						
+%R	5839	P09T2S02	Phase 9 track 2 step 2	TT_Task	8	8	1						
+%R	5840	P09T2S03	Phase 9 track 2 step 3	TT_Task	8	8	1						
+%R	5841	P09T2S04	Phase 9 track 2 step 4	TT_Task	8	8	1						
+%R	5842	P09T2S05	Phase 9 track 2 step 5	TT_Task	8	8	1						
+%R	5843	P09T2S06	Phase 9 track 2 step 6	TT_Task	8	8	1						
+%R	5844	P09T2S07	Phase 9 track 2 step 7	TT_Task	8	8	1						
+%R	5845	P09T2S08	Phase 9 track 2 step 8	TT_Task	8	8	1						
+%R	5846	P09T2S09	Phase 9 track 2 step 9	TT_Task	8	8	1						
+%R	5847	P09T2S10	Phase 9 track 2 step 10	TT_Task	8	8	1						
+%R	5848	P09T2S11	Phase 9 track 2 step 11	TT_Task	8	8	1						
+%R	5849	P09T2S12	Phase 9 track 2 step 12	TT_Task	8	8	1						
+%R	5850	P09T2S13	Phase 9 track 2 step 13	TT_Task	8	8	1						
+%R	5851	P09T2S14	Phase 9 track 2 step 14	TT_Task	8	8	1						
+%R	5852	P09T2S15	Phase 9 track 2 step 15	TT_Task	8	8	1						
+%R	5853	P09T2S16	Phase 9 track 2 step 16	TT_Task	8	8	1						
+%R	5854	P09T2S17	Phase 9 track 2 step 17	TT_Task	8	8	1						
+%R	5855	P09T2S18	Phase 9 track 2 step 18	TT_Task	8	8	1						
+%R	5856	P09T2S19	Phase 9 track 2 step 19	TT_Task	8	8	1						
+%R	5857	P09T2S20	Phase 9 track 2 step 20	TT_Task	8	8	1						
+%R	5858	P09T3S01	Phase 9 track 3 step 1	TT_Task	8	8	1						
+%R	5859	P09T3S02	Phase 9 track 3 step 2	TT_Task	8	8	1						
+%R	5860	P09T3S03	Phase 9 track 3 step 3	TT_Task	8	8	1						
+%R	5861	P09T3S04	Phase 9 track 3 step 4	TT_Task	8	8	1						
+%R	5862	P09T3S05	Phase 9 track 3 step 5	TT_Task	8	8	1						
+%R	5863	P09T3S06	Phase 9 track 3 step 6	TT_Task	8	8	1						
+%R	5864	P09T3S07	Phase 9 track 3 step 7	TT_Task	8	8	1						
+%R	5865	P09T3S08	Phase 9 track 3 step 8	TT_Task	8	8	1						
+%R	5866	P09T3S09	Phase 9 track 3 step 9	TT_Task	8	8	1						
+%R	5867	P09T3S10	Phase 9 track 3 step 10	TT_Task	8	8	1						
+%R	5868	P09T3S11	Phase 9 track 3 step 11	TT_Task	8	8	1						
+%R	5869	P09T3S12	Phase 9 track 3 step 12	TT_Task	8	8	1						
+%R	5870	P09T3S13	Phase 9 track 3 step 13	TT_Task	8	8	1						
+%R	5871	P09T3S14	Phase 9 track 3 step 14	TT_Task	8	8	1						
+%R	5872	P09T3S15	Phase 9 track 3 step 15	TT_Task	8	8	1						
+%R	5873	P09T3S16	Phase 9 track 3 step 16	TT_Task	8	8	1						
+%R	5874	P09T3S17	Phase 9 track 3 step 17	TT_Task	8	8	1						
+%R	5875	P09T3S18	Phase 9 track 3 step 18	TT_Task	8	8	1						
+%R	5876	P09T3S19	Phase 9 track 3 step 19	TT_Task	8	8	1						
+%R	5877	P09T3S20	Phase 9 track 3 step 20	TT_Task	8	8	1						
+%R	5878	P09T4S01	Phase 9 track 4 step 1	TT_Task	8	8	1						
+%R	5879	P09T4S02	Phase 9 track 4 step 2	TT_Task	8	8	1						
+%R	5880	P09T4S03	Phase 9 track 4 step 3	TT_Task	8	8	1						
+%R	5881	P09T4S04	Phase 9 track 4 step 4	TT_Task	8	8	1						
+%R	5882	P09T4S05	Phase 9 track 4 step 5	TT_Task	8	8	1						
+%R	5883	P09T4S06	Phase 9 track 4 step 6	TT_Task	8	8	1						
+%R	5884	P09T4S07	Phase 9 track 4 step 7	TT_Task	8	8	1						
+%R	5885	P09T4S08	Phase 9 track 4 step 8	TT_Task	8	8	1						
+%R	5886	P09T4S09	Phase 9 track 4 step 9	TT_Task	8	8	1						
+%R	5887	P09T4S10	Phase 9 track 4 step 10	TT_Task	8	8	1						
+%R	5888	P09T4S11	Phase 9 track 4 step 11	TT_Task	8	8	1						
+%R	5889	P09T4S12	Phase 9 track 4 step 12	TT_Task	8	8	1						
+%R	5890	P09T4S13	Phase 9 track 4 step 13	TT_Task	8	8	1						
+%R	5891	P09T4S14	Phase 9 track 4 step 14	TT_Task	8	8	1						
+%R	5892	P09T4S15	Phase 9 track 4 step 15	TT_Task	8	8	1						
+%R	5893	P09T4S16	Phase 9 track 4 step 16	TT_Task	8	8	1						
+%R	5894	P09T4S17	Phase 9 track 4 step 17	TT_Task	8	8	1						
+%R	5895	P09T4S18	Phase 9 track 4 step 18	TT_Task	8	8	1						
+%R	5896	P09T4S19	Phase 9 track 4 step 19	TT_Task	8	8	1						
+%R	5897	P09T4S20	Phase 9 track 4 step 20	TT_Task	8	8	1						
+%R	5898	P09T5S01	Phase 9 track 5 step 1	TT_Task	8	8	1						
+%R	5899	P09T5S02	Phase 9 track 5 step 2	TT_Task	8	8	1						
+%R	5900	P09T5S03	Phase 9 track 5 step 3	TT_Task	8	8	1						
+%R	5901	P09T5S04	Phase 9 track 5 step 4	TT_Task	8	8	1						
+%R	5902	P09T5S05	Phase 9 track 5 step 5	TT_Task	8	8	1						
+%R	5903	P09T5S06	Phase 9 track 5 step 6	TT_Task	8	8	1						
+%R	5904	P09T5S07	Phase 9 track 5 step 7	TT_Task	8	8	1						
+%R	5905	P09T5S08	Phase 9 track 5 step 8	TT_Task	8	8	1						
+%R	5906	P09T5S09	Phase 9 track 5 step 9	TT_Task	8	8	1						
+%R	5907	P09T5S10	Phase 9 track 5 step 10	TT_Task	8	8	1						
+%R	5908	P09T5S11	Phase 9 track 5 step 11	TT_Task	8	8	1						
+%R	5909	P09T5S12	Phase 9 track 5 step 12	TT_Task	8	8	1						
+%R	5910	P09T5S13	Phase 9 track 5 step 13	TT_Task	8	8	1						
+%R	5911	P09T5S14	Phase 9 track 5 step 14	TT_Task	8	8	1						
+%R	5912	P09T5S15	Phase 9 track 5 step 15	TT_Task	8	8	1						
+%R	5913	P09T5S16	Phase 9 track 5 step 16	TT_Task	8	8	1						
+%R	5914	P09T5S17	Phase 9 track 5 step 17	TT_Task	8	8	1						
+%R	5915	P09T5S18	Phase 9 track 5 step 18	TT_Task	8	8	1						
+%R	5916	P09T5S19	Phase 9 track 5 step 19	TT_Task	8	8	1						
+%R	5917	P09T5S20	Phase 9 track 5 step 20	TT_Task	8	8	1						
+%R	5817	P09_END	Phase 9 end milestone	TT_FinMile	0	0	1						
+%R	5918	P10_START	Phase 10 start milestone	TT_Mile	0	0	1						
+%R	5920	P10T1S01	Phase 10 track 1 step 1	TT_Task	8	8	1						
+%R	5921	P10T1S02	Phase 10 track 1 step 2	TT_Task	8	8	1						
+%R	5922	P10T1S03	Phase 10 track 1 step 3	TT_Task	8	8	1						
+%R	5923	P10T1S04	Phase 10 track 1 step 4	TT_Task	8	8	1						
+%R	5924	P10T1S05	Phase 10 track 1 step 5	TT_Task	8	8	1						
+%R	5925	P10T1S06	Phase 10 track 1 step 6	TT_Task	8	8	1						
+%R	5926	P10T1S07	Phase 10 track 1 step 7	TT_Task	8	8	1						
+%R	5927	P10T1S08	Phase 10 track 1 step 8	TT_Task	8	8	1						
+%R	5928	P10T1S09	Phase 10 track 1 step 9	TT_Task	8	8	1						
+%R	5929	P10T1S10	Phase 10 track 1 step 10	TT_Task	8	8	1						
+%R	5930	P10T1S11	Phase 10 track 1 step 11	TT_Task	8	8	1						
+%R	5931	P10T1S12	Phase 10 track 1 step 12	TT_Task	8	8	1						
+%R	5932	P10T1S13	Phase 10 track 1 step 13	TT_Task	8	8	1						
+%R	5933	P10T1S14	Phase 10 track 1 step 14	TT_Task	8	8	1						
+%R	5934	P10T1S15	Phase 10 track 1 step 15	TT_Task	8	8	1						
+%R	5935	P10T1S16	Phase 10 track 1 step 16	TT_Task	8	8	1						
+%R	5936	P10T1S17	Phase 10 track 1 step 17	TT_Task	8	8	1						
+%R	5937	P10T1S18	Phase 10 track 1 step 18	TT_Task	8	8	1						
+%R	5938	P10T1S19	Phase 10 track 1 step 19	TT_Task	8	8	1						
+%R	5939	P10T1S20	Phase 10 track 1 step 20	TT_Task	8	8	1						
+%R	5940	P10T2S01	Phase 10 track 2 step 1	TT_Task	8	8	1						
+%R	5941	P10T2S02	Phase 10 track 2 step 2	TT_Task	8	8	1						
+%R	5942	P10T2S03	Phase 10 track 2 step 3	TT_Task	8	8	1						
+%R	5943	P10T2S04	Phase 10 track 2 step 4	TT_Task	8	8	1						
+%R	5944	P10T2S05	Phase 10 track 2 step 5	TT_Task	8	8	1						
+%R	5945	P10T2S06	Phase 10 track 2 step 6	TT_Task	8	8	1						
+%R	5946	P10T2S07	Phase 10 track 2 step 7	TT_Task	8	8	1						
+%R	5947	P10T2S08	Phase 10 track 2 step 8	TT_Task	8	8	1						
+%R	5948	P10T2S09	Phase 10 track 2 step 9	TT_Task	8	8	1						
+%R	5949	P10T2S10	Phase 10 track 2 step 10	TT_Task	8	8	1						
+%R	5950	P10T2S11	Phase 10 track 2 step 11	TT_Task	8	8	1						
+%R	5951	P10T2S12	Phase 10 track 2 step 12	TT_Task	8	8	1						
+%R	5952	P10T2S13	Phase 10 track 2 step 13	TT_Task	8	8	1						
+%R	5953	P10T2S14	Phase 10 track 2 step 14	TT_Task	8	8	1						
+%R	5954	P10T2S15	Phase 10 track 2 step 15	TT_Task	8	8	1						
+%R	5955	P10T2S16	Phase 10 track 2 step 16	TT_Task	8	8	1						
+%R	5956	P10T2S17	Phase 10 track 2 step 17	TT_Task	8	8	1						
+%R	5957	P10T2S18	Phase 10 track 2 step 18	TT_Task	8	8	1						
+%R	5958	P10T2S19	Phase 10 track 2 step 19	TT_Task	8	8	1						
+%R	5959	P10T2S20	Phase 10 track 2 step 20	TT_Task	8	8	1						
+%R	5960	P10T3S01	Phase 10 track 3 step 1	TT_Task	8	8	1						
+%R	5961	P10T3S02	Phase 10 track 3 step 2	TT_Task	8	8	1						
+%R	5962	P10T3S03	Phase 10 track 3 step 3	TT_Task	8	8	1						
+%R	5963	P10T3S04	Phase 10 track 3 step 4	TT_Task	8	8	1						
+%R	5964	P10T3S05	Phase 10 track 3 step 5	TT_Task	8	8	1						
+%R	5965	P10T3S06	Phase 10 track 3 step 6	TT_Task	8	8	1						
+%R	5966	P10T3S07	Phase 10 track 3 step 7	TT_Task	8	8	1						
+%R	5967	P10T3S08	Phase 10 track 3 step 8	TT_Task	8	8	1						
+%R	5968	P10T3S09	Phase 10 track 3 step 9	TT_Task	8	8	1						
+%R	5969	P10T3S10	Phase 10 track 3 step 10	TT_Task	8	8	1						
+%R	5970	P10T3S11	Phase 10 track 3 step 11	TT_Task	8	8	1						
+%R	5971	P10T3S12	Phase 10 track 3 step 12	TT_Task	8	8	1						
+%R	5972	P10T3S13	Phase 10 track 3 step 13	TT_Task	8	8	1						
+%R	5973	P10T3S14	Phase 10 track 3 step 14	TT_Task	8	8	1						
+%R	5974	P10T3S15	Phase 10 track 3 step 15	TT_Task	8	8	1						
+%R	5975	P10T3S16	Phase 10 track 3 step 16	TT_Task	8	8	1						
+%R	5976	P10T3S17	Phase 10 track 3 step 17	TT_Task	8	8	1						
+%R	5977	P10T3S18	Phase 10 track 3 step 18	TT_Task	8	8	1						
+%R	5978	P10T3S19	Phase 10 track 3 step 19	TT_Task	8	8	1						
+%R	5979	P10T3S20	Phase 10 track 3 step 20	TT_Task	8	8	1						
+%R	5980	P10T4S01	Phase 10 track 4 step 1	TT_Task	8	8	1						
+%R	5981	P10T4S02	Phase 10 track 4 step 2	TT_Task	8	8	1						
+%R	5982	P10T4S03	Phase 10 track 4 step 3	TT_Task	8	8	1						
+%R	5983	P10T4S04	Phase 10 track 4 step 4	TT_Task	8	8	1						
+%R	5984	P10T4S05	Phase 10 track 4 step 5	TT_Task	8	8	1						
+%R	5985	P10T4S06	Phase 10 track 4 step 6	TT_Task	8	8	1						
+%R	5986	P10T4S07	Phase 10 track 4 step 7	TT_Task	8	8	1						
+%R	5987	P10T4S08	Phase 10 track 4 step 8	TT_Task	8	8	1						
+%R	5988	P10T4S09	Phase 10 track 4 step 9	TT_Task	8	8	1						
+%R	5989	P10T4S10	Phase 10 track 4 step 10	TT_Task	8	8	1						
+%R	5990	P10T4S11	Phase 10 track 4 step 11	TT_Task	8	8	1						
+%R	5991	P10T4S12	Phase 10 track 4 step 12	TT_Task	8	8	1						
+%R	5992	P10T4S13	Phase 10 track 4 step 13	TT_Task	8	8	1						
+%R	5993	P10T4S14	Phase 10 track 4 step 14	TT_Task	8	8	1						
+%R	5994	P10T4S15	Phase 10 track 4 step 15	TT_Task	8	8	1						
+%R	5995	P10T4S16	Phase 10 track 4 step 16	TT_Task	8	8	1						
+%R	5996	P10T4S17	Phase 10 track 4 step 17	TT_Task	8	8	1						
+%R	5997	P10T4S18	Phase 10 track 4 step 18	TT_Task	8	8	1						
+%R	5998	P10T4S19	Phase 10 track 4 step 19	TT_Task	8	8	1						
+%R	5999	P10T4S20	Phase 10 track 4 step 20	TT_Task	8	8	1						
+%R	6000	P10T5S01	Phase 10 track 5 step 1	TT_Task	8	8	1						
+%R	6001	P10T5S02	Phase 10 track 5 step 2	TT_Task	8	8	1						
+%R	6002	P10T5S03	Phase 10 track 5 step 3	TT_Task	8	8	1						
+%R	6003	P10T5S04	Phase 10 track 5 step 4	TT_Task	8	8	1						
+%R	6004	P10T5S05	Phase 10 track 5 step 5	TT_Task	8	8	1						
+%R	6005	P10T5S06	Phase 10 track 5 step 6	TT_Task	8	8	1						
+%R	6006	P10T5S07	Phase 10 track 5 step 7	TT_Task	8	8	1						
+%R	6007	P10T5S08	Phase 10 track 5 step 8	TT_Task	8	8	1						
+%R	6008	P10T5S09	Phase 10 track 5 step 9	TT_Task	8	8	1						
+%R	6009	P10T5S10	Phase 10 track 5 step 10	TT_Task	8	8	1						
+%R	6010	P10T5S11	Phase 10 track 5 step 11	TT_Task	8	8	1						
+%R	6011	P10T5S12	Phase 10 track 5 step 12	TT_Task	8	8	1						
+%R	6012	P10T5S13	Phase 10 track 5 step 13	TT_Task	8	8	1						
+%R	6013	P10T5S14	Phase 10 track 5 step 14	TT_Task	8	8	1						
+%R	6014	P10T5S15	Phase 10 track 5 step 15	TT_Task	8	8	1						
+%R	6015	P10T5S16	Phase 10 track 5 step 16	TT_Task	8	8	1						
+%R	6016	P10T5S17	Phase 10 track 5 step 17	TT_Task	8	8	1						
+%R	6017	P10T5S18	Phase 10 track 5 step 18	TT_Task	8	8	1						
+%R	6018	P10T5S19	Phase 10 track 5 step 19	TT_Task	8	8	1						
+%R	6019	P10T5S20	Phase 10 track 5 step 20	TT_Task	8	8	1						
+%R	5919	P10_END	Phase 10 end milestone	TT_FinMile	0	0	1						
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	pred_type	lag_hr_cnt
+%R	5000	5002	5000	PR_FS	0
+%R	5001	5003	5002	PR_FS	0
+%R	5002	5004	5003	PR_FS	0
+%R	5003	5005	5004	PR_FS	0
+%R	5004	5006	5005	PR_FS	0
+%R	5005	5007	5006	PR_FS	0
+%R	5006	5008	5007	PR_FS	0
+%R	5007	5009	5008	PR_FS	0
+%R	5008	5010	5009	PR_FS	0
+%R	5009	5011	5010	PR_FS	0
+%R	5010	5012	5011	PR_FS	0
+%R	5011	5013	5012	PR_FS	0
+%R	5012	5014	5013	PR_FS	0
+%R	5013	5015	5014	PR_FS	0
+%R	5014	5016	5015	PR_FS	0
+%R	5015	5017	5016	PR_FS	0
+%R	5016	5018	5017	PR_FS	0
+%R	5017	5019	5018	PR_FS	0
+%R	5018	5020	5019	PR_FS	0
+%R	5019	5021	5020	PR_FS	0
+%R	5020	5001	5021	PR_FS	0
+%R	5021	5022	5000	PR_FS	0
+%R	5022	5023	5022	PR_FS	0
+%R	5023	5024	5023	PR_FS	0
+%R	5024	5025	5024	PR_FS	0
+%R	5025	5026	5025	PR_FS	0
+%R	5026	5027	5026	PR_FS	0
+%R	5027	5028	5027	PR_FS	0
+%R	5028	5029	5028	PR_FS	0
+%R	5029	5030	5029	PR_FS	0
+%R	5030	5031	5030	PR_FS	0
+%R	5031	5032	5031	PR_FS	0
+%R	5032	5033	5032	PR_FS	0
+%R	5033	5034	5033	PR_FS	0
+%R	5034	5035	5034	PR_FS	0
+%R	5035	5036	5035	PR_FS	0
+%R	5036	5037	5036	PR_FS	0
+%R	5037	5038	5037	PR_FS	0
+%R	5038	5039	5038	PR_FS	0
+%R	5039	5040	5039	PR_FS	0
+%R	5040	5041	5040	PR_FS	0
+%R	5041	5001	5041	PR_FS	0
+%R	5042	5042	5000	PR_FS	0
+%R	5043	5043	5042	PR_FS	0
+%R	5044	5044	5043	PR_FS	0
+%R	5045	5045	5044	PR_FS	0
+%R	5046	5046	5045	PR_FS	0
+%R	5047	5047	5046	PR_FS	0
+%R	5048	5048	5047	PR_FS	0
+%R	5049	5049	5048	PR_FS	0
+%R	5050	5050	5049	PR_FS	0
+%R	5051	5051	5050	PR_FS	0
+%R	5052	5052	5051	PR_FS	0
+%R	5053	5053	5052	PR_FS	0
+%R	5054	5054	5053	PR_FS	0
+%R	5055	5055	5054	PR_FS	0
+%R	5056	5056	5055	PR_FS	0
+%R	5057	5057	5056	PR_FS	0
+%R	5058	5058	5057	PR_FS	0
+%R	5059	5059	5058	PR_FS	0
+%R	5060	5060	5059	PR_FS	0
+%R	5061	5061	5060	PR_FS	0
+%R	5062	5001	5061	PR_FS	0
+%R	5063	5062	5000	PR_FS	0
+%R	5064	5063	5062	PR_FS	0
+%R	5065	5064	5063	PR_FS	0
+%R	5066	5065	5064	PR_FS	0
+%R	5067	5066	5065	PR_FS	0
+%R	5068	5067	5066	PR_FS	0
+%R	5069	5068	5067	PR_FS	0
+%R	5070	5069	5068	PR_FS	0
+%R	5071	5070	5069	PR_FS	0
+%R	5072	5071	5070	PR_FS	0
+%R	5073	5072	5071	PR_FS	0
+%R	5074	5073	5072	PR_FS	0
+%R	5075	5074	5073	PR_FS	0
+%R	5076	5075	5074	PR_FS	0
+%R	5077	5076	5075	PR_FS	0
+%R	5078	5077	5076	PR_FS	0
+%R	5079	5078	5077	PR_FS	0
+%R	5080	5079	5078	PR_FS	0
+%R	5081	5080	5079	PR_FS	0
+%R	5082	5081	5080	PR_FS	0
+%R	5083	5001	5081	PR_FS	0
+%R	5084	5082	5000	PR_FS	0
+%R	5085	5083	5082	PR_FS	0
+%R	5086	5084	5083	PR_FS	0
+%R	5087	5085	5084	PR_FS	0
+%R	5088	5086	5085	PR_FS	0
+%R	5089	5087	5086	PR_FS	0
+%R	5090	5088	5087	PR_FS	0
+%R	5091	5089	5088	PR_FS	0
+%R	5092	5090	5089	PR_FS	0
+%R	5093	5091	5090	PR_FS	0
+%R	5094	5092	5091	PR_FS	0
+%R	5095	5093	5092	PR_FS	0
+%R	5096	5094	5093	PR_FS	0
+%R	5097	5095	5094	PR_FS	0
+%R	5098	5096	5095	PR_FS	0
+%R	5099	5097	5096	PR_FS	0
+%R	5100	5098	5097	PR_FS	0
+%R	5101	5099	5098	PR_FS	0
+%R	5102	5100	5099	PR_FS	0
+%R	5103	5101	5100	PR_FS	0
+%R	5104	5001	5101	PR_FS	0
+%R	5105	5102	5001	PR_FS	0
+%R	5106	5104	5102	PR_FS	0
+%R	5107	5105	5104	PR_FS	0
+%R	5108	5106	5105	PR_FS	0
+%R	5109	5107	5106	PR_FS	0
+%R	5110	5108	5107	PR_FS	0
+%R	5111	5109	5108	PR_FS	0
+%R	5112	5110	5109	PR_FS	0
+%R	5113	5111	5110	PR_FS	0
+%R	5114	5112	5111	PR_FS	0
+%R	5115	5113	5112	PR_FS	0
+%R	5116	5114	5113	PR_FS	0
+%R	5117	5115	5114	PR_FS	0
+%R	5118	5116	5115	PR_FS	0
+%R	5119	5117	5116	PR_FS	0
+%R	5120	5118	5117	PR_FS	0
+%R	5121	5119	5118	PR_FS	0
+%R	5122	5120	5119	PR_FS	0
+%R	5123	5121	5120	PR_FS	0
+%R	5124	5122	5121	PR_FS	0
+%R	5125	5123	5122	PR_FS	0
+%R	5126	5103	5123	PR_FS	0
+%R	5127	5124	5102	PR_FS	0
+%R	5128	5125	5124	PR_FS	0
+%R	5129	5126	5125	PR_FS	0
+%R	5130	5127	5126	PR_FS	0
+%R	5131	5128	5127	PR_FS	0
+%R	5132	5129	5128	PR_FS	0
+%R	5133	5130	5129	PR_FS	0
+%R	5134	5131	5130	PR_FS	0
+%R	5135	5132	5131	PR_FS	0
+%R	5136	5133	5132	PR_FS	0
+%R	5137	5134	5133	PR_FS	0
+%R	5138	5135	5134	PR_FS	0
+%R	5139	5136	5135	PR_FS	0
+%R	5140	5137	5136	PR_FS	0
+%R	5141	5138	5137	PR_FS	0
+%R	5142	5139	5138	PR_FS	0
+%R	5143	5140	5139	PR_FS	0
+%R	5144	5141	5140	PR_FS	0
+%R	5145	5142	5141	PR_FS	0
+%R	5146	5143	5142	PR_FS	0
+%R	5147	5103	5143	PR_FS	0
+%R	5148	5144	5102	PR_FS	0
+%R	5149	5145	5144	PR_FS	0
+%R	5150	5146	5145	PR_FS	0
+%R	5151	5147	5146	PR_FS	0
+%R	5152	5148	5147	PR_FS	0
+%R	5153	5149	5148	PR_FS	0
+%R	5154	5150	5149	PR_FS	0
+%R	5155	5151	5150	PR_FS	0
+%R	5156	5152	5151	PR_FS	0
+%R	5157	5153	5152	PR_FS	0
+%R	5158	5154	5153	PR_FS	0
+%R	5159	5155	5154	PR_FS	0
+%R	5160	5156	5155	PR_FS	0
+%R	5161	5157	5156	PR_FS	0
+%R	5162	5158	5157	PR_FS	0
+%R	5163	5159	5158	PR_FS	0
+%R	5164	5160	5159	PR_FS	0
+%R	5165	5161	5160	PR_FS	0
+%R	5166	5162	5161	PR_FS	0
+%R	5167	5163	5162	PR_FS	0
+%R	5168	5103	5163	PR_FS	0
+%R	5169	5164	5102	PR_FS	0
+%R	5170	5165	5164	PR_FS	0
+%R	5171	5166	5165	PR_FS	0
+%R	5172	5167	5166	PR_FS	0
+%R	5173	5168	5167	PR_FS	0
+%R	5174	5169	5168	PR_FS	0
+%R	5175	5170	5169	PR_FS	0
+%R	5176	5171	5170	PR_FS	0
+%R	5177	5172	5171	PR_FS	0
+%R	5178	5173	5172	PR_FS	0
+%R	5179	5174	5173	PR_FS	0
+%R	5180	5175	5174	PR_FS	0
+%R	5181	5176	5175	PR_FS	0
+%R	5182	5177	5176	PR_FS	0
+%R	5183	5178	5177	PR_FS	0
+%R	5184	5179	5178	PR_FS	0
+%R	5185	5180	5179	PR_FS	0
+%R	5186	5181	5180	PR_FS	0
+%R	5187	5182	5181	PR_FS	0
+%R	5188	5183	5182	PR_FS	0
+%R	5189	5103	5183	PR_FS	0
+%R	5190	5184	5102	PR_FS	0
+%R	5191	5185	5184	PR_FS	0
+%R	5192	5186	5185	PR_FS	0
+%R	5193	5187	5186	PR_FS	0
+%R	5194	5188	5187	PR_FS	0
+%R	5195	5189	5188	PR_FS	0
+%R	5196	5190	5189	PR_FS	0
+%R	5197	5191	5190	PR_FS	0
+%R	5198	5192	5191	PR_FS	0
+%R	5199	5193	5192	PR_FS	0
+%R	5200	5194	5193	PR_FS	0
+%R	5201	5195	5194	PR_FS	0
+%R	5202	5196	5195	PR_FS	0
+%R	5203	5197	5196	PR_FS	0
+%R	5204	5198	5197	PR_FS	0
+%R	5205	5199	5198	PR_FS	0
+%R	5206	5200	5199	PR_FS	0
+%R	5207	5201	5200	PR_FS	0
+%R	5208	5202	5201	PR_FS	0
+%R	5209	5203	5202	PR_FS	0
+%R	5210	5103	5203	PR_FS	0
+%R	5211	5204	5103	PR_FS	0
+%R	5212	5206	5204	PR_FS	0
+%R	5213	5207	5206	PR_FS	0
+%R	5214	5208	5207	PR_FS	0
+%R	5215	5209	5208	PR_FS	0
+%R	5216	5210	5209	PR_FS	0
+%R	5217	5211	5210	PR_FS	0
+%R	5218	5212	5211	PR_FS	0
+%R	5219	5213	5212	PR_FS	0
+%R	5220	5214	5213	PR_FS	0
+%R	5221	5215	5214	PR_FS	0
+%R	5222	5216	5215	PR_FS	0
+%R	5223	5217	5216	PR_FS	0
+%R	5224	5218	5217	PR_FS	0
+%R	5225	5219	5218	PR_FS	0
+%R	5226	5220	5219	PR_FS	0
+%R	5227	5221	5220	PR_FS	0
+%R	5228	5222	5221	PR_FS	0
+%R	5229	5223	5222	PR_FS	0
+%R	5230	5224	5223	PR_FS	0
+%R	5231	5225	5224	PR_FS	0
+%R	5232	5205	5225	PR_FS	0
+%R	5233	5226	5204	PR_FS	0
+%R	5234	5227	5226	PR_FS	0
+%R	5235	5228	5227	PR_FS	0
+%R	5236	5229	5228	PR_FS	0
+%R	5237	5230	5229	PR_FS	0
+%R	5238	5231	5230	PR_FS	0
+%R	5239	5232	5231	PR_FS	0
+%R	5240	5233	5232	PR_FS	0
+%R	5241	5234	5233	PR_FS	0
+%R	5242	5235	5234	PR_FS	0
+%R	5243	5236	5235	PR_FS	0
+%R	5244	5237	5236	PR_FS	0
+%R	5245	5238	5237	PR_FS	0
+%R	5246	5239	5238	PR_FS	0
+%R	5247	5240	5239	PR_FS	0
+%R	5248	5241	5240	PR_FS	0
+%R	5249	5242	5241	PR_FS	0
+%R	5250	5243	5242	PR_FS	0
+%R	5251	5244	5243	PR_FS	0
+%R	5252	5245	5244	PR_FS	0
+%R	5253	5205	5245	PR_FS	0
+%R	5254	5246	5204	PR_FS	0
+%R	5255	5247	5246	PR_FS	0
+%R	5256	5248	5247	PR_FS	0
+%R	5257	5249	5248	PR_FS	0
+%R	5258	5250	5249	PR_FS	0
+%R	5259	5251	5250	PR_FS	0
+%R	5260	5252	5251	PR_FS	0
+%R	5261	5253	5252	PR_FS	0
+%R	5262	5254	5253	PR_FS	0
+%R	5263	5255	5254	PR_FS	0
+%R	5264	5256	5255	PR_FS	0
+%R	5265	5257	5256	PR_FS	0
+%R	5266	5258	5257	PR_FS	0
+%R	5267	5259	5258	PR_FS	0
+%R	5268	5260	5259	PR_FS	0
+%R	5269	5261	5260	PR_FS	0
+%R	5270	5262	5261	PR_FS	0
+%R	5271	5263	5262	PR_FS	0
+%R	5272	5264	5263	PR_FS	0
+%R	5273	5265	5264	PR_FS	0
+%R	5274	5205	5265	PR_FS	0
+%R	5275	5266	5204	PR_FS	0
+%R	5276	5267	5266	PR_FS	0
+%R	5277	5268	5267	PR_FS	0
+%R	5278	5269	5268	PR_FS	0
+%R	5279	5270	5269	PR_FS	0
+%R	5280	5271	5270	PR_FS	0
+%R	5281	5272	5271	PR_FS	0
+%R	5282	5273	5272	PR_FS	0
+%R	5283	5274	5273	PR_FS	0
+%R	5284	5275	5274	PR_FS	0
+%R	5285	5276	5275	PR_FS	0
+%R	5286	5277	5276	PR_FS	0
+%R	5287	5278	5277	PR_FS	0
+%R	5288	5279	5278	PR_FS	0
+%R	5289	5280	5279	PR_FS	0
+%R	5290	5281	5280	PR_FS	0
+%R	5291	5282	5281	PR_FS	0
+%R	5292	5283	5282	PR_FS	0
+%R	5293	5284	5283	PR_FS	0
+%R	5294	5285	5284	PR_FS	0
+%R	5295	5205	5285	PR_FS	0
+%R	5296	5286	5204	PR_FS	0
+%R	5297	5287	5286	PR_FS	0
+%R	5298	5288	5287	PR_FS	0
+%R	5299	5289	5288	PR_FS	0
+%R	5300	5290	5289	PR_FS	0
+%R	5301	5291	5290	PR_FS	0
+%R	5302	5292	5291	PR_FS	0
+%R	5303	5293	5292	PR_FS	0
+%R	5304	5294	5293	PR_FS	0
+%R	5305	5295	5294	PR_FS	0
+%R	5306	5296	5295	PR_FS	0
+%R	5307	5297	5296	PR_FS	0
+%R	5308	5298	5297	PR_FS	0
+%R	5309	5299	5298	PR_FS	0
+%R	5310	5300	5299	PR_FS	0
+%R	5311	5301	5300	PR_FS	0
+%R	5312	5302	5301	PR_FS	0
+%R	5313	5303	5302	PR_FS	0
+%R	5314	5304	5303	PR_FS	0
+%R	5315	5305	5304	PR_FS	0
+%R	5316	5205	5305	PR_FS	0
+%R	5317	5306	5205	PR_FS	0
+%R	5318	5308	5306	PR_FS	0
+%R	5319	5309	5308	PR_FS	0
+%R	5320	5310	5309	PR_FS	0
+%R	5321	5311	5310	PR_FS	0
+%R	5322	5312	5311	PR_FS	0
+%R	5323	5313	5312	PR_FS	0
+%R	5324	5314	5313	PR_FS	0
+%R	5325	5315	5314	PR_FS	0
+%R	5326	5316	5315	PR_FS	0
+%R	5327	5317	5316	PR_FS	0
+%R	5328	5318	5317	PR_FS	0
+%R	5329	5319	5318	PR_FS	0
+%R	5330	5320	5319	PR_FS	0
+%R	5331	5321	5320	PR_FS	0
+%R	5332	5322	5321	PR_FS	0
+%R	5333	5323	5322	PR_FS	0
+%R	5334	5324	5323	PR_FS	0
+%R	5335	5325	5324	PR_FS	0
+%R	5336	5326	5325	PR_FS	0
+%R	5337	5327	5326	PR_FS	0
+%R	5338	5307	5327	PR_FS	0
+%R	5339	5328	5306	PR_FS	0
+%R	5340	5329	5328	PR_FS	0
+%R	5341	5330	5329	PR_FS	0
+%R	5342	5331	5330	PR_FS	0
+%R	5343	5332	5331	PR_FS	0
+%R	5344	5333	5332	PR_FS	0
+%R	5345	5334	5333	PR_FS	0
+%R	5346	5335	5334	PR_FS	0
+%R	5347	5336	5335	PR_FS	0
+%R	5348	5337	5336	PR_FS	0
+%R	5349	5338	5337	PR_FS	0
+%R	5350	5339	5338	PR_FS	0
+%R	5351	5340	5339	PR_FS	0
+%R	5352	5341	5340	PR_FS	0
+%R	5353	5342	5341	PR_FS	0
+%R	5354	5343	5342	PR_FS	0
+%R	5355	5344	5343	PR_FS	0
+%R	5356	5345	5344	PR_FS	0
+%R	5357	5346	5345	PR_FS	0
+%R	5358	5347	5346	PR_FS	0
+%R	5359	5307	5347	PR_FS	0
+%R	5360	5348	5306	PR_FS	0
+%R	5361	5349	5348	PR_FS	0
+%R	5362	5350	5349	PR_FS	0
+%R	5363	5351	5350	PR_FS	0
+%R	5364	5352	5351	PR_FS	0
+%R	5365	5353	5352	PR_FS	0
+%R	5366	5354	5353	PR_FS	0
+%R	5367	5355	5354	PR_FS	0
+%R	5368	5356	5355	PR_FS	0
+%R	5369	5357	5356	PR_FS	0
+%R	5370	5358	5357	PR_FS	0
+%R	5371	5359	5358	PR_FS	0
+%R	5372	5360	5359	PR_FS	0
+%R	5373	5361	5360	PR_FS	0
+%R	5374	5362	5361	PR_FS	0
+%R	5375	5363	5362	PR_FS	0
+%R	5376	5364	5363	PR_FS	0
+%R	5377	5365	5364	PR_FS	0
+%R	5378	5366	5365	PR_FS	0
+%R	5379	5367	5366	PR_FS	0
+%R	5380	5307	5367	PR_FS	0
+%R	5381	5368	5306	PR_FS	0
+%R	5382	5369	5368	PR_FS	0
+%R	5383	5370	5369	PR_FS	0
+%R	5384	5371	5370	PR_FS	0
+%R	5385	5372	5371	PR_FS	0
+%R	5386	5373	5372	PR_FS	0
+%R	5387	5374	5373	PR_FS	0
+%R	5388	5375	5374	PR_FS	0
+%R	5389	5376	5375	PR_FS	0
+%R	5390	5377	5376	PR_FS	0
+%R	5391	5378	5377	PR_FS	0
+%R	5392	5379	5378	PR_FS	0
+%R	5393	5380	5379	PR_FS	0
+%R	5394	5381	5380	PR_FS	0
+%R	5395	5382	5381	PR_FS	0
+%R	5396	5383	5382	PR_FS	0
+%R	5397	5384	5383	PR_FS	0
+%R	5398	5385	5384	PR_FS	0
+%R	5399	5386	5385	PR_FS	0
+%R	5400	5387	5386	PR_FS	0
+%R	5401	5307	5387	PR_FS	0
+%R	5402	5388	5306	PR_FS	0
+%R	5403	5389	5388	PR_FS	0
+%R	5404	5390	5389	PR_FS	0
+%R	5405	5391	5390	PR_FS	0
+%R	5406	5392	5391	PR_FS	0
+%R	5407	5393	5392	PR_FS	0
+%R	5408	5394	5393	PR_FS	0
+%R	5409	5395	5394	PR_FS	0
+%R	5410	5396	5395	PR_FS	0
+%R	5411	5397	5396	PR_FS	0
+%R	5412	5398	5397	PR_FS	0
+%R	5413	5399	5398	PR_FS	0
+%R	5414	5400	5399	PR_FS	0
+%R	5415	5401	5400	PR_FS	0
+%R	5416	5402	5401	PR_FS	0
+%R	5417	5403	5402	PR_FS	0
+%R	5418	5404	5403	PR_FS	0
+%R	5419	5405	5404	PR_FS	0
+%R	5420	5406	5405	PR_FS	0
+%R	5421	5407	5406	PR_FS	0
+%R	5422	5307	5407	PR_FS	0
+%R	5423	5408	5307	PR_FS	0
+%R	5424	5410	5408	PR_FS	0
+%R	5425	5411	5410	PR_FS	0
+%R	5426	5412	5411	PR_FS	0
+%R	5427	5413	5412	PR_FS	0
+%R	5428	5414	5413	PR_FS	0
+%R	5429	5415	5414	PR_FS	0
+%R	5430	5416	5415	PR_FS	0
+%R	5431	5417	5416	PR_FS	0
+%R	5432	5418	5417	PR_FS	0
+%R	5433	5419	5418	PR_FS	0
+%R	5434	5420	5419	PR_FS	0
+%R	5435	5421	5420	PR_FS	0
+%R	5436	5422	5421	PR_FS	0
+%R	5437	5423	5422	PR_FS	0
+%R	5438	5424	5423	PR_FS	0
+%R	5439	5425	5424	PR_FS	0
+%R	5440	5426	5425	PR_FS	0
+%R	5441	5427	5426	PR_FS	0
+%R	5442	5428	5427	PR_FS	0
+%R	5443	5429	5428	PR_FS	0
+%R	5444	5409	5429	PR_FS	0
+%R	5445	5430	5408	PR_FS	0
+%R	5446	5431	5430	PR_FS	0
+%R	5447	5432	5431	PR_FS	0
+%R	5448	5433	5432	PR_FS	0
+%R	5449	5434	5433	PR_FS	0
+%R	5450	5435	5434	PR_FS	0
+%R	5451	5436	5435	PR_FS	0
+%R	5452	5437	5436	PR_FS	0
+%R	5453	5438	5437	PR_FS	0
+%R	5454	5439	5438	PR_FS	0
+%R	5455	5440	5439	PR_FS	0
+%R	5456	5441	5440	PR_FS	0
+%R	5457	5442	5441	PR_FS	0
+%R	5458	5443	5442	PR_FS	0
+%R	5459	5444	5443	PR_FS	0
+%R	5460	5445	5444	PR_FS	0
+%R	5461	5446	5445	PR_FS	0
+%R	5462	5447	5446	PR_FS	0
+%R	5463	5448	5447	PR_FS	0
+%R	5464	5449	5448	PR_FS	0
+%R	5465	5409	5449	PR_FS	0
+%R	5466	5450	5408	PR_FS	0
+%R	5467	5451	5450	PR_FS	0
+%R	5468	5452	5451	PR_FS	0
+%R	5469	5453	5452	PR_FS	0
+%R	5470	5454	5453	PR_FS	0
+%R	5471	5455	5454	PR_FS	0
+%R	5472	5456	5455	PR_FS	0
+%R	5473	5457	5456	PR_FS	0
+%R	5474	5458	5457	PR_FS	0
+%R	5475	5459	5458	PR_FS	0
+%R	5476	5460	5459	PR_FS	0
+%R	5477	5461	5460	PR_FS	0
+%R	5478	5462	5461	PR_FS	0
+%R	5479	5463	5462	PR_FS	0
+%R	5480	5464	5463	PR_FS	0
+%R	5481	5465	5464	PR_FS	0
+%R	5482	5466	5465	PR_FS	0
+%R	5483	5467	5466	PR_FS	0
+%R	5484	5468	5467	PR_FS	0
+%R	5485	5469	5468	PR_FS	0
+%R	5486	5409	5469	PR_FS	0
+%R	5487	5470	5408	PR_FS	0
+%R	5488	5471	5470	PR_FS	0
+%R	5489	5472	5471	PR_FS	0
+%R	5490	5473	5472	PR_FS	0
+%R	5491	5474	5473	PR_FS	0
+%R	5492	5475	5474	PR_FS	0
+%R	5493	5476	5475	PR_FS	0
+%R	5494	5477	5476	PR_FS	0
+%R	5495	5478	5477	PR_FS	0
+%R	5496	5479	5478	PR_FS	0
+%R	5497	5480	5479	PR_FS	0
+%R	5498	5481	5480	PR_FS	0
+%R	5499	5482	5481	PR_FS	0
+%R	5500	5483	5482	PR_FS	0
+%R	5501	5484	5483	PR_FS	0
+%R	5502	5485	5484	PR_FS	0
+%R	5503	5486	5485	PR_FS	0
+%R	5504	5487	5486	PR_FS	0
+%R	5505	5488	5487	PR_FS	0
+%R	5506	5489	5488	PR_FS	0
+%R	5507	5409	5489	PR_FS	0
+%R	5508	5490	5408	PR_FS	0
+%R	5509	5491	5490	PR_FS	0
+%R	5510	5492	5491	PR_FS	0
+%R	5511	5493	5492	PR_FS	0
+%R	5512	5494	5493	PR_FS	0
+%R	5513	5495	5494	PR_FS	0
+%R	5514	5496	5495	PR_FS	0
+%R	5515	5497	5496	PR_FS	0
+%R	5516	5498	5497	PR_FS	0
+%R	5517	5499	5498	PR_FS	0
+%R	5518	5500	5499	PR_FS	0
+%R	5519	5501	5500	PR_FS	0
+%R	5520	5502	5501	PR_FS	0
+%R	5521	5503	5502	PR_FS	0
+%R	5522	5504	5503	PR_FS	0
+%R	5523	5505	5504	PR_FS	0
+%R	5524	5506	5505	PR_FS	0
+%R	5525	5507	5506	PR_FS	0
+%R	5526	5508	5507	PR_FS	0
+%R	5527	5509	5508	PR_FS	0
+%R	5528	5409	5509	PR_FS	0
+%R	5529	5510	5409	PR_FS	0
+%R	5530	5512	5510	PR_FS	0
+%R	5531	5513	5512	PR_FS	0
+%R	5532	5514	5513	PR_FS	0
+%R	5533	5515	5514	PR_FS	0
+%R	5534	5516	5515	PR_FS	0
+%R	5535	5517	5516	PR_FS	0
+%R	5536	5518	5517	PR_FS	0
+%R	5537	5519	5518	PR_FS	0
+%R	5538	5520	5519	PR_FS	0
+%R	5539	5521	5520	PR_FS	0
+%R	5540	5522	5521	PR_FS	0
+%R	5541	5523	5522	PR_FS	0
+%R	5542	5524	5523	PR_FS	0
+%R	5543	5525	5524	PR_FS	0
+%R	5544	5526	5525	PR_FS	0
+%R	5545	5527	5526	PR_FS	0
+%R	5546	5528	5527	PR_FS	0
+%R	5547	5529	5528	PR_FS	0
+%R	5548	5530	5529	PR_FS	0
+%R	5549	5531	5530	PR_FS	0
+%R	5550	5511	5531	PR_FS	0
+%R	5551	5532	5510	PR_FS	0
+%R	5552	5533	5532	PR_FS	0
+%R	5553	5534	5533	PR_FS	0
+%R	5554	5535	5534	PR_FS	0
+%R	5555	5536	5535	PR_FS	0
+%R	5556	5537	5536	PR_FS	0
+%R	5557	5538	5537	PR_FS	0
+%R	5558	5539	5538	PR_FS	0
+%R	5559	5540	5539	PR_FS	0
+%R	5560	5541	5540	PR_FS	0
+%R	5561	5542	5541	PR_FS	0
+%R	5562	5543	5542	PR_FS	0
+%R	5563	5544	5543	PR_FS	0
+%R	5564	5545	5544	PR_FS	0
+%R	5565	5546	5545	PR_FS	0
+%R	5566	5547	5546	PR_FS	0
+%R	5567	5548	5547	PR_FS	0
+%R	5568	5549	5548	PR_FS	0
+%R	5569	5550	5549	PR_FS	0
+%R	5570	5551	5550	PR_FS	0
+%R	5571	5511	5551	PR_FS	0
+%R	5572	5552	5510	PR_FS	0
+%R	5573	5553	5552	PR_FS	0
+%R	5574	5554	5553	PR_FS	0
+%R	5575	5555	5554	PR_FS	0
+%R	5576	5556	5555	PR_FS	0
+%R	5577	5557	5556	PR_FS	0
+%R	5578	5558	5557	PR_FS	0
+%R	5579	5559	5558	PR_FS	0
+%R	5580	5560	5559	PR_FS	0
+%R	5581	5561	5560	PR_FS	0
+%R	5582	5562	5561	PR_FS	0
+%R	5583	5563	5562	PR_FS	0
+%R	5584	5564	5563	PR_FS	0
+%R	5585	5565	5564	PR_FS	0
+%R	5586	5566	5565	PR_FS	0
+%R	5587	5567	5566	PR_FS	0
+%R	5588	5568	5567	PR_FS	0
+%R	5589	5569	5568	PR_FS	0
+%R	5590	5570	5569	PR_FS	0
+%R	5591	5571	5570	PR_FS	0
+%R	5592	5511	5571	PR_FS	0
+%R	5593	5572	5510	PR_FS	0
+%R	5594	5573	5572	PR_FS	0
+%R	5595	5574	5573	PR_FS	0
+%R	5596	5575	5574	PR_FS	0
+%R	5597	5576	5575	PR_FS	0
+%R	5598	5577	5576	PR_FS	0
+%R	5599	5578	5577	PR_FS	0
+%R	5600	5579	5578	PR_FS	0
+%R	5601	5580	5579	PR_FS	0
+%R	5602	5581	5580	PR_FS	0
+%R	5603	5582	5581	PR_FS	0
+%R	5604	5583	5582	PR_FS	0
+%R	5605	5584	5583	PR_FS	0
+%R	5606	5585	5584	PR_FS	0
+%R	5607	5586	5585	PR_FS	0
+%R	5608	5587	5586	PR_FS	0
+%R	5609	5588	5587	PR_FS	0
+%R	5610	5589	5588	PR_FS	0
+%R	5611	5590	5589	PR_FS	0
+%R	5612	5591	5590	PR_FS	0
+%R	5613	5511	5591	PR_FS	0
+%R	5614	5592	5510	PR_FS	0
+%R	5615	5593	5592	PR_FS	0
+%R	5616	5594	5593	PR_FS	0
+%R	5617	5595	5594	PR_FS	0
+%R	5618	5596	5595	PR_FS	0
+%R	5619	5597	5596	PR_FS	0
+%R	5620	5598	5597	PR_FS	0
+%R	5621	5599	5598	PR_FS	0
+%R	5622	5600	5599	PR_FS	0
+%R	5623	5601	5600	PR_FS	0
+%R	5624	5602	5601	PR_FS	0
+%R	5625	5603	5602	PR_FS	0
+%R	5626	5604	5603	PR_FS	0
+%R	5627	5605	5604	PR_FS	0
+%R	5628	5606	5605	PR_FS	0
+%R	5629	5607	5606	PR_FS	0
+%R	5630	5608	5607	PR_FS	0
+%R	5631	5609	5608	PR_FS	0
+%R	5632	5610	5609	PR_FS	0
+%R	5633	5611	5610	PR_FS	0
+%R	5634	5511	5611	PR_FS	0
+%R	5635	5612	5511	PR_FS	0
+%R	5636	5614	5612	PR_FS	0
+%R	5637	5615	5614	PR_FS	0
+%R	5638	5616	5615	PR_FS	0
+%R	5639	5617	5616	PR_FS	0
+%R	5640	5618	5617	PR_FS	0
+%R	5641	5619	5618	PR_FS	0
+%R	5642	5620	5619	PR_FS	0
+%R	5643	5621	5620	PR_FS	0
+%R	5644	5622	5621	PR_FS	0
+%R	5645	5623	5622	PR_FS	0
+%R	5646	5624	5623	PR_FS	0
+%R	5647	5625	5624	PR_FS	0
+%R	5648	5626	5625	PR_FS	0
+%R	5649	5627	5626	PR_FS	0
+%R	5650	5628	5627	PR_FS	0
+%R	5651	5629	5628	PR_FS	0
+%R	5652	5630	5629	PR_FS	0
+%R	5653	5631	5630	PR_FS	0
+%R	5654	5632	5631	PR_FS	0
+%R	5655	5633	5632	PR_FS	0
+%R	5656	5613	5633	PR_FS	0
+%R	5657	5634	5612	PR_FS	0
+%R	5658	5635	5634	PR_FS	0
+%R	5659	5636	5635	PR_FS	0
+%R	5660	5637	5636	PR_FS	0
+%R	5661	5638	5637	PR_FS	0
+%R	5662	5639	5638	PR_FS	0
+%R	5663	5640	5639	PR_FS	0
+%R	5664	5641	5640	PR_FS	0
+%R	5665	5642	5641	PR_FS	0
+%R	5666	5643	5642	PR_FS	0
+%R	5667	5644	5643	PR_FS	0
+%R	5668	5645	5644	PR_FS	0
+%R	5669	5646	5645	PR_FS	0
+%R	5670	5647	5646	PR_FS	0
+%R	5671	5648	5647	PR_FS	0
+%R	5672	5649	5648	PR_FS	0
+%R	5673	5650	5649	PR_FS	0
+%R	5674	5651	5650	PR_FS	0
+%R	5675	5652	5651	PR_FS	0
+%R	5676	5653	5652	PR_FS	0
+%R	5677	5613	5653	PR_FS	0
+%R	5678	5654	5612	PR_FS	0
+%R	5679	5655	5654	PR_FS	0
+%R	5680	5656	5655	PR_FS	0
+%R	5681	5657	5656	PR_FS	0
+%R	5682	5658	5657	PR_FS	0
+%R	5683	5659	5658	PR_FS	0
+%R	5684	5660	5659	PR_FS	0
+%R	5685	5661	5660	PR_FS	0
+%R	5686	5662	5661	PR_FS	0
+%R	5687	5663	5662	PR_FS	0
+%R	5688	5664	5663	PR_FS	0
+%R	5689	5665	5664	PR_FS	0
+%R	5690	5666	5665	PR_FS	0
+%R	5691	5667	5666	PR_FS	0
+%R	5692	5668	5667	PR_FS	0
+%R	5693	5669	5668	PR_FS	0
+%R	5694	5670	5669	PR_FS	0
+%R	5695	5671	5670	PR_FS	0
+%R	5696	5672	5671	PR_FS	0
+%R	5697	5673	5672	PR_FS	0
+%R	5698	5613	5673	PR_FS	0
+%R	5699	5674	5612	PR_FS	0
+%R	5700	5675	5674	PR_FS	0
+%R	5701	5676	5675	PR_FS	0
+%R	5702	5677	5676	PR_FS	0
+%R	5703	5678	5677	PR_FS	0
+%R	5704	5679	5678	PR_FS	0
+%R	5705	5680	5679	PR_FS	0
+%R	5706	5681	5680	PR_FS	0
+%R	5707	5682	5681	PR_FS	0
+%R	5708	5683	5682	PR_FS	0
+%R	5709	5684	5683	PR_FS	0
+%R	5710	5685	5684	PR_FS	0
+%R	5711	5686	5685	PR_FS	0
+%R	5712	5687	5686	PR_FS	0
+%R	5713	5688	5687	PR_FS	0
+%R	5714	5689	5688	PR_FS	0
+%R	5715	5690	5689	PR_FS	0
+%R	5716	5691	5690	PR_FS	0
+%R	5717	5692	5691	PR_FS	0
+%R	5718	5693	5692	PR_FS	0
+%R	5719	5613	5693	PR_FS	0
+%R	5720	5694	5612	PR_FS	0
+%R	5721	5695	5694	PR_FS	0
+%R	5722	5696	5695	PR_FS	0
+%R	5723	5697	5696	PR_FS	0
+%R	5724	5698	5697	PR_FS	0
+%R	5725	5699	5698	PR_FS	0
+%R	5726	5700	5699	PR_FS	0
+%R	5727	5701	5700	PR_FS	0
+%R	5728	5702	5701	PR_FS	0
+%R	5729	5703	5702	PR_FS	0
+%R	5730	5704	5703	PR_FS	0
+%R	5731	5705	5704	PR_FS	0
+%R	5732	5706	5705	PR_FS	0
+%R	5733	5707	5706	PR_FS	0
+%R	5734	5708	5707	PR_FS	0
+%R	5735	5709	5708	PR_FS	0
+%R	5736	5710	5709	PR_FS	0
+%R	5737	5711	5710	PR_FS	0
+%R	5738	5712	5711	PR_FS	0
+%R	5739	5713	5712	PR_FS	0
+%R	5740	5613	5713	PR_FS	0
+%R	5741	5714	5613	PR_FS	0
+%R	5742	5716	5714	PR_FS	0
+%R	5743	5717	5716	PR_FS	0
+%R	5744	5718	5717	PR_FS	0
+%R	5745	5719	5718	PR_FS	0
+%R	5746	5720	5719	PR_FS	0
+%R	5747	5721	5720	PR_FS	0
+%R	5748	5722	5721	PR_FS	0
+%R	5749	5723	5722	PR_FS	0
+%R	5750	5724	5723	PR_FS	0
+%R	5751	5725	5724	PR_FS	0
+%R	5752	5726	5725	PR_FS	0
+%R	5753	5727	5726	PR_FS	0
+%R	5754	5728	5727	PR_FS	0
+%R	5755	5729	5728	PR_FS	0
+%R	5756	5730	5729	PR_FS	0
+%R	5757	5731	5730	PR_FS	0
+%R	5758	5732	5731	PR_FS	0
+%R	5759	5733	5732	PR_FS	0
+%R	5760	5734	5733	PR_FS	0
+%R	5761	5735	5734	PR_FS	0
+%R	5762	5715	5735	PR_FS	0
+%R	5763	5736	5714	PR_FS	0
+%R	5764	5737	5736	PR_FS	0
+%R	5765	5738	5737	PR_FS	0
+%R	5766	5739	5738	PR_FS	0
+%R	5767	5740	5739	PR_FS	0
+%R	5768	5741	5740	PR_FS	0
+%R	5769	5742	5741	PR_FS	0
+%R	5770	5743	5742	PR_FS	0
+%R	5771	5744	5743	PR_FS	0
+%R	5772	5745	5744	PR_FS	0
+%R	5773	5746	5745	PR_FS	0
+%R	5774	5747	5746	PR_FS	0
+%R	5775	5748	5747	PR_FS	0
+%R	5776	5749	5748	PR_FS	0
+%R	5777	5750	5749	PR_FS	0
+%R	5778	5751	5750	PR_FS	0
+%R	5779	5752	5751	PR_FS	0
+%R	5780	5753	5752	PR_FS	0
+%R	5781	5754	5753	PR_FS	0
+%R	5782	5755	5754	PR_FS	0
+%R	5783	5715	5755	PR_FS	0
+%R	5784	5756	5714	PR_FS	0
+%R	5785	5757	5756	PR_FS	0
+%R	5786	5758	5757	PR_FS	0
+%R	5787	5759	5758	PR_FS	0
+%R	5788	5760	5759	PR_FS	0
+%R	5789	5761	5760	PR_FS	0
+%R	5790	5762	5761	PR_FS	0
+%R	5791	5763	5762	PR_FS	0
+%R	5792	5764	5763	PR_FS	0
+%R	5793	5765	5764	PR_FS	0
+%R	5794	5766	5765	PR_FS	0
+%R	5795	5767	5766	PR_FS	0
+%R	5796	5768	5767	PR_FS	0
+%R	5797	5769	5768	PR_FS	0
+%R	5798	5770	5769	PR_FS	0
+%R	5799	5771	5770	PR_FS	0
+%R	5800	5772	5771	PR_FS	0
+%R	5801	5773	5772	PR_FS	0
+%R	5802	5774	5773	PR_FS	0
+%R	5803	5775	5774	PR_FS	0
+%R	5804	5715	5775	PR_FS	0
+%R	5805	5776	5714	PR_FS	0
+%R	5806	5777	5776	PR_FS	0
+%R	5807	5778	5777	PR_FS	0
+%R	5808	5779	5778	PR_FS	0
+%R	5809	5780	5779	PR_FS	0
+%R	5810	5781	5780	PR_FS	0
+%R	5811	5782	5781	PR_FS	0
+%R	5812	5783	5782	PR_FS	0
+%R	5813	5784	5783	PR_FS	0
+%R	5814	5785	5784	PR_FS	0
+%R	5815	5786	5785	PR_FS	0
+%R	5816	5787	5786	PR_FS	0
+%R	5817	5788	5787	PR_FS	0
+%R	5818	5789	5788	PR_FS	0
+%R	5819	5790	5789	PR_FS	0
+%R	5820	5791	5790	PR_FS	0
+%R	5821	5792	5791	PR_FS	0
+%R	5822	5793	5792	PR_FS	0
+%R	5823	5794	5793	PR_FS	0
+%R	5824	5795	5794	PR_FS	0
+%R	5825	5715	5795	PR_FS	0
+%R	5826	5796	5714	PR_FS	0
+%R	5827	5797	5796	PR_FS	0
+%R	5828	5798	5797	PR_FS	0
+%R	5829	5799	5798	PR_FS	0
+%R	5830	5800	5799	PR_FS	0
+%R	5831	5801	5800	PR_FS	0
+%R	5832	5802	5801	PR_FS	0
+%R	5833	5803	5802	PR_FS	0
+%R	5834	5804	5803	PR_FS	0
+%R	5835	5805	5804	PR_FS	0
+%R	5836	5806	5805	PR_FS	0
+%R	5837	5807	5806	PR_FS	0
+%R	5838	5808	5807	PR_FS	0
+%R	5839	5809	5808	PR_FS	0
+%R	5840	5810	5809	PR_FS	0
+%R	5841	5811	5810	PR_FS	0
+%R	5842	5812	5811	PR_FS	0
+%R	5843	5813	5812	PR_FS	0
+%R	5844	5814	5813	PR_FS	0
+%R	5845	5815	5814	PR_FS	0
+%R	5846	5715	5815	PR_FS	0
+%R	5847	5816	5715	PR_FS	0
+%R	5848	5818	5816	PR_FS	0
+%R	5849	5819	5818	PR_FS	0
+%R	5850	5820	5819	PR_FS	0
+%R	5851	5821	5820	PR_FS	0
+%R	5852	5822	5821	PR_FS	0
+%R	5853	5823	5822	PR_FS	0
+%R	5854	5824	5823	PR_FS	0
+%R	5855	5825	5824	PR_FS	0
+%R	5856	5826	5825	PR_FS	0
+%R	5857	5827	5826	PR_FS	0
+%R	5858	5828	5827	PR_FS	0
+%R	5859	5829	5828	PR_FS	0
+%R	5860	5830	5829	PR_FS	0
+%R	5861	5831	5830	PR_FS	0
+%R	5862	5832	5831	PR_FS	0
+%R	5863	5833	5832	PR_FS	0
+%R	5864	5834	5833	PR_FS	0
+%R	5865	5835	5834	PR_FS	0
+%R	5866	5836	5835	PR_FS	0
+%R	5867	5837	5836	PR_FS	0
+%R	5868	5817	5837	PR_FS	0
+%R	5869	5838	5816	PR_FS	0
+%R	5870	5839	5838	PR_FS	0
+%R	5871	5840	5839	PR_FS	0
+%R	5872	5841	5840	PR_FS	0
+%R	5873	5842	5841	PR_FS	0
+%R	5874	5843	5842	PR_FS	0
+%R	5875	5844	5843	PR_FS	0
+%R	5876	5845	5844	PR_FS	0
+%R	5877	5846	5845	PR_FS	0
+%R	5878	5847	5846	PR_FS	0
+%R	5879	5848	5847	PR_FS	0
+%R	5880	5849	5848	PR_FS	0
+%R	5881	5850	5849	PR_FS	0
+%R	5882	5851	5850	PR_FS	0
+%R	5883	5852	5851	PR_FS	0
+%R	5884	5853	5852	PR_FS	0
+%R	5885	5854	5853	PR_FS	0
+%R	5886	5855	5854	PR_FS	0
+%R	5887	5856	5855	PR_FS	0
+%R	5888	5857	5856	PR_FS	0
+%R	5889	5817	5857	PR_FS	0
+%R	5890	5858	5816	PR_FS	0
+%R	5891	5859	5858	PR_FS	0
+%R	5892	5860	5859	PR_FS	0
+%R	5893	5861	5860	PR_FS	0
+%R	5894	5862	5861	PR_FS	0
+%R	5895	5863	5862	PR_FS	0
+%R	5896	5864	5863	PR_FS	0
+%R	5897	5865	5864	PR_FS	0
+%R	5898	5866	5865	PR_FS	0
+%R	5899	5867	5866	PR_FS	0
+%R	5900	5868	5867	PR_FS	0
+%R	5901	5869	5868	PR_FS	0
+%R	5902	5870	5869	PR_FS	0
+%R	5903	5871	5870	PR_FS	0
+%R	5904	5872	5871	PR_FS	0
+%R	5905	5873	5872	PR_FS	0
+%R	5906	5874	5873	PR_FS	0
+%R	5907	5875	5874	PR_FS	0
+%R	5908	5876	5875	PR_FS	0
+%R	5909	5877	5876	PR_FS	0
+%R	5910	5817	5877	PR_FS	0
+%R	5911	5878	5816	PR_FS	0
+%R	5912	5879	5878	PR_FS	0
+%R	5913	5880	5879	PR_FS	0
+%R	5914	5881	5880	PR_FS	0
+%R	5915	5882	5881	PR_FS	0
+%R	5916	5883	5882	PR_FS	0
+%R	5917	5884	5883	PR_FS	0
+%R	5918	5885	5884	PR_FS	0
+%R	5919	5886	5885	PR_FS	0
+%R	5920	5887	5886	PR_FS	0
+%R	5921	5888	5887	PR_FS	0
+%R	5922	5889	5888	PR_FS	0
+%R	5923	5890	5889	PR_FS	0
+%R	5924	5891	5890	PR_FS	0
+%R	5925	5892	5891	PR_FS	0
+%R	5926	5893	5892	PR_FS	0
+%R	5927	5894	5893	PR_FS	0
+%R	5928	5895	5894	PR_FS	0
+%R	5929	5896	5895	PR_FS	0
+%R	5930	5897	5896	PR_FS	0
+%R	5931	5817	5897	PR_FS	0
+%R	5932	5898	5816	PR_FS	0
+%R	5933	5899	5898	PR_FS	0
+%R	5934	5900	5899	PR_FS	0
+%R	5935	5901	5900	PR_FS	0
+%R	5936	5902	5901	PR_FS	0
+%R	5937	5903	5902	PR_FS	0
+%R	5938	5904	5903	PR_FS	0
+%R	5939	5905	5904	PR_FS	0
+%R	5940	5906	5905	PR_FS	0
+%R	5941	5907	5906	PR_FS	0
+%R	5942	5908	5907	PR_FS	0
+%R	5943	5909	5908	PR_FS	0
+%R	5944	5910	5909	PR_FS	0
+%R	5945	5911	5910	PR_FS	0
+%R	5946	5912	5911	PR_FS	0
+%R	5947	5913	5912	PR_FS	0
+%R	5948	5914	5913	PR_FS	0
+%R	5949	5915	5914	PR_FS	0
+%R	5950	5916	5915	PR_FS	0
+%R	5951	5917	5916	PR_FS	0
+%R	5952	5817	5917	PR_FS	0
+%R	5953	5918	5817	PR_FS	0
+%R	5954	5920	5918	PR_FS	0
+%R	5955	5921	5920	PR_FS	0
+%R	5956	5922	5921	PR_FS	0
+%R	5957	5923	5922	PR_FS	0
+%R	5958	5924	5923	PR_FS	0
+%R	5959	5925	5924	PR_FS	0
+%R	5960	5926	5925	PR_FS	0
+%R	5961	5927	5926	PR_FS	0
+%R	5962	5928	5927	PR_FS	0
+%R	5963	5929	5928	PR_FS	0
+%R	5964	5930	5929	PR_FS	0
+%R	5965	5931	5930	PR_FS	0
+%R	5966	5932	5931	PR_FS	0
+%R	5967	5933	5932	PR_FS	0
+%R	5968	5934	5933	PR_FS	0
+%R	5969	5935	5934	PR_FS	0
+%R	5970	5936	5935	PR_FS	0
+%R	5971	5937	5936	PR_FS	0
+%R	5972	5938	5937	PR_FS	0
+%R	5973	5939	5938	PR_FS	0
+%R	5974	5919	5939	PR_FS	0
+%R	5975	5940	5918	PR_FS	0
+%R	5976	5941	5940	PR_FS	0
+%R	5977	5942	5941	PR_FS	0
+%R	5978	5943	5942	PR_FS	0
+%R	5979	5944	5943	PR_FS	0
+%R	5980	5945	5944	PR_FS	0
+%R	5981	5946	5945	PR_FS	0
+%R	5982	5947	5946	PR_FS	0
+%R	5983	5948	5947	PR_FS	0
+%R	5984	5949	5948	PR_FS	0
+%R	5985	5950	5949	PR_FS	0
+%R	5986	5951	5950	PR_FS	0
+%R	5987	5952	5951	PR_FS	0
+%R	5988	5953	5952	PR_FS	0
+%R	5989	5954	5953	PR_FS	0
+%R	5990	5955	5954	PR_FS	0
+%R	5991	5956	5955	PR_FS	0
+%R	5992	5957	5956	PR_FS	0
+%R	5993	5958	5957	PR_FS	0
+%R	5994	5959	5958	PR_FS	0
+%R	5995	5919	5959	PR_FS	0
+%R	5996	5960	5918	PR_FS	0
+%R	5997	5961	5960	PR_FS	0
+%R	5998	5962	5961	PR_FS	0
+%R	5999	5963	5962	PR_FS	0
+%R	6000	5964	5963	PR_FS	0
+%R	6001	5965	5964	PR_FS	0
+%R	6002	5966	5965	PR_FS	0
+%R	6003	5967	5966	PR_FS	0
+%R	6004	5968	5967	PR_FS	0
+%R	6005	5969	5968	PR_FS	0
+%R	6006	5970	5969	PR_FS	0
+%R	6007	5971	5970	PR_FS	0
+%R	6008	5972	5971	PR_FS	0
+%R	6009	5973	5972	PR_FS	0
+%R	6010	5974	5973	PR_FS	0
+%R	6011	5975	5974	PR_FS	0
+%R	6012	5976	5975	PR_FS	0
+%R	6013	5977	5976	PR_FS	0
+%R	6014	5978	5977	PR_FS	0
+%R	6015	5979	5978	PR_FS	0
+%R	6016	5919	5979	PR_FS	0
+%R	6017	5980	5918	PR_FS	0
+%R	6018	5981	5980	PR_FS	0
+%R	6019	5982	5981	PR_FS	0
+%R	6020	5983	5982	PR_FS	0
+%R	6021	5984	5983	PR_FS	0
+%R	6022	5985	5984	PR_FS	0
+%R	6023	5986	5985	PR_FS	0
+%R	6024	5987	5986	PR_FS	0
+%R	6025	5988	5987	PR_FS	0
+%R	6026	5989	5988	PR_FS	0
+%R	6027	5990	5989	PR_FS	0
+%R	6028	5991	5990	PR_FS	0
+%R	6029	5992	5991	PR_FS	0
+%R	6030	5993	5992	PR_FS	0
+%R	6031	5994	5993	PR_FS	0
+%R	6032	5995	5994	PR_FS	0
+%R	6033	5996	5995	PR_FS	0
+%R	6034	5997	5996	PR_FS	0
+%R	6035	5998	5997	PR_FS	0
+%R	6036	5999	5998	PR_FS	0
+%R	6037	5919	5999	PR_FS	0
+%R	6038	6000	5918	PR_FS	0
+%R	6039	6001	6000	PR_FS	0
+%R	6040	6002	6001	PR_FS	0
+%R	6041	6003	6002	PR_FS	0
+%R	6042	6004	6003	PR_FS	0
+%R	6043	6005	6004	PR_FS	0
+%R	6044	6006	6005	PR_FS	0
+%R	6045	6007	6006	PR_FS	0
+%R	6046	6008	6007	PR_FS	0
+%R	6047	6009	6008	PR_FS	0
+%R	6048	6010	6009	PR_FS	0
+%R	6049	6011	6010	PR_FS	0
+%R	6050	6012	6011	PR_FS	0
+%R	6051	6013	6012	PR_FS	0
+%R	6052	6014	6013	PR_FS	0
+%R	6053	6015	6014	PR_FS	0
+%R	6054	6016	6015	PR_FS	0
+%R	6055	6017	6016	PR_FS	0
+%R	6056	6018	6017	PR_FS	0
+%R	6057	6019	6018	PR_FS	0
+%R	6058	5919	6019	PR_FS	0
+%E
