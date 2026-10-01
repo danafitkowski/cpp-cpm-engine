@@ -46,7 +46,7 @@ All AACE RPs are peer-reviewed and adopted by AACE International, the leading pr
 
 > AACE International Recommended Practice 29R-03. *Forensic Schedule Analysis.* AACE International, originally 2003, revised 2011.
 
-Defines the standard methods for forensic schedule analysis (Method Implementation Protocols 3.1 through 3.9). The engine provides the CPM math primitives supporting MIP 3.3 (Observational / Dynamic / Contemporaneous As-Is — also called Modified Schedule / Windows Analysis), MIP 3.6 (Modeled / Additive / Single Simulation — Prospective Single-Base TIA), MIP 3.7 (Modeled / Additive / Multiple Base — TIA), and MIP 3.8 (Modeled / Subtractive / Single Simulation — Collapsed As-Built). Both "Contemporaneous As-Is" and "Modified Schedule / Windows Analysis" descriptors for MIP 3.3 appear in AACE materials across editions; an opposing expert citing one descriptor will be looking at the same protocol.
+Defines the standard methods for forensic schedule analysis (Method Implementation Protocols 3.1 through 3.9). The engine provides the CPM math primitives supporting MIP 3.3 (Observational / Dynamic / Contemporaneous As-Is — also called Modified Schedule / Windows Analysis), MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA), MIP 3.7 (Modeled / Additive / Multiple Base — TIA), and MIP 3.8 (Modeled / Subtractive / Single Simulation — Collapsed As-Built). Both "Contemporaneous As-Is" and "Modified Schedule / Windows Analysis" descriptors for MIP 3.3 appear in AACE materials across editions; an opposing expert citing one descriptor will be looking at the same protocol.
 
 - **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
@@ -71,9 +71,9 @@ Defines the prospective TIA method — fragnet insertion against a contemporaneo
 
 ### AACE 122R-22 (2022)
 
-> AACE International Recommended Practice 122R-22. *Quantitative Schedule Risk Analysis Maturity Model (QRAMM).* AACE International, 2022.
+> AACE International Recommended Practice 122R-22. *Quantitative Risk Analysis Maturity Model (QRAMM).* AACE International, 2022.
 
-Defines the maturity-model framework for QRA programs. The engine emits a QRAMM-compatible badge surface; the full QRAMM scoring is in the `schedule-risk-analysis` skill.
+Defines a five-level maturity model (Level 1 Reactive, 2 Ad-hoc, 3 Centralized, 4 Dynamic, 5 Adaptive) for an organization's quantitative-risk-analysis capability; the RP states it is guidance, not a standard. The engine emits a QRAMM-aligned badge surface; the full QRAMM-aligned maturity reading is in the `schedule-risk-analysis` skill.
 
 - **AACE web:** <https://web.aacei.org>
 - **Verified:** Yes.
@@ -167,6 +167,7 @@ The following citations have circulated in scheduling literature and CPP audit h
 - **Emden v. Homer Holdings** — does not exist. (Confused with the *Hudson's* and *Emden's Building Contracts* treatises, which are real.)
 - **Leopold-Leasco v. United States** — does not exist.
 - **J.A. Jones v. Plumbers & Pipefitters Local 598 (Wash. App. 2000)** — does not exist.
+- **"AACE 29R-03 §4.3 immutability"** — does not exist. Withdrawn 2026-08-19. The engine used to attribute its actual-start early-start pinning to this rule. §4.3 of the 25 April 2011 revision is "Critical Path and Float" (A. Identifying the Critical Path, B. Quantifying Near-Critical, C. Identifying the As-Built Critical Path, D. Common Critical Path Alteration Techniques, E. Ownership of Float). The full §4.3 span contains no occurrence of "early start", "actual start", "pin" or "immutable", and "immutable", "historical fact" and "already happened" appear nowhere in the 134 pages. The behaviour is Oracle P6 / CPM forward-pass semantics and needs no RP citation. Do not substitute §1.5.B.2: it addresses the data date concept and says critical path and float are computable only forward of the data date, which is silent on actual starts and arguably cuts against the pinning rule. The only honest AACE anchor is §2.2.B.1.c, and only for the data condition (an actual start to the right of the data date is a source-validation exception to investigate), never for the calculation.
 
 If you believe a flagged citation is real, please open a PR with a primary-source URL (Westlaw / CanLII / BAILII / a court reporter cite). The audit will reconsider.
 

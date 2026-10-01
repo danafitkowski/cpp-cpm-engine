@@ -74,11 +74,12 @@ const result = E.computeCPM(activities, relationships, { dataDate: '<YYYY-MM-DD>
 **Goal:** Know whether the source schedule was computed under retained logic or progress override, and whether multi-calendar or single-calendar.
 
 **Do:**
-- Identify the P6 schedule mode: retained logic vs progress override. The engine implements **retained logic only**; if the source schedule was computed under progress override, that is a disclosed-substitution path (the engine emits `progress-override-not-supported` ALERT and proceeds under retained logic).
+- Identify the P6 schedule mode: retained logic vs progress override. The engine implements **both** modes, selected by `opts.scheduleMode` (alias `opts.schedule_mode`), with `retained_logic` as the default. Under `retained_logic` the remaining work of an in-progress activity restarts at max(data date, driving predecessor logic); under `progress_override` it restarts at the data date, ignoring predecessor logic. `progress_override` output is engine self-consistency only (JS/Python crossval fixture F49) and is not asserted as P6-validated until an override-mode P6 capture exists. An unrecognized `opts.scheduleMode` value emits an `unknown-schedule-mode` ALERT and the run falls back to `retained_logic`.
 - Identify whether activities have per-activity calendar assignments (`clndr_id`) or a single project calendar.
 
 **Engine support:**
-- `result.alerts` will contain `progress-override-not-supported` if the engine detected progress-override input.
+- `result.alerts` will contain `unknown-schedule-mode` if `opts.scheduleMode` is neither `retained_logic` nor `progress_override`; the run then proceeds under `retained_logic`.
+- The engine does not detect the mode from the source file. It validates only the mode the analyst passes, and both valid modes compute without any alert, so an empty alert filter is not evidence of the source schedule's mode. Read the source mode from the XER `SCHEDOPTIONS` row (`sched_retained_logic` / `sched_progress_override`) and confirm `opts.scheduleMode` matches it. `progress_override` output is engine self-consistency only and is not P6-validated.
 - In forensic strict mode (`forensic_strict: true`), this alert is FATAL and must be addressed before producing an opinion.
 
 **Capture in manifest:** source schedule mode (retained / override / unknown), calendar count, override-vs-retained reconciliation note if applicable.
@@ -155,7 +156,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - If the opinion relies on engine output that the analyst has not personally verified against P6 (or another commercial CPM tool), run the engine against the source XER AND open the source XER in P6, capture P6's native ES/EF/LS/LF/TF/FF for the activities the opinion turns on, and document field-level agreement or divergence.
-- The engine ships a [P6 comparison matrix framework](validation/p6-comparison/) covering 15 representative scenarios. Use it as a template for case-specific comparisons.
+- The engine ships a [P6 comparison matrix framework](validation/p6-comparison/) covering 13 P6-comparable scenarios. Two further scenarios are by-construction non-comparable, so they sit outside the matrix and are documented separately in `validation/engine-limitations/`: one is a deliberate engine divergence (day-granular rounding of sub-day lags P6 handles natively), one an input P6 cannot author (a dangling relationship). Use it as a template for case-specific comparisons.
 
 **Engine support:**
 - `result.nodes[code]` carries `{ es, ef, ls, lf, tf, ff }` per activity (engine output).
@@ -173,7 +174,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 - Select the AACE method:
   - **3.3 Observational / Dynamic / Contemporaneous As-Is** (windows analysis) — most common for retrospective EOT claims.
   - **3.7 Modeled / Additive / Multiple Base** (prospective TIA) — fragnet insertion.
-  - **3.8 Modeled / Subtractive / Single Base** (collapsed as-built / but-for) — independent validation method.
+  - **3.8 Modeled / Subtractive / Single Simulation** (collapsed as-built / but-for) — independent validation method.
   - **3.9 Modeled / Subtractive / Multiple Base** — but-for with windowed baselines.
   - Other methods per the case posture.
 - The engine emits the AACE-canonical `method_id` automatically in `result.manifest.method_id` based on the entry point used (computeCPM, computeTIA, etc.). Verify the emitted label matches the analyst's intent.
@@ -257,7 +258,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - Verify the deliverable's report manifest references:
-  - Engine version (e.g., `cpm-engine v2.9.34`)
+  - Engine version (e.g., `cpm-engine v2.9.49`)
   - Source SHA-256 (from Step 2)
   - This SOP (`FORENSIC_USE_SOP.md`)
   - DAUBERT.md (engine disclosure)
@@ -272,15 +273,48 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 ---
 
+## After issuance: re-issue and supersession
+
+The 14 steps run from intake to signoff and stop there. They do not cover what
+happens when the engine changes underneath a deliverable that has already been
+signed and sent, and that gap is not theoretical: a scheduling-behaviour change can
+make a signed report compute differently today than it did on the day it was
+issued, while a disclosure-only change can leave a report pointing its reader at
+published hashes that no longer verify. Those two situations need opposite
+responses, and neither one is a step in this SOP.
+
+That procedure lives in the operator procedure, not here:
+
+> **CPP Schedule Analytics Suite Operator Procedure, `PROCEDURE.md` §12,
+> "Re-issue and supersession of issued deliverables"**
+> (`~/.claude/skills/_cpp_common/PROCEDURE.md`)
+
+`PROCEDURE.md` §12 answers, concretely: which classes of engine change require
+action on already-issued work and which do not; what to re-run and what to compare
+in order to test one specific report for exposure; what the client is told, and by
+when, for each outcome; how a superseded deliverable is marked so it cannot be
+mistaken for the current one; and who decides.
+
+**Step 14 is what makes it runnable.** The engine version, the source SHA-256 and
+the deliverable SHA-256 recorded at signoff are the first fields §12.2 reads. A
+deliverable signed without them cannot be tested for exposure later, so treat the
+Step 14 manifest references as the precondition for post-issuance change control
+rather than as paperwork.
+
+Run §12.1 on the day an engine release is tagged, before the new version touches
+live work. Do not wait for a client to ask.
+
+---
+
 ## Why this SOP exists
 
 FRE 702 attacks come in two flavors:
 
-1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.34 verification chain answer this layer.
+1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.49 verification chain answer this layer.
 
 2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
-Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,104 unit tests, 747/747 crossval, 93/82/93/93 coverage). The application layer is where attacks will land — make it harder than the engine layer.
+Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,345 unit tests, 2465 of 2539 enumerated crossval comparisons bit-identical, 94/83/95/94 coverage at the v2.9.49 baseline). The application layer is where attacks will land — make it harder than the engine layer.
 
 Following this SOP does not guarantee admissibility. It documents a defensible application discipline. Whether the opinion itself is defensible remains the analyst's burden under FRE 702.
 
@@ -293,7 +327,7 @@ For each deliverable, the analyst should be able to mark every line below as ✅
 - [ ] Step 1 — Source intake recorded (filename, sender, timestamp, transmission method)
 - [ ] Step 2 — SHA-256 captured; original file read-only
 - [ ] Step 3 — Data date confirmed (file + transmittal reconciled)
-- [ ] Step 4 — Schedule mode confirmed (retained logic vs override); progress-override-not-supported alert handled if applicable
+- [ ] Step 4 — Schedule mode confirmed (retained logic vs progress override); `opts.scheduleMode` set to match the source schedule, any `unknown-schedule-mode` alert handled, and `progress_override` runs disclosed as engine self-consistency only (not P6-validated)
 - [ ] Step 5 — Calendar inventory captured; jurisdiction code + verification noted
 - [ ] Step 6 — Forensic strict validation passed (no unoverridden fatal alerts)
 - [ ] Step 7 — All non-fatal alerts reviewed; analyst notes attached
@@ -307,8 +341,23 @@ For each deliverable, the analyst should be able to mark every line below as ✅
 
 Use this checklist as the cover sheet of the case folder. Opposing counsel asking "did you follow your own SOP?" gets an answer they can see line by line.
 
+The cover sheet is also where post-issuance change control is recorded. Leave a
+**Supersession** block at the foot of it, empty until it is needed, and enter one
+line per event per `PROCEDURE.md` §12.5:
+
+```
+Supersession
+  <deliverable filename> (issued <date>, engine v<X.Y.Z>, SHA-256 <first 8 hex>)
+    superseded <date> by <replacement filename> (SHA-256 <first 8 hex>): <reason>
+```
+
+An engine re-check that moved nothing still gets recorded, as the re-check note
+named in `PROCEDURE.md` §12.2. A blank Supersession block on a case that was never
+re-checked and a blank one on a case that was re-checked clean look identical, and
+only the second is an answer.
+
 ---
 
 ## Document version
 
-This SOP is aligned to `cpm-engine` v2.9.34. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.
+This SOP is aligned to `cpm-engine` v2.9.49. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.

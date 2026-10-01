@@ -24,9 +24,9 @@
 | 3 | SHA sidecar wording | CLOSED v2.9.33 | — | Reframed as "gitignored generated artifact" |
 | 4 | `npm run verify` doesn't run new gates | CLOSED v2.9.33 | — | `scripts/attestation.js` now invokes truncation + version-drift |
 | 5 | Version-refs gate silently skips missing release-evidence | CLOSED v2.9.33 | — | Now WARN-by-default + FATAL when `CHECK_RELEASE_EVIDENCE=1` |
-| 6 | P6 comparison framework has no analyst captures | **OPEN — Dana's action** | Q3 | Requires P6 access + per-case capture |
+| 6 | P6 comparison framework has no analyst captures | CLOSED v2.9.39 (fitted) | Q3 | One P6 23.12 capture covering all 13 cases landed 2026-08-11 (commit `9b748cc`) and scored 6 PASS / 7 FAIL; five divergence families were fixed against it in commits `23ffeca`, `264de84`, `bf442d5`, `05dc8b4` and the regenerated matrix now reads 13 / 13. Fitted to that one capture, no held-out case, so an independent second capture stays OPEN. |
 | 7 | Cases 14/15 in P6 matrix not P6-comparable | CLOSED v2.9.33 | Q11 | Moved to `validation/engine-limitations/` |
-| 8 | Synthetic XER corpus — no real-world XERs | **OPEN — Dana's action** | Q4, Q5 | `validation/real-xer-corpus/` placeholder created; awaits consent + sourcing |
+| 8 | Synthetic XER corpus — no real-world XERs | CLOSED v2.9.43 (superseded) | Q4, Q5 | Closed 2026-09-08 as superseded by the maintainer's private P6 oracle harness, which exercises real project exports under confidentiality and cannot be published. No owner consent will be sought for a public corpus; the public validation surface remains the synthetic corpus plus the P6 comparison matrix. |
 | 9 | Clean baseline emits 23 alerts | **ACCEPTED-LIMITATION** | Q6 | Parser logs every event (INFO/WARN/ALERT) by forensic-discipline design; case READMEs explain breakdown. **v2.9.34** — full per-alert triage at `validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md` (single root cause: corpus harness does not pass `cal_map`; 9 forward + 14 backward variants of the same fallback). |
 | 10 | 1k-activity scale stress is trivial FS chain | CLOSED v2.9.34 | Q7 | New case `13-large-1000-dag-branching` — 10-phase diamond cascade, 5-way fan-out + 5-way fan-in at every phase boundary, 1020 activities / 1059 relationships. Topology regression at `tests/corpus-dag-fixture.test.js`. |
 | 11 | docs/jurisdictions.md bottom guarantee wrong | CLOSED v2.9.33 | — | Both top + bottom now describe ISO date strings correctly |
@@ -59,8 +59,8 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 
 ## Validation surface roadmap
 
-- **P6 comparison matrix population** — Dana's action; per-case native P6 captures for cases 1-13. (#6 / Q3) Engineering scaffolding shipped in v2.9.34 — `scripts/validate-p6-comparison.js` validates populated CSVs against schema + engine-column accuracy; `docs/p6-comparison-schema.md` documents the format.
-- **Real-XER corpus** — Dana's action; sanitization + consent process for 5-10 real project schedules. (#8 / Q4, Q5)
+- **P6 comparison matrix population** — Dana's action; cases 1-13 are populated from a single capture taken on 2026-08-11 against Primavera P6 Professional 23.12, and the matrix now stands 13 / 13 PASS. That result is fitted, not blind: the first capture scored 6/13 and five divergence families were then corrected against P6's pinned answers, so the remaining action is one independent held-out capture. (#6 / Q3) Engineering scaffolding shipped in v2.9.34 — `scripts/validate-p6-comparison.js` validates populated CSVs against schema + engine-column accuracy; `docs/p6-comparison-schema.md` documents the format.
+- **Real-XER corpus** — closed 2026-09-08, superseded by the private oracle harness (see #8). No public corpus is planned.
 - **1k-10k DAG fixtures** — first 1k DAG fixture shipped v2.9.34 (`13-large-1000-dag-branching`, 10-phase diamond cascade with branching + merging). Expansion toward 10k DAG with parametric topology is a future engineering item.
 - **MPXJ Java-bridge crossval** — engineering roadmap; second-implementation external verification beyond JS↔Python parity. (DAUBERT §10)
 - **AACE TCM Forum submission** — Dana's action; formal peer review path. (DAUBERT §3 / §10)
@@ -71,6 +71,56 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 2. **Cross-exam-prep responses** in [`docs/cross-exam-prep.md`](docs/cross-exam-prep.md) are keyed to the Q# column. ACCEPTED-LIMITATION items always have a Q#.
 3. **OPEN items** make the engine's roadmap visible to opposing counsel and to the trier of fact. That visibility is the forensic-discipline posture — better than silently leaving items out.
 
+## Status at v2.9.43 (reviewed 2026-09-07)
+
+No audit item changed status between v2.9.39 and v2.9.43; the two releases since v2.9.39 moved the validation surface, not the register:
+
+- **v2.9.42, v2.9.43 (retained-logic wave, 2026-09-02).** Progress-override and retained-logic scheduling aligned to P6 semantics on an empirical rule set (380 of 380 observed P6 outcomes reproduced in the private oracle harness). Cross-validation at v2.9.42 reads 1,009 of 1,015 field comparisons executed, 6 not compared, 0 failures, across 46 fixtures (`validation.html` on the practice site records the run). JS unit tests 1,273.
+- **Reported-figures fix (2026-09-03).** Five defects in the figures that reach a deliverable face were fixed and deployed on the hosted server; no engine math changed.
+- **Item 6 stays as recorded:** 13 / 13 is fitted to the one 2026-08-11 capture. The independent held-out capture (about one hour in P6) remains Dana's action and is the only thing that turns the matrix from fitted to blind.
+- **Item 8 closed 2026-09-08** as superseded by the private oracle harness; no public corpus is planned.
+
+## Status at v2.9.45 (reviewed 2026-09-21)
+
+No audit item changed status. v2.9.45 is an engine-math release (finish-constraint instants, see CHANGELOG.md): the cross-validation surface is unchanged at 1,009 of 1,015 comparisons across 46 fixtures, the unit suite grew from 1,288 to 1,306, coverage was re-measured on the new bytes (93.87% statements / 83.09% branches / 94.92% functions), and the 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture, every engine column identical to v2.9.44's. Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
+
+## Status at v2.9.46 (reviewed 2026-09-22)
+
+No audit item changed status. v2.9.46 is an engine-math release (retained-logic pass-through, SS_U, PO_SNAP; see CHANGELOG.md): the cross-validation surface grew from 46 to 53 fixtures (7 new ones exercising the three changes directly) and from 1,009 of 1,015 to 1,167 of 1,183 comparisons, still 0 failures; the unit suite grew from 1,306 to 1,307 (RL-5/RL-6/RL-7 re-pinned to the SS_U-correct values rather than added as new tests); coverage was re-measured on the new bytes (93.81% statements / 82.63% branches / 94.96% functions); the 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture and reads 13 / 13 with zero changed rows. Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
+
+## Status at v2.9.47 (reviewed 2026-09-23)
+
+No audit item changed status. v2.9.47 is an engine-math release (the unexpired lag off started and completed work, "lag from Actual Start", no lag from started work into completed work; see CHANGELOG.md).
+- The cross-validation surface grew from 53 to 82 fixtures (29 new ones exercising the changes directly) and from 1,167 of 1,183 to 1,957 of 2,011 comparisons, still 0 failures.
+- The unit suite grew from 1,307 to 1,315.
+- Coverage was re-measured on the new bytes: 93.95% statements / 83.08% branches / 95.20% functions.
+- The 13-case P6 comparison matrix was recomputed under the new engine against the same 2026-08-11 capture. It reads 13 / 13 with zero changed rows.
+
+Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action. The new rules were measured in P6 itself, on probe projects scheduled and read back from its database. Those probes are not a held-out capture of the comparison matrix.
+
+## Status at v2.9.48 (reviewed 2026-09-27)
+
+No audit item changed status. v2.9.48 changes no scheduling arithmetic; it fixes two display fields and the Daubert disclosure text (see CHANGELOG.md).
+- A completed activity's `ef_last_worked_date` / `lf_last_worked_date` print its actual finish date when that finish carries its closing time, as P6 prints it.
+- `buildDaubertDisclosure` states the harness's current figures (82 fixtures, 1957 of 2011, 54 skipped), and its gate R-v298-B10 reads them from `validation/crossval-summary.json`.
+- The cross-validation surface is unchanged at 1,957 of 2,011 comparisons across 82 fixtures, 0 failures.
+- The unit suite grew from 1,315 to 1,325.
+- Coverage was re-measured on the new bytes: 94.05% statements / 83.20% branches / 95.20% functions.
+- The 13-case P6 comparison matrix was re-run on the new bytes against the same 2026-08-11 capture. It reads 13 / 13 with zero changed rows.
+
+Item 6 stands: that matrix is still fitted to one capture, and the held-out capture remains Dana's action.
+
+## Status at v2.9.49 (reviewed 2026-09-27)
+
+No audit item changed status. v2.9.49 is an engine-math release measured on Primavera P6 Professional 23.12.1's own F9 of the website demo update at three data dates: the Must Finish By, the resume date, completed-to-completed links, free float to a completed successor, and what `parseXER` hands on (see CHANGELOG.md). Its change class is Dana's decision under the operator procedure.
+- The cross-validation surface grew from 82 to 99 fixtures (17 new ones exercising the changes directly) and from 1,957 of 2,011 to 2,465 of 2,539 comparisons, still 0 failures. F75 moves to the measured value and is re-described.
+- The unit suite grew from 1,325 to 1,345.
+- Coverage was re-measured on the new bytes: 94.30% statements / 83.43% branches / 95.30% functions.
+- The 13-case P6 comparison matrix was re-run on the new bytes against the same 2026-08-11 capture. It reads 13 / 13 with zero changed rows.
+- Three demo-update capture cases (16-18) join it: all 291 open activities match P6 on early and late dates and total and free float at each of the three data dates.
+
+Item 6 stands: the 13-case matrix is still fitted to one capture, and the held-out capture remains Dana's action. The demo-update cases are fitted too: the v2.9.49 rules were derived from them, so they are not the held-out capture either.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.34. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.49. Update on every release that closes or opens an audit item.

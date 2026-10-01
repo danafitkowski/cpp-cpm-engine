@@ -6,7 +6,7 @@ B has an actual_start before A finished. Engine emits "out-of-sequence" ALERT an
 
 ## Expected behavior
 
-A planned, duration 10 wd, no actuals. B is FS-after-A but has actual_start 2026-01-08 (4 wd into A). Engine emits out-of-sequence ALERT enumerating A as the violating predecessor. In retained logic, B.ES = max(B.actual_start, A.EF) so B is pulled to A.EF if A finishes after B started.
+fitted to capture 9b748cc (2026-08-11), not independently validated: RETAINED LOGIC holds the remaining work of the out-of-sequence starter behind its predecessor. B (AS Jan 8, 3 wd remaining) restarts behind A EF disp Jan 23: restart Jan 26, EF disp Jan 28. A: ES Jan 12, TF 0 (drives B remaining). B TF 0; display LS = actual start Jan 8; REM_LATE_START Jan 26. Continuing B from the data date is progress-override behavior.
 
 ## How to reproduce in Primavera P6
 
@@ -17,22 +17,14 @@ A planned, duration 10 wd, no actuals. B is FS-after-A but has actual_start 2026
 5. Data date = 2026-01-12. Retained logic mode.
 6. P6 should flag the out-of-sequence relationship; engine emits ALERT.
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.45)
 
-Project finish: `2026-01-22`
+Project finish: `2026-01-29`
 
 Critical activities: `["A","B"]`
 
 ### Alerts emitted
 
-- **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `FS lag A->B` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `forward B.EF (retained-logic rem=3)` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `init-LS B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward B.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward FS lag A->B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `out-of-sequence` — Activity B is in progress but 1 predecessor(s) have no actual_start (retained-logic anomaly): A
 
 
@@ -42,12 +34,12 @@ Critical activities: `["A","B"]`
 2. F9 to schedule.
 3. Capture the ES / EF / LS / LF / TF / FF columns from the P6 activity table.
 4. Paste each activity's P6 values into the `*_p6` columns of `comparison.csv`.
-5. Mark verdict_pass_fail = `PASS` when all six values match the engine column,
+5. Mark verdict_pass_fail = `PASS` when each value matches the engine column on the documented basis. EF and LF are compared on the activity's own calendar, so a computed value one working day from the raw P6 cell is a PASS, not a FAIL,
    or `FAIL — <delta>` with the specific field-level discrepancy.
 
 ## Files in this case
 
 - `input.json` — activities + relationships + opts (engine input)
 - `engine-output.json` — full `computeCPM` result
-- `comparison.csv` — engine vs P6 comparison (P6 column blank, fill manually)
+- `comparison.csv` — engine vs P6 comparison (P6 columns already captured and verdicts written; regenerate only to add a new case)
 - `README.md` — this file

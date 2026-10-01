@@ -16,7 +16,9 @@ Lag value 0.5 wd: engine emits ALERT, rounds to 1 wd (Math.round half-toward-+in
 4. Compare B.ES to engine output. Engine reports lag = 1 wd after rounding; P6 honors 4h lag natively.
 5. This case documents the engine's known day-granular limitation (see DAUBERT.md §11).
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.41)
+
+First captured at v2.9.31; re-run at v2.9.41 on 2026-08-19 with the same project finish and critical set. The newer engine emits two additional calendar-fallback alerts (`seed last-worked`) from a pass that did not exist at v2.9.31; `engine-output.json` is the v2.9.41 run.
 
 Project finish: `2026-01-14`
 
@@ -25,13 +27,15 @@ Critical activities: `["A","B"]`
 ### Alerts emitted
 
 - **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `FS lag A->B` — SUB_DAY_LAG_ROUNDED: lag/duration value 0.5 is fractional; engine rounds to 1 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precisi
+- **ALERT** `FS lag A->B` — SUB_DAY_LAG_ROUNDED: lag/duration value 0.5 is fractional; engine rounds to 1 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift.
 - **ALERT** `FS lag A->B` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `forward B.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+- **ALERT** `seed last-worked A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+- **ALERT** `seed last-worked B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `init-LS B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `backward B.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
-- **ALERT** `backward FS lag A->B` — SUB_DAY_LAG_ROUNDED: lag/duration value 0.5 is fractional; engine rounds to 1 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precisi
+- **ALERT** `backward FS lag A->B` — SUB_DAY_LAG_ROUNDED: lag/duration value 0.5 is fractional; engine rounds to 1 day(s). V8 Math.round rounds half toward +Infinity; sub-day lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the documented drift.
 - **ALERT** `backward FS lag A->B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `backward A.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 

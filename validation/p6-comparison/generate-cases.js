@@ -66,11 +66,10 @@ const CASES = [
             'Start-to-Start relationship with 5 working-day lag. B can start ' +
             'no earlier than 5 wd after A starts.',
         expected_behavior:
-            'A starts dataDate (Mon Jan 5), duration 10 wd → EF Mon Jan 19. ' +
-            'B is anchored by SS+5: B.ES = A.ES + 5 wd = Mon Jan 12. ' +
-            'B duration 4 wd → B.EF = Fri Jan 16. ' +
-            'Project finishes at max(A.EF, B.EF) = A.EF = Jan 19. ' +
-            'A is on the critical path; B has TF = 1 wd (Jan 19 - Jan 16).',
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: the SS successor constrains ' +
+            'the START of A only; the finish of A floats to project end (use-project-' +
+            'end-date-for-float). A: ES Jan 5, EF disp Jan 16, LS Jan 5, LF disp Jan 16, TF 0. ' +
+            'B: ES Jan 12, EF disp Jan 15, LS Jan 13, LF disp Jan 16, TF 1 wd, FF 1 wd.',
         activities: [
             { code: 'A', duration_days: 10 },
             { code: 'B', duration_days: 4 },
@@ -128,11 +127,10 @@ const CASES = [
             'Start-to-Finish relationship: B finishes no earlier than A starts ' +
             '(uncommon, used for things like "B must continue until A starts").',
         expected_behavior:
-            'A starts dataDate = Mon Jan 5. B.EF >= A.ES + 0 = Mon Jan 5. ' +
-            'B duration 3 wd → B.ES = Wed Dec 31 (prior year). With ' +
-            'projectStart anchor Mon Jan 5, B.ES is pinned to Mon Jan 5 and ' +
-            'B.EF becomes Wed Jan 7. Verify the engine and P6 handle the ' +
-            'projectStart anchor identically.',
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: the SF successor constrains ' +
+            'the START of A only, never its finish. A: ES Jan 5, EF disp Jan 9, LS Jan 5, ' +
+            'LF disp Jan 9 (project finish), TF 0. B: ES Jan 5, EF disp Jan 7, ' +
+            'LS Jan 7, LF disp Jan 9, TF 2 wd, FF 2 wd.',
         activities: [
             { code: 'A', duration_days: 5 },
             { code: 'B', duration_days: 3 },
@@ -161,11 +159,13 @@ const CASES = [
             'on the terminal activity that is earlier than the natural finish. ' +
             'Should produce NEGATIVE total float, surfacing the impossibility.',
         expected_behavior:
-            'A→B chain, total natural duration 12 wd from Mon Jan 5 → Wed Jan 21. ' +
-            'B has FNLT = Mon Jan 12. B.LF = Jan 12, B.LS = Jan 7 (after 4 wd back), ' +
-            'A.LF = Jan 7, A.LS = Jan 2 (Friday, before dataDate). ' +
-            'Total float = LS - ES = Jan 2 - Jan 5 = -1 wd (or more, depending ' +
-            'on calendar weekend handling).',
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: constraint dates are day-start ' +
+            'instants, so FNLT 2026-01-12 08:00 forbids work on the 12th; last ' +
+            'permissible finish is Fri Jan 9 17:00. B LATE_END Jan 9, B LS Jan 6, ' +
+            'A LF Jan 5 close, A LS Dec 25. TF = -7 working days on both (engine ' +
+            'tf_working_days; the raw calendar-day tf -9 is not the comparison ' +
+            'surface). P6 shows FF 0 on B (free float floored at zero at the ' +
+            'constrained terminal activity).',
         activities: [
             { code: 'A', duration_days: 8 },
             {
@@ -196,11 +196,11 @@ const CASES = [
             'Two activities with different calendars. A on Mon-Fri (5-day), ' +
             'B on Mon-Sat (6-day) including Saturdays as working days.',
         expected_behavior:
-            'A.ES = Mon Jan 5, 10 wd Mon-Fri → A.EF = Fri Jan 16. ' +
-            'B.ES = Mon Jan 5, 10 wd Mon-Sat → B.EF = Fri Jan 16 ' +
-            '(10 work days on a 6-day calendar covers Mon-Sat: ' +
-            'Jan 5,6,7,8,9,10,12,13,14,15 = Thu Jan 15). ' +
-            'Verify engine + P6 honor per-activity calendar assignments.',
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: no relationships; each ' +
+            'the LF of each activity seeds from the PROJECT FINISH instant on its OWN calendar. ' +
+            'A (MonFri): ES Jan 5, EF disp Fri Jan 16, TF 0. B (Mon-Sat): ES Jan 5, ' +
+            'EF disp Thu Jan 15, LF disp Fri Jan 16, LS Tue Jan 6, TF 1 six-day ' +
+            'working day, FF 1.',
         activities: [
             { code: 'A', duration_days: 10, calendar: 'MONFRI' },
             { code: 'B', duration_days: 10, calendar: 'SIXDAY' },
@@ -355,11 +355,12 @@ const CASES = [
             'B has an actual_start before A finished. Engine emits ' +
             '"out-of-sequence" ALERT and continues under retained logic.',
         expected_behavior:
-            'A planned, duration 10 wd, no actuals. ' +
-            'B is FS-after-A but has actual_start 2026-01-08 (4 wd into A). ' +
-            'Engine emits out-of-sequence ALERT enumerating A as the violating ' +
-            'predecessor. In retained logic, B.ES = max(B.actual_start, A.EF) ' +
-            'so B is pulled to A.EF if A finishes after B started.',
+            'fitted to capture 9b748cc (2026-08-11), not independently validated: RETAINED LOGIC holds the ' +
+            'remaining work of the out-of-sequence starter behind its predecessor. ' +
+            'B (AS Jan 8, 3 wd remaining) restarts behind A EF disp Jan 23: restart ' +
+            'Jan 26, EF disp Jan 28. A: ES Jan 12, TF 0 (drives B remaining). ' +
+            'B TF 0; display LS = actual start Jan 8; REM_LATE_START Jan 26. ' +
+            'Continuing B from the data date is progress-override behavior.',
         activities: [
             { code: 'A', duration_days: 10 },
             {
@@ -444,7 +445,9 @@ const CASES = [
             {
                 code: 'A',
                 duration_days: 5,
-                constraint_type: 'CS_MSOB',  // Start On or After (SNET)
+                constraint_type: 'CS_MSOA',  // Start On or After (SNET) — was
+                // miscoded CS_MSOB (Start On or BEFORE / SNLT) until 2026-08-10;
+                // the engine's CONSTRAINT_TYPE_MAP pins the A/B suffix semantics.
                 constraint_date: '2026-01-20',
             },
             {
@@ -534,12 +537,19 @@ function writeFile(p, content) {
 
 function compareCsvRow(code, node, p6Cols) {
     const eng = {
-        ES: node && node.es ? E.numToDate(node.es) : '',
-        EF: node && node.ef ? E.numToDate(node.ef) : '',
-        LS: node && node.ls !== undefined ? E.numToDate(node.ls) : '',
-        LF: node && node.lf !== undefined ? E.numToDate(node.lf) : '',
-        TF: node && node.tf !== undefined ? String(node.tf) : '',
-        FF: node && node.ff !== undefined ? String(node.ff) : '',
+        // B4: use the engine's DISPLAY date fields, which carry the P6 grid
+        // semantics (in-progress LS displays the actual start; the
+        // remaining-late calculus lives in remaining_late_start_date).
+        ES: node && node.es_date ? node.es_date : (node && node.es ? E.numToDate(node.es) : ''),
+        EF: node && node.ef_date ? node.ef_date : (node && node.ef ? E.numToDate(node.ef) : ''),
+        LS: node && node.ls_date ? node.ls_date : (node && node.ls !== undefined ? E.numToDate(node.ls) : ''),
+        LF: node && node.lf_date ? node.lf_date : (node && node.lf !== undefined ? E.numToDate(node.lf) : ''),
+        // B1 (2026-08-11): compare float in WORKING DAYS on the activity's
+        // own calendar. That is what P6's TF/FF columns mean. The raw
+        // calendar-day tf/ff stay internal; case 05 proved the difference
+        // (tf=-9 calendar vs tf_working_days=-7 = P6's answer).
+        TF: node && node.tf_working_days !== undefined ? String(node.tf_working_days) : '',
+        FF: node && node.ff_working_days !== undefined ? String(node.ff_working_days) : '',
     };
     const p6 = p6Cols || { ES: '', EF: '', LS: '', LF: '', TF: '', FF: '' };
     const row = [
@@ -554,6 +564,47 @@ function compareCsvRow(code, node, p6Cols) {
         '',
     ];
     return row.join(',');
+}
+
+// ---------------------------------------------------------------------------
+// Calendar binding pass (2026-08-10). The engine reads an activity's calendar
+// from `clndr_id` (cpm-engine.js: `a.clndr_id && calMap`); the original case
+// definitions used a `calendar` key on cases 06/07 and no key at all on the
+// other cases, so NO case ever bound a calendar and every engine output
+// silently fell back to 7-day ordinal arithmetic — contradicting each case's
+// own expected_behavior prose and README setup notes, which all describe
+// Mon-Fri working-day arithmetic (e.g. case 08 prose says A.EF = Jan 12 +
+// 7 wd = Wed Jan 21; the unbound run pinned Jan 19). This pass binds every
+// activity explicitly, so input.json records exactly what the engine
+// computed with and the P6 setup notes become reproducible as written.
+const MONFRI_CAL = { work_days: [1, 2, 3, 4, 5], holidays: [] };
+for (const c of CASES) {
+    let usesMonFri = false;
+    for (const a of c.activities) {
+        if (a.calendar) { a.clndr_id = a.calendar; delete a.calendar; }
+        if (!a.clndr_id) { a.clndr_id = 'MONFRI'; }
+        if (a.clndr_id === 'MONFRI') usesMonFri = true;
+        // Constraint binding (same 2026-08-10 fix, second family): the engine
+        // reads constraints from `a.constraint` / `a.constraint2` objects
+        // ({ type, date }), not from the flat constraint_type / constraint_date
+        // keys the original definitions used — so cases 05 / 11 / 12 / 13
+        // never bound their constraints either (case 05 is titled
+        // "negative-float" yet pinned TF = 0 everywhere; case 11's mandatory
+        // pins pinned nothing).
+        if (a.constraint_type) {
+            a.constraint = { type: a.constraint_type, date: a.constraint_date };
+            delete a.constraint_type;
+            delete a.constraint_date;
+        }
+        if (a.constraint_type_secondary) {
+            a.constraint2 = { type: a.constraint_type_secondary,
+                              date: a.constraint_date_secondary };
+            delete a.constraint_type_secondary;
+            delete a.constraint_date_secondary;
+        }
+    }
+    c.opts.cal_map = c.opts.cal_map || {};
+    if (usesMonFri && !c.opts.cal_map.MONFRI) c.opts.cal_map.MONFRI = MONFRI_CAL;
 }
 
 function generate() {
@@ -630,7 +681,7 @@ function generate() {
             '',
             c.p6_setup_notes,
             '',
-            '## Engine output (v2.9.31)',
+            '## Engine output (v' + E.ENGINE_VERSION + ')',
             '',
             'Project finish: `' + (engineOutput.projectFinish || 'N/A') + '`',
             '',
@@ -646,14 +697,14 @@ function generate() {
             '2. F9 to schedule.',
             '3. Capture the ES / EF / LS / LF / TF / FF columns from the P6 activity table.',
             '4. Paste each activity\'s P6 values into the `*_p6` columns of `comparison.csv`.',
-            '5. Mark verdict_pass_fail = `PASS` when all six values match the engine column,',
+            '5. Mark verdict_pass_fail = `PASS` when each value matches the engine column on the documented basis. EF and LF are compared on the activity\'s own calendar, so a computed value one working day from the raw P6 cell is a PASS, not a FAIL,',
             '   or `FAIL — <delta>` with the specific field-level discrepancy.',
             '',
             '## Files in this case',
             '',
             '- `input.json` — activities + relationships + opts (engine input)',
             '- `engine-output.json` — full `computeCPM` result',
-            '- `comparison.csv` — engine vs P6 comparison (P6 column blank, fill manually)',
+            '- `comparison.csv` — engine vs P6 comparison (P6 columns already captured and verdicts written; regenerate only to add a new case)',
             '- `README.md` — this file',
             '',
         ].join('\n');

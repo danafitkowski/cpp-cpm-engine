@@ -61,7 +61,7 @@ We follow a **90-day coordinated-disclosure timeline**:
 
 1. **Day 0** — report received, reporter acknowledged within 72 hours.
 2. **Day 0-7** — triage, severity assignment, fix plan.
-3. **Day 7-60** — fix developed, tested against the full 792-unit / 416-crossval suite, and against any new regression test the reporter supplies.
+3. **Day 7-60** — fix developed, tested against the full 1,306-unit / 1009-crossval suite, and against any new regression test the reporter supplies.
 4. **Day 60-90** — release coordinated with the reporter. Both sides agree a public-disclosure date.
 5. **Day 90** — public disclosure (CHANGELOG entry, GitHub Security Advisory, optional CVE) regardless of whether all downstream consumers have upgraded. The engine is open-source; closed downstream consumers are responsible for their own patch windows.
 
@@ -79,7 +79,7 @@ gh attestation verify <artifact-or-tarball> --repo danafitkowski/cpp-cpm-engine
 
 A failing `gh attestation verify` on a release artifact is itself a security finding and should be reported through this channel.
 
-The Python reference (`python_reference/cpm.py`) is byte-pinned by SHA-256 in `DAUBERT.md` §3.1. If the published bytes do not match the pinned hash, that is also a security finding.
+The Python reference (`python_reference/cpm.py`) is byte-pinned by SHA-256 in `release-evidence/<version>/python_reference-cpm.py.sha256`, the committed per-release pin. If the published bytes at a tag do not match that release's pinned hash, that is a security finding.
 
 ### Forked-PR isolation
 

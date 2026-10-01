@@ -14,7 +14,9 @@ Activities array has A, B. Relationships: A→B (valid), Z→B (dangling). Z is 
 2. This case tests the engine's defensive handling of corrupt XER input. Compare against an XER that has been edited to reference a non-existent activity, OR an XER from a non-P6 source that did not enforce referential integrity.
 3. Engine output: dangling-rel ALERT in result.alerts; the dropped relationship does not affect B's CPM dates.
 
-## Engine output (v2.9.31)
+## Engine output (v2.9.41)
+
+First captured at v2.9.31; re-run at v2.9.41 on 2026-08-19 with the same project finish and critical set. The newer engine emits two additional calendar-fallback alerts (`seed last-worked`) from a pass that did not exist at v2.9.31; `engine-output.json` is the v2.9.41 run.
 
 Project finish: `2026-01-13`
 
@@ -26,6 +28,8 @@ Critical activities: `["A","B"]`
 - **ALERT** `forward A.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `FS lag A->B` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `forward B.EF` — Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+- **ALERT** `seed last-worked A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
+- **ALERT** `seed last-worked B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `init-LS A` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `init-LS B` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.
 - **ALERT** `backward B.LS` — Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.

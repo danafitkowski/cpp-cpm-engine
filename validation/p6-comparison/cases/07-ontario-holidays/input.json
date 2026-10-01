@@ -3,7 +3,7 @@
     {
       "code": "A",
       "duration_days": 90,
-      "calendar": "CA_ON"
+      "clndr_id": "CA_ON"
     }
   ],
   "relationships": [],

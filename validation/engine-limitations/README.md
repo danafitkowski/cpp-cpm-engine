@@ -6,7 +6,7 @@ Moved here in v2.9.33 from `validation/p6-comparison/cases/` per ChatGPT audit f
 
 ## Cases
 
-| # | Case | Engine behavior | Why P6 cannot compare |
+| # | Case | Engine behavior | Why field-level comparison cannot run |
 |---|---|---|---|
 | 01 | `01-fractional-lag-engine-rounds` | Engine is day-granular; sub-day lags emit `SUB_DAY_LAG_ROUNDED` ALERT and round via JS Math.round (half-toward-+infinity) | P6 stores lags in hours and honors sub-day precision natively. Direct field-level comparison would always show a 0–1-day mismatch by design. |
 | 02 | `02-dangling-rel-corrupt-xer` | Engine emits `dangling-rel` ALERT and drops the relationship; remaining valid relationships compute normally | P6 enforces referential integrity at authoring time; a TASKPRED row referencing a non-existent task_id cannot be created in P6. This case tests defensive parse-path handling for non-P6-sourced XER (hand-edited / MS Project XML round-trip / corrupt source). |
