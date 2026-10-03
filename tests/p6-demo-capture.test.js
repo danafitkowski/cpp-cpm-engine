@@ -1,16 +1,9 @@
 // tests/p6-demo-capture.test.js
 //
-// The engine against P6's own F9 of two progressed updates, each at the three
-// data dates P6 scheduled it (validation/p6-comparison/cases/16-21). Run by
-// `npm run test:p6-comparison`.
-//
-// Cases 16-18 (added in v2.9.49): P6 Professional 23.12.1 F9'd the
-// 405-activity website demo update at 16-Sep-2025 08:00, 16-Sep-2025 17:00 and
-// 01-Jul-2025 17:00 on 27-Sep-2026: 291 open activities and 113 completed at
-// each. Before v2.9.49 the engine matched 0 of 291 late dates and total floats
-// at every data date (it seeded late dates at its own early finish, not the
-// Must Finish By), and at the filed date 67 of 291 early dates (it read no
-// resume dates).
+// The engine against P6's own F9 of a progressed update at the three data
+// dates P6 scheduled it (validation/p6-comparison/cases/19-21). Run by
+// `npm run test:p6-comparison`. Cases 16-18, added in v2.9.49, were withdrawn
+// in v2.9.50.
 //
 // Cases 19-21 (added in v2.9.50): P6 Professional 23.12.1 F9'd the synthetic
 // Larchmere update, with only it open, at 15-Oct-2025 00:00, 15-Oct-2025

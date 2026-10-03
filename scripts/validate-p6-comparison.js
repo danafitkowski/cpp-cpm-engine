@@ -60,10 +60,10 @@ const P6_COLS = ['ES_p6', 'EF_p6', 'LS_p6', 'LF_p6', 'TF_p6', 'FF_p6'];
 
 function parseCSV(content) {
     // CSV with RFC 4180 quoting: a field may be wrapped in double quotes, with
-    // "" for a quote inside it. The 13 hand-built cases never quote; the demo
-    // capture cases (16-18) must, because a P6 activity code may carry a comma
-    // (the demo has "A1370,1"). An unquoted line parses exactly as the old
-    // split(',') did. Zero-dep on purpose.
+    // "" for a quote inside it. The 13 hand-built cases never quote; a P6
+    // capture case must, because a P6 activity code may carry a comma. An
+    // unquoted line parses exactly as the old split(',') did. Zero-dep on
+    // purpose.
     const lines = content.replace(/\r\n/g, '\n').split('\n').filter(l => l.length > 0);
     return lines.map(splitCSVLine);
 }

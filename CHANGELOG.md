@@ -27,7 +27,12 @@ a Must Finish By that differs from its early finish:
   (with a Must Finish By passed it runs to the early finish, as P6 measures
   it; see the v2.9.49 notes).
 
-**Change class: to be decided by Dana under PROCEDURE.md §12.1.**
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+3-Oct-2026 on Dana's instruction to apply the rule, as for v2.9.49: late dates
+and total float move on schedules carrying `N` beside a Must Finish By that
+differs from their early finish; no early date and no project finish moves.
+§12.2 re-check: not run at release. What moves is measured below under "Who
+is affected".
 
 **How it was measured.** Primavera P6 Professional 23.12.1 (standalone)
 imported the synthetic Larchmere Library update (379 activities: 123
@@ -53,7 +58,7 @@ P6 instant read as the working day it opens on (the p6-oracle convention):
 | 05-Aug-2025 00:00 | 256 / 256 / 0 / 0 / 0 / 256 | 256 on every field |
 
 The three are committed as `validation/p6-comparison/cases/19-21` and scored
-by `npm run test:p6-comparison` beside cases 16-18. The scheduling arithmetic
+by `npm run test:p6-comparison`. The scheduling arithmetic
 was not changed against them: the engine already matched their early dates
 and free float, and its late dates once handed the date. The `parseXER` rule
 was derived from them, so for that rule they are fitted, not held out.
@@ -72,18 +77,21 @@ that setting with one project open (measured 3-Oct-2026), the case the engine
 computes, and that several projects open is not measured. MFB-8 pins both
 spellings, the WARN, and late dates and floats equal to those under `true`.
 
-**3. The capture-case builder.** `build-demo-capture-cases.py` takes `--set
-demo` (cases 16-18, the default) or `--set larchmere` (cases 19-21). It hands
-the Must Finish By on whatever the flag, and the lag-calendar value P6 exports
-without its `rcal_` prefix (`Successor`) on as `rcal_Successor`, as the CPP
-converter does; cases 16-18 carry `Y` and `rcal_Predecessor`, so nothing they
-hold changes.
+**3. The capture-case builder.** `build-demo-capture-cases.py` builds cases
+19-21 (`--set larchmere`). It hands the Must Finish By on whatever the flag,
+and the lag-calendar value P6 exports without its `rcal_` prefix
+(`Successor`) on as `rcal_Successor`, as the CPP converter does.
+
+**4. Cases 16-18 withdrawn.** The three demo-update capture cases v2.9.49
+added are removed, with their pinned exports in the builder, because the demo
+schedule they were built from is no longer published. Their case numbers are
+not reused. The v2.9.49 rules derived from them stay pinned by small networks
+in the unit suite (MFB, RES, CC) and cross-validation fixtures 87-102, and
+cases 19-21 exercise the Must Finish By rule on a different schedule.
 
 **Verified.**
 - Cases 19-21: 256 of 256 open activities on ES, EF, LS, LF, TF and FF at
   each data date, and all 123 completed rows pass their actual dates through.
-- Cases 16-18 (flag `Y`): 291 of 291 at each data date, as before; their
-  `engine-output.json` differs only in the engine version it names.
 - Cases 01-13 (no Must Finish By): `generate-cases.js` run in a scratch tree
   on the v2.9.49 and v2.9.50 engines gives identical output on every node and
   alert, and the 13-case matrix re-applied from the same capture reads 13 / 13
@@ -114,8 +122,11 @@ hold changes.
 **Who is affected.** Schedules whose SCHEDOPTIONS carry
 `sched_use_project_end_date_for_float = N` beside a Must Finish By that
 differs from their early finish, where the caller takes the Must Finish By
-from `parseXER` or from a converter that follows the same rule. How many
-exports on the measuring machine move is recorded with the change class.
+from `parseXER` or from a converter that follows the same rule. On the
+measuring machine 24 distinct exports carry `N` beside a Must Finish By, all
+synthetic. On 14 of them the rule moves the late finish and total float of
+1,904 of 2,235 open activities; it moves no early date and no project finish
+on any of the 24.
 
 ## v2.9.49 — 2026-09-27 — the Must Finish By, the resume date and completed work, measured on P6's own F9
 

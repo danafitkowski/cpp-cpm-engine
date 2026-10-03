@@ -3,11 +3,10 @@
  * validation/p6-comparison/demo-capture.js
  *
  * Runs the engine on the P6 capture cases and scores every open activity
- * against P6's own F9 of the same network: cases 16-18 (the website demo
- * update of 27-Sep-2026, Must Finish By under SCHEDOPTIONS
- * sched_use_project_end_date_for_float = Y) and cases 19-21 (the synthetic
- * Larchmere update of 3-Oct-2026, Must Finish By under N, "opened projects",
- * scheduled with only that project open).
+ * against P6's own F9 of the same network: cases 19-21 (the synthetic
+ * Larchmere update of 3-Oct-2026, Must Finish By under SCHEDOPTIONS
+ * sched_use_project_end_date_for_float = N, "opened projects", scheduled with
+ * only that project open). Cases 16-18 were withdrawn in v2.9.50.
  *
  *   node validation/p6-comparison/demo-capture.js           score, print
  *   node validation/p6-comparison/demo-capture.js --write   also write
@@ -36,9 +35,6 @@ const E = require('../../cpm-engine.js');
 
 const CASES_DIR = path.join(__dirname, 'cases');
 const CASES = [
-    '16-demo-update-corrected-data-date',
-    '17-demo-update-data-date-1700',
-    '18-demo-update-filed-data-date',
     '19-larchmere-update-corrected-data-date',
     '20-larchmere-update-data-date-1700',
     '21-larchmere-update-filed-data-date',
@@ -47,9 +43,6 @@ const CASES = [
 // How many open and completed activities each case holds, so a case that
 // loses rows cannot pass on the rows it kept.
 const EXPECTED_COUNTS = {
-    '16-demo-update-corrected-data-date': { open: 291, completed: 113 },
-    '17-demo-update-data-date-1700': { open: 291, completed: 113 },
-    '18-demo-update-filed-data-date': { open: 291, completed: 113 },
     '19-larchmere-update-corrected-data-date': { open: 256, completed: 123 },
     '20-larchmere-update-data-date-1700': { open: 256, completed: 123 },
     '21-larchmere-update-filed-data-date': { open: 256, completed: 123 },
@@ -58,10 +51,8 @@ const EXPECTED_COUNTS = {
 // Documented residuals: the case, the activity, the field, and why. Anything
 // failing that is not listed here fails the run.
 const RESIDUALS = {
-    // None: every open activity matches P6 on every field at all six data
-    // dates. A2220's free float was the last one, fixed in v2.9.49 (0
-    // against P6 0 / 10 once free float runs to a completed successor's
-    // stamp).
+    // None: every open activity matches P6 on every field at all three data
+    // dates.
 };
 
 const HEADER = 'activity_code,ES_engine,ES_p6,EF_engine,EF_p6,LS_engine,LS_p6,' +
@@ -69,8 +60,8 @@ const HEADER = 'activity_code,ES_engine,ES_p6,EF_engine,EF_p6,LS_engine,LS_p6,' 
 
 function str(v) { return (v === null || v === undefined) ? '' : String(v); }
 
-// RFC 4180: a field carrying a comma or a quote is quoted (a P6 code may carry
-// a comma: the demo has "A1370,1"). scripts/validate-p6-comparison.js reads it.
+// RFC 4180: a field carrying a comma or a quote is quoted (a P6 activity code
+// may carry a comma). scripts/validate-p6-comparison.js reads it.
 function csvField(v) {
     const s = str(v);
     return /[",]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;

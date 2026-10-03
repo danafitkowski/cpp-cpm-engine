@@ -123,12 +123,12 @@ Item 6 stands: the 13-case matrix is still fitted to one capture, and the held-o
 
 ## Status at v2.9.50 (reviewed 2026-10-03)
 
-No audit item changed status. v2.9.50 changes what `parseXER` hands on, not the scheduling arithmetic: it returns the Must Finish By whatever SCHEDOPTIONS `sched_use_project_end_date_for_float` says, because Primavera P6 Professional 23.12.1 applied it under `N` ("opened projects") with one project open on its own F9 of the synthetic Larchmere update at three data dates (see CHANGELOG.md). Its change class is Dana's decision under the operator procedure.
+No audit item changed status. v2.9.50 changes what `parseXER` hands on, not the scheduling arithmetic: it returns the Must Finish By whatever SCHEDOPTIONS `sched_use_project_end_date_for_float` says, because Primavera P6 Professional 23.12.1 applied it under `N` ("opened projects") with one project open on its own F9 of the synthetic Larchmere update at three data dates (see CHANGELOG.md). Its change class under the operator procedure is A (computational).
 - The cross-validation surface grew from 99 to 101 fixtures (2 pinning the measured shape) and from 2,465 of 2,539 to 2,623 of 2,705 comparisons, still 0 failures.
 - The unit suite grew from 1,345 to 1,346.
 - Coverage was re-measured on the new bytes: 94.38% statements / 83.53% branches / 95.30% functions.
 - The 13-case P6 comparison matrix was re-run on the new bytes against the same 2026-08-11 capture. It reads 13 / 13 with zero changed rows.
-- Three Larchmere capture cases (19-21) join it: all 256 open activities match P6 on early and late dates and total and free float at each of the three data dates. Cases 16-18 are unchanged.
+- Three Larchmere capture cases (19-21) join it: all 256 open activities match P6 on early and late dates and total and free float at each of the three data dates. The three demo-update capture cases v2.9.49 added (16-18) were withdrawn: the demo schedule they were built from is no longer published.
 
 Item 6 stands: the 13-case matrix is still fitted to one capture, and the held-out capture remains Dana's action. The Larchmere cases are a second network the scheduling arithmetic was not fitted to, but the `parseXER` rule for "opened projects" was derived from them, and they are not a re-capture of the 13 cases.
 

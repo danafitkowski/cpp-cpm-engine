@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""Build the P6 capture cases (16-18 and 19-21) from P6's own exports.
+"""Build the P6 capture cases (19-21) from P6's own exports.
 
 Primavera P6 Professional 23.12.1 scheduled a progressed update with F9 at
-three data dates and exported it after each run, twice. This script turns
-each export into a case folder beside the 13 synthetic cases:
+three data dates and exported it after each run. This script turns each
+export into a case folder beside the 13 synthetic cases (cases 16-18, built
+by an earlier set, were withdrawn in v2.9.50):
 
-  set "demo" (27-Sep-2026, the website demo update of that date):
-    cases/16-demo-update-corrected-data-date/   16-Sep-2025 08:00
-    cases/17-demo-update-data-date-1700/        16-Sep-2025 17:00
-    cases/18-demo-update-filed-data-date/       01-Jul-2025 17:00
   set "larchmere" (3-Oct-2026, the synthetic Larchmere Library update;
   SCHEDOPTIONS sched_use_project_end_date_for_float = N):
     cases/19-larchmere-update-corrected-data-date/  15-Oct-2025 00:00
@@ -28,8 +25,7 @@ Each folder gets:
                   scheduling mode, the lag calendar, lag-from, and the Must
                   Finish By (PROJECT.plan_end_date) whenever one is set,
                   whatever sched_use_project_end_date_for_float says: P6
-                  applied it under N with one project open (the larchmere
-                  set). The lag-calendar value P6 exports without its rcal_
+                  applied it under N with one project open. The lag-calendar value P6 exports without its rcal_
                   prefix ('Successor') is handed on as rcal_Successor, as
                   tia_builder._detect_schedule_options does.
   p6-export.json  P6's own COMPUTED fields for every activity, raw, plus the
@@ -47,11 +43,10 @@ not in this repository (P6 writes its users into them); their SHA-256 digests
 are pinned below and checked before anything is built.
 
 Usage:
-    CPP_XER_PARSER=<xer-parser/scripts> python build-demo-capture-cases.py [--set demo|larchmere] <dir holding the three exports>
+    CPP_XER_PARSER=<xer-parser/scripts> python build-demo-capture-cases.py [--set larchmere] <dir holding the three exports>
 
-The set defaults to "demo". Both sets name their exports f9_corrected.xer,
-f9_1700.xer and f9_filed.xer, so the pinned SHA-256 decides which set a
-directory holds.
+The exports are named f9_corrected.xer, f9_1700.xer and f9_filed.xer, and
+each must match its pinned SHA-256.
 """
 import hashlib
 import json
@@ -66,14 +61,6 @@ sys.path.insert(0, os.path.join(HERE, '..', 'p6-oracle'))
 import xer_parser as xp          # noqa: E402
 from p6cal import build_calendars, parse_dt  # noqa: E402
 
-EXPORTS = [
-    ('16-demo-update-corrected-data-date', 'f9_corrected.xer',
-     'a326ba0bd4e77793860d78f20dfdea857b8841318a7d5558acd2e994a821beb4'),
-    ('17-demo-update-data-date-1700', 'f9_1700.xer',
-     'b03d3f904c9aeca44b05ed028912898eb2d5a9eb0cfa38b68604833408772bb4'),
-    ('18-demo-update-filed-data-date', 'f9_filed.xer',
-     '262221921619ca4698128d1da6f1aeee08107572a357dcdede0212a8c8177491'),
-]
 # The synthetic Larchmere update, F9'd on 3-Oct-2026 with only it open, from
 # a check copy (SHA-256 ebbdaac2...) that differs from the published demo
 # input only in its project ID and its calendar's name.
@@ -86,7 +73,6 @@ LARCHMERE_EXPORTS = [
      '687043f8fb9b3746a07258b85bf56fdf199bef962bc6fad411b64677baf4fbcb'),
 ]
 SETS = {
-    'demo': (EXPORTS, '2026-09-27, F9, one project open, log to file off'),
     'larchmere': (LARCHMERE_EXPORTS, '2026-10-03, F9, one project open, log to file off'),
 }
 LAG_ROLE = {'rcal_Predecessor': 'predecessor', 'rcal_Successor': 'successor'}
@@ -104,7 +90,7 @@ def _f(v, default=0.0):
         return default
 
 
-def build(xer_path, sha, scheduled=SETS['demo'][1]):
+def build(xer_path, sha, scheduled=SETS['larchmere'][1]):
     data = xp.parse_xer(xer_path)
     proj = xp.get_table(data, 'PROJECT')[0]
     pid = proj['proj_id']
@@ -176,7 +162,7 @@ def build(xer_path, sha, scheduled=SETS['demo'][1]):
     flag = (so.get('sched_use_project_end_date_for_float') or '').strip().upper()
     # The Must Finish By whenever one is set, whatever the flag (engine
     # v2.9.50): P6 23.12.1 applied it under N with one project open, measured
-    # on the larchmere set. The demo set carries Y, so its cases are as built.
+    # on the larchmere set.
     pf = (proj.get('plan_end_date') or '').strip()
     mode = ('progress_override' if (so.get('sched_progress_override') or '').upper() == 'Y'
             else 'retained_logic')
@@ -247,7 +233,7 @@ def build(xer_path, sha, scheduled=SETS['demo'][1]):
         'activities': rows,
     }
     if lag_raw != lag_token:
-        # Only where it was rewritten, so the demo set's files are as built.
+        # Only where it was rewritten.
         export['source']['sched_calendar_on_relationship_lag'] = (
             '%s (handed to the engine as %s)' % (lag_raw, lag_token))
     return inp, export
@@ -255,7 +241,7 @@ def build(xer_path, sha, scheduled=SETS['demo'][1]):
 
 def main():
     args = sys.argv[1:]
-    set_name = 'demo'
+    set_name = 'larchmere'
     if len(args) == 3 and args[0] == '--set' and args[1] in SETS:
         set_name, args = args[1], args[2:]
     if len(args) != 1:
