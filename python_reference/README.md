@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **2465 of 2539 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **2465 of 2539** across 99 as measured 2026-09-27 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 74 comparisons still skipped (37 `ff_signed`, 37 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **2623 of 2705 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **2623 of 2705** across 101 as measured 2026-10-03 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 82 comparisons still skipped (41 `ff_signed`, 41 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
 
 ## Provenance
 
@@ -52,8 +52,20 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  24aa3548f2c9e8501ef99ba1f29096509402caf060fc5347113976a40f4e55b2
+cpm.py  SHA-256:  5a6440607195677a2ca4cb26e9e0a7d946fcc054fb35b379b17aa9e212049ba5
 
+(v2.9.50 the Must Finish By under "opened projects" 2026-10-03 - bumped from
+24aa3548...: ENGINE_VERSION reads 2.9.50, the comments that carry the
+cross-validation figures carry the measured ones (101 fixtures, 2623 of 2705
+executed), and the Must Finish By comment records the measurement: Primavera
+P6 Professional 23.12.1, with one project open, applied the Must Finish By
+under SCHEDOPTIONS sched_use_project_end_date_for_float = N on its own F9 of
+the synthetic Larchmere update at three data dates. No computed value moves:
+the flag never reaches compute_cpm, and the change it brings is in the JS
+engine's parseXER, which now hands project_finish on whatever the flag. The
+harness gains 2 fixtures (F104-F105) pinning the measured shape: 101
+fixtures, 2623 of 2705 executed and bit-identical.
+Prior:
 (v2.9.49 Must Finish By, resume date and completed work 2026-09-27 - bumped
 from 7e3772f4...: four rules measured on Primavera P6 Professional
 23.12.1's own F9 of the website demo update at three data dates. MFB:
@@ -318,15 +330,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 205108
-  sha-256:  24aa3548f2c9e8501ef99ba1f29096509402caf060fc5347113976a40f4e55b2
+  bytes: 205563
+  sha-256:  5a6440607195677a2ca4cb26e9e0a7d946fcc054fb35b379b17aa9e212049ba5
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 99 passed, 0 failed
-  Checks:   2465 / 2465 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 101 passed, 0 failed
+  Checks:   2623 / 2623 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

@@ -1,6 +1,6 @@
 # `validation/p6-comparison/` — Primavera P6 comparison matrix
 
-This folder holds the framework that compares `cpm-engine` output against Primavera P6 native scheduling output for 13 P6-comparable representative CPM cases (FS / SS / FF / SF, negative float, multi-calendar, Ontario holidays, in-progress retained logic, completed successors, out-of-sequence progress, mandatory start and finish, SNET plus FNLT, ALAP). Two cases that are not P6-comparable by construction, fractional lag (sub-day lag rounding) and a dangling relationship pointing at a non-existent activity, were moved to `validation/engine-limitations/` during the v2.9.33 audit cycle and are not part of this matrix. Since v2.9.49 the folder also holds three capture cases of a real-size progressed schedule, scored against P6's own F9 of it at three data dates (cases 16-18, below).
+This folder holds the framework that compares `cpm-engine` output against Primavera P6 native scheduling output for 13 P6-comparable representative CPM cases (FS / SS / FF / SF, negative float, multi-calendar, Ontario holidays, in-progress retained logic, completed successors, out-of-sequence progress, mandatory start and finish, SNET plus FNLT, ALAP). Two cases that are not P6-comparable by construction, fractional lag (sub-day lag rounding) and a dangling relationship pointing at a non-existent activity, were moved to `validation/engine-limitations/` during the v2.9.33 audit cycle and are not part of this matrix. Since v2.9.49 the folder also holds three capture cases of a real-size progressed schedule, scored against P6's own F9 of it at three data dates (cases 16-18, below), and since v2.9.50 three more of the synthetic Larchmere update, F9'd by P6 under "opened projects" (cases 19-21, below).
 
 It addresses the ChatGPT third-pass directive item #2:
 
@@ -70,6 +70,24 @@ Before v2.9.49 the engine matched none of the 291 late dates or total floats at 
 
 ---
 
+## The Larchmere capture cases (19-21, v2.9.50)
+
+Three more cases score the synthetic Larchmere Library update (379 activities: 256 open, of which 7 in progress and 249 not started, and 123 completed; 584 relationships; one Mon-Fri 8-hour calendar with two shifts and 30 holidays) against P6's own answers. Its SCHEDOPTIONS `sched_use_project_end_date_for_float` is `N` ("opened projects"), and it carries a Must Finish By, `PROJECT.plan_end_date` 01-May-2026 17:00. Primavera P6 Professional 23.12.1 (standalone) scheduled it with F9 on 3-Oct-2026 at three data dates, with no other project open and Log to file off, and each run was exported:
+
+| # | Case ID | Data date | P6 project finish | Open activities matching P6 (ES / EF / LS / LF / TF / FF) |
+|---|---|---|---|---|
+| 19 | `19-larchmere-update-corrected-data-date` | 15-Oct-2025 00:00 | 03-Sep-2026 17:00 | 256 / 256 / 256 / 256 / 256 / 256 |
+| 20 | `20-larchmere-update-data-date-1700` | 15-Oct-2025 17:00 | 04-Sep-2026 17:00 | 256 / 256 / 256 / 256 / 256 / 256 |
+| 21 | `21-larchmere-update-filed-data-date` | 05-Aug-2025 00:00 | 24-Jun-2026 17:00 | 256 / 256 / 256 / 256 / 256 / 256 |
+
+P6 applied the Must Finish By under `N`: in all three exports every open end's late finish is 01-May-2026 17:00, and the critical path carries -86, -87 and -37 working days of total float. The engine, handed the Must Finish By, matches every open activity on all six fields at each data date. Under the v2.9.49 rule, which withheld the date under `N`, the engine seeded its late dates from its own early finish and matched all 256 early starts, early finishes and free floats but none of the 256 late starts, late finishes or total floats at any of the three data dates. That measurement is why `parseXER` now hands the Must Finish By on whatever the flag. It covers one project open; `N` with several projects open is not measured.
+
+`build-demo-capture-cases.py --set larchmere <dir>` builds the cases from the three pinned exports, exactly as it builds 16-18, under two rules that only these exports exercise. The Must Finish By is handed on whenever one is set, whatever the flag, as `parseXER` hands it on since v2.9.50. The lag-calendar value P6 holds and exports without its `rcal_` prefix (`Successor`) is handed on as `rcal_Successor`, as the CPP converter (`tia_builder._detect_schedule_options`) hands it on; read raw, the engine would raise its `lag-calendar-mode-unsupported` ALERT and fall back to the same successor-calendar walk. The exports were made from a check copy of the published demo input that differs from it in two fields only, the project ID and the name of its one calendar. They are not committed (P6 writes its user into them), and no task name, WBS, user or project name travels into the case files. At the filed data date 62 activities carry actual dates after the data date; the engine reproduces P6's schedule of that contradiction on all 256 open activities, as P6 does (it restarts the remaining work of the 7 in-progress activities at the data date).
+
+The engine's scheduling arithmetic was not changed against these cases: it already matched their early dates and free float before v2.9.50. The `parseXER` rule that hands the Must Finish By on under `N` was derived from them, so for that rule they are fitted, not held out.
+
+---
+
 ## Per-case folder layout
 
 Each `cases/<NN-name>/` folder contains:
@@ -95,8 +113,9 @@ README.md                       — this file
 comparison-matrix.md            — master matrix overview
 generate-cases.js               — generator script (re-run to refresh after engine bumps)
 engine-outputs-summary.json     — index of all cases with engine project finish + alert counts
-build-demo-capture-cases.py     — builds cases 16-18 from the three pinned P6 exports
-demo-capture.js                 — scores cases 16-18 (--write regenerates their outputs)
+build-demo-capture-cases.py     - builds cases 16-18 (--set demo) and 19-21 (--set larchmere)
+                                  from their pinned P6 exports
+demo-capture.js                 - scores cases 16-21 (--write regenerates their outputs)
 ```
 
 ---
@@ -143,6 +162,7 @@ If `generate-cases.js` is run with the engine in a state that produces different
 
 - It does not claim "the engine produces identical output to P6 for every CPM scenario." It claims field-level agreement on 13 named representative cases, with the P6 columns captured and the verdicts written by `apply-p6-capture.py`. PASS is convention-normalized, not raw equality: a computed EF/LF must equal the next working day after the finish date P6 displays (the day-start versus day-end boundary documented in `apply-p6-capture.py`), and a blank P6 total float or free float on a completed activity is accepted where the engine answers 0.
 - It does not claim these 13 cases are a held-out test. The first capture scored 6 of 13; five divergence families were then fixed in the engine against P6's pinned answers (23ffeca, 264de84, bf442d5, 05dc8b4) and the matrix regenerated to 13 of 13. These are the cases the engine was aligned to. An independent post-fix capture is not yet in the repository.
+- It does not claim the Larchmere cases (19-21) are a held-out test of the `parseXER` rule for "opened projects": that rule was derived from them. They measure one project open; P6's handling of `N` with several projects open is not measured.
 - It does not claim the demo-update cases (16-18) are a held-out test either. The engine matched none of their 291 late dates before v2.9.49, and the v2.9.49 rules (the Must Finish By, the resume date, completed-to-completed links, free float to a completed successor) were derived from these exports.
 - It does not claim "P6 is the ground truth." P6 has its own quirks (e.g., progress override default, calendar-rollover behavior, undisclosed sub-day lag handling). The matrix documents agreement and disagreement; it does not adjudicate.
 - It does not extend to the engine's pre-publication public-API surfaces (Bayesian, kinematic, topology-hash). Those are JS-only and not part of the P6 comparison surface; see [DAUBERT.md §11](../../DAUBERT.md).

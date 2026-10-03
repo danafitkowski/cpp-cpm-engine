@@ -2,8 +2,12 @@
 /**
  * validation/p6-comparison/demo-capture.js
  *
- * Runs the engine on the three demo-update capture cases (16, 17, 18) and
- * scores every open activity against P6's own F9 of the same network.
+ * Runs the engine on the P6 capture cases and scores every open activity
+ * against P6's own F9 of the same network: cases 16-18 (the website demo
+ * update of 27-Sep-2026, Must Finish By under SCHEDOPTIONS
+ * sched_use_project_end_date_for_float = Y) and cases 19-21 (the synthetic
+ * Larchmere update of 3-Oct-2026, Must Finish By under N, "opened projects",
+ * scheduled with only that project open).
  *
  *   node validation/p6-comparison/demo-capture.js           score, print
  *   node validation/p6-comparison/demo-capture.js --write   also write
@@ -35,14 +39,29 @@ const CASES = [
     '16-demo-update-corrected-data-date',
     '17-demo-update-data-date-1700',
     '18-demo-update-filed-data-date',
+    '19-larchmere-update-corrected-data-date',
+    '20-larchmere-update-data-date-1700',
+    '21-larchmere-update-filed-data-date',
 ];
+
+// How many open and completed activities each case holds, so a case that
+// loses rows cannot pass on the rows it kept.
+const EXPECTED_COUNTS = {
+    '16-demo-update-corrected-data-date': { open: 291, completed: 113 },
+    '17-demo-update-data-date-1700': { open: 291, completed: 113 },
+    '18-demo-update-filed-data-date': { open: 291, completed: 113 },
+    '19-larchmere-update-corrected-data-date': { open: 256, completed: 123 },
+    '20-larchmere-update-data-date-1700': { open: 256, completed: 123 },
+    '21-larchmere-update-filed-data-date': { open: 256, completed: 123 },
+};
 
 // Documented residuals: the case, the activity, the field, and why. Anything
 // failing that is not listed here fails the run.
 const RESIDUALS = {
-    // None at v2.9.49: every open activity matches P6 on every field at all
-    // three data dates. A2220's free float was the last one (0 against P6 0
-    // / 10 once free float runs to a completed successor's stamp).
+    // None: every open activity matches P6 on every field at all six data
+    // dates. A2220's free float was the last one, fixed in v2.9.49 (0
+    // against P6 0 / 10 once free float runs to a completed successor's
+    // stamp).
 };
 
 const HEADER = 'activity_code,ES_engine,ES_p6,EF_engine,EF_p6,LS_engine,LS_p6,' +
@@ -187,6 +206,6 @@ function main() {
     process.exit(failed > 0 ? 1 : 0);
 }
 
-module.exports = { runCase, trimmedOutput, CASES, RESIDUALS };
+module.exports = { runCase, trimmedOutput, CASES, EXPECTED_COUNTS, RESIDUALS };
 
 if (require.main === module) main();

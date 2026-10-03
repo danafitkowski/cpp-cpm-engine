@@ -309,12 +309,18 @@ def build_case(path, swap_cstr=False, honour_must_finish=False):
     # the open ends' late finish at it in every P6-scheduled export found (2
     # on the measuring machine, and P6 23.12.1's own F9 of the website demo
     # update at three data dates). The files that looked otherwise carried
-    # the flag N ("opened projects", unmeasured), no SCHEDOPTIONS setting or
-    # no last_schedule_date (no record of a P6 schedule run), or stored dates
-    # scheduled before their own data date. The CPP converters pass it (flag
-    # Y or absent). This harness still leaves it off by default so its
-    # recorded figures stay comparable; `honour_must_finish=True`
-    # (--must-finish) passes it.
+    # the flag N ("opened projects"), no SCHEDOPTIONS setting or no
+    # last_schedule_date (no record of a P6 schedule run), or stored dates
+    # scheduled before their own data date. Under N, P6 23.12.1 with one
+    # project open seeded at the Must Finish By too (its own F9 of the
+    # synthetic Larchmere update at three data dates, measured 3-Oct-2026),
+    # so the stored dates of an N file that did not are not explained by
+    # that measurement: several projects open (not measured) or a Must
+    # Finish By set after the last schedule run would each produce them.
+    # The CPP converters and parseXER pass it whenever it is set (engine
+    # v2.9.50). This harness still leaves it off by default so its recorded
+    # figures stay comparable; `honour_must_finish=True` (--must-finish)
+    # passes it.
     mf_raw = projects[0].get("plan_end_date", "") if projects else ""
     mf_dt = parse_dt(mf_raw)
     mf_day = base_cal.opening_day(mf_dt) if (base_cal and mf_dt) else None

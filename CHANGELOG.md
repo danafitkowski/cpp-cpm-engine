@@ -12,6 +12,111 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.50 — 2026-10-03 — the Must Finish By under "opened projects", measured on P6's own F9
+
+**Engine math changed, in what `parseXER` hands a caller; the arithmetic of
+`computeCPM` is unchanged.** `parseXER` now returns the project's Must Finish By as
+`project_finish` whenever `PROJECT.plan_end_date` is set, whatever SCHEDOPTIONS
+`sched_use_project_end_date_for_float` says. Under `N` ("opened projects") it
+returned `''`, because P6's handling of that setting was not measured, so a
+caller seeded the late dates from the early finish. Once a caller passes the
+date it now returns, the following can move on a schedule carrying `N` beside
+a Must Finish By that differs from its early finish:
+- every late date and total float;
+- the free float of an open end whose late finish a constraint pulls in
+  (with a Must Finish By passed it runs to the early finish, as P6 measures
+  it; see the v2.9.49 notes).
+
+**Change class: to be decided by Dana under PROCEDURE.md §12.1.**
+
+**How it was measured.** Primavera P6 Professional 23.12.1 (standalone)
+imported the synthetic Larchmere Library update (379 activities: 123
+completed, 7 in progress and 249 not started; 584 relationships; one
+calendar) from a check copy that differs from the published demo input only
+in its project ID and the name of its calendar. Its SCHEDOPTIONS carry
+`sched_use_project_end_date_for_float = N` and its Must Finish By is
+01-May-2026 17:00. P6 scheduled it with F9 on 3-Oct-2026, with no other
+project open and Log to file off, at three data dates, and it was exported
+after each run. A database diff before and after the session showed rows
+added for that project and nothing else changed but P6's id counters.
+
+P6 applied the Must Finish By under `N`: in all three exports every open
+end's late finish is 01-May-2026 17:00, and the critical path carries -86
+working days of total float at 15-Oct-2025 00:00, -87 at 15-Oct-2025 17:00
+and -37 at 05-Aug-2025 00:00. Engine against P6 on every open activity, each
+P6 instant read as the working day it opens on (the p6-oracle convention):
+
+| Data date | Must Finish By withheld, the v2.9.49 rule (ES / EF / LS / LF / TF / FF) | Handed on, v2.9.50 |
+|---|---|---|
+| 15-Oct-2025 00:00 | 256 / 256 / 0 / 0 / 0 / 256 | 256 on every field |
+| 15-Oct-2025 17:00 | 256 / 256 / 0 / 0 / 0 / 256 | 256 on every field |
+| 05-Aug-2025 00:00 | 256 / 256 / 0 / 0 / 0 / 256 | 256 on every field |
+
+The three are committed as `validation/p6-comparison/cases/19-21` and scored
+by `npm run test:p6-comparison` beside cases 16-18. The scheduling arithmetic
+was not changed against them: the engine already matched their early dates
+and free float, and its late dates once handed the date. The `parseXER` rule
+was derived from them, so for that rule they are fitted, not held out.
+
+**1. `parseXER`.** `project_finish` is `plan_end_date` whenever one is set,
+and `''` when none is. PX-3 now expects the date under `N` as under `Y` and
+with no setting.
+
+**2. The "opened projects" disclosure.** `computeCPM` with
+`useProjectEndDateForFloat: false` (alias `use_project_end_date_for_float`),
+the engine's form of `N`, computed exactly as `true` and said that P6's
+behaviour was uncaptured. It still computes exactly as `true`, and its
+`use-project-end-date-for-float-off-not-implemented` WARN (context and
+severity unchanged) now says that P6 23.12.1 applied the Must Finish By under
+that setting with one project open (measured 3-Oct-2026), the case the engine
+computes, and that several projects open is not measured. MFB-8 pins both
+spellings, the WARN, and late dates and floats equal to those under `true`.
+
+**3. The capture-case builder.** `build-demo-capture-cases.py` takes `--set
+demo` (cases 16-18, the default) or `--set larchmere` (cases 19-21). It hands
+the Must Finish By on whatever the flag, and the lag-calendar value P6 exports
+without its `rcal_` prefix (`Successor`) on as `rcal_Successor`, as the CPP
+converter does; cases 16-18 carry `Y` and `rcal_Predecessor`, so nothing they
+hold changes.
+
+**Verified.**
+- Cases 19-21: 256 of 256 open activities on ES, EF, LS, LF, TF and FF at
+  each data date, and all 123 completed rows pass their actual dates through.
+- Cases 16-18 (flag `Y`): 291 of 291 at each data date, as before; their
+  `engine-output.json` differs only in the engine version it names.
+- Cases 01-13 (no Must Finish By): `generate-cases.js` run in a scratch tree
+  on the v2.9.49 and v2.9.50 engines gives identical output on every node and
+  alert, and the 13-case matrix re-applied from the same capture reads 13 / 13
+  over 27 field checks with zero changed rows.
+- JS unit suite: 1,346 checks green, up from 1,345 (MFB-8; PX-3 re-pinned).
+  PX-3 and MFB-8 fail against the v2.9.49 engine.
+- Cross-validation: 101 fixtures, 2623 of 2705 executed, 82 skipped (41
+  `ff_signed`, 41 `ff_signed_working_days`, all mutual on completed
+  activities), 0 failures. The 2 new fixtures (F104-F105) pin the measured
+  shape with the Must Finish By applied: a data date at midnight and at the
+  17:00 close, lag on the successor's calendar, start-to-start lag from the
+  actual start, a Start On and a Finish On or After constraint, a negative
+  lag and two finish milestones. No Python change was needed beyond the
+  version and comments: the flag never reaches the seeding arithmetic.
+- Coverage re-measured on these bytes: 94.38% statements (10,699 / 11,336),
+  83.53% branches (2,333 / 2,793), 95.30% functions (142 / 149).
+
+**Not measured, not claimed.**
+- `N` with several projects open, where P6 calculates float from the latest
+  finish among the open projects. The engine schedules one project at a
+  time.
+- Everything else the v2.9.49 notes list as not measured stands.
+- Not changed: `parseXER` still hands `sched_calendar_on_relationship_lag` on
+  as the file stores it. A caller that forwards P6's unprefixed `Successor`
+  draws the `lag-calendar-mode-unsupported` ALERT and the successor-calendar
+  walk that `rcal_Successor` selects, so the dates are the same.
+
+**Who is affected.** Schedules whose SCHEDOPTIONS carry
+`sched_use_project_end_date_for_float = N` beside a Must Finish By that
+differs from their early finish, where the caller takes the Must Finish By
+from `parseXER` or from a converter that follows the same rule. How many
+exports on the measuring machine move is recorded with the change class.
+
 ## v2.9.49 — 2026-09-27 — the Must Finish By, the resume date and completed work, measured on P6's own F9
 
 **Engine math changed.** Primavera P6 Professional 23.12.1 scheduled the

@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
-"""Build the demo-update capture cases (16, 17, 18) from P6's own exports.
+"""Build the P6 capture cases (16-18 and 19-21) from P6's own exports.
 
-P6 Professional 23.12.1 scheduled the website demo update with F9 at three
-data dates on 27-Sep-2026 and exported it after each run. This script turns
+Primavera P6 Professional 23.12.1 scheduled a progressed update with F9 at
+three data dates and exported it after each run, twice. This script turns
 each export into a case folder beside the 13 synthetic cases:
 
+  set "demo" (27-Sep-2026, the website demo update of that date):
     cases/16-demo-update-corrected-data-date/   16-Sep-2025 08:00
     cases/17-demo-update-data-date-1700/        16-Sep-2025 17:00
     cases/18-demo-update-filed-data-date/       01-Jul-2025 17:00
+  set "larchmere" (3-Oct-2026, the synthetic Larchmere Library update;
+  SCHEDOPTIONS sched_use_project_end_date_for_float = N):
+    cases/19-larchmere-update-corrected-data-date/  15-Oct-2025 00:00
+    cases/20-larchmere-update-data-date-1700/       15-Oct-2025 17:00
+    cases/21-larchmere-update-filed-data-date/      05-Aug-2025 00:00
 
 Each folder gets:
   input.json      the engine input: activities, relationships and opts, built
                   from the export's INPUT fields the way the CPP converters
-                  build it (tia_builder._xer_to_canonical, engine v2.9.49):
+                  build it (tia_builder._xer_to_canonical, engine v2.9.50):
                   remaining duration in working days of the activity's own
                   calendar, actual dates with their time, the suspend and
                   resume dates,
@@ -20,7 +26,12 @@ Each folder gets:
                   calendar, and in opts the data date, the calendar (with its
                   clndr_data, so shift closes are hour-accurate), the
                   scheduling mode, the lag calendar, lag-from, and the Must
-                  Finish By (PROJECT.plan_end_date, flag Y).
+                  Finish By (PROJECT.plan_end_date) whenever one is set,
+                  whatever sched_use_project_end_date_for_float says: P6
+                  applied it under N with one project open (the larchmere
+                  set). The lag-calendar value P6 exports without its rcal_
+                  prefix ('Successor') is handed on as rcal_Successor, as
+                  tia_builder._detect_schedule_options does.
   p6-export.json  P6's own COMPUTED fields for every activity, raw, plus the
                   working day each instant opens on (p6cal.opening_day on the
                   activity's own calendar), which is what the engine's
@@ -36,7 +47,11 @@ not in this repository (P6 writes its users into them); their SHA-256 digests
 are pinned below and checked before anything is built.
 
 Usage:
-    CPP_XER_PARSER=<xer-parser/scripts> python build-demo-capture-cases.py <dir holding the three exports>
+    CPP_XER_PARSER=<xer-parser/scripts> python build-demo-capture-cases.py [--set demo|larchmere] <dir holding the three exports>
+
+The set defaults to "demo". Both sets name their exports f9_corrected.xer,
+f9_1700.xer and f9_filed.xer, so the pinned SHA-256 decides which set a
+directory holds.
 """
 import hashlib
 import json
@@ -59,7 +74,27 @@ EXPORTS = [
     ('18-demo-update-filed-data-date', 'f9_filed.xer',
      '262221921619ca4698128d1da6f1aeee08107572a357dcdede0212a8c8177491'),
 ]
+# The synthetic Larchmere update, F9'd on 3-Oct-2026 with only it open, from
+# a check copy (SHA-256 ebbdaac2...) that differs from the published demo
+# input only in its project ID and its calendar's name.
+LARCHMERE_EXPORTS = [
+    ('19-larchmere-update-corrected-data-date', 'f9_corrected.xer',
+     '06b6f625f3798900852685f00119b840b7e5681cd834654644144e1a453c7816'),
+    ('20-larchmere-update-data-date-1700', 'f9_1700.xer',
+     'ec645b1096acd9af59963d3ffc5000d4cc6a97f49bc5d76925a9153f844964b2'),
+    ('21-larchmere-update-filed-data-date', 'f9_filed.xer',
+     '687043f8fb9b3746a07258b85bf56fdf199bef962bc6fad411b64677baf4fbcb'),
+]
+SETS = {
+    'demo': (EXPORTS, '2026-09-27, F9, one project open, log to file off'),
+    'larchmere': (LARCHMERE_EXPORTS, '2026-10-03, F9, one project open, log to file off'),
+}
 LAG_ROLE = {'rcal_Predecessor': 'predecessor', 'rcal_Successor': 'successor'}
+# P6 23.12.1 holds and exports the lag-calendar value without its rcal_
+# prefix too (the Larchmere update carries 'Successor' and P6 wrote it back
+# unchanged in all three exports); tia_builder._detect_schedule_options
+# hands it on as rcal_Successor, and so does this builder.
+LAG_TOKEN = {'Successor': 'rcal_Successor'}
 
 
 def _f(v, default=0.0):
@@ -69,7 +104,7 @@ def _f(v, default=0.0):
         return default
 
 
-def build(xer_path, sha):
+def build(xer_path, sha, scheduled=SETS['demo'][1]):
     data = xp.parse_xer(xer_path)
     proj = xp.get_table(data, 'PROJECT')[0]
     pid = proj['proj_id']
@@ -113,7 +148,8 @@ def build(xer_path, sha):
             a['remaining_duration'] = a['duration_days']
         acts.append(a)
 
-    lag_token = (so.get('sched_calendar_on_relationship_lag') or 'rcal_Predecessor').strip()
+    lag_raw = (so.get('sched_calendar_on_relationship_lag') or 'rcal_Predecessor').strip()
+    lag_token = LAG_TOKEN.get(lag_raw, lag_raw)
     role = LAG_ROLE.get(lag_token, 'successor')
     codes = {a['code'] for a in acts}
     rels = []
@@ -138,7 +174,10 @@ def build(xer_path, sha):
             'raw': c.get('raw', ''),
         }
     flag = (so.get('sched_use_project_end_date_for_float') or '').strip().upper()
-    pf = (proj.get('plan_end_date') or '').strip() if flag != 'N' else ''
+    # The Must Finish By whenever one is set, whatever the flag (engine
+    # v2.9.50): P6 23.12.1 applied it under N with one project open, measured
+    # on the larchmere set. The demo set carries Y, so its cases are as built.
+    pf = (proj.get('plan_end_date') or '').strip()
     mode = ('progress_override' if (so.get('sched_progress_override') or '').upper() == 'Y'
             else 'retained_logic')
     ss_from = 'actual_start' if (so.get('sched_lag_early_start_flag') or '').upper() == 'N' \
@@ -196,7 +235,7 @@ def build(xer_path, sha):
         'source': {
             'export_sha256': sha,
             'p6_version': 'Primavera P6 Professional 23.12.1 (standalone SQLite)',
-            'scheduled': '2026-09-27, F9, one project open, log to file off',
+            'scheduled': scheduled,
             'data_date': (proj.get('last_recalc_date') or '').strip(),
             'p6_project_finish': (proj.get('scd_end_date') or '').strip(),
             'must_finish_by': (proj.get('plan_end_date') or '').strip(),
@@ -207,19 +246,28 @@ def build(xer_path, sha):
         },
         'activities': rows,
     }
+    if lag_raw != lag_token:
+        # Only where it was rewritten, so the demo set's files are as built.
+        export['source']['sched_calendar_on_relationship_lag'] = (
+            '%s (handed to the engine as %s)' % (lag_raw, lag_token))
     return inp, export
 
 
 def main():
-    if len(sys.argv) != 2:
+    args = sys.argv[1:]
+    set_name = 'demo'
+    if len(args) == 3 and args[0] == '--set' and args[1] in SETS:
+        set_name, args = args[1], args[2:]
+    if len(args) != 1:
         sys.exit(__doc__)
-    src = sys.argv[1]
-    for folder, name, sha in EXPORTS:
+    src = args[0]
+    exports, scheduled = SETS[set_name]
+    for folder, name, sha in exports:
         path = os.path.join(src, name)
         got = hashlib.sha256(open(path, 'rb').read()).hexdigest()
         if got != sha:
             sys.exit('%s: SHA-256 %s, expected %s' % (name, got, sha))
-        inp, export = build(path, sha)
+        inp, export = build(path, sha, scheduled)
         out = os.path.join(HERE, 'cases', folder)
         os.makedirs(out, exist_ok=True)
         for fname, obj in (('input.json', inp), ('p6-export.json', export)):

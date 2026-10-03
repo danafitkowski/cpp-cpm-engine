@@ -11546,6 +11546,36 @@ console.log('\n=== PX — parseXER hands computeCPM the actual dates P6 wrote (v
         bad.alerts.some((a) => a.context === 'project-deadline-invalid' && a.severity === 'WARN'),
         [none.nodes.B.tf_working_days, none.nodes.B.lf_date, deadlineAlerts(none).length,
          bad.nodes.B.tf_working_days].join(' / '));
+
+    // MFB-8: "opened projects", SCHEDOPTIONS
+    // sched_use_project_end_date_for_float = N, passed as
+    // useProjectEndDateForFloat (or use_project_end_date_for_float) = false.
+    // P6 Professional 23.12.1, with one project open, applied the Must Finish
+    // By under N as it does under Y (measured 3-Oct-2026 on its own F9 of the
+    // synthetic Larchmere update at three data dates; p6-comparison cases
+    // 19-21). So the late dates and float are those of the default, and one
+    // WARN says that N with several projects open is not measured.
+    const offCtx = 'use-project-end-date-for-float-off-not-implemented';
+    const openedRun = (key) => E.computeCPM([act('A', 5), act('B', 5)], [fs0('A', 'B')],
+        Object.assign({ dataDate: '2026-09-14 08:00', calMap: mfbCal,
+            projectFinish: '2026-09-18 17:00' }, { [key]: false }));
+    const dflt = chain('2026-09-18 17:00');
+    const sameAsDefault = (o) => ['A', 'B'].every((c) => ['es_date', 'ef_date', 'ls_date',
+        'lf_date', 'tf_working_days', 'ff_working_days'].every((f) => o.nodes[c][f] === dflt.nodes[c][f]));
+    const offWarn = (o) => o.alerts.filter((a) => a.context === offCtx);
+    const opened = openedRun('useProjectEndDateForFloat');
+    const openedSnake = openedRun('use_project_end_date_for_float');
+    check('MFB-8: under "opened projects" the Must Finish By seeds the late dates as under Y; a WARN names the unmeasured several-projects case',
+        sameAsDefault(opened) && sameAsDefault(openedSnake) &&
+        opened.nodes.B.tf_working_days === -5 && deadlineAlerts(opened).length === 1 &&
+        offWarn(opened).length === 1 && offWarn(opened)[0].severity === 'WARN' &&
+        offWarn(openedSnake).length === 1 &&
+        /one project open \(measured 3-Oct-2026\)/.test(offWarn(opened)[0].message) &&
+        /several projects open/.test(offWarn(opened)[0].message) &&
+        offWarn(dflt).length === 0,
+        [opened.nodes.B.tf_working_days, openedSnake.nodes.B.tf_working_days,
+         deadlineAlerts(opened).length, offWarn(opened).length, offWarn(openedSnake).length,
+         offWarn(dflt).length].join(' / '));
 }
 
 // ===========================================================================
@@ -11722,10 +11752,12 @@ console.log('\n=== PX — parseXER hands computeCPM the actual dates P6 wrote (v
 // ===========================================================================
 // PX — parseXER hands a caller both new inputs, as it already hands the
 // SCHEDOPTIONS settings (v2.9.49): the Must Finish By (PROJECT.plan_end_date)
-// pre-extracted as project_finish when SCHEDOPTIONS
-// sched_use_project_end_date_for_float is Y or absent (P6's default; with N
-// P6's handling is unmeasured and it is not handed on), and each task's
-// resume_date as P6 wrote it. Paired with tia_builder._detect_project_finish
+// pre-extracted as project_finish whenever one is set, whatever SCHEDOPTIONS
+// sched_use_project_end_date_for_float says, and each task's resume_date as
+// P6 wrote it. v2.9.49 held the date back under N ("opened projects", then
+// unmeasured); P6 Professional 23.12.1 applied it under N with one project
+// open (measured 3-Oct-2026, p6-comparison cases 19-21), and N with several
+// projects open is not measured. Paired with tia_builder._detect_project_finish
 // and the resume_date the Python converter passes.
 // ===========================================================================
 {
@@ -11752,10 +11784,10 @@ console.log('\n=== PX — parseXER hands computeCPM the actual dates P6 wrote (v
     const pN = E.parseXER(pxXer('N', '2026-09-30 17:00'));
     const pNone = E.parseXER(pxXer('Y', ''));
     E.resetMC();
-    check('PX-3: parseXER hands on the Must Finish By, and holds it back under "opened projects"',
+    check('PX-3: parseXER hands on the Must Finish By whatever the float setting, "opened projects" included',
         pY.plan_end_date === '2026-09-30 17:00' && pY.project_finish === '2026-09-30 17:00' &&
         pBlank.project_finish === '2026-09-30 17:00' &&
-        pN.plan_end_date === '2026-09-30 17:00' && pN.project_finish === '' &&
+        pN.plan_end_date === '2026-09-30 17:00' && pN.project_finish === '2026-09-30 17:00' &&
         pNone.plan_end_date === '' && pNone.project_finish === '',
         JSON.stringify([pY.project_finish, pBlank.project_finish, pN.project_finish,
             pNone.plan_end_date]));

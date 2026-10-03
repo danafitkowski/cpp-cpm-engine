@@ -2444,6 +2444,64 @@ compareFixture('F103 — RES: a resume date without a suspend date is not applie
     relationship_lag_calendar: 'predecessor',
 });
 
+// F104-F105 (v2.9.50): the Must Finish By handed on under SCHEDOPTIONS
+// sched_use_project_end_date_for_float = N ("opened projects"). P6
+// Professional 23.12.1, with one project open, applied it on its own F9 of
+// the synthetic Larchmere update at three data dates (3-Oct-2026), so
+// parseXER now hands it on whatever the flag. The flag never reaches
+// computeCPM's seeding, so these pin the shape that update carries, with the
+// Must Finish By applied: a data date at midnight and at the 17:00 close,
+// lag on the successor's calendar (its 'Successor', handed on as
+// rcal_Successor), start-to-start lag counted from the actual start
+// (sched_lag_early_start_flag = N), in-progress work whose remaining time
+// restarts at the data date, a Start On constraint on work by others, a
+// Finish On or After constraint, a negative lag, and two finish milestones
+// behind a Must Finish By earlier than the early finish.
+const opened = (dd) => ({
+    activities: [
+        { code: 'S0', duration_days: 0, actual_start: '2025-05-05 08:00',
+          actual_finish: '2025-05-05 08:00', is_complete: true, clndr_id: 'MF',
+          task_type: 'TT_Mile' },
+        { code: 'C1', duration_days: 0, actual_start: '2025-09-01 08:00',
+          actual_finish: '2025-10-14 17:00', is_complete: true, clndr_id: 'MF' },
+        { code: 'P1', duration_days: 10, remaining_duration: 1,
+          actual_start: '2025-10-08 08:00', clndr_id: 'MF' },
+        { code: 'P2', duration_days: 6, remaining_duration: 3,
+          actual_start: '2025-10-14 08:00', clndr_id: 'MF' },
+        { code: 'N1', duration_days: 15, clndr_id: 'MF' },
+        { code: 'N2', duration_days: 8, clndr_id: 'MF' },
+        { code: 'N3', duration_days: 20, clndr_id: 'MF' },
+        { code: 'N4', duration_days: 10, clndr_id: 'MF',
+          constraint: { type: 'CS_MEOA', date: '2026-01-30 17:00' } },
+        { code: 'BY', duration_days: 10, clndr_id: 'MF',
+          constraint: { type: 'CS_MSO', date: '2026-01-12 08:00' } },
+        { code: 'Z1', duration_days: 0, clndr_id: 'MF', task_type: 'TT_FinMile' },
+        { code: 'Z2', duration_days: 0, clndr_id: 'MF', task_type: 'TT_FinMile' },
+    ],
+    relationships: [
+        { from_code: 'S0', to_code: 'C1', type: 'FS', lag_days: 0 },
+        { from_code: 'C1', to_code: 'P1', type: 'FS', lag_days: 0 },
+        { from_code: 'C1', to_code: 'P2', type: 'SS', lag_days: 0 },
+        { from_code: 'P1', to_code: 'N1', type: 'FS', lag_days: 0 },
+        { from_code: 'P2', to_code: 'N2', type: 'SS', lag_days: 2 },
+        { from_code: 'N1', to_code: 'N3', type: 'FS', lag_days: -1 },
+        { from_code: 'N2', to_code: 'N3', type: 'FS', lag_days: 0 },
+        { from_code: 'N3', to_code: 'N4', type: 'FS', lag_days: 0 },
+        { from_code: 'N4', to_code: 'Z1', type: 'FS', lag_days: 0 },
+        { from_code: 'BY', to_code: 'Z1', type: 'FS', lag_days: 0 },
+        { from_code: 'Z1', to_code: 'Z2', type: 'FS', lag_days: 0 },
+    ],
+    data_date: dd,
+    cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [], raw: RAW_MF_0817 } },
+    relationship_lag_calendar: 'rcal_Successor',
+    ss_lag_from: 'actual_start',
+    project_finish: '2025-12-19 17:00',
+});
+compareFixture('F104 - MFB under "opened projects": the measured shape at a midnight data date',
+    opened('2025-10-15 00:00'));
+compareFixture('F105 - MFB under "opened projects": the measured shape at the 17:00 close',
+    opened('2025-10-15 17:00'));
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

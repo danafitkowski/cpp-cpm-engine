@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.49';
+const ENGINE_VERSION = '2.9.50';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -3541,8 +3541,14 @@ function computeCPM(activities, relationships, opts) {
     // project finish stays the EARLY finish (v2.9.18 through v2.9.48 reported
     // the deadline itself, and seeded every activity from its bare date), and
     // free float of an activity with no successor still runs to the early
-    // finish (all 78 open ends of three P6 files). Python paired site:
-    // _deadline_lf_for.
+    // finish (all 78 open ends of three P6 files). It does the same under
+    // SCHEDOPTIONS sched_use_project_end_date_for_float = N ("opened
+    // projects") with one project open: measured 3-Oct-2026 on P6's own F9
+    // of the synthetic Larchmere update (Must Finish By 01-May-2026 17:00)
+    // at three data dates, every open end's late finish is the Must Finish
+    // By and, handed it, the engine matches all 256 open activities on six
+    // fields (p6-comparison cases 19-21). N with several projects open is
+    // not measured. Python paired site: _deadline_lf_for.
     const _projectFinishOpt = String(opts.projectFinish || opts.project_finish ||
         opts.mustFinishBy || '').trim();
     let _projectDeadlineNum = 0;
@@ -3595,9 +3601,12 @@ function computeCPM(activities, relationships, opts) {
     // where the scalar maxEF seed handed it the Mon 19th boundary).
     // A user-supplied projectFinish deadline keeps the scalar behavior
     // (deadline IS the seed instant for every node, unchanged semantics).
-    // opts.useProjectEndDateForFloat=false is DISCLOSED but not implemented:
-    // P6's behavior with the option off was not captured, and the engine
-    // does not guess silently.
+    // opts.useProjectEndDateForFloat=false (P6's "opened projects", flag N)
+    // computes exactly as true and is DISCLOSED by a WARN: P6 Professional
+    // 23.12.1 applied the Must Finish By under N with one project open
+    // (measured 3-Oct-2026), which is the case the engine computes, since it
+    // schedules one project; N with several projects open is not measured,
+    // and the engine does not guess at it.
     const _useProjEnd = (opts.useProjectEndDateForFloat !== undefined)
         ? !!opts.useProjectEndDateForFloat
         : (opts.use_project_end_date_for_float !== undefined)
@@ -3607,9 +3616,12 @@ function computeCPM(activities, relationships, opts) {
         alerts.push({
             severity: 'WARN',
             context: 'use-project-end-date-for-float-off-not-implemented',
-            message: 'useProjectEndDateForFloat=false requested; P6\'s ' +
-                'off-behavior is uncaptured, so the engine computes with the ' +
-                'documented default (true) semantics. Disclosed, not guessed.',
+            message: 'useProjectEndDateForFloat=false requested ("opened ' +
+                'projects"); the engine computes as for true. P6 Professional ' +
+                '23.12.1 applied the Must Finish By under this setting with ' +
+                'one project open (measured 3-Oct-2026), the case the engine ' +
+                'computes; with several projects open its behavior is not ' +
+                'measured. Disclosed, not guessed.',
         });
     }
     let _dLast = 0;
@@ -5482,17 +5494,21 @@ function parseXER(content) {
         sched_calendar_on_relationship_lag:
             _MC.schedOptions.sched_calendar_on_relationship_lag || '',
         sched_float_type: _MC.schedOptions.sched_float_type || '',
-        // v2.9.49 — the Must Finish By (PROJECT.plan_end_date), and the value
-        // to hand computeCPM as opts.projectFinish: the same date when
-        // SCHEDOPTIONS sched_use_project_end_date_for_float is Y or absent
-        // (P6's default, the setting P6 was measured under), '' when it is N
-        // ("opened projects", unmeasured) or no date is set. Paired with
+        // v2.9.50: the Must Finish By (PROJECT.plan_end_date), and the value to hand
+        // computeCPM as opts.projectFinish: the same date whenever one is
+        // set, whatever SCHEDOPTIONS sched_use_project_end_date_for_float
+        // says, '' when none is set. v2.9.49 handed it on only under Y or
+        // absent and held it back under N ("opened projects", then
+        // unmeasured). P6 Professional 23.12.1 applied it under N with one
+        // project open (measured 3-Oct-2026 on P6's own F9 of the synthetic
+        // Larchmere update at three data dates: every open end's late finish
+        // is the Must Finish By, and the engine handed it matches all 256
+        // open activities on six fields; p6-comparison cases 19-21). The
+        // engine schedules one project at a time, which is the measured
+        // case; N with several projects open is not measured. Paired with
         // tia_builder._detect_project_finish.
         plan_end_date: _projectRow ? String(_projectRow.plan_end_date || '').trim() : '',
-        project_finish: (_projectRow && String(_projectRow.plan_end_date || '').trim() &&
-            String(_MC.schedOptions.sched_use_project_end_date_for_float || '')
-                .trim().toUpperCase() !== 'N')
-            ? String(_projectRow.plan_end_date).trim() : '',
+        project_finish: _projectRow ? String(_projectRow.plan_end_date || '').trim() : '',
         hammock_count: Object.keys(_MC.hammocks).length,
         // v2.9.12 T1.5 — expose parse-time alerts so callers that don't go
         // through runCPM can still see what was dropped.
@@ -8583,20 +8599,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '99 cross-validation fixtures. The harness defines 2539 ' +
-                'comparisons; 74 of them are never executed because neither ' +
+                '101 cross-validation fixtures. The harness defines 2705 ' +
+                'comparisons; 82 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
-                '(37 ff_signed, 37 ff_signed_working_days, all on completed ' +
+                '(41 ff_signed, 41 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 2465 / 2465" counts executed comparisons only and ' +
-                'is not a coverage figure. None of those 74 is a one-sided parity ' +
+                'reported "Checks: 2623 / 2623" counts executed comparisons only and ' +
+                'is not a coverage figure. None of those 82 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 30 of the 99 fixtures contain at least one skipped ' +
-                'comparison. The 2465 comparisons that did run are bit-identical ' +
+                'branch. 32 of the 101 fixtures contain at least one skipped ' +
+                'comparison. The 2623 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 91 of the 99 fixtures). ' +
+                'severity-level alert parity, compared on 93 of the 101 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -8635,29 +8651,29 @@ function buildDaubertDisclosure(result, opts) {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite actually executes. Coverage limit: the cross-validation harness ' +
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
-                'emit the field, so 74 checks are skipped rather than compared, counted, ' +
-                'or reported as failures (37 ff_signed, 37 ff_signed_working_days). The ' +
-                'printed 2465 / 2465 therefore sits on a nominal surface of 2539 checks, and ' +
-                'those two fields go uncompared somewhere in 30 of the 99 fixtures. In ' +
-                'all 74 cases NEITHER engine emits the field, so the skip is a ' +
+                'emit the field, so 82 checks are skipped rather than compared, counted, ' +
+                'or reported as failures (41 ff_signed, 41 ff_signed_working_days). The ' +
+                'printed 2623 / 2623 therefore sits on a nominal surface of 2705 checks, and ' +
+                'those two fields go uncompared somewhere in 32 of the 101 fixtures. In ' +
+                'all 82 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
-                'emit, 74 are comparisons where neither engine emits one. Every ' +
+                'emit, 82 are comparisons where neither engine emits one. Every ' +
                 'ES/EF/LS/LF/TF and date comparison is executed, on every activity ' +
                 'comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '99 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '101 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '2465 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 2465 / 2465 tally cannot express ' +
-                'the following gaps. Not executed: 74 node comparisons on the signed ' +
+                '2623 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 2623 / 2623 tally cannot express ' +
+                'the following gaps. Not executed: 82 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 91 of the 99 fixtures: not on those 2, which have no ' +
+                'parity runs on 93 of the 101 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +

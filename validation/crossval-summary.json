@@ -1,34 +1,34 @@
 {
-  "engine_version": "2.9.49",
-  "generated_utc": "2026-09-27T08:53:12.364Z",
+  "engine_version": "2.9.50",
+  "generated_utc": "2026-10-03T22:46:26.270Z",
   "fixtures": {
-    "total": 99,
-    "passed": 99,
+    "total": 101,
+    "passed": 101,
     "failed": 0
   },
   "checks": {
-    "executed": 2465,
+    "executed": 2623,
     "failed": 0,
-    "passed": 2465,
-    "skipped": 74,
-    "surface": 2539
+    "passed": 2623,
+    "skipped": 82,
+    "surface": 2705
   },
   "skips_by_field": {
-    "ff_signed": 37,
-    "ff_signed_working_days": 37
+    "ff_signed": 41,
+    "ff_signed_working_days": 41
   },
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 74
+    "mutual": 82
   },
   "checks_by_field": {
-    "project_finish_num": 97,
-    "project_finish": 97,
-    "critical_codes": 97,
-    "topo_order": 97,
-    "alert_count": 91,
-    "alert_severity_counts": 91,
-    "node <id>": 1893,
+    "project_finish_num": 99,
+    "project_finish": 99,
+    "critical_codes": 99,
+    "topo_order": 99,
+    "alert_count": 93,
+    "alert_severity_counts": 93,
+    "node <id>": 2039,
     "threw (both engines)": 2
   },
   "rows": [
@@ -912,6 +912,28 @@
       "skips_by_field": {
         "ff_signed": 1,
         "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F104",
+      "name": "F104 - MFB under \"opened projects\": the measured shape at a midnight data date",
+      "checks": 79,
+      "fails": 0,
+      "skips": 4,
+      "skips_by_field": {
+        "ff_signed": 2,
+        "ff_signed_working_days": 2
+      }
+    },
+    {
+      "id": "F105",
+      "name": "F105 - MFB under \"opened projects\": the measured shape at the 17:00 close",
+      "checks": 79,
+      "fails": 0,
+      "skips": 4,
+      "skips_by_field": {
+        "ff_signed": 2,
+        "ff_signed_working_days": 2
       }
     }
   ]

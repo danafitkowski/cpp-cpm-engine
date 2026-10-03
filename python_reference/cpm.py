@@ -16,11 +16,11 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 2465 of 2539
-# across 99 as measured 2026-09-27 (validation/crossval-summary.json carries
-# the figures of the latest run). The 74 that remain are
+# measured 2026-08-27, and the fixtures added since took it to 2623 of 2705
+# across 101 as measured 2026-10-03 (validation/crossval-summary.json carries
+# the figures of the latest run). The 82 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
-# populates (36 ff_signed, 36 ff_signed_working_days).
+# populates (41 ff_signed, 41 ff_signed_working_days).
 # Why that mattered: the free-float working-day conversion carried a wrong
 # anchor in BOTH ports, and ff_signed_working_days — the field that would have
 # shown it — was one of the fields the harness was skipping.
@@ -63,10 +63,10 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 99 fixtures in cpm-engine.crossval.js. As
-measured 2026-09-27 that is 2465 of a 2539-comparison surface; the 74 that are
+the harness executes across the 101 fixtures in cpm-engine.crossval.js. As
+measured 2026-10-03 that is 2623 of a 2705-comparison surface; the 82 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
-field (37 ff_signed, 37 ff_signed_working_days on completed activities).
+field (41 ff_signed, 41 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
 DAUBERT.md §3 for verification methodology.
 """
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.49'
+ENGINE_VERSION = '2.9.50'
 
 
 # =============================================================================
@@ -2714,6 +2714,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # work is the close of its last working day before it. The reported
     # project finish stays the EARLY finish, and free float of an activity
     # with no successor still runs to it (all 78 open ends of three P6 files).
+    # It does the same under SCHEDOPTIONS sched_use_project_end_date_for_float
+    # = N ("opened projects") with one project open: measured 3-Oct-2026 on
+    # P6's own F9 of the synthetic Larchmere update (Must Finish By
+    # 01-May-2026 17:00) at three data dates, every open end's late finish is
+    # the Must Finish By and, handed it, the engine matches all 256 open
+    # activities on six fields. N with several projects open is not measured.
     # JS paired site: _projectDeadlineNum / _seedLFFor.
     _pf_raw = str(project_finish or '').strip()
     _pf_day = date_to_num(_pf_raw) if _pf_raw else 0
@@ -3245,10 +3251,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # well, so all four free-float fields cross-validate. Only the
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
-    # comparisons are absent on both sides rather than one: 74 of them (37
-    # ff_signed, 37 ff_signed_working_days) on the 99-fixture harness as
-    # measured 2026-09-27, whose line reads 2465 / 2465 executed against a
-    # 2539-comparison surface (validation/crossval-summary.json in the engine
+    # comparisons are absent on both sides rather than one: 82 of them (41
+    # ff_signed, 41 ff_signed_working_days) on the 101-fixture harness as
+    # measured 2026-10-03, whose line reads 2623 / 2623 executed against a
+    # 2705-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.

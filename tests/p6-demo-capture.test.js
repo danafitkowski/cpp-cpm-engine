@@ -1,20 +1,31 @@
 // tests/p6-demo-capture.test.js
 //
-// v2.9.49 — the engine against P6's own F9 of the website demo update, at the
-// three data dates P6 scheduled it (validation/p6-comparison/cases/16-18). Run
-// by `npm run test:p6-comparison`.
+// The engine against P6's own F9 of two progressed updates, each at the three
+// data dates P6 scheduled it (validation/p6-comparison/cases/16-21). Run by
+// `npm run test:p6-comparison`.
 //
-// P6 Professional 23.12.1 F9'd the 405-activity update at 16-Sep-2025 08:00,
-// 16-Sep-2025 17:00 and 01-Jul-2025 17:00 on 27-Sep-2026. The case folders
-// hold the engine input built from each export's input fields
-// (build-demo-capture-cases.py) and P6's computed fields (p6-export.json).
-// Every one of the 291 open activities must match P6 on early start (its
+// Cases 16-18 (added in v2.9.49): P6 Professional 23.12.1 F9'd the
+// 405-activity website demo update at 16-Sep-2025 08:00, 16-Sep-2025 17:00 and
+// 01-Jul-2025 17:00 on 27-Sep-2026: 291 open activities and 113 completed at
+// each. Before v2.9.49 the engine matched 0 of 291 late dates and total floats
+// at every data date (it seeded late dates at its own early finish, not the
+// Must Finish By), and at the filed date 67 of 291 early dates (it read no
+// resume dates).
+//
+// Cases 19-21 (added in v2.9.50): P6 Professional 23.12.1 F9'd the synthetic
+// Larchmere update, with only it open, at 15-Oct-2025 00:00, 15-Oct-2025
+// 17:00 and 05-Aug-2025 00:00 on 3-Oct-2026: 256 open activities and 123
+// completed at each. Its SCHEDOPTIONS sched_use_project_end_date_for_float is
+// N ("opened projects") and P6 applied its Must Finish By anyway. Under the
+// v2.9.49 rule, which withheld the date under N, the engine matched 0 of 256
+// late starts, late finishes and total floats at every data date.
+//
+// The case folders hold the engine input built from each export's input
+// fields (build-demo-capture-cases.py) and P6's computed fields
+// (p6-export.json). Every open activity must match P6 on early start (its
 // restart when started), early finish, late start (remaining late start when
-// started), late finish, total float and free float, and the 113 completed
-// rows must pass their actual dates through. Before v2.9.49 the engine matched
-// 0 of 291 late dates and total floats at every data date (it seeded late
-// dates at its own early finish, not the Must Finish By), and at the filed
-// date 67 of 291 early dates (it read no resume dates).
+// started), late finish, total float and free float, and every completed row
+// must pass its actual dates through.
 //
 // It also fails when the committed engine-output.json or comparison.csv is
 // not what the current engine produces, so a stale case cannot pass.
@@ -30,16 +41,21 @@ function check(label, cond, msg) {
     if (!cond) failures.push(label + (msg ? ' — ' + msg : ''));
 }
 
+let comparisons = 0;
 for (const name of dc.CASES) {
     const { dir, r, csv, summary } = dc.runCase(name);
     const c = summary.counts;
-    check(name + ': 291 open activities', c.open === 291, 'open=' + c.open);
+    const want = dc.EXPECTED_COUNTS[name];
+    check(name + ': expected counts are declared', !!want);
+    if (!want) continue;
+    check(name + ': ' + want.open + ' open activities', c.open === want.open, 'open=' + c.open);
     for (const f of ['es', 'ef', 'ls', 'lf', 'tf', 'ff']) {
-        check(name + ': ' + f + ' matches P6 on every open activity', c[f] === 291,
+        check(name + ': ' + f + ' matches P6 on every open activity', c[f] === want.open,
             f + '=' + c[f]);
+        comparisons += c[f];
     }
-    check(name + ': 113 completed rows pass their actual dates through',
-        c.completed === 113, 'completed=' + c.completed);
+    check(name + ': ' + want.completed + ' completed rows pass their actual dates through',
+        c.completed === want.completed, 'completed=' + c.completed);
     check(name + ': no undocumented difference from P6', summary.failures.length === 0,
         summary.failures.slice(0, 5).join('; '));
     const outFile = path.join(dir, 'engine-output.json');
@@ -57,7 +73,8 @@ for (const name of dc.CASES) {
 }
 
 if (failures.length === 0) {
-    console.log('p6-demo-capture.test.js — PASS (3 data dates x 291 open activities x 6 fields match P6; outputs current)');
+    console.log('p6-demo-capture.test.js: PASS (' + dc.CASES.length + ' P6 F9 exports, ' +
+        comparisons + ' open-activity comparisons on 6 fields match P6; outputs current)');
     process.exit(0);
 }
 console.error('p6-demo-capture.test.js — FAIL — ' + failures.length + ' failure(s):');

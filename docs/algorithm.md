@@ -74,7 +74,10 @@ seedLF(n) = the Must Finish By (opts.projectFinish) when one is passed,
             calendar: the boundary after the last workable day <= that
             deadline / the project's last worked day. Single-calendar
             networks with no Must Finish By: seedLF == maxEF.
-            (P6: sched_use_project_end_date_for_float = Y.)
+            (P6: sched_use_project_end_date_for_float = Y. The Must
+            Finish By seed holds under N too with one project open,
+            measured 3-Oct-2026; N with several projects open is not
+            measured.)
 
 LF = min( seedLF(n),
           over FS successors S:  S.LS - lag,
