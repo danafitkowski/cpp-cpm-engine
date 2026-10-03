@@ -316,7 +316,7 @@ def build_case(path, swap_cstr=False, honour_must_finish=False):
     # synthetic Larchmere update at three data dates, measured 3-Oct-2026),
     # so the stored dates of an N file that did not are not explained by
     # that measurement: several projects open (not measured) or a Must
-    # Finish By set after the last schedule run would each produce them.
+    # Finish By set after the last schedule run could each produce them.
     # The CPP converters and parseXER pass it whenever it is set (engine
     # v2.9.50). This harness still leaves it off by default so its recorded
     # figures stay comparable; `honour_must_finish=True` (--must-finish)

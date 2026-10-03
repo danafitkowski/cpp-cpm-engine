@@ -12,7 +12,7 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
-## v2.9.50 — 2026-10-03 — the Must Finish By under "opened projects", measured on P6's own F9
+## v2.9.50 - 2026-10-03 - the Must Finish By under "opened projects", measured on P6's own F9
 
 **Engine math changed, in what `parseXER` hands a caller; the arithmetic of
 `computeCPM` is unchanged.** `parseXER` now returns the project's Must Finish By as
@@ -110,9 +110,9 @@ cases 19-21 exercise the Must Finish By rule on a different schedule.
   83.53% branches (2,333 / 2,793), 95.30% functions (142 / 149).
 
 **Not measured, not claimed.**
-- `N` with several projects open, where P6 calculates float from the latest
-  finish among the open projects. The engine schedules one project at a
-  time.
+- `N` with several projects open, where the option's name says float runs
+  to the finish of the opened projects; how P6 computes that case is not
+  claimed. The engine schedules one project at a time.
 - Everything else the v2.9.49 notes list as not measured stands.
 - Not changed: `parseXER` still hands `sched_calendar_on_relationship_lag` on
   as the file stores it. A caller that forwards P6's unprefixed `Successor`
