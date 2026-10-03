@@ -191,6 +191,12 @@ const HISTORIC_OK_PATTERNS = [
     // the explicit lag phrasing on the same line, so a bare stale reference,
     // or a future edit that softens the warning, still fails.
     /\bnpm\b[^\n]*\blags this repository\b/i,
+    // Withdrawal record. A release that withdraws evidence an earlier one
+    // shipped has to name the release that shipped it: "the three capture
+    // cases v2.9.49 shipped (16-18) were withdrawn in v2.9.50". Added
+    // 2026-10-03 for v2.9.50. Deliberately narrow: it requires "withdrawn"
+    // and a version naming what was shipped or added on the same line.
+    /\bv2\.9\.\d+ (only|shipped|added)\b[^\n]*\bwithdrawn\b/i,
 ];
 
 const VERSION_RE = /\bv?2\.9\.(\d+)\b/g;
