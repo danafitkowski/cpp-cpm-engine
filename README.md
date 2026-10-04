@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/cpp-cpm-engine.svg)](https://www.npmjs.com/package/cpp-cpm-engine)
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![tests: 1346 passing](https://img.shields.io/badge/tests-1346%20passing-brightgreen.svg)](cpm-engine.test.js)
+[![tests: 1352 passing](https://img.shields.io/badge/tests-1352%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: JS↔Python 2623/2705](https://img.shields.io/badge/JS%E2%86%94Python-2623%2F2705-brightgreen.svg)](DAUBERT.md#31-independent-verification)
 [![coverage: 94%](https://img.shields.io/badge/coverage-94%25%20stmts%20%2F%2083%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2950-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
@@ -142,7 +142,7 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 101 fixtures, 2623 checks executed, 0 deviations, measured 2026-10-03.
+# 101 fixtures, 2623 checks executed, 0 deviations, measured 2026-10-04.
 # A further 82 comparisons on the enumerated surface (2705 total) are skipped rather than failed by the harness field guards, all on ff_signed / ff_signed_working_days on completed activities, where NEITHER engine emits the field.
 ```
 

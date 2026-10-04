@@ -7,7 +7,7 @@ This document is the **courtroom-exhibit-form** of the engine release verificati
 > - **Completed activities are kept.** `parseXER` keeps every completed activity, with its actual dates and no remaining duration, as P6 keeps it. It used to drop each completed non-milestone with its relationships, so a `computeCPM` run built from `getTasks()` lost what completed work hands on: an unfinished predecessor's date passing through completed out-of-sequence work under retained logic, and the unexpired lag off an actual finish after the data date. On P6's own F9 of the synthetic Larchmere update at its filed data date that path matched 254 of 256 open activities' early finishes; it now matches 256. No issued CPP deliverable is computed through the engine's `parseXER`.
 > - **The float burndown chart** prints its text in ink at 12 px (the footer at 11 px) and grows to hold its whole legend. No computed value moves.
 >
-> A result computed on v2.9.50 or earlier through `parseXER` can differ on a schedule whose completed work drives open work. See [CHANGELOG.md](CHANGELOG.md) for the measurements.
+> A result computed on v2.9.50 or earlier can differ, through `parseXER`, on a schedule whose completed work drives open work. See [CHANGELOG.md](CHANGELOG.md) for the measurements.
 
 
 ## What this file proves
@@ -151,10 +151,10 @@ engine.sha256:    <engine_sha from manifest>
 python_ref.sha256: <python_sha from manifest>
 
 [1/3] unit tests
-  1346 passed, 0 failed
+  1352 passed, 0 failed
 
 [2/3] cross-validation
-  Fixtures: 99 passed, 0 failed
+  Fixtures: 101 passed, 0 failed
   Checks:   2623 / 2623
 
 [3/3] citation regression
@@ -165,7 +165,7 @@ Verdict: PASS
 Witness written to: attestations/latest.json
 ```
 
-**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,346 / 2623 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
+**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,352 / 2623 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
 
 **Drift documents itself.** Any mismatch — different SHA, different pass count, different verdict — is itself usable evidence. The verifier can publish a witness from their own machine showing the drift; it is the same JSON shape as the proponent's witness.
 
