@@ -100,8 +100,8 @@ Workflow runs are publicly visible at <https://github.com/danafitkowski/cpp-cpm-
 
 **Layer 2 — Cryptographic attestation via Sigstore.** On every push to `main` and every tag push, the workflow:
 
-1. Generates a **witness JSON file** (`attestations/latest.json`) containing: package version, engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version, runner OS, and the exact pass/fail counts from each test suite. *Note: `attestations/latest.json` is intentionally gitignored — it is a per-machine generated artifact, not a committed file. The public Sigstore-signed witness is the **GitHub release asset** attached to each tagged release (`v<TAG>/attestations-latest.json`), permanent and externally verifiable.*
-2. Signs the witness via **Sigstore using GitHub OIDC** (`actions/attest-build-provenance@v1`). The signature is recorded on the public Sigstore transparency log (Rekor), providing a tamper-evident audit trail.
+1. Generates a **witness JSON file** (`attestations/latest.json`) containing: package version, engine SHA-256, Python-reference SHA-256, commit SHA, UTC timestamp, Node version, runner OS, and the exact pass/fail counts from each test suite. *Note: `attestations/latest.json` is intentionally gitignored — it is a per-machine generated artifact, not a committed file. The public Sigstore-signed witness is the **GitHub release asset** attached to each tagged release (`latest.json` on release `v<TAG>`), permanent and externally verifiable.*
+2. Signs the witness via **Sigstore using GitHub OIDC** (`actions/attest-build-provenance`, pinned to a release commit in `.github/workflows/verify.yml`). The signature is recorded on the public Sigstore transparency log (Rekor), providing a tamper-evident audit trail.
 3. Publishes the signed witness as a workflow artifact (90-day retention) and — on tag pushes — as a release asset (permanent).
 
 Anyone can verify a published attestation:
