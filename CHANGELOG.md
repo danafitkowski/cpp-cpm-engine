@@ -12,6 +12,94 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.51 - 2026-10-04 - parseXER keeps completed activities; the float burndown chart reads in ink
+
+**Engine math changed, in what `parseXER` hands a caller; the arithmetic of
+`computeCPM` is unchanged.** `parseXER` now keeps every completed activity,
+with its actual dates, no remaining duration and `is_complete: true`, as P6
+keeps it. Until now it dropped each completed non-milestone with its
+relationships (a `task-dropped` INFO, reason `completed`), so a `computeCPM`
+run built from `getTasks()` and `getRelationships()`, and `runCPM`, which
+reads the same network, lost what completed work hands on, where P6 does not:
+
+- under retained logic an unfinished predecessor's date passes through
+  completed out-of-sequence work to its successors (v2.9.46);
+- an actual finish after the data date drives its successors by the lag it
+  has not used up (v2.9.47).
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+4-Oct-2026 on Dana's instruction to fix the gap: early and late dates and
+float can move, through `parseXER`, on a schedule whose completed work drives
+open work. §12.2 re-check: not run. No issued CPP deliverable is computed
+through the engine's `parseXER`: the CPP skills read XERs with their Python
+converters, which always kept completed activities; its one shipped caller is
+the interactive `/try` page.
+
+**How it was found and measured.** P6 Professional 23.12.1's own F9 of the
+synthetic Larchmere update at its filed data date (05-Aug-2025; the export
+behind capture case 21) carries A2610, SS + 16 h from A2600, which is
+complete with actual dates after the data date. P6 starts A2610 two working
+days after the data date. Through `parseXER` and `getTasks()`, A2600 was
+dropped and the engine started A2610 on the data date. Engine against P6 on
+that export's 256 open activities, through `parseXER` only:
+
+| | early finish (last day worked) | early start, not-started and completed rows |
+|---|---|---|
+| v2.9.50 `parseXER` | 254 of 256 | 247 of 256 |
+| v2.9.51 `parseXER` | 256 of 256 | 249 of 256 |
+
+The seven early starts that differ either way are in-progress activities,
+where P6 stores the restart as the early start and the engine reports the
+actual start. At the corrected data date and at 17:00 nothing moves. Capture
+cases 19-21 build their input with the Python converter, which kept completed
+rows already, and read as before: 256 of 256 on all six fields at each date.
+
+**1. `parseXER`.** A row with no remaining duration and an actual finish that
+is not a milestone is kept as a task: `remaining: 0`, `originalRemaining` its
+target duration, `actual_start` and `actual_finish` as P6 wrote them, time
+included, `is_complete: true`. Its relationships are kept. `dropped_activities`
+no longer lists completed rows; a zero-remaining row with no actual finish is
+still dropped (reason `zero-remaining`). R-10 and R-v295-10 are re-pinned;
+PX-5 to PX-7 pin the kept row, its relationship, the successor's start through
+`getTasks()` equal to the same network handed to `computeCPM` directly, and
+that the completed row is not critical.
+
+**2. The float burndown chart.** `computeFloatBurndown(..., { renderHTML: true })`
+printed its axis labels in grey at 10-11 px and its footer in grey at 9 px,
+and with more than ten activities its legend ran past the fixed 520 px height
+and was clipped. Every label now prints in ink (#0b1424) at 12 px, the footer
+at 11 px, the legend starts below the rotated window labels, and the chart is
+as tall as its legend. The text is unchanged. This mirrors the Python twin's
+change of 3-Oct-2026. BDR-1 to BDR-3 pin it. No computed value moves.
+
+**Verified.**
+- JS unit suite: 1,352 checks green, up from 1,346 (PX-5 to PX-7, BDR-1 to
+  BDR-3). Each fails against the v2.9.50 engine.
+- Cross-validation: 101 fixtures, 2623 of 2705 executed, 82 skipped, 0
+  failures, unchanged: the harness hands `computeCPM` its networks directly.
+- The 13-case P6 matrix re-applied on these bytes reads 13 / 13 over 27 field
+  checks with zero changed rows; cases 19-21 read 256 of 256 on six fields at
+  each data date.
+- Coverage re-measured on these bytes: 94.38% statements (10,715 / 11,352),
+  83.61% branches (2,332 / 2,789), 95.30% functions (142 / 149).
+
+**Who is affected.** Callers that build `computeCPM` input from `getTasks()`
+and `getRelationships()`, and `runCPM`, on a schedule with completed
+activities. On the measuring machine, of 462 distinct exports parsed, 257
+carry a completed non-milestone activity; through `parseXER` and the
+converter the unit suite uses, 125 move at least one open activity and 54
+move the project finish. Scored against the dates stored in each file, on
+69,345 not-started tasks in the 209 files where both paths produce a
+comparable date, agreement rises from 33,122 to 37,597 early starts and from
+34,901 to 39,260 early finishes; 53 files agree more often and 12 less often.
+The scoring reads every stored date as P6's, which holds only for a file P6
+scheduled.
+
+**Not measured, not claimed.** `runCPM` is the ordinal Section D engine for
+Monte Carlo inner loops and is not P6-aligned; the completed rows it now
+reads carry no duration and pin to their actual start when a project start
+is given. Its results are not claimed to match P6.
+
 ## v2.9.50 - 2026-10-03 - the Must Finish By under "opened projects", measured on P6's own F9
 
 **Engine math changed, in what `parseXER` hands a caller; the arithmetic of

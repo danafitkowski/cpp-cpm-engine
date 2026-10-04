@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.50'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.51'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -308,7 +308,7 @@ For the per-iteration hot loop in Monte Carlo schedule risk analysis.
 
 Parse a P6 XER export. Returns `{ taskCount, relCount, dropped_activities }` plus the SCHEDOPTIONS settings it read and, since v2.9.49, `plan_end_date` (the project's Must Finish By as P6 wrote it) and `project_finish` (the value to pass as `computeCPM`'s `opts.projectFinish`: the same date whenever one is set, whatever SCHEDOPTIONS `sched_use_project_end_date_for_float` says, `''` when none is set; v2.9.49 returned `''` under `N`, a setting P6 was not then measured under). The `getTasks()` records carry `actual_start` / `actual_finish` as P6 wrote them, time included (they were cut to `YYYY-MM-DD` through v2.9.48), and each task's `suspend_date` and `resume_date`.
 
-- `dropped_activities: Array<{ task_code, task_type, reason }>` — activities dropped during parse (e.g. `TT_LOE` level-of-effort, `TT_WBS` summary, completed or zero-remaining rows that are not milestones). Caller can surface for transparency; no silent corruption.
+- `dropped_activities: Array<{ task_code, task_type, reason }>` — activities dropped during parse (e.g. `TT_LOE` level-of-effort, `TT_WBS` summary, zero-remaining rows with no actual finish that are not milestones). Since v2.9.51 a completed activity is kept, with its actual dates and no remaining duration (`is_complete: true`), as P6 keeps it; until then it was dropped with its relationships. Caller can surface for transparency; no silent corruption.
 
 ### `E.runCPM(opts)`
 

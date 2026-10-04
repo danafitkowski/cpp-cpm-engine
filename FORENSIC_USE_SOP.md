@@ -190,11 +190,11 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 **Goal:** Document what was excluded from the CPM analysis and why.
 
 **Do:**
-- Any activity filtered out of the analysis (e.g., LOE / TT_WBS / completed / dropped-by-strict-mode) must be enumerated.
+- Any activity filtered out of the analysis (e.g., LOE / TT_WBS / zero-remaining / dropped-by-strict-mode) must be enumerated. Since v2.9.51 `parseXER` keeps completed activities, with their actual dates, as P6 does.
 - For each excluded activity: code, reason, source of authority for the exclusion (engine alert, analyst judgment, contract scope, etc.).
 
 **Engine support:**
-- Engine emits `task-dropped` INFO for LOE / TT_WBS / completed-zero-remaining drops.
+- Engine emits `task-dropped` INFO for LOE / TT_WBS / zero-remaining drops.
 - `result.alerts.filter(a => a.context === 'task-dropped')` enumerates them.
 
 **Capture in manifest:** excluded-activity table (code, exclusion reason, source).
@@ -258,7 +258,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - Verify the deliverable's report manifest references:
-  - Engine version (e.g., `cpm-engine v2.9.50`)
+  - Engine version (e.g., `cpm-engine v2.9.51`)
   - Source SHA-256 (from Step 2)
   - This SOP (`FORENSIC_USE_SOP.md`)
   - DAUBERT.md (engine disclosure)
@@ -310,11 +310,11 @@ live work. Do not wait for a client to ask.
 
 FRE 702 attacks come in two flavors:
 
-1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.50 verification chain answer this layer.
+1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.9.51 verification chain answer this layer.
 
 2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
-Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,346 unit tests, 2623 of 2705 enumerated crossval comparisons bit-identical, 94/83/95/94 coverage at the v2.9.50 baseline). The application layer is where attacks will land — make it harder than the engine layer.
+Opposing counsel will go after whichever is weaker. Right now the engine layer is harder to attack than most commercial forensic tools (open source, Sigstore-signed witness, Rekor transparency log, 1,352 unit tests, 2623 of 2705 enumerated crossval comparisons bit-identical, 94/83/95/94 coverage at the v2.9.51 baseline). The application layer is where attacks will land — make it harder than the engine layer.
 
 Following this SOP does not guarantee admissibility. It documents a defensible application discipline. Whether the opinion itself is defensible remains the analyst's burden under FRE 702.
 
@@ -360,4 +360,4 @@ only the second is an answer.
 
 ## Document version
 
-This SOP is aligned to `cpm-engine` v2.9.50. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.
+This SOP is aligned to `cpm-engine` v2.9.51. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.

@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.50'
+ENGINE_VERSION = '2.9.51'
 
 
 # =============================================================================

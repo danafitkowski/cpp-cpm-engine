@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.50';
+const ENGINE_VERSION = '2.9.51';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -5187,20 +5187,25 @@ function parseXER(content) {
                         message: 'Task ' + (row.task_code || taskId) +
                             ' dropped: reason=zero-remaining (no actual finish, zero remain_drtn_hr_cnt)',
                     });
-                } else if (remaining <= 0 && !isMilestone && row.act_end_date) {
-                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'completed' });
-                    _MC.parseAlerts.push({
-                        severity: 'INFO',
-                        context: 'task-dropped',
-                        message: 'Task ' + (row.task_code || taskId) +
-                            ' dropped: reason=completed (act_end_date=' +
-                            (row.act_end_date || '') + ')',
-                    });
                 }
 
                 const isDroppedType = (_taskType === 'TT_LOE' || _taskType === 'TT_WBS' || _taskType === 'TT_Hammock');
-                // Retain: milestones (even zero-duration), or any non-dropped type with remaining>0.
-                if (!isDroppedType && (isMilestone || remaining > 0)) {
+                // v2.9.51 — a completed activity is kept, with its actual
+                // dates and no remaining duration, as P6 keeps it. Until then
+                // parseXER dropped every completed non-milestone and its
+                // relationships, so a computeCPM run built from getTasks()
+                // lost what completed work hands on: under retained logic an
+                // unfinished predecessor's date passes through completed
+                // out-of-sequence work, and an actual finish after the data
+                // date drives its successors by the lag it has not used up.
+                // On P6's own F9 of the synthetic Larchmere update at its
+                // filed data date (05-Aug-2025) that path matched 254 of 256
+                // open activities on early dates (A2610, A2650: SS +16h from
+                // completed A2600, which started 18-Aug-2025); kept, 256.
+                const isCompleted = remaining <= 0 && !isMilestone && !!row.act_end_date;
+                // Retain: milestones (even zero-duration), completed activities,
+                // or any non-dropped type with remaining>0.
+                if (!isDroppedType && (isMilestone || remaining > 0 || isCompleted)) {
                     // Audit Alpha #1+#4: capture progress markers + per-activity
                     // calendar so Section C consumers (e.g. /try's
                     // _buildSectionCInput) can propagate them. v2.9.49 — kept
@@ -9927,12 +9932,22 @@ function computeFloatBurndown(snapshots, opts) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, slip_velocity) {
-    const W = 900, H = 520;
+    // v2.9.51 — every label prints in ink at 12 px (the footer at 11 px), not
+    // grey at 9-11 px, and the chart grows to hold its whole legend instead of
+    // clipping the rows past a fixed 520 px. Mirrors the Python twin
+    // (_render_float_burndown_svg, 3-Oct-2026) in structure and text.
+    const W = 900;
     const PLOT_X1 = 80, PLOT_X2 = 860;
     const PLOT_Y1 = 50, PLOT_Y2 = 400;
     const PLOT_W = PLOT_X2 - PLOT_X1;
     const PLOT_H = PLOT_Y2 - PLOT_Y1;
-    const LEGEND_Y_START = 420;
+    // Room under the plot for the rotated window labels before the legend.
+    const LEGEND_Y_START = 470;
+    const LEGEND_ROW_H = 20;
+    const legendRows = Math.floor((codes.length + 1) / 2);
+    // The footer sits under the last legend row; the chart is as tall as that.
+    const FOOTER_Y = LEGEND_Y_START + Math.max(legendRows - 1, 0) * LEGEND_ROW_H + 34;
+    const H = Math.max(520, FOOTER_Y + 12);
 
     // ── Color palette ────────────────────────────────────────────────────────
     const HEALTHY_COLORS = [
@@ -9947,7 +9962,8 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
     const NAVY_COLOR      = _CPP_NAVY;   // CPP brand navy (canonical)
     const ZERO_LINE_COLOR = '#E8A020';   // amber — zero-float warning line
     const GRID_COLOR      = '#E0E8F0';
-    const AXIS_COLOR      = '#8090A8';
+    const AXIS_COLOR      = '#8090A8';   // axis tick strokes only, never text
+    const TEXT_COLOR      = '#0b1424';   // ink, as the report sheet prints text
 
     // ── Determine Y range ────────────────────────────────────────────────────
     let tfMin = Infinity, tfMax = -Infinity;
@@ -10014,7 +10030,7 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
         );
         parts.push(
             '<text x="' + (PLOT_X1 - 6) + '" y="' + (py + 4).toFixed(1) + '" ' +
-            'text-anchor="end" font-size="11" fill="' + AXIS_COLOR + '">' +
+            'text-anchor="end" font-size="12" fill="' + TEXT_COLOR + '">' +
             Math.round(tf) + 'd</text>'
         );
     }
@@ -10028,7 +10044,7 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
         );
         parts.push(
             '<text x="' + (PLOT_X2 + 4) + '" y="' + (y0 + 4).toFixed(1) + '" ' +
-            'font-size="10" fill="' + ZERO_LINE_COLOR + '" font-weight="600">TF=0</text>'
+            'font-size="12" fill="' + TEXT_COLOR + '" font-weight="600">TF=0</text>'
         );
     }
 
@@ -10047,7 +10063,7 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
         const label = String(windows[wi]);
         parts.push(
             '<text x="' + px.toFixed(1) + '" y="' + (PLOT_Y2 + 18) + '" ' +
-            'text-anchor="middle" font-size="10" fill="' + AXIS_COLOR + '" ' +
+            'text-anchor="middle" font-size="12" fill="' + TEXT_COLOR + '" ' +
             'transform="rotate(-30,' + px.toFixed(1) + ',' + (PLOT_Y2 + 18) + ')">' +
             _svgEsc(label) + '</text>'
         );
@@ -10057,7 +10073,7 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
     const yAxisMid = (PLOT_Y1 + PLOT_Y2) / 2;
     parts.push(
         '<text x="18" y="' + yAxisMid + '" ' +
-        'text-anchor="middle" font-size="11" fill="' + AXIS_COLOR + '" ' +
+        'text-anchor="middle" font-size="12" fill="' + TEXT_COLOR + '" ' +
         'transform="rotate(-90,18,' + yAxisMid + ')">' +
         'Total Float (days)</text>'
     );
@@ -10118,12 +10134,12 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
     // ── Legend (two-column) ───────────────────────────────────────────────────
     const LEGEND_COLS = 2;
     const COL_W = PLOT_W / LEGEND_COLS;
-    const ROW_H = 18;
+    const ROW_H = LEGEND_ROW_H;
     let legendRow = 0, legendCol = 0;
 
     parts.push(
         '<text x="' + PLOT_X1 + '" y="' + (LEGEND_Y_START - 4) + '" ' +
-        'font-size="11" font-weight="600" fill="' + NAVY_COLOR + '">Legend</text>'
+        'font-size="12" font-weight="600" fill="' + TEXT_COLOR + '">Legend</text>'
     );
 
     for (const code of codes) {
@@ -10131,7 +10147,7 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
         const lx = PLOT_X1 + legendCol * COL_W;
         const ly = LEGEND_Y_START + legendRow * ROW_H;
         parts.push(
-            '<rect x="' + lx + '" y="' + (ly - 9) + '" width="16" height="10" ' +
+            '<rect x="' + lx + '" y="' + (ly - 10) + '" width="16" height="11" ' +
             'fill="' + color + '" rx="2"/>'
         );
         const vel = slip_velocity[code];
@@ -10141,7 +10157,7 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
         const flagged = first_zero_crossing[code] !== null ? ' [crossed-zero]' : '';
         parts.push(
             '<text x="' + (lx + 20) + '" y="' + ly + '" ' +
-            'font-size="10" fill="' + NAVY_COLOR + '">' +
+            'font-size="12" fill="' + TEXT_COLOR + '">' +
             _svgEsc(code) + (velStr ? ' (' + velStr + ')' : '') + _svgEsc(flagged) +
             '</text>'
         );
@@ -10151,8 +10167,8 @@ function _renderFloatBurndownSVG(codes, windows, series, first_zero_crossing, sl
 
     // Footer caveat
     parts.push(
-        '<text x="' + (W / 2) + '" y="' + (H - 6) + '" ' +
-        'text-anchor="middle" font-size="9" fill="' + AXIS_COLOR + '">' +
+        '<text x="' + (W / 2) + '" y="' + FOOTER_Y + '" ' +
+        'text-anchor="middle" font-size="11" fill="' + TEXT_COLOR + '">' +
         'CPP computeFloatBurndown v' + ENGINE_VERSION +
         ' — Post-processing of analyst-supplied CPM snapshots. Forensic use: analyst-verified only.' +
         '</text>'

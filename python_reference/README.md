@@ -52,7 +52,14 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  5a6440607195677a2ca4cb26e9e0a7d946fcc054fb35b379b17aa9e212049ba5
+cpm.py  SHA-256:  e22660297f9a4acb8723ddc2c0b1cb3ee66cf4c5c66cfacdac94fd31659181f3
+
+(v2.9.51 parseXER keeps completed activities 2026-10-04 - bumped from
+5a644060...: ENGINE_VERSION reads 2.9.51. No computed value of compute_cpm moves:
+the change is in the JS engine's parseXER, which now keeps a completed
+activity with its actual dates, as this reference's callers (the CPP
+converters) always handed it, and in the JS float burndown chart's text,
+which this file does not draw.)
 
 (v2.9.50 the Must Finish By under "opened projects" 2026-10-03 - bumped from
 24aa3548...: ENGINE_VERSION reads 2.9.50, the comments that carry the
@@ -331,7 +338,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 205563
-  sha-256:  5a6440607195677a2ca4cb26e9e0a7d946fcc054fb35b379b17aa9e212049ba5
+  sha-256:  e22660297f9a4acb8723ddc2c0b1cb3ee66cf4c5c66cfacdac94fd31659181f3
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

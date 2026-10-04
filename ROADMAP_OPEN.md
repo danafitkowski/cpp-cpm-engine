@@ -132,6 +132,16 @@ No audit item changed status. v2.9.50 changes what `parseXER` hands on, not the 
 
 Item 6 stands: the 13-case matrix is still fitted to one capture, and the held-out capture remains Dana's action. The Larchmere cases are a second network the scheduling arithmetic was not fitted to, but the `parseXER` rule for "opened projects" was derived from them, and they are not a re-capture of the 13 cases.
 
+## Status at v2.9.51 (reviewed 2026-10-04)
+
+No audit item changed status. v2.9.51 changes what `parseXER` hands on, not the scheduling arithmetic: it keeps every completed activity, with its actual dates and no remaining duration, as P6 keeps it, where it used to drop each completed non-milestone with its relationships. It also prints the float burndown chart's text in ink at 12 px (the footer at 11 px), and the chart grows to hold its whole legend.
+- The unit suite grew from 1,346 to 1,352.
+- The cross-validation surface is unchanged: 101 fixtures, 2,623 of 2,705 comparisons, 0 failures.
+- Coverage was re-measured on the new bytes: 94.38% statements / 83.61% branches / 95.30% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before on the new bytes.
+
+Item 6 stands.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.50. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.51. Update on every release that closes or opens an audit item.

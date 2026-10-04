@@ -4512,7 +4512,8 @@ function _rChain(constraint, opts) {
     check('R-9: OoS message mentions in progress', oos.length > 0 && oos[0].message.indexOf('in progress') >= 0);
 }
 
-// R-10: parseXER dropped_activities surfaces TT_LOE / TT_WBS / completed rows.
+// R-10: parseXER dropped_activities surfaces TT_LOE / TT_WBS rows. Since
+// v2.9.51 a completed activity is kept, with its actual dates, as P6 keeps it.
 {
     const xer = [
         '%T TASK',
@@ -4526,16 +4527,14 @@ function _rChain(constraint, opts) {
     const res = E.parseXER(xer);
     check('R-10: parseXER returns dropped_activities array',
         Array.isArray(res.dropped_activities));
-    check('R-10: 3 activities dropped (LOE + WBS + completed)',
-        res.dropped_activities.length === 3,
+    check('R-10: 2 activities dropped (LOE + WBS)',
+        res.dropped_activities.length === 2,
         'got ' + res.dropped_activities.length);
-    check('R-10: 1 active TT_Task retained', res.taskCount === 1);
+    check('R-10: the active and the completed TT_Task retained', res.taskCount === 2,
+        'got ' + res.taskCount);
     const reasons = res.dropped_activities.map(d => d.reason).sort();
     check('R-10: dropped reasons enumerated',
-        reasons.indexOf('level-of-effort') >= 0 &&
-        reasons.indexOf('wbs-summary') >= 0 &&
-        // v2.9.5 — was 'completed-or-zero-remaining'; split into 'completed' vs 'zero-remaining'.
-        reasons.indexOf('completed') >= 0);
+        reasons.join(',') === 'level-of-effort,wbs-summary', reasons.join(','));
 }
 
 // ============================================================================
@@ -4753,7 +4752,8 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
         'got ' + r.nodes.B.es_date);
 }
 
-// R-v295-10: Hammock count regression — fully-completed activities still drop with 'completed'.
+// R-v295-10: a fully completed activity is kept with its actual dates and no
+// remaining duration (v2.9.51; until then it dropped with reason 'completed').
 {
     const xer = [
         '%T TASK',
@@ -4762,10 +4762,12 @@ console.log('\n=== Section R-v295 — v2.9.5 fixes ===');
         '',
     ].join('\n');
     const res = E.parseXER(xer);
-    check('R-v295-10: completed task still dropped',
-        res.dropped_activities.length === 1 &&
-        res.dropped_activities[0].reason === 'completed',
-        'got ' + JSON.stringify(res.dropped_activities));
+    const done = E.getTasks()['700'];
+    check('R-v295-10: a completed task is kept, complete, with its actual dates',
+        res.dropped_activities.length === 0 && done && done.is_complete === true &&
+        done.remaining === 0 && done.originalRemaining === 5 &&
+        done.actual_start === '2026-01-05 08:00' && done.actual_finish === '2026-01-12 17:00',
+        'got ' + JSON.stringify(res.dropped_activities) + ' / ' + JSON.stringify(done));
 }
 
 // ============================================================================
@@ -11423,6 +11425,90 @@ console.log('\n=== PX — parseXER hands computeCPM the actual dates P6 wrote (v
     check('PX-2: through getTasks() the lagged successor of completed work starts on the P6 day',
         px.nodes.S.es_date === '2026-10-08',
         'S es ' + px.nodes.S.es_date + ' (P6 2026-10-08)');
+}
+
+console.log('\n=== PX — parseXER keeps completed activities, as P6 does (v2.9.51) ===');
+{
+    // Until v2.9.51 parseXER dropped every completed non-milestone and its
+    // relationships. A computeCPM run built from getTasks() then lost what
+    // completed work hands on. Shape of the Larchmere update at its filed data
+    // date (P6's own F9, 3-Oct-2026): A2610 runs SS + 16 h from completed
+    // A2600, whose actual dates fall after the data date. P6 starts A2610 two
+    // working days after the data date (the unexpired lag off the stamp); with
+    // A2600 dropped the engine started it on the data date.
+    E.resetMC();
+    const xer = [
+        '%T\tPROJECT',
+        '%F\tproj_id\tlast_recalc_date',
+        '%R\t1\t2026-10-05 00:00',
+        '%T\tTASK',
+        '%F\ttask_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\ttarget_drtn_hr_cnt\tact_start_date\tact_end_date\tclndr_id',
+        '%R\t1\tP\tDone late\tTT_Task\t0\t16\t2026-10-14 08:00\t2026-10-15 17:00\tMF',
+        '%R\t2\tS\tNext\tTT_Task\t8\t8\t\t\tMF',
+        '%T\tTASKPRED',
+        '%F\ttask_id\tpred_task_id\tpred_type\tlag_hr_cnt',
+        '%R\t2\t1\tPR_SS\t16',
+    ].join('\n');
+    const pr = E.parseXER(xer);
+    const t = E.getTasks();
+    check('PX-5: parseXER keeps the completed task and its relationship',
+        pr.taskCount === 2 && pr.relCount === 1 && t['1'] && t['1'].is_complete === true &&
+        pr.dropped_activities.length === 0,
+        'tasks ' + pr.taskCount + ', rels ' + pr.relCount);
+    const acts = Object.values(t).map((k) => ({
+        code: k.code, duration_days: k.remaining, clndr_id: k.clndr_id,
+        task_type: k.task_type, actual_start: k.actual_start,
+        actual_finish: k.actual_finish, is_complete: k.is_complete,
+    }));
+    const rels = E.getRelationships().map((p) => ({
+        from_code: t[p.predTaskId].code, to_code: t[p.taskId].code,
+        type: p.type, lag_days: p.lag,
+    }));
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
+    const viaTasks = E.computeCPM(acts, rels, { dataDate: '2026-10-05', calMap: cal });
+    // The same network handed to computeCPM directly, as the Python
+    // converters and the P6 capture cases hand it.
+    const direct = E.computeCPM([
+        { code: 'P', duration_days: 0, clndr_id: 'MF', task_type: 'TT_Task',
+          actual_start: '2026-10-14 08:00', actual_finish: '2026-10-15 17:00', is_complete: true },
+        { code: 'S', duration_days: 1, clndr_id: 'MF', task_type: 'TT_Task' },
+    ], [{ from_code: 'P', to_code: 'S', type: 'SS', lag_days: 2 }],
+    { dataDate: '2026-10-05', calMap: cal });
+    check('PX-6: through getTasks() the successor of completed work starts where P6 starts it',
+        viaTasks.nodes.S.es_date === '2026-10-07' && direct.nodes.S.es_date === '2026-10-07',
+        'via getTasks ' + viaTasks.nodes.S.es_date + ', direct ' + direct.nodes.S.es_date);
+    check('PX-7: the completed task is not critical and keeps its actual finish',
+        viaTasks.criticalCodesArray.indexOf('P') < 0 &&
+        viaTasks.nodes.P.ef_last_worked_date === '2026-10-15',
+        'critical ' + JSON.stringify(viaTasks.criticalCodesArray) + ', P lw ' +
+        viaTasks.nodes.P.ef_last_worked_date);
+}
+
+console.log('\n=== BDR — the float burndown chart prints in ink, nothing under 11 px (v2.9.51) ===');
+{
+    // Mirrors the Python twin (_render_float_burndown_svg, 3-Oct-2026).
+    const codes = [];
+    for (let i = 1; i <= 24; i++) codes.push('A' + (1000 + i));
+    const snap = (shift) => {
+        const nodes = {};
+        codes.forEach((c, i) => { nodes[c] = { tf: shift - i, is_critical: shift - i <= 0 }; });
+        return { nodes };
+    };
+    const fb = E.computeFloatBurndown([snap(20), snap(10), snap(5)],
+        { activityCodes: codes, windowLabels: ['W1', 'W2', 'W3'], renderHTML: true });
+    const svg = fb.html || '';
+    const sizes = [...svg.matchAll(/<text [^>]*font-size="(\d+(?:\.\d+)?)"/g)].map((m) => +m[1]);
+    const fills = [...svg.matchAll(/<text [^>]*fill="([^"]+)"/g)].map((m) => m[1].toLowerCase());
+    check('BDR-1: no text under 11 px', sizes.length > 0 && Math.min(...sizes) >= 11,
+        'min ' + Math.min(...sizes));
+    check('BDR-2: no grey text (the old axis grey #8090a8)', fills.indexOf('#8090a8') < 0,
+        JSON.stringify([...new Set(fills)]));
+    const h = +svg.match(/height="(\d+(?:\.\d+)?)"/)[1];
+    const footY = +svg.match(/<text x="[^"]+" y="(\d+(?:\.\d+)?)"[^>]*>CPP computeFloatBurndown/)[1];
+    const lastLegendY = Math.max(...[...svg.matchAll(/<text x="[^"]+" y="(\d+(?:\.\d+)?)" font-size="12" fill="#0b1424">A1\d{3}/g)].map((m) => +m[1]));
+    check('BDR-3: the chart grows to hold its whole legend and the footer under it',
+        h > 520 && lastLegendY < footY && footY < h,
+        'height ' + h + ', last legend row ' + lastLegendY + ', footer ' + footY);
 }
 
 // ===========================================================================

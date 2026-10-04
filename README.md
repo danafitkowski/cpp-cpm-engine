@@ -10,7 +10,7 @@
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
-**Open source. AACE-aligned. Daubert-disclosed. 1,346 JS unit tests, plus JS/Python parity on 2623 of 2705 enumerated cross-validation comparisons; the remaining 82 are not compared because neither engine emits the field on a completed activity (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+**Open source. AACE-aligned. Daubert-disclosed. 1,352 JS unit tests, plus JS/Python parity on 2623 of 2705 enumerated cross-validation comparisons; the remaining 82 are not compared because neither engine emits the field on a completed activity (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
 
 Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
@@ -25,7 +25,7 @@ Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a fo
 ```bash
 git clone https://github.com/danafitkowski/cpp-cpm-engine.git
 cd cpp-cpm-engine
-git checkout v2.9.50
+git checkout v2.9.51
 ```
 
 The engine has zero runtime dependencies, so a clone is all it needs. This is the same install path [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md) gives an opposing expert.
@@ -51,7 +51,7 @@ const result = E.computeCPM(
 
 console.log('Project finish:', result.projectFinish);     // 2026-01-21
 console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
-console.log('Engine version:', result.manifest.engine_version); // 2.9.50
+console.log('Engine version:', result.manifest.engine_version); // 2.9.51
 ```
 
 That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
@@ -111,7 +111,7 @@ Every computation emits a manifest:
 
 ```js
 result.manifest = {
-    engine_version: '2.9.50',
+    engine_version: '2.9.51',
     method_id: 'computeCPM',
     activity_count: 3,
     relationship_count: 2,
@@ -196,7 +196,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.50. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.9.51. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
@@ -218,13 +218,13 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.50.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.9.51.
 
 ---
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,346 unit tests and the cross-validation harness, in which 2623 of 2705 defined comparisons execute and are bit-identical with 0 failures across 101 fixtures (the remaining 82 are skipped rather than compared — 41 `ff_signed`, 41 `ff_signed_working_days`, all on completed activities where neither engine emits the field), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,352 unit tests and the cross-validation harness, in which 2623 of 2705 defined comparisons execute and are bit-identical with 0 failures across 101 fixtures (the remaining 82 are skipped rather than compared — 41 `ff_signed`, 41 `ff_signed_working_days`, all on completed activities where neither engine emits the field), plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 
