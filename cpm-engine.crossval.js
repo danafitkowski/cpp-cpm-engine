@@ -118,6 +118,7 @@ try:
         relationship_lag_calendar=payload.get('relationship_lag_calendar', 'successor'),
         ss_lag_from=payload.get('ss_lag_from', 'early_start'),
         project_finish=payload.get('project_finish', ''),
+        use_expected_finish=payload.get('use_expected_finish', False),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -190,7 +191,8 @@ function runJS(payload) {
               scheduleMode: payload.schedule_mode || 'retained_logic',
               relationshipLagCalendar: payload.relationship_lag_calendar || 'successor',
               ssLagFrom: payload.ss_lag_from || 'early_start',
-              projectFinish: payload.project_finish || '' }
+              projectFinish: payload.project_finish || '',
+              useExpectedFinish: payload.use_expected_finish === true }
         );
     } catch (e) {
         return {
@@ -2501,6 +2503,102 @@ compareFixture('F104 - MFB under "opened projects": the measured shape at a midn
     opened('2025-10-15 00:00'));
 compareFixture('F105 - MFB under "opened projects": the measured shape at the 17:00 close',
     opened('2025-10-15 17:00'));
+
+// F106-F110 (v2.9.52): P6's "Use Expected Finish Dates" (TD-13) and finish
+// constraints on work already under way (TD-14). The networks are the
+// synthetic probe cases P6 Professional 23.12.1 scheduled on 7-Oct-2026 and
+// 23-Sep-2026 (one Mon-Fri 08:00-17:00 calendar with a lunch hour, retained
+// logic unless named): started work is A (actual start Mon 28-Sep 08:00,
+// remaining and original duration in working days), work not started is N.
+// The engine reproduces P6's own F9 of every one of them on start, finish
+// and total float (private oracle repo, expected_finish_2026_10_07).
+const XAS = '2026-09-28 08:00';
+const xA = (code, rem, dur, extra) => Object.assign(
+    { code, duration_days: dur || 10, remaining_duration: rem, actual_start: XAS, clndr_id: 'MF' }, extra || {});
+const xN = (code, dur, extra) => Object.assign({ code, duration_days: dur, clndr_id: 'MF' }, extra || {});
+const xR = (f, t, type) => ({ from_code: f, to_code: t, type: type || 'FS', lag_days: 0 });
+const XCAL = { MF: { work_days: [1,2,3,4,5], holidays: [], raw: RAW_MF_0817 } };
+const xfNetwork = (useXF) => ({
+    activities: [
+        xA('X01', 5, 10, { expected_finish: '2026-10-23 17:00' }),      // stretch
+        xA('X02', 10, 10, { expected_finish: '2026-10-14 17:00' }),     // shrink
+        xA('X03P', 4), xA('X03', 2, 10, { expected_finish: '2026-10-21 17:00' }),
+        xA('X04P', 6), xA('X04', 2, 10, { expected_finish: '2026-10-14 17:00' }),
+        xA('X05', 3, 10, { expected_finish: '2026-10-08 17:00' }),      // before the data date
+        xN('X06', 3, { expected_finish: '2026-10-20 17:00' }),
+        xA('X07P', 5), xN('X07', 10, { expected_finish: '2026-10-23 17:00' }),
+        xA('X08P', 5), xN('X08', 2, { expected_finish: '2026-10-14 17:00' }),
+        xA('X10', 5, 10, { expected_finish: '2026-10-17 17:00' }),      // a Saturday
+        xA('X11', 2, 10, { expected_finish: '2026-10-21 17:00' }), xN('X11T', 2),
+        xA('X12P', 8), xA('X12', 2, 10, { expected_finish: '2026-10-21 17:00' }),
+    ],
+    relationships: [
+        xR('X03P', 'X03'), xR('X04P', 'X04'), xR('X07P', 'X07'), xR('X08P', 'X08'),
+        xR('X11', 'X11T'), xR('X12P', 'X12', 'FF'),
+    ],
+    data_date: '2026-10-12 08:00',
+    cal_map: XCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: useXF,
+});
+compareFixture('F106 - XF: expected finish on re-sizes remaining work (stretch, shrink, logic, weekend, FF)',
+    xfNetwork(true));
+compareFixture('F107 - XF: the same network with the expected-finish option off',
+    xfNetwork(false));
+compareFixture('F108 - UW: finish constraints on work already under way', {
+    activities: [
+        xA('C01', 2, 10, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }),
+        xN('C02', 2, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }),
+        xA('C03', 2, 10, { constraint2: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }),
+        xA('C04', 2, 10, { constraint: { type: 'CS_MEO', date: '2026-10-21 17:00' } }),
+        xA('C05', 5, 10, { constraint: { type: 'CS_MEOB', date: '2026-10-14 17:00' } }),
+        xA('C06', 2, 10, { constraint: { type: 'CS_MANDFIN', date: '2026-10-21 17:00' } }),
+        xA('C07', 2, 10, { constraint: { type: 'CS_MSOA', date: '2026-10-15 08:00' } }),
+        xA('C08', 2, 10, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }), xN('C08T', 1),
+        xA('C09', 2, 10, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' },
+            expected_finish: '2026-10-16 17:00' }),
+        xN('END', 0, { task_type: 'TT_FinMile', constraint: { type: 'CS_MEOA', date: '2026-10-30 17:00' } }),
+    ],
+    relationships: [xR('C08', 'C08T')],
+    data_date: '2026-10-12 08:00',
+    cal_map: XCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+});
+// The 23-Sep shapes: an expected finish at or before the restart behind FF
+// logic. P6 keeps the remaining duration when the activity has no FS / SS
+// predecessor or its FF pull-back already passes the restart, and re-sizes
+// it otherwise (then the FF moves the restart).
+const xffNetwork = (mode) => ({
+    activities: [
+        xA('E01P', 3), xA('E01', 2, 10, { expected_finish: '2026-10-02 17:00' }),
+        xA('E02P', 3), xA('E02', 2, 10, { expected_finish: '2026-10-02 17:00' }),
+        xA('E04P', 3), xA('E04', 2, 10, { expected_finish: '2026-10-06 17:00' }),
+        { code: 'E05Q', duration_days: 0, actual_start: '2026-09-14 08:00',
+          actual_finish: '2026-09-30 17:00', is_complete: true, clndr_id: 'MF' },
+        xA('E05', 1, 10, { expected_finish: '2026-10-02 17:00' }),
+        xA('E07', 1, 10, { expected_finish: '2026-10-02 17:00' }),
+        xA('E08P', 7), xA('E08', 9, 15, { expected_finish: '2026-10-02 17:00' }),
+        xA('E10P', 3), xA('E10', 2, 10, { expected_finish: '2026-10-02 17:00' }),
+        xA('E13P', 3), xA('E13', 2, 10, { expected_finish: '2026-10-09 17:00' }),
+        xA('R1P', 1), xA('R1', 2, 10, { expected_finish: '2026-09-24 17:00' }),
+    ],
+    relationships: [
+        xR('E01P', 'E01', 'FF'), xR('E01P', 'E01', 'SS'), xR('E02P', 'E02', 'FF'),
+        xR('E04P', 'E04', 'FF'), xR('E05Q', 'E05', 'FF'), xR('E08P', 'E08', 'FF'),
+        xR('E10P', 'E10', 'SS'), xR('E13P', 'E13', 'FF'),
+        xR('R1P', 'R1', 'FF'), xR('R1P', 'R1', 'SS'),
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: XCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: mode,
+    use_expected_finish: true,
+});
+compareFixture('F109 - XF: an expected finish behind FF logic, retained logic',
+    xffNetwork('retained_logic'));
+compareFixture('F110 - XF: an expected finish behind FF logic, progress override',
+    xffNetwork('progress_override'));
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +

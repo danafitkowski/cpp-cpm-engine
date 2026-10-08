@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.51';
+const ENGINE_VERSION = '2.9.52';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1398,6 +1398,85 @@ function _calendarDayClose(dayNum, calendarInfo) {
     return tables.week[d.getUTCDay()];       // getUTCDay(): 0 = Sunday
 }
 
+// Working slots [start, finish] in minutes of the day in one clndr_data
+// segment, read by the same grammar as _slotCloseOf.
+const _DAY_SLOT_CACHE = new Map();
+function _slotsOf(seg) {
+    const out = [];
+    _CSTR_SLOT_RE.lastIndex = 0;
+    let m;
+    while ((m = _CSTR_SLOT_RE.exec(seg)) !== null) {
+        let s;
+        let f;
+        if (m[1] !== undefined) {
+            s = _d7hhmm(m[1]); f = _d7hhmm(m[2]);
+        } else {
+            f = _d7hhmm(m[3]); s = _d7hhmm(m[4]);
+        }
+        if (f === 0) f = 1440;
+        if (f > s) out.push([s, f]);
+    }
+    return out;
+}
+
+// { week: [slots per jsDow], exc: { 'YYYY-MM-DD': slots } }, or null when the
+// blob carries no usable hours. Python paired site: _day_slot_tables.
+function _daySlotTables(raw) {
+    if (_DAY_SLOT_CACHE.has(raw)) return _DAY_SLOT_CACHE.get(raw);
+    const week = [null, null, null, null, null, null, null];
+    const exc = Object.create(null);
+    const dowBlock = _d7BlockAfter(raw, 'DaysOfWeek');
+    if (dowBlock !== null) {
+        for (const seg of _d7SegmentsOf(dowBlock)) {
+            const m = _CSTR_DAY_SEG.exec(seg);
+            if (!m) continue;
+            week[(parseInt(m[1], 10) - 1) % 7] = _slotsOf(seg);
+        }
+    }
+    const excBlock = _d7BlockAfter(raw, 'Exceptions');
+    if (excBlock !== null) {
+        for (const seg of _d7SegmentsOf(excBlock)) {
+            const dm = _D7_EXC_DATE_RE.exec(seg);
+            if (!dm) continue;
+            const ds = _d7SerialToDateString(dm[1]);
+            if (ds) exc[ds] = _slotsOf(seg);
+        }
+    }
+    const out = week.some((w) => w && w.length) ? { week, exc } : null;
+    if (_DAY_SLOT_CACHE.size < _DAY_CLOSE_CACHE_MAX) _DAY_SLOT_CACHE.set(raw, out);
+    return out;
+}
+
+// Share of the working time of `dayNum` on `calendarInfo` that lies before
+// minute-of-day `tod`, or null when the calendar carries no hour detail for
+// that day. Python paired site: _calendar_day_worked_share.
+function _calendarDayWorkedShare(dayNum, tod, calendarInfo) {
+    if (!calendarInfo || typeof calendarInfo !== 'object') return null;
+    const raw = calendarInfo.raw;
+    if (!raw || String(raw).indexOf('(') === -1) return null;
+    const tables = _daySlotTables(String(raw));
+    if (!tables) return null;
+    const iso = numToDate(dayNum);
+    if (!iso) return null;
+    let slots;
+    if (Object.prototype.hasOwnProperty.call(tables.exc, iso)) {
+        slots = tables.exc[iso];
+    } else {
+        const d = new Date(iso + 'T00:00:00Z');
+        if (Number.isNaN(d.getTime())) return null;
+        slots = tables.week[d.getUTCDay()];
+    }
+    if (!slots || !slots.length) return null;
+    let total = 0;
+    let before = 0;
+    for (const [s, f] of slots) {
+        total += f - s;
+        before += Math.max(0, Math.min(f, tod) - s);
+    }
+    if (total <= 0) return null;
+    return before / total;
+}
+
 // The canonical types whose date addresses the activity's FINISH, and which
 // therefore clamp against the engine's exclusive ef / lf boundary. The
 // start-side types (SNET / SNLT / SO / MS_Start) address es / ls, which
@@ -1437,6 +1516,94 @@ function _constraintFinishNum(cstr, calendarInfo, alerts, ctx) {
     }
     if (tod < close) return cdNum;           // the instant is inside the day
     return _advanceWithAlerts(cdNum, 1, calendarInfo, alerts || [], ctx);
+}
+
+// XF (P6 parity 2026-10-07, TD-13) — "Use Expected Finish Dates"
+// (SCHEDOPTIONS sched_use_expect_end_flag = Y), opts.useExpectedFinish.
+// Measured on P6 23.12.1's own F9 of two synthetic projects carrying the same
+// 21 cases, one with the flag Y and one with it N, and re-read against the
+// 23-Sep future-actuals probe (private oracle repo). With the flag Y, P6
+// re-sizes the remaining duration of every unfinished activity that carries
+// TASK.expect_end_date so its remaining work ends exactly there:
+//   * remaining = working time from its remaining start S (the restart of a
+//     started activity, the early start of one not started, driven by the
+//     data date and FS / SS logic) to the expected finish; a stretch
+//     (5 d -> 10 d) and a shrink (10 d -> 3 d) both land; none when the
+//     expected finish is at or before S (also before the data date);
+//   * an expected finish on a non-working day lands at the close of the
+//     working day before it (Saturday -> Friday 17:00);
+//   * FF / SF logic does not size the remaining work, it only moves it;
+//   * when the FF / SF logic needs a LATER finish than the expected finish
+//     (or the expected finish is at or before S), P6 keeps the remaining
+//     duration as it was if the activity has no FS / SS predecessor, or if
+//     the FF / SF pull-back on that remaining duration already passes S;
+//     under progress override FS / SS logic does not reach work under way,
+//     so a started activity there counts as having none;
+//   * successors follow the new finish, and the late dates and float are
+//     those of the re-sized remaining duration.
+// With the flag N the expected finish is ignored entirely. P6 is not
+// idempotent on an activity it zeroes behind FF logic (its first F9 leaves
+// it at the data date, a second moves it where its FF puts it); the engine
+// gives the second answer. Whole working days: an expected finish part-way
+// through a day counts that day when at least half its working time lies
+// before it, as the engine reads the hours P6 then stores (remaining hours
+// over hours per day, rounded half up), so a re-scheduled export reads back
+// unchanged; on the 12:00 case the finish date matches P6 and the float is
+// half a day shorter. INFERRED (not measured): an activity
+// not yet started with FF / SF predecessors (the started rule is applied).
+// Python paired site: _expected_finish_num.
+function _expectedFinishNum(raw, calendarInfo, alerts, ctx) {
+    const day = raw ? dateToNum(raw) : 0;
+    if (day <= 0) return day;
+    const tod = _constraintTimeMinutes(raw);
+    if (!calendarInfo) return day + (tod && tod >= 720 ? 1 : 0);
+    const snapped = _snapFwd(day, calendarInfo, alerts, ctx);
+    if (snapped !== day || !tod) return snapped;
+    let share = _calendarDayWorkedShare(day, tod, calendarInfo);
+    if (share === null) share = tod >= 720 ? 1 : 0;   // the engine's noon convention
+    if (share >= 0.5) return _advanceWithAlerts(day, 1, calendarInfo, alerts, ctx);
+    return day;
+}
+
+// UW (P6 parity 2026-10-07, TD-14) — finish constraints on an activity
+// already under way. Measured on the same F9 (both flag settings): P6 drops
+// the EARLY side of a finish constraint once the activity has an actual
+// start: Finish On or After (primary or secondary), Finish On's early half
+// and Mandatory Finish do not move its finish, and its successors follow
+// the unconstrained finish. The LATE side stays for Finish On and Finish On
+// or Before; Mandatory Finish is dropped from the backward pass too (late
+// finish = the project end). Python paired site:
+// _UNDERWAY_DROPPED_FINISH_TYPES.
+const _UNDERWAY_DROPPED_FINISH_TYPES = ['FNET', 'FO', 'MS_Finish', 'MFO'];
+const _UNDERWAY_DROPPED_LATE_TYPES = ['MS_Finish', 'MFO'];
+const _FINISH_TYPE_NAMES = { FNET: 'Finish On or After', FO: 'Finish On',
+    MS_Finish: 'Mandatory Finish', MFO: 'Mandatory Finish' };
+
+// Disclose a finish constraint whose early side UW dropped, only where it
+// would have moved the finish; Finish On keeps its violation report.
+function _underwayFinishNoop(code, ef, cstr, label, nodeCal, alerts) {
+    if (!cstr.date) return;
+    const cdNum = _constraintFinishNum(cstr, nodeCal, [], code);
+    if (cdNum <= 0) return;
+    const tag = label === 'secondary' ? ' (secondary)' : '';
+    const name = _FINISH_TYPE_NAMES[cstr.type] || cstr.type;
+    if (cdNum > ef || ((cstr.type === 'MS_Finish' || cstr.type === 'MFO') && cdNum !== ef)) {
+        alerts.push({
+            severity: 'WARN',
+            context: 'constraint-noop',
+            message: name + tag + ' ' + cstr.date + ' on ' + code + ' does not move ' +
+                'its finish: the activity is under way, and P6 drops the early ' +
+                'side of a finish constraint once work has started.',
+        });
+    } else if (cstr.type === 'FO' && ef > cdNum) {
+        alerts.push({
+            severity: 'ALERT',
+            context: 'constraint-violated',
+            message: 'Finish On' + tag + ' on ' + code + ' violated: EF=' +
+                numToDate(ef) + ' is after constraint date ' + cstr.date +
+                '. Predecessor logic governs.',
+        });
+    }
 }
 
 function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
@@ -2108,6 +2275,9 @@ function computeCPM(activities, relationships, opts) {
             // RES — applied only beside a suspend date (P6 enters a resume
             // date only on a suspended activity); see _resumeFloorOf.
             suspend_date: String(a.suspend_date || '').trim(),
+            // XF (v2.9.52) — P6 TASK.expect_end_date as written; read only
+            // when opts.useExpectedFinish is on (see _expectedFinishNum).
+            expected_finish: String(a.expected_finish || '').trim(),
             // v2.9.12 T1.6 — thread `alerts` + activity code so unrecognized
             // tokens / incomplete dates emit a forensically-visible WARN
             // instead of silently dropping. Backward-compat: callers that
@@ -2402,6 +2572,14 @@ function computeCPM(activities, relationships, opts) {
         });
         _ssLagFrom = 'early_start';
     }
+
+    // XF (v2.9.52) — P6 SCHEDOPTIONS sched_use_expect_end_flag, "Use Expected
+    // Finish Dates" (opts.useExpectedFinish; aliases use_expected_finish and
+    // the raw flag 'Y'). Default off, as P6's is. Python paired site: the
+    // use_expected_finish parameter of compute_cpm.
+    const _xfOpt = (opts.useExpectedFinish !== undefined) ? opts.useExpectedFinish
+        : opts.use_expected_finish;
+    const _useExpectedFinish = _xfOpt === true || _xfOpt === 'Y';
 
     // The calendar a lag between predNode and succNode is walked on.
     function lagCalFor(predNode, succNode) {
@@ -2774,6 +2952,17 @@ function computeCPM(activities, relationships, opts) {
         // winning pred's anchor and replay it directly when node.ef is
         // computed below; preserves FF-0 identity (succ.EF === pred.EF).
         let finishAnchorEF = null;
+        // XF (v2.9.52) — an expected finish in force on this activity (see
+        // _expectedFinishNum): FF / SF predecessors drive neither its start
+        // nor its restart; the latest finish they ask for is kept as a floor.
+        const _xf = !!(_useExpectedFinish && node.expected_finish && !node.is_complete);
+        let _xfFloor = 0;
+        let _xfFloorPred = null;
+        // Under progress override FS / SS logic does not reach work already
+        // under way (its restart is the data date), so it does not count.
+        const _xfStartPred = _xf && !(_scheduleMode === 'progress_override' &&
+            dateToNum(node.actual_start || '') > 0) &&
+            preds.some(p => p.type !== 'FF' && p.type !== 'SF' && nodes[p.from_code]);
         for (const p of preds) {
             const pnode = nodes[p.from_code];
             if (!pnode) continue;
@@ -2896,6 +3085,13 @@ function computeCPM(activities, relationships, opts) {
                 _driveInstants.push([drive, driveInstant]);
             }
             if (_viaPt) _ptVia.add(pnode.code);
+            if (_xf && thisAnchorEF !== null) {
+                if (thisAnchorEF > _xfFloor) {
+                    _xfFloor = thisAnchorEF;
+                    _xfFloorPred = { code: pnode.code, type: p.type, lag_days: lag };
+                }
+                continue;
+            }
             // v2.9.5 — when this node has an actual_start, predecessor logic
             // cannot push ES later. We still track the driving_predecessor for
             // forensic traceability (which pred *would* have driven if not for
@@ -3133,7 +3329,7 @@ function computeCPM(activities, relationships, opts) {
         // default "retained logic" scheduling mode for in-progress activities.
         // Backward-compat: when remaining_duration is undefined or non-finite,
         // we fall back to the legacy duration_days formula. See DAUBERT.md §8.
-        const _remRaw = node.remaining_duration;
+        let _remRaw = node.remaining_duration;
         const _hasRem = Number.isFinite(_remRaw) && _remRaw >= 0;
         if (hasActualStart && !node.is_complete && _hasRem) {
             // B4 (P6 alignment wave, capture 9b748cc case 10) — the restart
@@ -3212,12 +3408,101 @@ function computeCPM(activities, relationships, opts) {
                 'forward ' + code + '.EF');
         }
 
+        // XF (v2.9.52) — the expected finish re-sizes the remaining work (see
+        // _expectedFinishNum for the measured rule). The new figure replaces
+        // remaining_duration (started) or duration_days (not started), so
+        // the backward pass, the late dates and the float all run on it, as
+        // P6's do. A started activity with no remaining_duration is left
+        // alone: the completion-data-incomplete ALERT below names it.
+        if (_xf && (!hasActualStart || _hasRem)) {
+            const _xfStart = hasActualStart ? node.restart : node.es;
+            const _xfWas = hasActualStart ? _remRaw : node.duration_days;
+            const _xfNum = _expectedFinishNum(node.expected_finish, nodeCal, alerts,
+                'expected finish ' + code);
+            let _xfKeep = false;
+            if (_xfFloorPred !== null && (_xfNum < _xfFloor || _xfNum <= _xfStart)) {
+                const _xfPullWas = _retreatWithAlerts(_xfFloor, _xfWas, nodeCal, alerts,
+                    'expected finish ' + _xfFloorPred.type + ' ' + code);
+                _xfKeep = (!_xfStartPred) || _xfPullWas > _xfStart;
+            }
+            let _xfRd;
+            if (_xfKeep) {
+                _xfRd = _xfWas;
+            } else if (_xfNum > _xfStart) {
+                _xfRd = nodeCal ? _countWorkDaysBetween(_xfStart - 1, _xfNum - 1, nodeCal)
+                    : _xfNum - _xfStart;
+            } else {
+                _xfRd = 0;
+            }
+            let _xfBegin = _xfStart;
+            let _xfPulled = false;
+            if (_xfFloorPred !== null) {
+                const _xfPull = _retreatWithAlerts(_xfFloor, _xfRd, nodeCal, alerts,
+                    'expected finish ' + _xfFloorPred.type + ' ' + code);
+                if (_xfPull > _xfBegin) {
+                    _xfBegin = _xfPull;
+                    _xfPulled = true;
+                    if (!hasActualStart || drivingPred === null) {
+                        drivingPred = Object.assign({}, _xfFloorPred);
+                    }
+                }
+            }
+            node.ef = _xfPulled ? _xfFloor   // FF / SF identity (F2.2)
+                : _advanceWithAlerts(_xfBegin, _xfRd, nodeCal, alerts,
+                    'forward ' + code + '.EF (expected finish)');
+            if (hasActualStart) {
+                node.restart = _xfBegin;
+                node.remaining_duration = _xfRd;
+                _remRaw = _xfRd;
+            } else {
+                node.es = _xfBegin;
+                node.duration_days = _xfRd;
+            }
+            node.expected_finish_applied = {
+                expected_finish: node.expected_finish,
+                applied: !_xfKeep,
+                was_days: _xfWas,
+                now_days: _xfRd,
+            };
+            if (_xfKeep) {
+                alerts.push({
+                    severity: 'INFO',
+                    context: 'expected-finish-not-applied',
+                    message: code + ': expected finish ' + node.expected_finish +
+                        ' not applied: its ' + _xfFloorPred.type + ' predecessor ' +
+                        _xfFloorPred.code + ' needs a later finish, so P6 keeps ' +
+                        'the remaining duration (' + _xfWas + ' working days).',
+                });
+            } else {
+                alerts.push({
+                    severity: 'INFO',
+                    context: 'expected-finish-applied',
+                    message: code + ': remaining duration re-sized from ' + _xfWas +
+                        ' to ' + _xfRd + ' working days so the remaining work ends ' +
+                        'on its expected finish ' + node.expected_finish +
+                        ' (P6 "Use Expected Finish Dates").',
+                });
+            }
+        }
+
         // Forward-pass EF-side constraint clamps (FNET, FNLT, MS_Finish, MFO).
         // v2.9.12 T3.20 — pass node.es so the helper guarantees EF >= ES.
         // v2.9.45 — nodeCal reaches the helper so a finish constraint's P6
         // instant can be resolved onto this activity's own boundary space.
-        node.ef = _applyForwardEFConstraint(code, node.ef, cstr, 'primary', alerts, node.es, nodeCal);
-        node.ef = _applyForwardEFConstraint(code, node.ef, cstr2, 'secondary', alerts, node.es, nodeCal);
+        // UW (v2.9.52) — on work under way the early side of Finish On or
+        // After, Finish On and Mandatory Finish is dropped (see
+        // _UNDERWAY_DROPPED_FINISH_TYPES); Finish On or Before still reports.
+        const _underway = hasActualStart && !node.is_complete;
+        const _efCstr = [cstr, cstr2].map((_c, _i) => {
+            if (_underway && _c && _UNDERWAY_DROPPED_FINISH_TYPES.indexOf(_c.type) !== -1) {
+                _underwayFinishNoop(code, node.ef, _c, _i === 0 ? 'primary' : 'secondary',
+                    nodeCal, alerts);
+                return null;
+            }
+            return _c;
+        });
+        node.ef = _applyForwardEFConstraint(code, node.ef, _efCstr[0], 'primary', alerts, node.es, nodeCal);
+        node.ef = _applyForwardEFConstraint(code, node.ef, _efCstr[1], 'secondary', alerts, node.es, nodeCal);
         // v2.9.16 F5-A — after BOTH EF constraints applied, re-check FNLT /
         // MS_Finish / MFO deadlines on either slot. Soft FNET on the secondary
         // can silently push EF past a FNLT primary's deadline. Single-call
@@ -3255,8 +3540,8 @@ function computeCPM(activities, relationships, opts) {
                 }
             }
         }
-        _checkFinalEFDeadline(cstr, 'primary');
-        _checkFinalEFDeadline(cstr2, 'secondary');
+        _checkFinalEFDeadline(_efCstr[0], 'primary');
+        _checkFinalEFDeadline(_efCstr[1], 'secondary');
 
         // v2.9.42 — in-progress work with no remaining_duration. The
         // retained-logic restart above applies ONLY when remaining_duration is
@@ -3901,8 +4186,13 @@ function computeCPM(activities, relationships, opts) {
         // Symmetric LF / LS clamps. Same semantics as forward pass but bounded
         // from above; violations were already alerted on the forward leg.
         // Primary then secondary; secondary tightens further if it applies.
-        const cstr = node.constraint;
-        const cstr2 = node.constraint2;
+        // UW (v2.9.52) — Mandatory Finish is dropped from the backward pass
+        // too once the activity is under way (late finish = the project end
+        // on the measured case); Finish On / Finish On or Before still cap LF.
+        const _uwBack = !!node.actual_start && !node.is_complete;
+        const _uwDrop = c => _uwBack && c && _UNDERWAY_DROPPED_LATE_TYPES.indexOf(c.type) !== -1;
+        const cstr = _uwDrop(node.constraint) ? null : node.constraint;
+        const cstr2 = _uwDrop(node.constraint2) ? null : node.constraint2;
         // v2.9.16 F5-C — soft secondary cannot tighten LF below a primary
         // mandatory pin. Capture the LF that a primary mandatory (MS_Start /
         // SO / MS_Finish / MFO) would have set, then refuse to let the
@@ -5314,6 +5604,11 @@ function parseXER(content) {
                         // and suspend_date).
                         resume_date: (row.resume_date || '').trim(),
                         suspend_date: (row.suspend_date || '').trim(),
+                        // v2.9.52 — TASK.expect_end_date as P6 wrote it, time
+                        // included; computeCPM re-sizes the remaining work to
+                        // end there under opts.useExpectedFinish (activity
+                        // field expected_finish).
+                        expected_finish: (row.expect_end_date || '').trim(),
                         ES: 0, EF: 0,
                         LS: Infinity, LF: Infinity,
                         TF: 0,
@@ -5499,6 +5794,13 @@ function parseXER(content) {
         sched_calendar_on_relationship_lag:
             _MC.schedOptions.sched_calendar_on_relationship_lag || '',
         sched_float_type: _MC.schedOptions.sched_float_type || '',
+        // v2.9.52 — "Use Expected Finish Dates" (sched_use_expect_end_flag),
+        // to hand computeCPM as opts.useExpectedFinish: true only on Y, P6's
+        // default being N. Paired with tia_builder._detect_schedule_options.
+        sched_use_expect_end_flag:
+            String(_MC.schedOptions.sched_use_expect_end_flag || '').trim().toUpperCase(),
+        use_expected_finish:
+            String(_MC.schedOptions.sched_use_expect_end_flag || '').trim().toUpperCase() === 'Y',
         // v2.9.50: the Must Finish By (PROJECT.plan_end_date), and the value to hand
         // computeCPM as opts.projectFinish: the same date whenever one is
         // set, whatever SCHEDOPTIONS sched_use_project_end_date_for_float
@@ -8604,20 +8906,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '101 cross-validation fixtures. The harness defines 2705 ' +
-                'comparisons; 82 of them are never executed because neither ' +
+                '106 cross-validation fixtures. The harness defines 3288 ' +
+                'comparisons; 86 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
-                '(41 ff_signed, 41 ff_signed_working_days, all on completed ' +
+                '(43 ff_signed, 43 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 2623 / 2623" counts executed comparisons only and ' +
-                'is not a coverage figure. None of those 82 is a one-sided parity ' +
+                'reported "Checks: 3202 / 3202" counts executed comparisons only and ' +
+                'is not a coverage figure. None of those 86 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 32 of the 101 fixtures contain at least one skipped ' +
-                'comparison. The 2623 comparisons that did run are bit-identical ' +
+                'branch. 34 of the 106 fixtures contain at least one skipped ' +
+                'comparison. The 3202 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 93 of the 101 fixtures). ' +
+                'severity-level alert parity, compared on 98 of the 106 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -8656,29 +8958,29 @@ function buildDaubertDisclosure(result, opts) {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite actually executes. Coverage limit: the cross-validation harness ' +
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
-                'emit the field, so 82 checks are skipped rather than compared, counted, ' +
-                'or reported as failures (41 ff_signed, 41 ff_signed_working_days). The ' +
-                'printed 2623 / 2623 therefore sits on a nominal surface of 2705 checks, and ' +
-                'those two fields go uncompared somewhere in 32 of the 101 fixtures. In ' +
-                'all 82 cases NEITHER engine emits the field, so the skip is a ' +
+                'emit the field, so 86 checks are skipped rather than compared, counted, ' +
+                'or reported as failures (43 ff_signed, 43 ff_signed_working_days). The ' +
+                'printed 3202 / 3202 therefore sits on a nominal surface of 3288 checks, and ' +
+                'those two fields go uncompared somewhere in 34 of the 106 fixtures. In ' +
+                'all 86 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
-                'emit, 82 are comparisons where neither engine emits one. Every ' +
+                'emit, 86 are comparisons where neither engine emits one. Every ' +
                 'ES/EF/LS/LF/TF and date comparison is executed, on every activity ' +
                 'comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '101 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '106 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '2623 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 2623 / 2623 tally cannot express ' +
-                'the following gaps. Not executed: 82 node comparisons on the signed ' +
+                '3202 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 3202 / 3202 tally cannot express ' +
+                'the following gaps. Not executed: 86 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 93 of the 101 fixtures: not on those 2, which have no ' +
+                'parity runs on 98 of the 106 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +

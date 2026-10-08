@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **2623 of 2705 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **2623 of 2705** across 101 as measured 2026-10-03 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 82 comparisons still skipped (41 `ff_signed`, 41 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **3202 of 3288 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **3202 of 3288** across 106 as measured 2026-10-07 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 86 comparisons still skipped (43 `ff_signed`, 43 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
 
 ## Provenance
 
@@ -48,11 +48,29 @@ have been applied:
    shift, read hour-accurately out of `CALENDAR.clndr_data`. Both walks
    resolve through the one helper, so they stay inverses. See CHANGELOG.md
    v2.9.45.
+5. v2.9.52 (expected finish dates and finish constraints on work under
+   way) is applied here by the same patch as the canonical engine:
+   `compute_cpm(use_expected_finish=True)` re-sizes the remaining work of
+   each unfinished activity carrying `expected_finish` to end there, and
+   the early side of Finish On or After, Finish On and Mandatory Finish is
+   dropped on started work (Mandatory Finish from the backward pass too).
+   The canonical engine's two wrappers (`compute_cpm_salvaging`,
+   `compute_cpm_with_strategies`) pass the option through and are not in
+   this file. See CHANGELOG.md v2.9.52.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  e22660297f9a4acb8723ddc2c0b1cb3ee66cf4c5c66cfacdac94fd31659181f3
+cpm.py  SHA-256:  ee7ba453afbff75ade0d9354ad5005ed90dc0f61e60aa26a81fde3c413774cb7
+
+(v2.9.52 expected finish dates and finish constraints on work under way 2026-10-07 -
+bumped from e2266029...: ENGINE_VERSION reads 2.9.52, compute_cpm takes
+use_expected_finish and reads expected_finish, finish constraints on started
+work keep only their late side, and the comments that carry the
+cross-validation figures carry the measured ones (106 fixtures, 3202 of 3288
+executed). Both rules were measured on Primavera P6 Professional 23.12.1's
+own F9 of synthetic probe projects; computed values move where a schedule
+carries them. The harness gains 5 fixtures (F106-F110).)
 
 (v2.9.51 parseXER keeps completed activities 2026-10-04 - bumped from
 5a644060...: ENGINE_VERSION reads 2.9.51. No computed value of compute_cpm moves:
@@ -337,15 +355,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 205563
-  sha-256:  e22660297f9a4acb8723ddc2c0b1cb3ee66cf4c5c66cfacdac94fd31659181f3
+  bytes: 222250
+  sha-256:  ee7ba453afbff75ade0d9354ad5005ed90dc0f61e60aa26a81fde3c413774cb7
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 101 passed, 0 failed
-  Checks:   2623 / 2623 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 106 passed, 0 failed
+  Checks:   3202 / 3202 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

@@ -16,11 +16,11 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 2623 of 2705
-# across 101 as measured 2026-10-03 (validation/crossval-summary.json carries
-# the figures of the latest run). The 82 that remain are
+# measured 2026-08-27, and the fixtures added since took it to 3202 of 3288
+# across 106 as measured 2026-10-07 (validation/crossval-summary.json carries
+# the figures of the latest run). The 86 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
-# populates (41 ff_signed, 41 ff_signed_working_days).
+# populates (43 ff_signed, 43 ff_signed_working_days).
 # Why that mattered: the free-float working-day conversion carried a wrong
 # anchor in BOTH ports, and ff_signed_working_days — the field that would have
 # shown it — was one of the fields the harness was skipping.
@@ -63,10 +63,10 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 101 fixtures in cpm-engine.crossval.js. As
-measured 2026-10-03 that is 2623 of a 2705-comparison surface; the 82 that are
+the harness executes across the 106 fixtures in cpm-engine.crossval.js. As
+measured 2026-10-07 that is 3202 of a 3288-comparison surface; the 86 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
-field (41 ff_signed, 41 ff_signed_working_days on completed activities).
+field (43 ff_signed, 43 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
 DAUBERT.md §3 for verification methodology.
 """
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.51'
+ENGINE_VERSION = '2.9.52'
 
 
 # =============================================================================
@@ -1033,6 +1033,79 @@ def _calendar_day_close(day_num, calendar_info):
     return week[(d.weekday() + 1) % 7]      # Python Mon=0 -> JS/P6 Sun=0
 
 
+_DAY_SLOT_CACHE = {}
+
+
+def _slots_of(seg):
+    """Working slots (start, finish) in minutes of the day in one clndr_data
+    segment, read by the same grammar as _slot_close_of."""
+    out = []
+    for m in _CSTR_SLOT_RE.finditer(seg):
+        if m.group(1) is not None:
+            s, f = _d7_hhmm(m.group(1)), _d7_hhmm(m.group(2))
+        else:
+            f, s = _d7_hhmm(m.group(3)), _d7_hhmm(m.group(4))
+        if f == 0:
+            f = 1440
+        if f > s:
+            out.append((s, f))
+    return out
+
+
+def _day_slot_tables(raw):
+    """(week_slots[js_dow], exception_slots{iso-date}) decoded from a
+    clndr_data blob, or (None, None) when it carries no usable hours."""
+    if raw in _DAY_SLOT_CACHE:
+        return _DAY_SLOT_CACHE[raw]
+    week = [None] * 7
+    exc = {}
+    dow_block = _d7_block_after(raw, 'DaysOfWeek')
+    if dow_block is not None:
+        for seg in _d7_segments_of(dow_block):
+            m = _CSTR_DAY_SEG.match(seg)
+            if not m:
+                continue
+            week[(int(m.group(1)) - 1) % 7] = _slots_of(seg)
+    exc_block = _d7_block_after(raw, 'Exceptions')
+    if exc_block is not None:
+        for seg in _d7_segments_of(exc_block):
+            dm = _D7_EXC_DATE.search(seg)
+            if not dm:
+                continue
+            ds = _d7_serial_to_date_string(dm.group(1))
+            if ds:
+                exc[ds] = _slots_of(seg)
+    out = (week, exc) if any(w for w in week) else (None, None)
+    if len(_DAY_SLOT_CACHE) < _DAY_CLOSE_CACHE_MAX:
+        _DAY_SLOT_CACHE[raw] = out
+    return out
+
+
+def _calendar_day_worked_share(day_num, tod, calendar_info):
+    """Share of the working time of `day_num` on `calendar_info` that lies
+    before minute-of-day `tod`, or None when the calendar carries no hour
+    detail for that day."""
+    if not calendar_info or not isinstance(calendar_info, dict):
+        return None
+    raw = calendar_info.get('raw')
+    if not raw or '(' not in str(raw):
+        return None
+    week, exc = _day_slot_tables(str(raw))
+    if week is None:
+        return None
+    d = _date_from_num(day_num)
+    if d is None:
+        return None
+    iso = d.isoformat()
+    slots = exc[iso] if iso in exc else week[(d.weekday() + 1) % 7]
+    if not slots:
+        return None
+    total = sum(f - s for s, f in slots)
+    if total <= 0:
+        return None
+    return sum(max(0, min(f, tod) - s) for s, f in slots) / total
+
+
 # The canonical types whose date addresses the activity's FINISH, and which
 # therefore clamp against the engine's exclusive ef / lf boundary. The
 # start-side types (SNET / SNLT / SO / MS_Start) address `es` / `ls`, which
@@ -1075,6 +1148,131 @@ def _constraint_finish_num(cstr, calendar_info, *, alerts, ctx):
     if tod < close:
         return cd_num                       # the instant is inside the day
     return _advance_workdays(cd_num, 1, calendar_info, alerts=alerts, ctx=ctx)
+
+
+# XF (P6 parity 2026-10-07, TD-13) — "Use Expected Finish Dates"
+# (SCHEDOPTIONS sched_use_expect_end_flag = Y). Measured on P6 23.12.1's own
+# F9 of two synthetic projects carrying the same 21 cases, one with the flag
+# Y and one with it N (private oracle repo, expected_finish_2026_10_07). With
+# the flag Y, P6 re-sizes the remaining duration of every unfinished activity
+# that carries TASK.expect_end_date so its remaining work ends exactly there:
+#   * remaining = working time from its remaining start (the restart of a
+#     started activity, the early start of one not started) to the expected
+#     finish; a stretch (5 d -> 10 d) and a shrink (10 d -> 3 d) both land;
+#   * the remaining start is still driven by FS / SS logic (an FS that holds
+#     the restart to Friday leaves only the days from Friday);
+#   * an expected finish at or before that start leaves no remaining work:
+#     remaining 0, finish = the remaining start (also when it is before the
+#     data date);
+#   * an expected finish on a non-working day lands at the close of the
+#     working day before it (Saturday -> Friday 17:00);
+#   * FF / SF logic does not size the remaining work, it only moves it: an
+#     FF from work finishing on the expected finish left a started activity
+#     at the data-date restart with 8 d remaining (with the flag N the same
+#     FF pulled the restart to 2 d before the finish);
+#   * when the FF / SF logic needs a LATER finish than the expected finish
+#     (or the expected finish is at or before the remaining start), P6 keeps
+#     the remaining duration as it was if the activity has no FS / SS
+#     predecessor, or if the FF / SF pull-back on that remaining duration
+#     already passes the remaining start; otherwise it re-sizes as above and
+#     the FF / SF then moves the restart (the 23-Sep probe, E and R cases;
+#     under progress override FS / SS logic does not reach work under way,
+#     so a started activity there counts as having none);
+#   * successors follow the new finish, and the late dates and float are
+#     those of the re-sized remaining duration.
+# With the flag N the expected finish is ignored entirely. Both probes
+# reproduce P6 on every incomplete row with the flag either way (56 of 56
+# and 182 of 182 start, finish and float), bar one part day and four rows of
+# a separate progress-override FF defect that carry no expected finish.
+# P6 is not idempotent on an activity it zeroes behind FF logic: the first
+# F9 leaves it at the data date and a second F9 moves it to where its FF
+# puts it (23-Sep probe, XFA4). The engine gives the second answer, P6's
+# fixed point.
+# The engine counts whole working days, so an expected finish part-way
+# through a working day counts that day when at least half its working time
+# lies before it (P6's stored remaining hours, read as the engine reads them,
+# round the same way): on the 12:00 case the finish DATE matches P6, the
+# remaining is half a day longer than P6's 20 h and the total float half a
+# day shorter. A real export F9'd in P6 with expected finishes at 09:00 (1 h
+# remaining) reads back unchanged. Not measured, and so INFERRED: an activity
+# not yet started with FF / SF predecessors and an expected finish (the
+# started rule is applied to its early start).
+def _expected_finish_num(raw, calendar_info, *, alerts, ctx):
+    """The exclusive EF boundary an expected finish puts remaining work on.
+
+    'YYYY-MM-DD HH:MM' as P6 writes TASK.expect_end_date. A non-working day
+    snaps to the next working day's opening (the work closes on the working
+    day before). A time of day inside a working day counts that day when at
+    least half of its working time lies before it, which is how the engine
+    reads the hours P6 then stores (remaining hours over hours per day,
+    rounded half up), so a re-scheduled export reads back unchanged. A bare
+    date (or 00:00) is the opening of the day. Without shift hours, noon
+    decides, as _instant_of does.
+    """
+    day = date_to_num(raw) if raw else 0
+    if day <= 0:
+        return day
+    tod = _constraint_time_minutes(raw)
+    if not calendar_info:
+        return day + (1 if tod and tod >= 720 else 0)
+    snapped = _snap_fwd(day, calendar_info, alerts=alerts, ctx=ctx)
+    if snapped != day or not tod:
+        return snapped
+    share = _calendar_day_worked_share(day, tod, calendar_info)
+    if share is None:
+        share = 1.0 if tod >= 720 else 0.0     # the engine's noon convention
+    if share >= 0.5:
+        return _advance_workdays(day, 1, calendar_info, alerts=alerts, ctx=ctx)
+    return day
+
+
+# UW (P6 parity 2026-10-07, TD-14) — finish constraints on an activity
+# already under way. Measured on the same F9 (both flag settings): P6 drops
+# the EARLY side of a finish constraint once the activity has an actual
+# start: Finish On or After (primary or secondary), Finish On's early half
+# and Mandatory Finish do not move its finish, and its successors follow the
+# unconstrained finish. The LATE side stays for Finish On and Finish On or
+# Before (late finish capped at the date, negative float when the forecast
+# runs past it); Mandatory Finish is dropped from the backward pass too (late
+# finish = the project end). Start On or After on started work was already
+# suppressed, and the measurement agrees. Before this, the engine pushed the
+# finish of started work out to every Finish On or After date: on one real
+# export F9'd in P6, 25 started activities carried one that P6 ignored.
+_UNDERWAY_DROPPED_FINISH_TYPES = ('FNET', 'FO', 'MS_Finish', 'MFO')
+_UNDERWAY_DROPPED_LATE_TYPES = ('MS_Finish', 'MFO')
+_FINISH_TYPE_NAMES = {'FNET': 'Finish On or After', 'FO': 'Finish On',
+                      'MS_Finish': 'Mandatory Finish', 'MFO': 'Mandatory Finish'}
+
+
+def _underway_finish_noop(code, ef, cstr, label, node_cal, alerts):
+    """Disclose a finish constraint whose early side UW dropped, only where
+    it would have moved the finish; Finish On keeps its violation report."""
+    if not cstr.get('date'):
+        return
+    cd_num = _constraint_finish_num(cstr, node_cal, alerts=[], ctx=code)
+    if cd_num <= 0:
+        return
+    tag = ' (secondary)' if label == 'secondary' else ''
+    name = _FINISH_TYPE_NAMES.get(cstr.get('type'), cstr.get('type'))
+    if cd_num > ef or (cstr.get('type') in ('MS_Finish', 'MFO') and cd_num != ef):
+        alerts.append({
+            'severity': 'WARN',
+            'context': 'constraint-noop',
+            'message': (
+                f'{name}{tag} {cstr["date"]} on {code} does not move its '
+                f'finish: the activity is under way, and P6 drops the early '
+                f'side of a finish constraint once work has started.'
+            ),
+        })
+    elif cstr.get('type') == 'FO' and ef > cd_num:
+        alerts.append({
+            'severity': 'ALERT',
+            'context': 'constraint-violated',
+            'message': (
+                f'Finish On{tag} on {code} violated: EF={num_to_date(ef)} is '
+                f'after constraint date {cstr["date"]}. Predecessor logic governs.'
+            ),
+        })
 
 
 # =============================================================================
@@ -1334,7 +1532,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 project_calendar='', schedule_mode='retained_logic',
                 relationship_lag_calendar='successor',
                 float_type='FT_FF', ss_lag_from='early_start',
-                project_finish=''):
+                project_finish='', use_expected_finish=False):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -1367,6 +1565,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             When set, every late date is seeded from it on each activity's
             own calendar instead of from the early finish (v2.9.49); the
             reported project finish stays the early finish.
+        use_expected_finish: P6 SCHEDOPTIONS sched_use_expect_end_flag
+            ("Use Expected Finish Dates"). When True, an unfinished activity
+            carrying ``expected_finish`` (P6 TASK.expect_end_date as written,
+            'YYYY-MM-DD HH:MM') has its remaining duration re-sized so its
+            remaining work ends there (v2.9.52; see _expected_finish_num).
+            Default False: the expected finish is ignored, as P6 does with
+            the option off.
 
     Returns:
         dict with ``nodes``, ``project_finish``, ``project_finish_num``,
@@ -1594,6 +1799,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # RES — applied only beside a suspend date (P6 enters a resume
             # date only on a suspended activity); see _resume_floor.
             'suspend_date': str(a.get('suspend_date') or '').strip(),
+            # XF (v2.9.52) — P6 TASK.expect_end_date as written; read only
+            # when use_expected_finish is on (see _expected_finish_num).
+            'expected_finish': str(a.get('expected_finish') or '').strip(),
         }
 
     # v2.9.42 PAIRED FIX — missing-data-date gate. Mirrors cpm-engine.js.
@@ -2086,6 +2294,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # PT — predecessors whose drive was the date they carry from
         # unfinished work, so the recorded driver can say so.
         _pt_via = set()
+        # XF (v2.9.52) — an expected finish in force on this activity (see
+        # _expected_finish_num): FF / SF predecessors drive neither its start
+        # nor its restart; the latest finish they ask for is kept as a floor.
+        _xf = bool(use_expected_finish and node.get('expected_finish')
+                   and not node['is_complete'])
+        _xf_floor = 0
+        _xf_floor_pred = None
+        # Under progress override FS / SS logic does not reach work already
+        # under way (its restart is the data date), so it does not count.
+        _xf_start_pred = _xf and not (
+            schedule_mode == 'progress_override'
+            and date_to_num(node['actual_start'] or '') > 0) and any(
+            p['type'] not in ('FF', 'SF') and p['from_code'] in nodes
+            for p in preds)
         for p in preds:
             pnode = nodes.get(p['from_code'])
             if not pnode:
@@ -2218,6 +2440,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 _drive_instants.append((drive, drive_instant))
             if _via_pt:
                 _pt_via.add(pnode['code'])
+            if _xf and this_anchor_ef is not None:
+                if this_anchor_ef > _xf_floor:
+                    _xf_floor = this_anchor_ef
+                    _xf_floor_pred = {
+                        'code': pnode['code'],
+                        'type': t,
+                        'lag_days': lag,
+                    }
+                continue
             # P6 forward-pass semantics: pred logic cannot override actual_start.
             if has_actual_start:
                 if drive > max_es and driving_pred is None:
@@ -2445,15 +2676,108 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 node['es'], node['duration_days'], node_cal,
                 alerts=alerts, ctx=f'forward {code}.EF')
 
+        # XF (v2.9.52) — the expected finish re-sizes the remaining work: from
+        # the remaining start S (restart / early start, driven by the data
+        # date and FS / SS logic only) to the expected finish, none when that
+        # finish is at or before S. FF / SF logic then applies as usual on the
+        # re-sized figure. The one exception is measured on the 23-Sep and
+        # 7-Oct probes: when the FF / SF logic needs a LATER finish than the
+        # expected finish, P6 keeps the remaining duration as it was if the
+        # activity has no FS / SS predecessor, or if that FF / SF pull-back
+        # (on the remaining duration as it was) already passes S. The new
+        # figure replaces remaining_duration (started) or duration_days (not
+        # started), so the backward pass, the late dates and the float all
+        # run on it, as P6's do. A started activity with no
+        # remaining_duration is left alone: the completion-data-incomplete
+        # ALERT below already names it.
+        if _xf and (not has_actual_start or _rem_provided):
+            _xf_start = node['restart'] if has_actual_start else node['es']
+            _xf_was = _rem_dur if has_actual_start else node['duration_days']
+            _xf_num = _expected_finish_num(
+                node['expected_finish'], node_cal, alerts=alerts,
+                ctx=f'expected finish {code}')
+            _xf_keep = False
+            if _xf_floor_pred is not None and (_xf_num < _xf_floor
+                                               or _xf_num <= _xf_start):
+                _xf_pull_was = _retreat_workdays(
+                    _xf_floor, _xf_was, node_cal,
+                    alerts=alerts, ctx=f'expected finish {_xf_floor_pred["type"]} {code}')
+                _xf_keep = (not _xf_start_pred) or _xf_pull_was > _xf_start
+            if _xf_keep:
+                _xf_rd = _xf_was
+            elif _xf_num > _xf_start:
+                _xf_rd = (_count_work_days_between(_xf_start - 1, _xf_num - 1, node_cal)
+                          if node_cal else _xf_num - _xf_start)
+            else:
+                _xf_rd = 0
+            _xf_begin = _xf_start
+            _xf_pulled = False
+            if _xf_floor_pred is not None:
+                _xf_pull = _retreat_workdays(
+                    _xf_floor, _xf_rd, node_cal,
+                    alerts=alerts, ctx=f'expected finish {_xf_floor_pred["type"]} {code}')
+                if _xf_pull > _xf_begin:
+                    _xf_begin = _xf_pull
+                    _xf_pulled = True
+                    if not has_actual_start or driving_pred is None:
+                        driving_pred = dict(_xf_floor_pred)
+            if _xf_pulled:
+                node['ef'] = _xf_floor          # FF / SF identity (F2.2)
+            else:
+                node['ef'] = _advance_workdays(
+                    _xf_begin, _xf_rd, node_cal,
+                    alerts=alerts, ctx=f'forward {code}.EF (expected finish)')
+            if has_actual_start:
+                node['restart'] = _xf_begin
+                node['remaining_duration'] = _xf_rd
+                _rem_dur = _xf_rd
+            else:
+                node['es'] = _xf_begin
+                node['duration_days'] = _xf_rd
+            node['expected_finish_applied'] = {
+                'expected_finish': node['expected_finish'],
+                'applied': not _xf_keep,
+                'was_days': _xf_was,
+                'now_days': _xf_rd,
+            }
+            if _xf_keep:
+                alerts.append({
+                    'severity': 'INFO',
+                    'context': 'expected-finish-not-applied',
+                    'message': (
+                        f'{code}: expected finish {node["expected_finish"]} not '
+                        f'applied: its {_xf_floor_pred["type"]} predecessor '
+                        f'{_xf_floor_pred["code"]} needs a later finish, so P6 '
+                        f'keeps the remaining duration ({_xf_was} working days).'
+                    ),
+                })
+            else:
+                alerts.append({
+                    'severity': 'INFO',
+                    'context': 'expected-finish-applied',
+                    'message': (
+                        f'{code}: remaining duration re-sized from {_xf_was} to '
+                        f'{_xf_rd} working days so the remaining work ends on its '
+                        f'expected finish {node["expected_finish"]} (P6 "Use '
+                        f'Expected Finish Dates").'
+                    ),
+                })
+
         # Forward-pass EF-side clamps (FNET, FNLT, MS_Finish, MFO).
         # v2.9.14 F5 Bug E backport — pass node['es'] so the helper guarantees
         # EF >= ES, matching JS T3.20 behavior.
         # v2.9.45 — node_cal reaches the helper so a finish constraint's P6
         # instant can be resolved onto this activity's own boundary space.
-        node['ef'] = _apply_forward_ef_constraint(
-            code, node['ef'], cstr, 'primary', alerts, node['es'], node_cal)
-        node['ef'] = _apply_forward_ef_constraint(
-            code, node['ef'], cstr2, 'secondary', alerts, node['es'], node_cal)
+        # UW (v2.9.52) — on work under way the early side of Finish On or
+        # After, Finish On and Mandatory Finish is dropped (see
+        # _UNDERWAY_DROPPED_FINISH_TYPES); Finish On or Before still reports.
+        _underway = has_actual_start and not node['is_complete']
+        for _c, _lab in ((cstr, 'primary'), (cstr2, 'secondary')):
+            if _underway and _c and _c.get('type') in _UNDERWAY_DROPPED_FINISH_TYPES:
+                _underway_finish_noop(code, node['ef'], _c, _lab, node_cal, alerts)
+                continue
+            node['ef'] = _apply_forward_ef_constraint(
+                code, node['ef'], _c, _lab, alerts, node['es'], node_cal)
 
         # v2.9.42 PAIRED FIX — in-progress work with no remaining_duration.
         # The retained-logic restart above applies ONLY when remaining_duration
@@ -3032,10 +3356,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # secondary; secondary tightens further.
         cstr = node.get('constraint')
         cstr2 = node.get('constraint2')
-        min_lf = _apply_backward_lf_constraint(
-            code, min_lf, cstr, node_cal, node['duration_days'], alerts)
-        min_lf = _apply_backward_lf_constraint(
-            code, min_lf, cstr2, node_cal, node['duration_days'], alerts)
+        # UW (v2.9.52) — Mandatory Finish is dropped from the backward pass
+        # too once the activity is under way (late finish = the project end
+        # on the measured case); Finish On / Finish On or Before still cap LF.
+        _uw_back = bool(node.get('actual_start')) and not node['is_complete']
+        for _c in (cstr, cstr2):
+            if _uw_back and _c and _c.get('type') in _UNDERWAY_DROPPED_LATE_TYPES:
+                continue
+            min_lf = _apply_backward_lf_constraint(
+                code, min_lf, _c, node_cal, node['duration_days'], alerts)
 
         node['lf'] = min_lf
         node['ls'] = _retreat_workdays(
@@ -3251,10 +3580,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # well, so all four free-float fields cross-validate. Only the
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
-    # comparisons are absent on both sides rather than one: 82 of them (41
-    # ff_signed, 41 ff_signed_working_days) on the 101-fixture harness as
-    # measured 2026-10-03, whose line reads 2623 / 2623 executed against a
-    # 2705-comparison surface (validation/crossval-summary.json in the engine
+    # comparisons are absent on both sides rather than one: 86 of them (43
+    # ff_signed, 43 ff_signed_working_days) on the 106-fixture harness as
+    # measured 2026-10-07, whose line reads 3202 / 3202 executed against a
+    # 3288-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.

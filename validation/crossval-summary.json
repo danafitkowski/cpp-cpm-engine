@@ -1,34 +1,34 @@
 {
-  "engine_version": "2.9.51",
-  "generated_utc": "2026-10-04T14:56:31.214Z",
+  "engine_version": "2.9.52",
+  "generated_utc": "2026-10-07T11:44:32.368Z",
   "fixtures": {
-    "total": 101,
-    "passed": 101,
+    "total": 106,
+    "passed": 106,
     "failed": 0
   },
   "checks": {
-    "executed": 2623,
+    "executed": 3202,
     "failed": 0,
-    "passed": 2623,
-    "skipped": 82,
-    "surface": 2705
+    "passed": 3202,
+    "skipped": 86,
+    "surface": 3288
   },
   "skips_by_field": {
-    "ff_signed": 41,
-    "ff_signed_working_days": 41
+    "ff_signed": 43,
+    "ff_signed_working_days": 43
   },
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 82
+    "mutual": 86
   },
   "checks_by_field": {
-    "project_finish_num": 99,
-    "project_finish": 99,
-    "critical_codes": 99,
-    "topo_order": 99,
-    "alert_count": 93,
-    "alert_severity_counts": 93,
-    "node <id>": 2039,
+    "project_finish_num": 104,
+    "project_finish": 104,
+    "critical_codes": 104,
+    "topo_order": 104,
+    "alert_count": 98,
+    "alert_severity_counts": 98,
+    "node <id>": 2588,
     "threw (both engines)": 2
   },
   "rows": [
@@ -934,6 +934,52 @@
       "skips_by_field": {
         "ff_signed": 2,
         "ff_signed_working_days": 2
+      }
+    },
+    {
+      "id": "F106",
+      "name": "F106 - XF: expected finish on re-sizes remaining work (stretch, shrink, logic, weekend, FF)",
+      "checks": 125,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F107",
+      "name": "F107 - XF: the same network with the expected-finish option off",
+      "checks": 125,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F108",
+      "name": "F108 - UW: finish constraints on work already under way",
+      "checks": 83,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F109",
+      "name": "F109 - XF: an expected finish behind FF logic, retained logic",
+      "checks": 123,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F110",
+      "name": "F110 - XF: an expected finish behind FF logic, progress override",
+      "checks": 123,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
       }
     }
   ]

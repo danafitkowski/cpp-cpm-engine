@@ -11883,6 +11883,153 @@ console.log('\n=== BDR — the float burndown chart prints in ink, nothing under
         JSON.stringify(task && [task.suspend_date, task.resume_date]));
 }
 
+console.log('\n=== XF / UW — expected finish dates and finish constraints on started work (v2.9.52) ===');
+// P6 Professional 23.12.1 F9'd two synthetic projects carrying the same cases
+// on 7-Oct-2026 (data date Mon 12-Oct-2026 08:00, Mon-Fri 08:00-17:00 with a
+// lunch hour, retained logic), one with "Use Expected Finish Dates" on and
+// one with it off. Every expected value below is P6's own stored answer.
+{
+    const RAW = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        ['2', '3', '4', '5', '6'].map((d) => '(0||' + d +
+            '()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))').join('') +
+        '(0||7()())))(0||Exceptions()())))';
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW } };
+    const A = (code, rem, extra) => Object.assign({ code, duration_days: 10, remaining_duration: rem,
+        actual_start: '2026-09-28 08:00', clndr_id: 'MF' }, extra || {});
+    const N = (code, dur, extra) => Object.assign({ code, duration_days: dur, clndr_id: 'MF' }, extra || {});
+    const R = (f, t, type) => ({ from_code: f, to_code: t, type: type || 'FS', lag_days: 0 });
+    const run = (acts, rels, on, mode) => E.computeCPM(acts, rels, { dataDate: '2026-10-12 08:00',
+        calMap: cal, useExpectedFinish: on, scheduleMode: mode || 'retained_logic' });
+    const lw = (r, c) => r.nodes[c].ef_last_worked_date;
+
+    const st = run([A('X01', 5, { expected_finish: '2026-10-23 17:00' }),
+        A('X02', 10, { expected_finish: '2026-10-14 17:00' })], [], true);
+    check('XF-1: the expected finish stretches and shrinks the remaining work (5 -> 10 d, 10 -> 3 d)',
+        lw(st, 'X01') === '2026-10-23' && st.nodes.X01.remaining_duration === 10 &&
+        lw(st, 'X02') === '2026-10-14' && st.nodes.X02.remaining_duration === 3,
+        [lw(st, 'X01'), st.nodes.X01.remaining_duration, lw(st, 'X02'), st.nodes.X02.remaining_duration].join(' '));
+    const off = run([A('X01', 5, { expected_finish: '2026-10-23 17:00' })], [], false);
+    check('XF-2: with the option off the expected finish is ignored',
+        lw(off, 'X01') === '2026-10-16' && off.nodes.X01.remaining_duration === 5, lw(off, 'X01'));
+    const lg = run([A('X03P', 4), A('X03', 2, { expected_finish: '2026-10-21 17:00' }),
+        A('X04P', 6), A('X04', 2, { expected_finish: '2026-10-14 17:00' }),
+        A('X05', 3, { expected_finish: '2026-10-08 17:00' })],
+        [R('X03P', 'X03'), R('X04P', 'X04')], true);
+    check('XF-3: an FS that holds the restart leaves only the days from it (restart 10-16, 4 d)',
+        lg.nodes.X03.restart_date === '2026-10-16' && lg.nodes.X03.remaining_duration === 4 &&
+        lw(lg, 'X03') === '2026-10-21', lg.nodes.X03.restart_date + ' ' + lg.nodes.X03.remaining_duration);
+    check('XF-4: an expected finish at or before the restart leaves no remaining work',
+        lg.nodes.X04.remaining_duration === 0 && lg.nodes.X04.restart_date === '2026-10-20' &&
+        lg.nodes.X05.remaining_duration === 0 && lg.nodes.X05.restart_date === '2026-10-12',
+        [lg.nodes.X04.remaining_duration, lg.nodes.X04.restart_date,
+            lg.nodes.X05.remaining_duration, lg.nodes.X05.restart_date].join(' '));
+    const ns = run([N('X06', 3, { expected_finish: '2026-10-20 17:00' }),
+        A('X10', 5, { expected_finish: '2026-10-17 17:00' }),
+        A('X11', 2, { expected_finish: '2026-10-21 17:00' }), N('X11T', 2)], [R('X11', 'X11T')], true);
+    check('XF-5: work not started is re-sized from its early start (3 -> 7 d)',
+        ns.nodes.X06.duration_days === 7 && lw(ns, 'X06') === '2026-10-20', String(ns.nodes.X06.duration_days));
+    check('XF-6: a Saturday expected finish closes on the Friday before it',
+        lw(ns, 'X10') === '2026-10-16' && ns.nodes.X10.remaining_duration === 5, lw(ns, 'X10'));
+    check('XF-7: successors follow the re-sized finish (T starts 10-22)',
+        ns.nodes.X11T.es_date === '2026-10-22', ns.nodes.X11T.es_date);
+    const ff = run([A('X12P', 8), A('X12', 2, { expected_finish: '2026-10-21 17:00' })],
+        [R('X12P', 'X12', 'FF')], true);
+    check('XF-8: FF logic does not size the remaining work (restart 10-12, 8 d)',
+        ff.nodes.X12.restart_date === '2026-10-12' && ff.nodes.X12.remaining_duration === 8,
+        ff.nodes.X12.restart_date + ' ' + ff.nodes.X12.remaining_duration);
+
+    // The 23-Sep probe (data date Mon 05-Oct-2026 08:00): an expected finish
+    // before the data date behind FF logic. E02 and E08 are its cases as P6
+    // scheduled them; R1 is its 2140-replica shape at this data date (P6
+    // zeroed it and, on a second F9, put it where its FF puts it; under
+    // progress override it kept its remaining duration).
+    const run5 = (acts, rels, mode) => E.computeCPM(acts, rels, { dataDate: '2026-10-05 08:00',
+        calMap: cal, useExpectedFinish: true, scheduleMode: mode || 'retained_logic' });
+    const ek = run5([A('E02P', 3), A('E02', 2, { expected_finish: '2026-10-02 17:00' }),
+        A('E08P', 7), A('E08', 9, { duration_days: 15, expected_finish: '2026-10-02 17:00' }),
+        A('R1P', 1), A('R1', 2, { expected_finish: '2026-09-24 17:00' })],
+        [R('E02P', 'E02', 'FF'), R('E08P', 'E08', 'FF'), R('R1P', 'R1', 'FF'), R('R1P', 'R1', 'SS')]);
+    check('XF-9: with FF logic only, P6 keeps the remaining duration (2 d, restart 10-06; 9 d)',
+        ek.nodes.E02.remaining_duration === 2 && ek.nodes.E02.restart_date === '2026-10-06' &&
+        ek.nodes.E08.remaining_duration === 9 && lw(ek, 'E08') === '2026-10-15',
+        [ek.nodes.E02.remaining_duration, ek.nodes.E02.restart_date, ek.nodes.E08.remaining_duration].join(' '));
+    check('XF-10: with an SS beside an FF that does not pass the restart, it goes to 0 where the FF puts it',
+        ek.nodes.R1.remaining_duration === 0 && ek.nodes.R1.restart_date === '2026-10-06',
+        ek.nodes.R1.remaining_duration + ' ' + ek.nodes.R1.restart_date);
+    const po = run5([A('R1P', 1), A('R1', 2, { expected_finish: '2026-09-24 17:00' })],
+        [R('R1P', 'R1', 'FF'), R('R1P', 'R1', 'SS')], 'progress_override');
+    check('XF-11: under progress override the same activity keeps its remaining duration',
+        po.nodes.R1.remaining_duration === 2 && po.nodes.R1.restart_date === '2026-10-05',
+        po.nodes.R1.remaining_duration + ' ' + po.nodes.R1.restart_date);
+
+    // A part day counts only when at least half its working time lies before
+    // the expected finish, as the engine reads the hours P6 then stores: a
+    // real export P6 F9'd with expected finishes at 09:00 (1 h remaining)
+    // reads back unchanged.
+    const pd = run([A('G1', 5, { expected_finish: '2026-10-13 09:00' }),
+        A('G2', 5, { expected_finish: '2026-10-13 13:30' })], [], true);
+    check('XF-13: an expected finish one hour into a day leaves that day out; past mid-day counts it',
+        pd.nodes.G1.remaining_duration === 1 && lw(pd, 'G1') === '2026-10-12' &&
+        pd.nodes.G2.remaining_duration === 2 && lw(pd, 'G2') === '2026-10-13',
+        [pd.nodes.G1.remaining_duration, lw(pd, 'G1'), pd.nodes.G2.remaining_duration, lw(pd, 'G2')].join(' '));
+
+    const uw = run([A('C01', 2, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }),
+        N('C02', 2, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }),
+        A('C03', 2, { constraint2: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }),
+        A('C04', 2, { constraint: { type: 'CS_MEO', date: '2026-10-21 17:00' } }),
+        A('C05', 5, { constraint: { type: 'CS_MEOB', date: '2026-10-14 17:00' } }),
+        A('C06', 2, { constraint: { type: 'CS_MANDFIN', date: '2026-10-21 17:00' } }),
+        A('C08', 2, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' } }), N('C08T', 1),
+        A('C09', 2, { constraint: { type: 'CS_MEOA', date: '2026-10-21 17:00' },
+            expected_finish: '2026-10-16 17:00' }),
+        N('END', 0, { task_type: 'TT_FinMile', constraint: { type: 'CS_MEOA', date: '2026-10-23 17:00' } })],
+        [R('C08', 'C08T')], true);
+    check('UW-1: Finish On or After on started work moves nothing (primary and secondary); not started it does',
+        lw(uw, 'C01') === '2026-10-13' && lw(uw, 'C03') === '2026-10-13' && lw(uw, 'C02') === '2026-10-21',
+        [lw(uw, 'C01'), lw(uw, 'C03'), lw(uw, 'C02')].join(' '));
+    check('UW-2: the successor of a started Finish On or After activity follows its own finish',
+        uw.nodes.C08T.es_date === '2026-10-14', uw.nodes.C08T.es_date);
+    check('UW-3: Finish On on started work keeps only its late side (finish 10-13, float 6 d)',
+        lw(uw, 'C04') === '2026-10-13' && uw.nodes.C04.tf_working_days === 6,
+        lw(uw, 'C04') + ' tf ' + uw.nodes.C04.tf_working_days);
+    check('UW-4: Finish On or Before on started work still caps the late finish (float -2 d)',
+        uw.nodes.C05.tf_working_days === -2, String(uw.nodes.C05.tf_working_days));
+    check('UW-5: Mandatory Finish on started work is dropped from both passes (late finish = project end)',
+        lw(uw, 'C06') === '2026-10-13' && uw.nodes.C06.lf_last_worked_date === '2026-10-23',
+        lw(uw, 'C06') + ' lf ' + uw.nodes.C06.lf_last_worked_date);
+    check('UW-6: an expected finish still re-sizes started work that carries a Finish On or After',
+        lw(uw, 'C09') === '2026-10-16' && uw.nodes.C09.remaining_duration === 5, lw(uw, 'C09'));
+}
+{
+    const T = String.fromCharCode(9);
+    const xer = (flag) => [
+        '%T' + T + 'PROJECT',
+        ['%F', 'proj_id', 'proj_short_name', 'last_recalc_date'].join(T),
+        ['%R', 'P1', 'T', '2026-10-12 08:00'].join(T),
+        '%T' + T + 'SCHEDOPTIONS',
+        ['%F', 'proj_id', 'sched_retained_logic', 'sched_use_expect_end_flag'].join(T),
+        ['%R', 'P1', 'Y', flag].join(T),
+        '%T' + T + 'TASK',
+        ['%F', 'task_id', 'proj_id', 'task_code', 'task_name', 'task_type', 'status_code',
+            'target_drtn_hr_cnt', 'remain_drtn_hr_cnt', 'act_start_date', 'expect_end_date'].join(T),
+        ['%R', 'T1', 'P1', 'A', 'A', 'TT_Task', 'TK_Active', '80', '40',
+            '2026-09-28 08:00', '2026-10-23 17:00'].join(T),
+        '%E',
+    ].join(String.fromCharCode(10));
+    E.resetMC();
+    const pY = E.parseXER(xer('Y'));
+    const task = Object.values(E.getTasks()).find((t) => t.code === 'A');
+    const pN = E.parseXER(xer('N'));
+    const pBlank = E.parseXER(xer(''));
+    E.resetMC();
+    check('XF-12: parseXER hands on each task\'s expected finish and the "Use Expected Finish Dates" option',
+        !!task && task.expected_finish === '2026-10-23 17:00' &&
+        pY.use_expected_finish === true && pN.use_expected_finish === false &&
+        pBlank.use_expected_finish === false,
+        JSON.stringify([task && task.expected_finish, pY.use_expected_finish, pN.use_expected_finish,
+            pBlank.use_expected_finish]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

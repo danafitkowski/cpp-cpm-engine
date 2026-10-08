@@ -142,6 +142,16 @@ No audit item changed status. v2.9.51 changes what `parseXER` hands on, not the 
 
 Item 6 stands.
 
+## Status at v2.9.52 (reviewed 2026-10-07)
+
+No audit item changed status. v2.9.52 changes the scheduling arithmetic in two places, each measured on Primavera P6 Professional 23.12.1's own F9 of synthetic probe projects (see CHANGELOG.md): with "Use Expected Finish Dates" on it re-sizes the remaining work of each unfinished activity carrying an expected finish so it ends there, and on work already under way it drops the early side of Finish On or After, Finish On and Mandatory Finish. Its change class under the operator procedure is A (computational).
+- The unit suite grew from 1,352 to 1,371.
+- The cross-validation surface grew from 101 to 106 fixtures (5 pinning the measured shapes) and from 2,623 of 2,705 to 3,202 of 3,288 comparisons, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.39% statements / 83.41% branches / 95.48% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before on the new bytes.
+
+Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.51. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.52. Update on every release that closes or opens an audit item.

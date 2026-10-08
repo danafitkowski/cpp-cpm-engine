@@ -12,6 +12,162 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.52 - 2026-10-08 - expected finish dates and finish constraints on work under way, measured on P6's own F9
+
+**Engine math changed.** Two rules, each measured on Primavera P6 Professional
+23.12.1's own F9 of probe projects read back from its database:
+
+**1. "Use Expected Finish Dates".** With SCHEDOPTIONS
+`sched_use_expect_end_flag = Y`, handed to `computeCPM` as the new option
+`useExpectedFinish` (Python `use_expected_finish`; default off, as P6's is),
+every unfinished activity that carries an expected finish (the new activity
+field `expected_finish`, P6 `TASK.expect_end_date` as written, time included)
+has its remaining duration re-sized so its remaining work ends there:
+- the remaining duration becomes the working time from its remaining start
+  (the restart of a started activity, the early start of one not started,
+  driven by the data date and by FS / SS logic) to the expected finish: a
+  stretch (5 d to 10 d) and a shrink (10 d to 3 d) both land, and an FS that
+  holds the restart later leaves only the days from it;
+- an expected finish at or before that start leaves no remaining work, also
+  when it falls before the data date;
+- an expected finish on a non-working day closes on the working day before
+  it (Saturday to Friday 17:00); one part-way through a working day counts
+  that day when at least half its working time lies before it (see below);
+- FF / SF logic does not size the remaining work, it only moves it: an FF
+  from work finishing on the expected finish leaves the restart at the data
+  date with the whole span remaining, where with the option off the same FF
+  pulls the restart to two days before the finish;
+- when the FF / SF logic needs a later finish than the expected finish, P6
+  keeps the remaining duration as it was if the activity has no FS / SS
+  predecessor, or if the FF / SF pull-back on that remaining duration already
+  passes the restart; otherwise it re-sizes as above and the FF / SF then
+  moves the restart. Under progress override FS / SS logic does not reach
+  work already under way, so a started activity there counts as having none;
+- successors follow the new finish, and the late dates and float are those of
+  the re-sized remaining duration, which replaces `remaining_duration`
+  (started) or `duration_days` (not started) on the node. The node carries
+  `expected_finish_applied` and an INFO alert (`expected-finish-applied`, or
+  `expected-finish-not-applied` where the FF / SF rule keeps the duration).
+
+With the option off the expected finish is ignored, as before. `parseXER`
+now hands each task's `expected_finish` on, and `use_expected_finish` (true
+only on `Y`) with the raw `sched_use_expect_end_flag`.
+
+**2. Finish constraints on work already under way.** Once an activity has an
+actual start, P6 drops the early side of Finish On or After (primary or
+secondary), of Finish On and of Mandatory Finish: none of them moves its
+finish, and its successors follow the unconstrained finish. Finish On and
+Finish On or Before still cap its late finish (negative float when the
+forecast runs past the date); Mandatory Finish is dropped from the backward
+pass too (late finish = the project end). Until now the engine pushed the
+finish of started work out to every such date. A `constraint-noop` WARN names
+each constraint that would have moved a finish. Start On or After on started
+work was already suppressed, and the measurement agrees.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+7-Oct-2026 on Dana's instruction to fix the defects. Early and late dates and
+float move on schedules that carry the expected-finish option `Y` with an
+expected finish on unfinished work, and on started work that carries Finish
+On or After, Finish On or Mandatory Finish; nothing moves on a schedule
+without either. §12.2 re-check: run on the update series of the one issued
+deliverable whose P6 check exposed the two defects. That deliverable reported
+P6's own F9 dates for its updates, and the engine now agrees with them more
+closely: one update moved from 9 working days later than P6 to exact, and no
+other update moved.
+
+**How it was measured.** Two synthetic projects carrying the same 21 cases
+(12 on the expected finish, 9 on finish constraints), one with the option `Y`
+and one with it `N`, retained logic, data date Monday 12-Oct-2026 08:00, one
+Monday-Friday 08:00-17:00 calendar with a lunch hour, were imported into P6
+Professional 23.12.1 and scheduled with F9 on 7-Oct-2026 with no other
+project open. A database diff before and after the session showed the two
+projects added and nothing else changed. Engine against P6 on every
+unfinished row of both projects (56), through the production path (the
+critical-path validator's network, the option read from SCHEDOPTIONS):
+
+| inputs | v2.9.51 start / finish / total float | v2.9.52 |
+|---|---|---|
+| as built, before P6's F9 | 52 / 31 / 24 of 56 | 56 / 56 / 55 of 56 |
+| with P6's post-F9 remaining durations | 54 / 41 / 39 of 56 | 56 / 56 / 55 of 56 |
+
+The one float apart is a 12:00 expected finish. The engine counts whole
+working days: a part day counts when at least half its working time lies
+before the expected finish, which is how the engine reads the hours P6 then
+stores (remaining hours over hours per day, rounded half up), so an export P6
+re-scheduled reads back unchanged. At 12:00, half the day, the finish date
+matches P6, the remaining duration is half a day longer than P6's 20 h and
+the float half a day shorter (7 against 7.5). The FF rule's second half was read from the
+future-actuals probe of 23-Sep-2026 (six projects, four with the option `Y`,
+two of them under progress override): with the option passed, 188 of 188
+unfinished rows match P6 on start, finish and float, and six rows that
+probe's harness had set aside as another cause now match. The four still set
+aside carry no expected finish (progress override honouring FF into started
+work, unchanged). Where P6 zeroes an activity behind FF logic it is not
+idempotent: its first F9 leaves the activity at the data date and a second F9
+moves it to where its FF puts it. The engine gives the second answer, P6's
+fixed point.
+
+On a real project, the P6 session that exposed both defects F9'd 20 filed
+schedules (its baseline and 19 updates) and 118 modelled runs (impacted, collapsed and time-impact runs of
+one 500-activity schedule with the option `Y`) and its finish milestone was
+read back. Against P6's own dates, through the production path: the filed schedules
+match on 10 of 20 (9 before; the one that moved was 9 working days late, on a
+started Finish On or After, and is now exact), and the modelled runs on 100
+of 118 (94 before). All six runs that moved landed on P6's date: three were
+25 to 29 working days late and two 55 early on one activity's expected
+finish, and one was 4 late on a started Finish On or After. Every run still
+apart from P6 is one working day apart, a part-day rounding outside this
+change; none moved away from P6.
+
+**Verified.**
+- JS unit suite: 1,371 checks green, up from 1,352 (XF-1 to XF-13, UW-1 to
+  UW-6). Fourteen of the nineteen fail against the v2.9.51 engine; the other
+  five pin what the change must leave alone (the option off, a Saturday
+  expected finish whose rule lands where the old finish did, the remaining
+  durations P6 keeps behind FF logic, and Finish On or Before).
+- Cross-validation: 106 fixtures, 3202 of 3288 executed, 86 skipped, 0
+  failures. F106 to F110 are new: the expected-finish network with the option
+  on and off, the finish constraints on started work, and the FF shapes under
+  retained logic and progress override. Each of F109 and F110 carries one
+  completed activity, whose two signed-free-float fields neither engine emits.
+- The 13-case P6 matrix re-applied on these bytes reads 13 / 13 over 27 field
+  checks with zero changed rows; cases 19-21 read 256 of 256 on six fields at
+  each data date.
+- Coverage re-measured on these bytes: 94.39% statements (11,001 / 11,654),
+  83.41% branches (2,414 / 2,894), 95.48% functions (148 / 155).
+
+**Who is affected.** On the measuring machine, 560 distinct exports (625 projects)
+were parsed. 190 real projects carry what the change reads: 105 with the
+option `Y` and an expected finish on unfinished work, 86 with a finish
+constraint on started work (one has both); many are successive updates or
+copies of a few jobs. Through the critical-path validator's path, 75 move at
+least one open activity and 16 move the project finish; 3,465 of their 81,338
+open activities move a date.
+
+The referee is P6's own scheduling. In the local P6 database, 97 real
+projects whose dates P6 computed (no task or relationship edited after their
+last F9) carry what the change reads. On their 28,255 unfinished rows the
+engine's early finish agrees with the one P6 computed on 26,305, up from
+25,606: 51 projects agree more often and none less often.
+
+The dates stored in an export are a weaker referee, because P6 did not
+produce all of them. Scored against them, agreement moves from 47,374 to
+47,014 of 80,315 early finishes. The exports that agree less often are MS
+Project conversions, whose dates are MS Project's, and an export saved before
+its expected finishes were applied. P6's own F9 of that export is on the
+machine: the engine's run of the export agrees with it on 1,543 of 2,619
+early finishes, up from 1,004. A first cut of the expected-finish rule
+counted any part day whole; on one real export P6 had re-scheduled with 09:00
+expected finishes it read back 254 of 672 stored finishes instead of 655, and
+the rule now counts a part day as the engine reads P6's stored hours.
+
+**Not measured, not claimed.** An activity not yet started with FF / SF
+predecessors and an expected finish (the started rule is applied to its early
+start). Start On, Start On or Before and Mandatory Start on started work
+(unchanged: their early side was already suppressed). An expected finish that
+P6 would place part-way through a working day is rounded up to the whole day,
+as above.
+
 ## v2.9.51 - 2026-10-04 - parseXER keeps completed activities; the float burndown chart reads in ink
 
 **Engine math changed, in what `parseXER` hands a caller; the arithmetic of
