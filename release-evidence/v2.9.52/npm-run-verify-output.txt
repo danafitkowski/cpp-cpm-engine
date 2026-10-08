@@ -1,0 +1,84 @@
+
+> cpp-cpm-engine@2.9.52 verify
+> node scripts/attestation.js
+
+{
+  "$schema": "cpp-cpm-engine-attestation/v1",
+  "generated_by": "scripts/attestation.js",
+  "generated_at_utc": "2026-10-08T20:35:50.431Z",
+  "package": {
+    "name": "cpp-cpm-engine",
+    "version": "2.9.52"
+  },
+  "engine": {
+    "version": "2.9.52",
+    "file": "cpm-engine.js",
+    "sha256": "ddd5b5b0a171e99bb5dc658d68c1c26f1c18027e19da475d5b74d0d7b1e4166b",
+    "bytes": 610604
+  },
+  "python_reference": {
+    "file": "python_reference/cpm.py",
+    "sha256": "ee7ba453afbff75ade0d9354ad5005ed90dc0f61e60aa26a81fde3c413774cb7",
+    "bytes": 222250
+  },
+  "git": {
+    "commit_sha": "2b308524b19502bb1d09163ecb3b542d347cd6cb",
+    "ref": "refs/heads/main",
+    "workflow_run_url": null
+  },
+  "environment": {
+    "node_version": "v22.23.2",
+    "platform": "win32",
+    "arch": "x64",
+    "runner": null
+  },
+  "results": {
+    "unit_tests": {
+      "command": "node cpm-engine.test.js",
+      "passed": 1371,
+      "failed": 0,
+      "ok": true
+    },
+    "crossval": {
+      "command": "node cpm-engine.crossval.js",
+      "fixtures_passed": 106,
+      "fixtures_failed": 0,
+      "checks_passed": 3202,
+      "checks_total": 3202,
+      "ok": true
+    },
+    "citation_regression": {
+      "command": "node tests/no-fabricated-citations.test.js",
+      "ok": true
+    },
+    "truncation_regression": {
+      "command": "node tests/no-truncation.test.js",
+      "ok": true
+    },
+    "version_drift_regression": {
+      "command": "node tests/no-stale-version-refs.test.js",
+      "ok": true
+    }
+  },
+  "verdict": "PASS",
+  "reproducibility_notes": [
+    "To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,",
+    "(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,",
+    "(4) run `npm run verify` on your own machine,",
+    "(5) compare your engine.sha256, python_reference.sha256, and results to the values above.",
+    "Bit-identical SHA-256s + matching pass counts = reproduced; any drift documents the delta."
+  ]
+}
+[1/3] Running unit tests (node cpm-engine.test.js)...
+       → 1371 passed, 0 failed (exit 0)
+[2/3] Running JS-Python crossval (node cpm-engine.crossval.js)...
+       → 106/106 fixtures, 3202/3202 checks (exit 0)
+[3/5] Running citation regression (node tests/no-fabricated-citations.test.js)...
+       → PASS (exit 0)
+[4/5] Running truncation regression (node tests/no-truncation.test.js)...
+       → PASS (exit 0)
+[5/5] Running version-drift regression (node tests/no-stale-version-refs.test.js)...
+       → PASS (exit 0)
+
+Witness written to: attestations\latest.json
+Verdict: PASS
