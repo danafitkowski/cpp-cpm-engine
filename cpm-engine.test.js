@@ -12030,6 +12030,117 @@ console.log('\n=== XF / UW — expected finish dates and finish constraints on s
             pBlank.use_expected_finish]));
 }
 
+console.log('\n=== XA — an expected finish that leaves no working time, with resource assignments (v2.9.53) ===');
+// P6 Professional 23.12.1 F9'd two synthetic projects on 9-Oct-2026 (data
+// date Wed 14-Oct-2026 17:00, Mon-Fri 08:00-17:00 with a lunch hour, retained
+// logic, "Use Expected Finish Dates" on; 153 activities). An expected finish
+// at or before the remaining start zeroes only an activity without resource
+// assignments; an assigned one keeps its remaining duration, whatever its
+// duration type and whatever its assignments carry. Every expected value
+// below is P6's own stored answer.
+{
+    const DAY = '(0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())';
+    const RAW = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        ['2', '3', '4', '5', '6'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '(0||7()())))(0||Exceptions()())))';
+    const RAW7 = '(0||CalendarData()((0||DaysOfWeek()(' +
+        ['1', '2', '3', '4', '5', '6', '7'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '))(0||Exceptions()())))';
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW },
+        D7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], raw: RAW7 } };
+    const A = (code, rem, n, extra) => Object.assign({ code, duration_days: 10, remaining_duration: rem,
+        actual_start: '2026-09-28 08:00', clndr_id: 'MF', resource_assignments: n }, extra || {});
+    const N = (code, dur, n, extra) => Object.assign({ code, duration_days: dur, clndr_id: 'MF',
+        resource_assignments: n }, extra || {});
+    const R = (f, t, type) => ({ from_code: f, to_code: t, type: type || 'FS', lag_days: 0 });
+    const run = (acts, rels) => E.computeCPM(acts, rels, { dataDate: '2026-10-14 17:00',
+        calMap: cal, useExpectedFinish: true, scheduleMode: 'retained_logic' });
+    const lw = (r, c) => r.nodes[c].ef_last_worked_date;
+    const XF = { A: '2026-09-25 17:00', B: '2026-10-09 17:00', E: '2026-10-14 17:00', C: '2026-10-14 18:00' };
+
+    const acts = [];
+    for (const k of Object.keys(XF)) {
+        acts.push(A('R0' + k, 5, 0, { expected_finish: XF[k] }), A('RL' + k, 5, 1, { expected_finish: XF[k] }));
+    }
+    const nw = run(acts, []);
+    const zeroed = Object.keys(XF).every((k) => nw.nodes['R0' + k].remaining_duration === 0 &&
+        nw.nodes['R0' + k].restart_date === '2026-10-15');
+    const kept = Object.keys(XF).every((k) => nw.nodes['RL' + k].remaining_duration === 5 &&
+        lw(nw, 'RL' + k) === '2026-10-21' && nw.nodes['RL' + k].expected_finish_applied.applied === false);
+    check('XA-1: no working time left: unassigned work goes to 0, assigned work keeps 5 d (finish 10-21)',
+        zeroed && kept && nw.alerts.some((a) => a.context === 'expected-finish-not-applied' &&
+            a.message.indexOf('RLE') === 0 && a.message.indexOf('resource assignments') !== -1),
+        Object.keys(XF).map((k) => nw.nodes['R0' + k].remaining_duration + '/' +
+            nw.nodes['RL' + k].remaining_duration).join(' '));
+    const wk = run([A('R0H', 5, 0, { expected_finish: '2026-10-15 09:00' }),
+        A('RLH', 5, 1, { expected_finish: '2026-10-15 09:00' }),
+        A('R0D', 5, 0, { expected_finish: '2026-10-15 17:00' }),
+        A('RLD', 5, 2, { expected_finish: '2026-10-15 17:00' })], []);
+    check('XA-2: one working hour or day after the data date applies to assigned work too',
+        wk.nodes.RLH.remaining_duration === 0 && wk.nodes.RLH.expected_finish_applied.applied === true &&
+        wk.nodes.R0H.remaining_duration === 0 &&
+        wk.nodes.RLD.remaining_duration === 1 && lw(wk, 'RLD') === '2026-10-15' &&
+        wk.nodes.R0D.remaining_duration === 1,
+        [wk.nodes.RLH.remaining_duration, wk.nodes.RLD.remaining_duration].join(' '));
+    const ns = run([A('N0P', 3), N('N0', 3, 0, { expected_finish: '2026-10-19 17:00' }),
+        A('N1P', 3), N('N1', 3, 1, { expected_finish: '2026-10-19 17:00' }),
+        A('N2P', 3), N('N2', 3, 1, { expected_finish: '2026-10-20 17:00' })],
+        [R('N0P', 'N0'), R('N1P', 'N1'), R('N2P', 'N2')]);
+    check('XA-3: work not started behind an FS (ES 10-20): unassigned 0, assigned keeps 3 d; a day after ES, 1 d',
+        ns.nodes.N0.duration_days === 0 && ns.nodes.N0.es_date === '2026-10-20' &&
+        ns.nodes.N1.duration_days === 3 && lw(ns, 'N1') === '2026-10-22' &&
+        ns.nodes.N2.duration_days === 1 && lw(ns, 'N2') === '2026-10-20',
+        [ns.nodes.N0.duration_days, ns.nodes.N1.duration_days, ns.nodes.N2.duration_days].join(' '));
+    const hd = run([A('HLP', 3), A('HL', 2, 1, { expected_finish: '2026-10-16 17:00' }),
+        A('H0P', 3), A('H0', 2, 0, { expected_finish: '2026-10-16 17:00' })], [R('HLP', 'HL'), R('H0P', 'H0')]);
+    check('XA-4: an FS holds the restart (10-20) past the expected finish: assigned keeps 2 d, unassigned 0',
+        hd.nodes.HL.restart_date === '2026-10-20' && hd.nodes.HL.remaining_duration === 2 &&
+        lw(hd, 'HL') === '2026-10-21' && hd.nodes.H0.remaining_duration === 0,
+        [hd.nodes.HL.restart_date, hd.nodes.HL.remaining_duration, hd.nodes.H0.remaining_duration].join(' '));
+    const k = (n, c) => run([
+        { code: 'P1', duration_days: 10, actual_start: '2026-02-02 08:00', actual_finish: '2026-02-13 17:00',
+            is_complete: true, clndr_id: c },
+        { code: 'P2', duration_days: 10, actual_start: '2026-02-09 08:00', actual_finish: '2026-02-20 16:00',
+            is_complete: true, clndr_id: c },
+        { code: 'S', duration_days: 76, remaining_duration: 88, actual_start: '2026-02-23 08:00', clndr_id: c,
+            expected_finish: '2026-10-14 17:00', resource_assignments: n },
+        { code: 'T', duration_days: 10, clndr_id: c }], [R('P1', 'S'), R('P2', 'S', 'SS'), R('S', 'T')]);
+    const k2 = k(2, 'MF');
+    const k0 = k(0, 'MF');
+    const k7 = k(2, 'D7');
+    check('XA-5: started 23-Feb, 704 h left, expected finish = the 17:00 data date: assigned keeps it all',
+        lw(k2, 'S') === '2027-02-15' && k2.nodes.T.es_date === '2027-02-16' &&
+        k0.nodes.S.remaining_duration === 0 && k0.nodes.T.es_date === '2026-10-15' &&
+        lw(k7, 'S') === '2027-01-10' && k7.nodes.T.es_date === '2027-01-11',
+        [lw(k2, 'S'), k0.nodes.T.es_date, lw(k7, 'S')].join(' '));
+    const T = String.fromCharCode(9);
+    const xer = [
+        '%T' + T + 'PROJECT',
+        ['%F', 'proj_id', 'proj_short_name', 'last_recalc_date'].join(T),
+        ['%R', 'P1', 'T', '2026-10-14 17:00'].join(T),
+        '%T' + T + 'TASK',
+        ['%F', 'task_id', 'proj_id', 'task_code', 'task_name', 'task_type', 'status_code',
+            'target_drtn_hr_cnt', 'remain_drtn_hr_cnt', 'act_start_date', 'expect_end_date'].join(T),
+        ['%R', 'T1', 'P1', 'A', 'A', 'TT_Task', 'TK_Active', '80', '40',
+            '2026-09-28 08:00', '2026-10-14 17:00'].join(T),
+        ['%R', 'T2', 'P1', 'B', 'B', 'TT_Task', 'TK_Active', '80', '40',
+            '2026-09-28 08:00', '2026-10-14 17:00'].join(T),
+        '%T' + T + 'TASKRSRC',
+        ['%F', 'taskrsrc_id', 'task_id', 'proj_id', 'rsrc_id', 'remain_qty', 'target_qty'].join(T),
+        ['%R', 'R1', 'T1', 'P1', 'X', '24', '48'].join(T),
+        ['%R', 'R2', 'T1', 'P1', 'Y', '0', '0'].join(T),
+        '%E',
+    ].join(String.fromCharCode(10));
+    E.resetMC();
+    E.parseXER(xer);
+    const ta = Object.values(E.getTasks()).find((t) => t.code === 'A');
+    const tb = Object.values(E.getTasks()).find((t) => t.code === 'B');
+    E.resetMC();
+    check('XA-6: parseXER counts each task\'s TASKRSRC rows, including one with no units',
+        !!ta && !!tb && ta.resource_assignments === 2 && tb.resource_assignments === 0,
+        JSON.stringify([ta && ta.resource_assignments, tb && tb.resource_assignments]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

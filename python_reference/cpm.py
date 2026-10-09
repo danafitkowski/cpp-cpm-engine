@@ -1226,6 +1226,62 @@ def _expected_finish_num(raw, calendar_info, *, alerts, ctx):
     return day
 
 
+# XA (P6 parity 2026-10-09, TD-15) — an expected finish that leaves no
+# working time. Measured on P6 23.12.1's own F9 of two synthetic projects
+# (private oracle repo, expected_finish_units_2026_10_09: 153 activities, data
+# date Wed 17:00): when the expected finish lies at or before the remaining
+# start in working time (before the actual start, before the data date, on
+# it, at 18:00 that evening, or before a restart an FS predecessor holds
+# later), P6 zeroes the remaining work ONLY on an activity with no resource
+# assignment. An activity with one or more assignments keeps its remaining
+# duration and the expected finish is ignored, whatever its duration type
+# (all four measured) and whatever the assignment carries (remaining units,
+# none remaining, no units at all, material only). One working hour after the
+# data date is enough for P6 to apply it on every activity alike (1 h, 8 h).
+# A real export F9'd in P6 showed the same: a started Fixed Duration & Units
+# activity with two assignments kept 704 h behind an expected finish equal to
+# its 17:00 data date while four unassigned ones beside it were zeroed.
+def _expected_finish_leaves_work(raw, start_day, data_date, calendar_info):
+    """True when P6 finds working time between an activity's remaining start
+    and its expected finish `raw` ('YYYY-MM-DD HH:MM').
+
+    The remaining start is the opening of `start_day` (the engine's restart or
+    early start), or the data date's own instant when that is later the same
+    day. A finish on a later day always leaves the remaining start's day to
+    work; on the same day it leaves work when some of that day's working time
+    lies between the two times. Without shift hours, noon decides, as
+    _expected_finish_num does.
+    """
+    day = date_to_num(raw) if raw else 0
+    if day <= 0:
+        return False
+    tod = _constraint_time_minutes(raw) or 0
+    s_day, s_tod = start_day, 0
+    dd_day = date_to_num(data_date) if data_date else 0
+    if dd_day > 0:
+        dd_tod = _constraint_time_minutes(data_date) or 0
+        if (dd_day, dd_tod) > (s_day, s_tod):
+            s_day, s_tod = dd_day, dd_tod
+    if day != s_day:
+        return day > s_day
+    if tod <= s_tod:
+        return False
+    share = _calendar_day_worked_share(day, tod, calendar_info)
+    if share is None:
+        return tod >= 720 > s_tod
+    return share > (_calendar_day_worked_share(day, s_tod, calendar_info) or 0.0)
+
+
+def _assignment_count(value):
+    """A whole, non-negative count of resource assignments; 0 for anything
+    that is not a number."""
+    try:
+        n = int(float(value or 0))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return n if n > 0 else 0
+
+
 # UW (P6 parity 2026-10-07, TD-14) — finish constraints on an activity
 # already under way. Measured on the same F9 (both flag settings): P6 drops
 # the EARLY side of a finish constraint once the activity has an actual
@@ -1570,8 +1626,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             carrying ``expected_finish`` (P6 TASK.expect_end_date as written,
             'YYYY-MM-DD HH:MM') has its remaining duration re-sized so its
             remaining work ends there (v2.9.52; see _expected_finish_num).
-            Default False: the expected finish is ignored, as P6 does with
-            the option off.
+            An activity carrying ``resource_assignments`` (the count of its P6
+            TASKRSRC rows) keeps its remaining duration instead when the
+            expected finish leaves it no working time (v2.9.53; see
+            _expected_finish_leaves_work). Default False: the expected finish
+            is ignored, as P6 does with the option off.
 
     Returns:
         dict with ``nodes``, ``project_finish``, ``project_finish_num``,
@@ -1802,6 +1861,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # XF (v2.9.52) — P6 TASK.expect_end_date as written; read only
             # when use_expected_finish is on (see _expected_finish_num).
             'expected_finish': str(a.get('expected_finish') or '').strip(),
+            # XA (v2.9.53) — how many resource assignments (P6 TASKRSRC rows)
+            # the activity carries; read only beside an expected finish that
+            # leaves no working time (see _expected_finish_leaves_work).
+            'resource_assignments': _assignment_count(a.get('resource_assignments')),
         }
 
     # v2.9.42 PAIRED FIX — missing-data-date gate. Mirrors cpm-engine.js.
@@ -2690,6 +2753,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # run on it, as P6's do. A started activity with no
         # remaining_duration is left alone: the completion-data-incomplete
         # ALERT below already names it.
+        # XA (v2.9.53) — an expected finish that leaves no working time after
+        # S zeroes only an activity without resource assignments; one with an
+        # assignment keeps its remaining duration (see
+        # _expected_finish_leaves_work), and FF / SF logic then moves it as
+        # usual.
         if _xf and (not has_actual_start or _rem_provided):
             _xf_start = node['restart'] if has_actual_start else node['es']
             _xf_was = _rem_dur if has_actual_start else node['duration_days']
@@ -2697,8 +2765,14 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 node['expected_finish'], node_cal, alerts=alerts,
                 ctx=f'expected finish {code}')
             _xf_keep = False
-            if _xf_floor_pred is not None and (_xf_num < _xf_floor
-                                               or _xf_num <= _xf_start):
+            _xf_assigned_keep = (
+                node['resource_assignments'] > 0
+                and not _expected_finish_leaves_work(
+                    node['expected_finish'], _xf_start, data_date, node_cal))
+            if _xf_assigned_keep:
+                _xf_keep = True
+            elif _xf_floor_pred is not None and (_xf_num < _xf_floor
+                                                 or _xf_num <= _xf_start):
                 _xf_pull_was = _retreat_workdays(
                     _xf_floor, _xf_was, node_cal,
                     alerts=alerts, ctx=f'expected finish {_xf_floor_pred["type"]} {code}')
@@ -2740,7 +2814,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 'was_days': _xf_was,
                 'now_days': _xf_rd,
             }
-            if _xf_keep:
+            if _xf_assigned_keep:
+                alerts.append({
+                    'severity': 'INFO',
+                    'context': 'expected-finish-not-applied',
+                    'message': (
+                        f'{code}: expected finish {node["expected_finish"]} not '
+                        f'applied: it leaves no working time after the remaining '
+                        f'start, and the activity has resource assignments, so '
+                        f'P6 keeps the remaining duration ({_xf_was} working '
+                        f'days).'
+                    ),
+                })
+            elif _xf_keep:
                 alerts.append({
                     'severity': 'INFO',
                     'context': 'expected-finish-not-applied',

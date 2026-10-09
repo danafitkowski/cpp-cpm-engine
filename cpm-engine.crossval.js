@@ -2600,6 +2600,69 @@ compareFixture('F109 - XF: an expected finish behind FF logic, retained logic',
 compareFixture('F110 - XF: an expected finish behind FF logic, progress override',
     xffNetwork('progress_override'));
 
+// F111-F112 (v2.9.53): an expected finish that leaves no working time zeroes
+// only an activity without resource assignments (XA, TD-15). The networks
+// are the synthetic probe cases P6 Professional 23.12.1 scheduled on
+// 9-Oct-2026 (data date Wed 14-Oct-2026 17:00, the same Mon-Fri calendar):
+// unassigned (resource_assignments 0) and assigned (1 or 2) pairs with the
+// expected finish before the actual start, before the data date, on it,
+// 18:00 that evening, one working hour and one working day after it; work
+// not started behind an FS; a restart an FS holds past the expected finish;
+// and a 704 h activity started in February with completed FS and SS
+// predecessors and an FS successor, on Mon-Fri and on a seven-day calendar.
+// The engine reproduces P6's own F9 of every open activity on start, finish
+// and total float, bar the float of the one-working-hour rows, which the
+// engine's whole days round (private oracle repo,
+// expected_finish_units_2026_10_09).
+const XA_XF = { A: '2026-09-25 17:00', B: '2026-10-09 17:00', E: '2026-10-14 17:00',
+    C: '2026-10-14 18:00', H: '2026-10-15 09:00', D: '2026-10-15 17:00' };
+const RAW_D7_0817 = '(0||CalendarData()((0||DaysOfWeek()(' +
+    [1, 2, 3, 4, 5, 6, 7].map(d => '(0||' + d +
+        '()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))').join('') +
+    '))(0||Exceptions()())))';
+const xaShape = (tag, n, cal) => [
+    { code: tag + 'P1', duration_days: 10, actual_start: '2026-02-02 08:00',
+      actual_finish: '2026-02-13 17:00', is_complete: true, clndr_id: cal },
+    { code: tag + 'P2', duration_days: 10, actual_start: '2026-02-09 08:00',
+      actual_finish: '2026-02-20 16:00', is_complete: true, clndr_id: cal },
+    // P6's original duration was 608 h (76 d) below the 704 h left; started
+    // work schedules on its remaining duration, so 88 here changes no date and
+    // keeps the JS-only remaining-exceeds-duration WARN (the Python reference
+    // has never carried it) out of the alert parity.
+    { code: tag, duration_days: 88, remaining_duration: 88, actual_start: '2026-02-23 08:00',
+      clndr_id: cal, expected_finish: '2026-10-14 17:00', resource_assignments: n },
+    { code: tag + 'T', duration_days: 10, clndr_id: cal },
+];
+const xaShapeRels = (tag) => [xR(tag + 'P1', tag), xR(tag + 'P2', tag, 'SS'), xR(tag, tag + 'T')];
+compareFixture('F111 - XA: no working time left zeroes only unassigned work (data date Wed 17:00)', {
+    activities: [].concat(
+        ...Object.keys(XA_XF).map(k => [
+            xA('U0' + k, 5, 10, { expected_finish: XA_XF[k], resource_assignments: 0 }),
+            xA('U1' + k, 5, 10, { expected_finish: XA_XF[k], resource_assignments: 1 })]),
+        ...['16', '19', '20'].map(d => [
+            xA('N0' + d + 'P', 3), xN('N0' + d, 3, { expected_finish: '2026-10-' + d + ' 17:00' }),
+            xA('N1' + d + 'P', 3), xN('N1' + d, 3, { expected_finish: '2026-10-' + d + ' 17:00',
+                resource_assignments: 1 })]),
+        [xA('H0P', 3), xA('H0', 2, 10, { expected_finish: '2026-10-16 17:00' }),
+            xA('H1P', 3), xA('H1', 2, 10, { expected_finish: '2026-10-16 17:00', resource_assignments: 1 })],
+        xaShape('K0', 0, 'MF'), xaShape('K2', 2, 'MF')),
+    relationships: [].concat(
+        ...['16', '19', '20'].map(d => [xR('N0' + d + 'P', 'N0' + d), xR('N1' + d + 'P', 'N1' + d)]),
+        [xR('H0P', 'H0'), xR('H1P', 'H1')], xaShapeRels('K0'), xaShapeRels('K2')),
+    data_date: '2026-10-14 17:00',
+    cal_map: XCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+});
+compareFixture('F112 - XA: the 704 h activity on a seven-day calendar keeps its remaining work', {
+    activities: xaShape('K7', 2, 'D7'),
+    relationships: xaShapeRels('K7'),
+    data_date: '2026-10-14 17:00',
+    cal_map: { D7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], raw: RAW_D7_0817 } },
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

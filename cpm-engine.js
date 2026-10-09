@@ -1565,6 +1565,49 @@ function _expectedFinishNum(raw, calendarInfo, alerts, ctx) {
     return day;
 }
 
+// XA (P6 parity 2026-10-09, TD-15) — an expected finish that leaves no
+// working time. Measured on P6 23.12.1's own F9 of two synthetic projects
+// (153 activities, data date Wed 17:00): when the expected finish lies at or
+// before the remaining start in working time (before the actual start,
+// before the data date, on it, at 18:00 that evening, or before a restart an
+// FS predecessor holds later), P6 zeroes the remaining work ONLY on an
+// activity with no resource assignment. An activity with one or more
+// assignments keeps its remaining duration and the expected finish is
+// ignored, whatever its duration type (all four measured) and whatever the
+// assignment carries (remaining units, none remaining, no units at all,
+// material only). One working hour after the data date is enough for P6 to
+// apply it on every activity alike. Returns true when P6 finds working time
+// between the remaining start (the opening of startDay, or the data date's
+// own instant when that is later the same day) and the expected finish.
+// Python paired site: _expected_finish_leaves_work.
+function _expectedFinishLeavesWork(raw, startDay, dataDate, calendarInfo) {
+    const day = raw ? dateToNum(raw) : 0;
+    if (day <= 0) return false;
+    const tod = _constraintTimeMinutes(raw) || 0;
+    let sDay = startDay;
+    let sTod = 0;
+    const ddDay = dataDate ? dateToNum(dataDate) : 0;
+    if (ddDay > 0) {
+        const ddTod = _constraintTimeMinutes(dataDate) || 0;
+        if (ddDay > sDay || (ddDay === sDay && ddTod > sTod)) {
+            sDay = ddDay;
+            sTod = ddTod;
+        }
+    }
+    if (day !== sDay) return day > sDay;
+    if (tod <= sTod) return false;
+    const share = _calendarDayWorkedShare(day, tod, calendarInfo);
+    if (share === null) return tod >= 720 && sTod < 720;
+    return share > (_calendarDayWorkedShare(day, sTod, calendarInfo) || 0);
+}
+
+// A whole, non-negative count of resource assignments; 0 for anything that
+// is not a number. Python paired site: _assignment_count.
+function _assignmentCount(value) {
+    const n = Math.trunc(Number(value || 0));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 // UW (P6 parity 2026-10-07, TD-14) — finish constraints on an activity
 // already under way. Measured on the same F9 (both flag settings): P6 drops
 // the EARLY side of a finish constraint once the activity has an actual
@@ -2278,6 +2321,10 @@ function computeCPM(activities, relationships, opts) {
             // XF (v2.9.52) — P6 TASK.expect_end_date as written; read only
             // when opts.useExpectedFinish is on (see _expectedFinishNum).
             expected_finish: String(a.expected_finish || '').trim(),
+            // XA (v2.9.53) — how many resource assignments (P6 TASKRSRC rows)
+            // the activity carries; read only beside an expected finish that
+            // leaves no working time (see _expectedFinishLeavesWork).
+            resource_assignments: _assignmentCount(a.resource_assignments),
             // v2.9.12 T1.6 — thread `alerts` + activity code so unrecognized
             // tokens / incomplete dates emit a forensically-visible WARN
             // instead of silently dropping. Backward-compat: callers that
@@ -3414,13 +3461,22 @@ function computeCPM(activities, relationships, opts) {
         // the backward pass, the late dates and the float all run on it, as
         // P6's do. A started activity with no remaining_duration is left
         // alone: the completion-data-incomplete ALERT below names it.
+        // XA (v2.9.53) — an expected finish that leaves no working time after
+        // the remaining start zeroes only an activity without resource
+        // assignments; one with an assignment keeps its remaining duration
+        // (see _expectedFinishLeavesWork), and FF / SF logic then moves it as
+        // usual.
         if (_xf && (!hasActualStart || _hasRem)) {
             const _xfStart = hasActualStart ? node.restart : node.es;
             const _xfWas = hasActualStart ? _remRaw : node.duration_days;
             const _xfNum = _expectedFinishNum(node.expected_finish, nodeCal, alerts,
                 'expected finish ' + code);
             let _xfKeep = false;
-            if (_xfFloorPred !== null && (_xfNum < _xfFloor || _xfNum <= _xfStart)) {
+            const _xfAssignedKeep = node.resource_assignments > 0 &&
+                !_expectedFinishLeavesWork(node.expected_finish, _xfStart, dataDate, nodeCal);
+            if (_xfAssignedKeep) {
+                _xfKeep = true;
+            } else if (_xfFloorPred !== null && (_xfNum < _xfFloor || _xfNum <= _xfStart)) {
                 const _xfPullWas = _retreatWithAlerts(_xfFloor, _xfWas, nodeCal, alerts,
                     'expected finish ' + _xfFloorPred.type + ' ' + code);
                 _xfKeep = (!_xfStartPred) || _xfPullWas > _xfStart;
@@ -3464,7 +3520,16 @@ function computeCPM(activities, relationships, opts) {
                 was_days: _xfWas,
                 now_days: _xfRd,
             };
-            if (_xfKeep) {
+            if (_xfAssignedKeep) {
+                alerts.push({
+                    severity: 'INFO',
+                    context: 'expected-finish-not-applied',
+                    message: code + ': expected finish ' + node.expected_finish +
+                        ' not applied: it leaves no working time after the remaining ' +
+                        'start, and the activity has resource assignments, so P6 keeps ' +
+                        'the remaining duration (' + _xfWas + ' working days).',
+                });
+            } else if (_xfKeep) {
                 alerts.push({
                     severity: 'INFO',
                     context: 'expected-finish-not-applied',
@@ -5225,6 +5290,8 @@ const _MC = {
 
 function parseXER(content) {
     _MC.tasks = {};
+    // v2.9.53 — TASKRSRC rows per task_id (see resource_assignments below).
+    const _assignCounts = {};
     _MC.predecessors = [];
     _MC.hammocks = {};
     _MC.parseAlerts = [];
@@ -5609,6 +5676,13 @@ function parseXER(content) {
                         // end there under opts.useExpectedFinish (activity
                         // field expected_finish).
                         expected_finish: (row.expect_end_date || '').trim(),
+                        // v2.9.53 — how many TASKRSRC rows the activity
+                        // carries, counted after the parse (TASKRSRC follows
+                        // TASK in a P6 export); computeCPM keeps the remaining
+                        // duration of an assigned activity whose expected
+                        // finish leaves no working time (activity field
+                        // resource_assignments).
+                        resource_assignments: 0,
                         ES: 0, EF: 0,
                         LS: Infinity, LF: Infinity,
                         TF: 0,
@@ -5627,6 +5701,9 @@ function parseXER(content) {
                         throw err;
                     }
                 }
+            }
+            if (currentTable === 'TASKRSRC' && row.task_id) {
+                _assignCounts[row.task_id] = (_assignCounts[row.task_id] || 0) + 1;
             }
             if (currentTable === 'TASKPRED') {
                 const predType = row.pred_type || 'PR_FS';
@@ -5701,6 +5778,10 @@ function parseXER(content) {
                 }
             }
         }
+    }
+
+    for (const _aid of Object.keys(_assignCounts)) {
+        if (_MC.tasks[_aid]) _MC.tasks[_aid].resource_assignments = _assignCounts[_aid];
     }
 
     // Build links — only valid (both sides exist). v2.9.7 — hammocks have
