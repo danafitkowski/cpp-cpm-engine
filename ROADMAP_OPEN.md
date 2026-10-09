@@ -152,6 +152,16 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.9.53 (reviewed 2026-10-09)
+
+No audit item changed status. v2.9.53 changes the scheduling arithmetic in one place, measured on Primavera P6 Professional 23.12.1's own F9 of synthetic probe projects (see CHANGELOG.md): with "Use Expected Finish Dates" on, an expected finish that leaves an unfinished activity no working time takes its remaining work to none only when the activity has no resource assignment; an assigned one keeps its remaining duration. Its change class under the operator procedure is A (computational).
+- The unit suite grew from 1,371 to 1,377.
+- The cross-validation surface grew from 106 to 108 fixtures (2 pinning the measured shapes) and from 3,202 of 3,288 to 3,482 of 3,580 comparisons, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.40% statements / 83.25% branches / 95.54% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before on the new bytes.
+
+Item 6 stands: the probe projects are fitted to the rule they measured, so they are not the held-out capture either.
+
 ## Document version
 
-Aligned to `cpm-engine` v2.9.52. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.53. Update on every release that closes or opens an audit item.

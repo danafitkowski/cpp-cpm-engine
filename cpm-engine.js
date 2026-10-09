@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.52';
+const ENGINE_VERSION = '2.9.53';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -8987,20 +8987,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '106 cross-validation fixtures. The harness defines 3288 ' +
-                'comparisons; 86 of them are never executed because neither ' +
+                '108 cross-validation fixtures. The harness defines 3580 ' +
+                'comparisons; 98 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
-                '(43 ff_signed, 43 ff_signed_working_days, all on completed ' +
+                '(49 ff_signed, 49 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 3202 / 3202" counts executed comparisons only and ' +
-                'is not a coverage figure. None of those 86 is a one-sided parity ' +
+                'reported "Checks: 3482 / 3482" counts executed comparisons only and ' +
+                'is not a coverage figure. None of those 98 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 34 of the 106 fixtures contain at least one skipped ' +
-                'comparison. The 3202 comparisons that did run are bit-identical ' +
+                'branch. 36 of the 108 fixtures contain at least one skipped ' +
+                'comparison. The 3482 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 98 of the 106 fixtures). ' +
+                'severity-level alert parity, compared on 100 of the 108 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -9039,29 +9039,29 @@ function buildDaubertDisclosure(result, opts) {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite actually executes. Coverage limit: the cross-validation harness ' +
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
-                'emit the field, so 86 checks are skipped rather than compared, counted, ' +
-                'or reported as failures (43 ff_signed, 43 ff_signed_working_days). The ' +
-                'printed 3202 / 3202 therefore sits on a nominal surface of 3288 checks, and ' +
-                'those two fields go uncompared somewhere in 34 of the 106 fixtures. In ' +
-                'all 86 cases NEITHER engine emits the field, so the skip is a ' +
+                'emit the field, so 98 checks are skipped rather than compared, counted, ' +
+                'or reported as failures (49 ff_signed, 49 ff_signed_working_days). The ' +
+                'printed 3482 / 3482 therefore sits on a nominal surface of 3580 checks, and ' +
+                'those two fields go uncompared somewhere in 36 of the 108 fixtures. In ' +
+                'all 98 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
-                'emit, 86 are comparisons where neither engine emits one. Every ' +
+                'emit, 98 are comparisons where neither engine emits one. Every ' +
                 'ES/EF/LS/LF/TF and date comparison is executed, on every activity ' +
                 'comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '106 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '108 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '3202 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 3202 / 3202 tally cannot express ' +
-                'the following gaps. Not executed: 86 node comparisons on the signed ' +
+                '3482 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 3482 / 3482 tally cannot express ' +
+                'the following gaps. Not executed: 98 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 98 of the 106 fixtures: not on those 2, which have no ' +
+                'parity runs on 100 of the 108 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +

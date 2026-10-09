@@ -12,6 +12,118 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.53 - 2026-10-09 - an expected finish that leaves no working time keeps assigned work, measured on P6's own F9
+
+**Engine math changed.** One rule, measured on Primavera P6 Professional
+23.12.1's own F9 of probe projects read back from its database, corrects part
+of the v2.9.52 expected-finish rule.
+
+With "Use Expected Finish Dates" on, v2.9.52 left no remaining work on every
+unfinished activity whose expected finish lay at or before its remaining
+start. P6 does that only on an activity with no resource assignment. When the
+expected finish leaves no working time after the remaining start (before the
+actual start, before the data date, on it, after the close of that day, or
+before a restart an FS predecessor holds later), an activity with one or more
+resource assignments keeps its remaining duration and the expected finish is
+ignored, whatever its duration type (all four measured) and whatever the
+assignment carries (units remaining, none remaining, no units at all, a
+material resource only). One working hour left after the remaining start is
+enough for P6 to apply the expected finish to every activity alike.
+
+- `computeCPM` reads a new activity field, `resource_assignments`: the
+  number of P6 TASKRSRC rows the activity carries (Python likewise). An
+  activity carrying one or more keeps its remaining duration when its
+  expected finish leaves no working time; `expected_finish_applied.applied`
+  is false and an INFO `expected-finish-not-applied` alert says why. FF / SF
+  logic then moves it as it would any activity.
+- "No working time" is read on the activity's calendar hours, from the
+  remaining start (the opening of its restart or early-start day, or the data
+  date's own instant when that is later on the same day) to the expected
+  finish. Without shift hours, noon decides, as for the expected finish
+  itself.
+- `parseXER` counts each task's TASKRSRC rows and hands the count on as
+  `resource_assignments`.
+- An activity without the field behaves exactly as in v2.9.52.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+9-Oct-2026 on Dana's instruction to fix the defect. Early and late dates and
+float move on a schedule that carries the option `Y`, an expected finish on
+unfinished work that has a resource assignment, and an expected finish that
+leaves that work no working time; nothing moves on a schedule without all
+three. §12.2 re-check: of the exports on the measuring machine that carry
+that shape, the only ones behind issued work move nothing, so no issued
+figure moves.
+
+**How it was measured.** Two synthetic projects, 153 activities, retained
+logic, data date Wednesday 14-Oct-2026 17:00, one Monday-Friday 08:00-17:00
+calendar with a lunch hour (and a seven-day project calendar for one case),
+resource assignments on two resources the database already held, were
+imported into P6 Professional 23.12.1 and scheduled with F9 on 9-Oct-2026,
+one at a time. Started activities with 40 h remaining crossed the four
+duration types with no assignment, an assignment with units remaining and
+one with none, and six expected finishes (before the actual start, before the
+data date, on it, 18:00 that evening, one working hour and one working day
+after it); work not started behind an FS, a restart an FS holds past the
+expected finish, a 704 h activity started in February with completed FS and
+SS predecessors and an FS successor, and assignments with no units at all or
+a material resource only made up the rest. A database diff before and after
+the session showed the two projects added and nothing else changed. Engine
+against P6 on every unfinished row (145), through the production path (the
+critical-path validator's network with the file's TASKRSRC counts, the
+option read from SCHEDOPTIONS):
+
+| inputs | v2.9.52 start / finish / total float | v2.9.53 |
+|---|---|---|
+| as built, before P6's F9 | 142 / 91 / 6 of 145 | 145 / 145 / 145 of 145 |
+| with P6's post-F9 remaining durations | 142 / 91 / 6 of 145 | 145 / 145 / 145 of 145 |
+
+Most of the float misses follow from one finish: the 704 h activity P6 keeps
+sets the project end. Twelve rows with an expected finish one working hour
+after the data date are scored on their finish date: P6 leaves 1 h, the
+engine's whole days round it to none, so the float is 1 h longer (the
+v2.9.52 part-day rule). The probes behind v2.9.52 still read 56 of 56 and
+188 of 188.
+
+On a real project, the P6 F9 that exposed the defect kept 704 h on a started
+Fixed Duration and Units activity with two resource assignments and an
+expected finish equal to its 17:00 data date, while four unassigned
+activities in the same schedule, with the same expected finish, were zeroed.
+v2.9.52 finished the assigned one at the data date, which took it and its
+successor off the driving path and put the engine's last worked day on 21
+August against P6's 14 October. On v2.9.53 the critical-path validator's
+driving path agrees with P6's exactly and the last worked day is 14 October.
+
+**Verified.**
+- JS unit suite: 1,377 checks green, up from 1,371 (XA-1 to XA-6). Five of
+  the six fail against the v2.9.52 engine; XA-2 pins what the change must
+  leave alone (one working hour or day after the data date is applied to
+  assigned work too).
+- Cross-validation: 108 fixtures, 3482 of 3580 executed, 98 skipped, 0
+  failures. F111 and F112 are new: the measured network at the 17:00 data
+  date, and the 704 h activity on a seven-day calendar. Their completed
+  predecessors carry the signed-free-float fields neither engine emits.
+- The 13-case P6 matrix re-applied on these bytes reads 13 / 13 over 27 field
+  checks with zero changed rows; cases 19-21 read 256 of 256 on six fields at
+  each data date.
+- Coverage re-measured on these bytes: 94.40% statements (11,079 / 11,735),
+  83.25% branches (2,432 / 2,921), 95.54% functions (150 / 157).
+
+**Who is affected.** On the measuring machine 513 distinct exports were
+parsed. 18 real project runs carry what the change reads, all successive
+updates or copies of two jobs. Through the critical-path validator's path, 3
+move at least one activity (87, 8 and 3) and 1 moves the project finish.
+
+The referee is P6's own scheduling. In the local P6 database one real
+project whose dates P6 computed (no task or relationship edited after its
+last F9) carries what the change reads. On its 87 unfinished rows the
+engine's early finish agrees with the one P6 computed on 87, up from 59.
+
+**Not measured, not claimed.** An assigned activity whose expected finish
+leaves no working time behind FF / SF logic (the FF / SF rule of v2.9.52 is
+applied to the kept duration). Resource-dependent activity types (TT_Rsrc).
+A data date part-way through a working day (the rule reads the time after it
+on that day).
+
 ## v2.9.52 - 2026-10-08 - expected finish dates and finish constraints on work under way, measured on P6's own F9
 
 **Engine math changed.** Two rules, each measured on Primavera P6 Professional

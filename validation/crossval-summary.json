@@ -1,34 +1,34 @@
 {
-  "engine_version": "2.9.52",
-  "generated_utc": "2026-10-07T11:44:32.368Z",
+  "engine_version": "2.9.53",
+  "generated_utc": "2026-10-09T19:59:33.729Z",
   "fixtures": {
-    "total": 106,
-    "passed": 106,
+    "total": 108,
+    "passed": 108,
     "failed": 0
   },
   "checks": {
-    "executed": 3202,
+    "executed": 3482,
     "failed": 0,
-    "passed": 3202,
-    "skipped": 86,
-    "surface": 3288
+    "passed": 3482,
+    "skipped": 98,
+    "surface": 3580
   },
   "skips_by_field": {
-    "ff_signed": 43,
-    "ff_signed_working_days": 43
+    "ff_signed": 49,
+    "ff_signed_working_days": 49
   },
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 86
+    "mutual": 98
   },
   "checks_by_field": {
-    "project_finish_num": 104,
-    "project_finish": 104,
-    "critical_codes": 104,
-    "topo_order": 104,
-    "alert_count": 98,
-    "alert_severity_counts": 98,
-    "node <id>": 2588,
+    "project_finish_num": 106,
+    "project_finish": 106,
+    "critical_codes": 106,
+    "topo_order": 106,
+    "alert_count": 100,
+    "alert_severity_counts": 100,
+    "node <id>": 2856,
     "threw (both engines)": 2
   },
   "rows": [
@@ -980,6 +980,28 @@
       "skips_by_field": {
         "ff_signed": 1,
         "ff_signed_working_days": 1
+      }
+    },
+    {
+      "id": "F111",
+      "name": "F111 - XA: no working time left zeroes only unassigned work (data date Wed 17:00)",
+      "checks": 250,
+      "fails": 0,
+      "skips": 8,
+      "skips_by_field": {
+        "ff_signed": 4,
+        "ff_signed_working_days": 4
+      }
+    },
+    {
+      "id": "F112",
+      "name": "F112 - XA: the 704 h activity on a seven-day calendar keeps its remaining work",
+      "checks": 30,
+      "fails": 0,
+      "skips": 4,
+      "skips_by_field": {
+        "ff_signed": 2,
+        "ff_signed_working_days": 2
       }
     }
   ]
