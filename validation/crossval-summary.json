@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.9.53",
-  "generated_utc": "2026-10-09T19:59:33.729Z",
+  "engine_version": "2.9.54",
+  "generated_utc": "2026-10-10T16:35:34.337Z",
   "fixtures": {
-    "total": 108,
-    "passed": 108,
+    "total": 112,
+    "passed": 112,
     "failed": 0
   },
   "checks": {
-    "executed": 3482,
+    "executed": 3814,
     "failed": 0,
-    "passed": 3482,
+    "passed": 3814,
     "skipped": 98,
-    "surface": 3580
+    "surface": 3912
   },
   "skips_by_field": {
     "ff_signed": 49,
@@ -22,13 +22,13 @@
     "mutual": 98
   },
   "checks_by_field": {
-    "project_finish_num": 106,
-    "project_finish": 106,
-    "critical_codes": 106,
-    "topo_order": 106,
-    "alert_count": 100,
-    "alert_severity_counts": 100,
-    "node <id>": 2856,
+    "project_finish_num": 110,
+    "project_finish": 110,
+    "critical_codes": 110,
+    "topo_order": 110,
+    "alert_count": 104,
+    "alert_severity_counts": 104,
+    "node <id>": 3164,
     "threw (both engines)": 2
   },
   "rows": [
@@ -1003,6 +1003,38 @@
         "ff_signed": 2,
         "ff_signed_working_days": 2
       }
+    },
+    {
+      "id": "F113",
+      "name": "F113 - OW: start constraints on a Saturday, a holiday and after the close",
+      "checks": 90,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F114",
+      "name": "F114 - OW: finish constraints on a Sunday (zero duration and two days)",
+      "checks": 41,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F115",
+      "name": "F115 - AL: ALAP by free float (FS, a chain, SS, no free float, an open end)",
+      "checks": 139,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F116",
+      "name": "F116 - FM: a finish milestone held at Friday 17:00 drives seven-day work from Saturday",
+      "checks": 62,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
     }
   ]
 }

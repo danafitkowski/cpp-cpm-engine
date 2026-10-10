@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **3482 of 3580 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **3482 of 3580** across 108 as measured 2026-10-09 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 98 comparisons still skipped (49 `ff_signed`, 49 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **3814 of 3912 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **3814 of 3912** across 112 as measured 2026-10-10 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 98 comparisons still skipped (49 `ff_signed`, 49 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
 
 ## Provenance
 
@@ -64,11 +64,30 @@ have been applied:
    duration when its expected finish leaves no working time after its
    remaining start (`_expected_finish_leaves_work`). See CHANGELOG.md
    v2.9.53.
+7. v2.9.54 (constraints dated on time the calendar does not work, ALAP by
+   free float, a finish milestone held at a Friday close) is applied here by
+   the same patch as the canonical engine: `_constraint_start_num` resolves a
+   start constraint on a non-working day, or at or after the close, to the
+   next working day, and a finish constraint on a non-working day to the next
+   opening; the ALAP post-pass slides by free float in reverse topological
+   order; a finish milestone held by a finish constraint sits at the
+   constraint's instant. See CHANGELOG.md v2.9.54.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  1196ea479181ceaee7894eaeb627c166788c986fb7f582e7d44dbb072cb1cdf6
+cpm.py  SHA-256:  df7557804148c5206a56fcc96bf9e136360d52602642121b6880c83b91acc1a8
+
+(v2.9.54 constraints off working time, ALAP by free float, milestone instants
+2026-10-10 - bumped from 1196ea47...: ENGINE_VERSION reads 2.9.54, start
+constraints dated on time the calendar does not work start at the next working
+time, a finish constraint on a non-working day resolves to the next opening,
+ALAP slides by free float, a finish milestone held by a finish constraint sits
+at the constraint's instant, and the comments that carry the cross-validation
+figures carry the measured ones (112 fixtures, 3814 of 3912 executed). The
+rules were measured on Primavera P6 Professional 23.12.1's own F9 of a
+synthetic probe project; computed values move where a schedule carries them.
+The harness gains 4 fixtures (F113-F116).)
 
 (v2.9.53 an expected finish that leaves no working time 2026-10-09 - bumped
 from ee7ba453...: ENGINE_VERSION reads 2.9.53, compute_cpm reads
@@ -371,15 +390,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 226722
-  sha-256:  1196ea479181ceaee7894eaeb627c166788c986fb7f582e7d44dbb072cb1cdf6
+  bytes: 234285
+  sha-256:  df7557804148c5206a56fcc96bf9e136360d52602642121b6880c83b91acc1a8
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 108 passed, 0 failed
-  Checks:   3482 / 3482 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 112 passed, 0 failed
+  Checks:   3814 / 3814 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

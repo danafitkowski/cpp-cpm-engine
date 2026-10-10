@@ -152,6 +152,16 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.9.54 (reviewed 2026-10-10)
+
+No audit item changed status. v2.9.54 changes the scheduling arithmetic in four places, measured on Primavera P6 Professional 23.12.1's own F9 of a synthetic probe project (see CHANGELOG.md): constraints dated on time the calendar does not work resolve to the next working time; As Late As Possible slides by free float; a finish milestone held by a finish constraint sits at the constraint's instant; and `parseXER` converts hours on the hours a calendar's shifts work when `day_hr_cnt` says otherwise. Its change class under the operator procedure is A (computational).
+- The unit suite grew from 1,377 to 1,387.
+- The cross-validation surface grew from 108 to 112 fixtures (4 pinning the measured shapes) and from 3,482 of 3,580 to 3,814 of 3,912 comparisons, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.44% statements / 82.77% branches / 95.56% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before on the new bytes.
+
+Item 6 stands: the probe project is fitted to the rules it measured, so it is not the held-out capture either.
+
 ## Status at v2.9.53 (reviewed 2026-10-09)
 
 No audit item changed status. v2.9.53 changes the scheduling arithmetic in one place, measured on Primavera P6 Professional 23.12.1's own F9 of synthetic probe projects (see CHANGELOG.md): with "Use Expected Finish Dates" on, an expected finish that leaves an unfinished activity no working time takes its remaining work to none only when the activity has no resource assignment; an assigned one keeps its remaining duration. Its change class under the operator procedure is A (computational).
@@ -164,4 +174,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.53. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.54. Update on every release that closes or opens an audit item.

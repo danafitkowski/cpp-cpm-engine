@@ -12,6 +12,118 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.54 - 2026-10-10 - constraints dated on time the calendar does not work, ALAP by free float, finish-milestone instants and shift hours, measured on P6's own F9
+
+**Engine math changed.** Four rules, measured on Primavera P6 Professional
+23.12.1's own F9 of a synthetic probe project read back from its database.
+They were found by comparing the engine with P6's F9 of forty real updates of
+one project, where every root of a day-level difference outside part-day
+arithmetic was one of these four.
+
+- **Constraints dated on time the calendar does not work.** A start constraint
+  (Start On or After, Start On, Mandatory Start, Start On or Before) dated on
+  a day the activity's calendar does not work, or at or after that day's
+  close, resolves to the next working day (`_constraintStartNum`). The engine
+  used to start the work on the non-working day, and since a duration counts
+  the working days after its start day, a two-day activity there worked one.
+  A finish constraint dated on a non-working day resolves to the next working
+  day's opening, which is the close of the working day before it in working
+  time: a task still finishes at the Friday close, a zero-duration task sits
+  at the Monday opening. The mandatory-start priority guard uses the resolved
+  date.
+- **As Late As Possible slides by free float.** ALAP work moves only as late as
+  it can go without delaying any successor's early dates (FS, SS, FF, SF),
+  walked in reverse topological order so a chain of ALAP work slides one
+  behind the other; an open end slides to the project's early finish; the late
+  dates stay the backward pass's and total float is what is left between them.
+  The engine used to set the early dates to the late dates, past successors'
+  early starts (the `alap-slide-violates-succ` WARN reported it), and every
+  later ALAP activity in a chain followed: on one real update nine months off
+  P6. Section D (Monte Carlo) slides the same way in its uniform arithmetic.
+  `alap-slide-violates-succ` stays as an invariant check.
+- **A finish milestone held by a finish constraint** sits at the constraint's
+  instant: Finish On or Finish On or After at Friday 17:00 places it at Friday
+  17:00, so a seven-day successor starts Saturday (the engine left the instant
+  at the next opening on its own calendar, Monday); at Sunday 17:00 it sits at
+  the Monday opening.
+- **Shift hours.** `parseXER` converts hours to days on the hours the
+  calendar's shifts work when every working day of its week works the same
+  and `day_hr_cnt` says otherwise (`calendar-shift-hours` WARN). P6 schedules
+  on the shifts; `day_hr_cnt` only converts for display. A Monday-Saturday
+  07:00-17:00 calendar declaring 8 ran a 40 h activity over five days in the
+  engine and four in P6. A week of unequal days keeps `day_hr_cnt`.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+10-Oct-2026 on Dana's go for the release. Early and late dates and float move
+on a schedule that carries one of the four shapes; nothing moves on a schedule
+without one.
+
+**How it was measured.** One synthetic project, 73 activities in 33
+independent networks, retained logic, data date Wednesday 14-Oct-2026 17:00,
+Use Expected Finish Dates off, four calendars (Monday-Friday 08:00-17:00 with
+a lunch hour, the same with a holiday, Monday-Saturday 07:00-17:00 declaring 8
+hours a day, and a seven-day calendar), was imported into P6 Professional
+23.12.1 and scheduled with F9 on 10-Oct-2026. Cases: start constraints of each
+type at Saturday 00:00 and 08:00, on a holiday, after a Friday close, and on a
+calendar that works Saturday; finish constraints of each type on a Sunday and
+a holiday, on a task, a zero-duration task and a finish milestone; late-side
+constraints; ALAP behind FS, SS and FF successors, in a chain, with no free
+float, as an open end and on a finish milestone; finish milestones held at a
+Friday close ahead of seven-day work; and the ten-hour calendar alone, ahead
+of and behind Monday-Friday work and across a lag. A database diff before and
+after showed the project added and nothing else changed. Engine against P6 on
+every unfinished row, through the data-date correction's production path
+(time-impact-analysis converter, options from SCHEDOPTIONS):
+
+| | rows matching P6 on start, finish and total float |
+|---|---|
+| v2.9.53 | 7 of 73 |
+| v2.9.54 | 70 of 73 |
+
+The three rows left are part-day: 16 h on a ten-hour day ends 13:00 and a
+cross-calendar late finish lands one hour into a day, so total float differs
+by 4 h and 1 h; and P6 writes a finish milestone held by On or After at Sunday
+17:00 at Monday 08:00 where the engine prints the Friday close, the same
+working instant on its calendar (its successors follow P6).
+
+**Verified.**
+- JS unit suite: 1,387 checks green, up from 1,377 (OW-1 to OW-4, AL-1 to
+  AL-3, FM-1 and FM-2, SH-1). Eight fail against the v2.9.53 engine; OW-4 pins
+  what the change must leave alone.
+- Cross-validation: 112 fixtures, 3814 of 3912 executed, 98 skipped, 0
+  failures. F113 to F116 are new: start and finish constraints on non-working
+  time, ALAP by free float, and the finish milestone at a Friday close.
+- The 13-case P6 matrix regenerated on these bytes reads 13 / 13 over 27 field
+  checks with zero changed engine values; cases 19-21 read 256 of 256 on six
+  fields at each data date.
+- Coverage re-measured on these bytes: 94.44% statements (11,230 / 11,891),
+  82.77% branches (2,485 / 3,002), 95.56% functions (151 / 158).
+
+**Who is affected.** On the measuring machine 576 distinct exports were parsed (632 project runs,
+many of them successive updates or copies of the same jobs). 131 runs carry
+what the change reads: 57 a constraint dated on non-working time, 92 a finish
+milestone under a finish constraint, 19 an As Late As Possible activity and 23
+a calendar whose shifts work other hours than its `day_hr_cnt`. Through the
+critical-path validator's path, 62 move at least one activity's early start or
+finish (1,983 activities in all, at most 184 in one run) and 3 move the
+project's latest early finish. No run without one of the four shapes moves.
+
+The referee is P6's own scheduling. In the local P6 database, 73 real projects
+whose dates P6 computed (no task or relationship edited after their last F9)
+carry at least one of the four shapes. On their 30,855 unfinished rows the
+engine's early finish agrees with the one P6 computed on 29,686, up from
+27,977 (90.7% to 96.2%), and the early start on 29,714, up from 28,046. 41
+projects move and none agrees less often. What remains on those rows is
+part-day arithmetic: P6 schedules in hours and the engine in whole working
+days, so a part-day remaining duration or lag, or a day of fewer hours than
+the calendar's usual, can put a date one working day off P6, and more across a
+long shutdown.
+
+**Not measured, not claimed.** A start constraint inside a working day that is
+not its opening (the engine keeps the day). A week whose working days work
+different hours (`day_hr_cnt` stands). ALAP on an activity whose successor is
+complete. Part-day arithmetic, which this release does not change.
+
 ## v2.9.53 - 2026-10-09 - an expected finish that leaves no working time keeps assigned work, measured on P6's own F9
 
 **Engine math changed.** One rule, measured on Primavera P6 Professional
