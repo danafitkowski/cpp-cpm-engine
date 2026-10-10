@@ -2663,6 +2663,84 @@ compareFixture('F112 - XA: the 704 h activity on a seven-day calendar keeps its 
     use_expected_finish: true,
 });
 
+// F113-F116 (P6 parity 10-Oct-2026): constraints dated on time the calendar
+// does not work (OW), ALAP by free float (AL), and a finish milestone held at a
+// Friday close driving seven-day work (FM). Synthetic shapes of the rows P6
+// 23.12 F9'd on forty real updates of one project (private). Data date Wed
+// 14-Oct-2026 17:00, Mon-Fri 08:00-17:00 with a lunch hour, a holiday calendar
+// (Mon 2-Nov off) and a seven-day twin.
+const PCAL = {
+    MF: { work_days: [1,2,3,4,5], holidays: [], raw: RAW_MF_0817 },
+    HOL: { work_days: [1,2,3,4,5], holidays: ['2026-11-02'], raw: RAW_MF_0817 },
+    D7: { work_days: [0,1,2,3,4,5,6], holidays: [], raw: RAW_D7_0817 },
+};
+const pN = (code, dur, c, extra) => Object.assign({ code, duration_days: dur, clndr_id: c || 'MF' }, extra || {});
+const pC = (type, date) => ({ constraint: { type, date } });
+compareFixture('F113 - OW: start constraints on a Saturday, a holiday and after the close', {
+    activities: [
+        pN('S0', 2, 'MF', pC('CS_MSOA', '2026-10-24 00:00')),
+        pN('S8', 2, 'MF', pC('CS_MSOA', '2026-10-24 08:00')),
+        pN('SH', 2, 'HOL', pC('CS_MSOA', '2026-11-02 00:00')),
+        pN('SC', 2, 'MF', pC('CS_MSOA', '2026-10-23 18:00')),
+        pN('SO', 2, 'MF', pC('CS_MSO', '2026-10-24 00:00')),
+        pN('SM', 0, 'MF', Object.assign({ task_type: 'TT_Mile' }, pC('CS_MSOA', '2026-10-24 00:00'))),
+        pN('S7', 2, 'D7', pC('CS_MSOA', '2026-10-24 00:00')),
+        pN('LP', 8), pN('LS', 2, 'MF', pC('CS_MSOA', '2026-10-24 00:00')), pN('LT', 1),
+        pN('SL', 2, 'MF', pC('CS_MSOB', '2026-10-24 00:00')),
+        pN('Z', 20),
+    ],
+    relationships: [xR('LP', 'LS'), xR('LS', 'LT')],
+    data_date: '2026-10-14 17:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F114 - OW: finish constraints on a Sunday (zero duration and two days)', {
+    activities: [
+        pN('FZ', 0, 'MF', pC('CS_MEOA', '2026-10-25 17:00')),
+        pN('FT', 2, 'MF', pC('CS_MEOA', '2026-10-25 17:00')),
+        pN('FM', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, pC('CS_MEOA', '2026-10-25 17:00'))),
+        pN('FL', 2, 'MF', pC('CS_MEOB', '2026-10-25 17:00')),
+        pN('Z', 20),
+    ],
+    relationships: [],
+    data_date: '2026-10-14 17:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F115 - AL: ALAP by free float (FS, a chain, SS, no free float, an open end)', {
+    activities: [
+        pN('AP', 2), pN('AX', 2, 'MF', pC('CS_ALAP', '')), pN('AT', 1), pN('AL', 10),
+        pN('CP', 2), pN('CX1', 2, 'MF', pC('CS_ALAP', '')), pN('CX2', 2, 'MF', pC('CS_ALAP', '')), pN('CT', 1), pN('CL', 10),
+        pN('SP', 2), pN('SX', 2, 'MF', pC('CS_ALAP', '')), pN('ST', 1), pN('SL', 10),
+        pN('NP', 2), pN('NX', 2, 'MF', pC('CS_ALAP', '')), pN('NT', 1),
+        pN('OP', 2), pN('OX', 2, 'MF', pC('CS_ALAP', '')),
+        pN('Z', 20),
+    ],
+    relationships: [
+        xR('AP', 'AX'), xR('AX', 'AT'), xR('AL', 'AT'),
+        xR('CP', 'CX1'), xR('CX1', 'CX2'), xR('CX2', 'CT'), xR('CL', 'CT'),
+        xR('SP', 'SX'), xR('SX', 'ST', 'SS'), xR('SL', 'ST'),
+        xR('NP', 'NX'), xR('NX', 'NT'),
+        xR('OP', 'OX'),
+    ],
+    data_date: '2026-10-14 17:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F116 - FM: a finish milestone held at Friday 17:00 drives seven-day work from Saturday', {
+    activities: [
+        pN('P', 1), pN('M', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, pC('CS_MEO', '2026-10-23 17:00'))),
+        pN('S', 0, 'D7', { task_type: 'TT_FinMile' }), pN('T', 2, 'D7'),
+        pN('P2', 1), pN('M2', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, pC('CS_MEOA', '2026-10-23 17:00'))),
+        pN('T2', 2, 'D7'),
+        pN('Z', 20),
+    ],
+    relationships: [xR('P', 'M'), xR('M', 'S'), xR('M', 'T'), xR('P2', 'M2'), xR('M2', 'T2')],
+    data_date: '2026-10-14 17:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

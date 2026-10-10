@@ -12141,6 +12141,119 @@ console.log('\n=== XA — an expected finish that leaves no working time, with r
         JSON.stringify([ta && ta.resource_assignments, tb && tb.resource_assignments]));
 }
 
+console.log('\n=== OW / AL / FM / SH — constraints off working time, ALAP free float, milestone instants, shift hours (P6 parity 10-Oct) ===');
+// Bisecting the engine against P6 23.12's own F9 of forty real updates of one
+// project (9-Oct-2026, private) found four day-level rules: OW, a start
+// constraint dated on time the calendar does not work starts at the next
+// working time (and a Finish On or After on a non-working day sits at the next
+// opening); AL, ALAP work slides by its FREE float, chained backward; FM, a
+// finish milestone held by a finish constraint at a Friday close drives
+// seven-day work from Saturday; SH, hours per day are the shifts' hours when
+// day_hr_cnt says otherwise. The networks are synthetic shapes of those rows.
+// Python paired file: _cpp_common tests/test_p6_parity_off_work_alap_2026_10_10.py.
+{
+    const DAY = '(0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())';
+    const RAW = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        ['2', '3', '4', '5', '6'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '(0||7()())))(0||Exceptions()())))';
+    const RAW7 = '(0||CalendarData()((0||DaysOfWeek()(' +
+        ['1', '2', '3', '4', '5', '6', '7'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '))(0||Exceptions()())))';
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW },
+        HOL: { work_days: [1, 2, 3, 4, 5], holidays: ['2026-11-02'], raw: RAW },
+        D7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], raw: RAW7 } };
+    const N = (code, dur, c, extra) => Object.assign({ code, duration_days: dur, clndr_id: c || 'MF' }, extra || {});
+    const R = (f, t, type) => ({ from_code: f, to_code: t, type: type || 'FS', lag_days: 0 });
+    const run = (acts, rels) => E.computeCPM(acts, rels, { dataDate: '2026-10-14 17:00',
+        calMap: cal, scheduleMode: 'retained_logic', relationshipLagCalendar: 'rcal_Predecessor' });
+    const sp = (r, c) => r.nodes[c].es_date + '..' + r.nodes[c].ef_last_worked_date;
+    const cs = (type, date) => ({ constraint: { type, date } });
+
+    const ow = ['2026-10-24 00:00', '2026-10-24 08:00', '2026-10-23 18:00'].map((d) =>
+        sp(run([N('A', 2, 'MF', cs('CS_MSOA', d))], []), 'A'));
+    check('OW-1: SNET on a Saturday (00:00, 08:00) or after the Friday close starts Monday (2 working days)',
+        ow.every((x) => x === '2026-10-26..2026-10-27'), ow.join(' '));
+    const hol = sp(run([N('A', 2, 'HOL', cs('CS_MSOA', '2026-11-02 00:00'))], []), 'A');
+    const so = ['CS_MSO', 'CS_MANDSTART'].map((t) => sp(run([N('A', 2, 'MF', cs(t, '2026-10-24 00:00'))], []), 'A'));
+    check('OW-2: SNET on a holiday starts the next working day; Start On and Mandatory Start on a Saturday start Monday',
+        hol === '2026-11-03..2026-11-04' && so.every((x) => x === '2026-10-26..2026-10-27'), [hol].concat(so).join(' '));
+    const ms = run([N('A', 0, 'MF', Object.assign({ task_type: 'TT_Mile' }, cs('CS_MSOA', '2026-10-24 00:00')))], []);
+    const zd = run([N('A', 0, 'MF', cs('CS_MEOA', '2026-10-25 17:00'))], []);
+    const fn = run([N('A', 2, 'MF', cs('CS_MEOA', '2026-10-25 17:00'))], []);
+    check('OW-3: a start milestone on Saturday sits Monday; FNET Sunday 17:00 puts a zero-duration task at Monday, a task at Friday',
+        ms.nodes.A.es_date === '2026-10-26' && zd.nodes.A.es_date === '2026-10-26' &&
+        zd.nodes.A.ef_date === '2026-10-26' && sp(fn, 'A') === '2026-10-22..2026-10-23',
+        [ms.nodes.A.es_date, zd.nodes.A.es_date, zd.nodes.A.ef_date, sp(fn, 'A')].join(' '));
+    const d7 = sp(run([N('A', 2, 'D7', cs('CS_MSOA', '2026-10-24 00:00'))], []), 'A');
+    const lg = run([N('P', 8), N('A', 2, 'MF', cs('CS_MSOA', '2026-10-24 00:00')), N('S', 1)], [R('P', 'A'), R('A', 'S')]);
+    check('OW-4: a Saturday that works is kept; logic past the date still wins and successors follow',
+        d7 === '2026-10-24..2026-10-25' && sp(lg, 'A') === '2026-10-27..2026-10-28' && sp(lg, 'S') === '2026-10-29..2026-10-29',
+        [d7, sp(lg, 'A'), sp(lg, 'S')].join(' '));
+
+    const ALAP = cs('CS_ALAP', '');
+    const a1 = run([N('P', 2), N('X', 2, 'MF', ALAP), N('T', 1), N('L', 10), N('Z', 20)],
+        [R('P', 'X'), R('X', 'T'), R('L', 'T')]);
+    check('AL-1: ALAP slides up to its successor early start, never past it; late dates and float stand',
+        sp(a1, 'X') === '2026-10-27..2026-10-28' && sp(a1, 'T') === '2026-10-29..2026-10-29' &&
+        a1.nodes.X.ef <= a1.nodes.T.es && a1.nodes.X.tf_working_days > 0 &&
+        !a1.alerts.some((a) => a.context === 'alap-slide-violates-succ'),
+        [sp(a1, 'X'), sp(a1, 'T'), a1.nodes.X.tf_working_days].join(' '));
+    const a2 = run([N('P', 2), N('X1', 2, 'MF', ALAP), N('X2', 2, 'MF', ALAP), N('T', 1), N('L', 10), N('Z', 20)],
+        [R('P', 'X1'), R('X1', 'X2'), R('X2', 'T'), R('L', 'T')]);
+    const a5 = run([N('P', 2), N('X', 2, 'MF', ALAP), N('T', 1), N('Z', 20)], [R('P', 'X'), R('X', 'T')]);
+    check('AL-2: a chain of ALAP work slides one behind the other; ALAP with no free float stays',
+        sp(a2, 'X2') === '2026-10-27..2026-10-28' && sp(a2, 'X1') === '2026-10-23..2026-10-26' &&
+        sp(a5, 'X') === '2026-10-19..2026-10-20', [sp(a2, 'X2'), sp(a2, 'X1'), sp(a5, 'X')].join(' '));
+    const a3 = run([N('P', 2), N('X', 2, 'MF', ALAP), N('T', 1), N('L', 10), N('Z', 20)],
+        [R('P', 'X'), R('X', 'T', 'SS'), R('L', 'T')]);
+    const a4 = run([N('P', 2), N('X', 2, 'MF', ALAP), N('Z', 20)], [R('P', 'X')]);
+    check('AL-3: an SS successor bounds the ALAP start; an ALAP open end slides to the project finish',
+        sp(a3, 'X') === '2026-10-29..2026-10-30' && a4.nodes.X.ef_last_worked_date === a4.nodes.Z.ef_last_worked_date,
+        [sp(a3, 'X'), a4.nodes.X.ef_last_worked_date, a4.nodes.Z.ef_last_worked_date].join(' '));
+
+    const fm = (t) => run([N('P', 1), N('M', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, cs(t, '2026-10-23 17:00'))),
+        N('S', 0, 'D7', { task_type: 'TT_FinMile' }), N('T', 2, 'D7')], [R('P', 'M'), R('M', 'S'), R('M', 'T')]);
+    const m1 = fm('CS_MEO');
+    const m2 = fm('CS_MEOA');
+    check('FM-1: a finish milestone held at Friday 17:00 by Finish On / On or After drives seven-day work from Saturday',
+        m1.nodes.M.ef_last_worked_date === '2026-10-23' && m1.nodes.S.ef_last_worked_date === '2026-10-23' &&
+        sp(m1, 'T') === '2026-10-24..2026-10-25' && sp(m2, 'T') === '2026-10-24..2026-10-25',
+        [m1.nodes.S.ef_last_worked_date, sp(m1, 'T'), sp(m2, 'T')].join(' '));
+
+    const fz = run([N('A', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, cs('CS_MEOA', '2026-10-25 17:00'))),
+        N('T', 2, 'D7')], [R('A', 'T')]);
+    check('FM-2: a finish milestone held by On or After at Sunday 17:00 sits at the Monday opening (P6: Monday 08:00), so seven-day work starts Monday',
+        fz.nodes.A.ef_instant_date === '2026-10-26' && sp(fz, 'T') === '2026-10-26..2026-10-27',
+        [fz.nodes.A.ef_instant_date, sp(fz, 'T')].join(' '));
+
+    const T = String.fromCharCode(9);
+    const TEN = '(0||0(s|07:00|f|17:00)())';
+    let raw10 = '(0||CalendarData()((0||DaysOfWeek()(';
+    for (let d = 1; d <= 7; d++) raw10 += '(0||' + d + '()(' + (d >= 2 ? TEN : '') + '))';
+    raw10 += '))(0||Exceptions()())))';
+    const xer = (dayHr, raw) => ['%T' + T + 'PROJECT',
+        ['%F', 'proj_id', 'proj_short_name', 'last_recalc_date', 'clndr_id'].join(T),
+        ['%R', 'P1', 'P', '2026-10-14 17:00', '9'].join(T),
+        '%T' + T + 'CALENDAR', ['%F', 'clndr_id', 'clndr_name', 'day_hr_cnt', 'clndr_type', 'clndr_data'].join(T),
+        ['%R', '9', 'Concrete', dayHr, 'CA_Project', raw].join(T),
+        '%T' + T + 'TASK', ['%F', 'task_id', 'proj_id', 'task_code', 'task_name', 'task_type', 'status_code',
+            'clndr_id', 'remain_drtn_hr_cnt', 'target_drtn_hr_cnt'].join(T),
+        ['%R', 'T1', 'P1', 'A', 'A', 'TT_Task', 'TK_NotStart', '9', '40', '40'].join(T),
+        '%E'].join(String.fromCharCode(10));
+    E.resetMC();
+    const p10 = E.parseXER(xer('8', raw10));
+    const t10 = Object.values(E.getTasks()).find((t) => t.code === 'A');
+    E.resetMC();
+    const p10b = E.parseXER(xer('10', raw10));
+    const t10b = Object.values(E.getTasks()).find((t) => t.code === 'A');
+    E.resetMC();
+    check('SH-1: parseXER converts on the shifts 10 h when day_hr_cnt says 8 (40 h = 4 d), and says so',
+        !!t10 && t10.remaining === 4 && !!t10b && t10b.remaining === 4 &&
+        (p10.parse_alerts || []).some((a) => a.context === 'calendar-shift-hours') &&
+        !(p10b.parse_alerts || []).some((a) => a.context === 'calendar-shift-hours'),
+        JSON.stringify([t10 && t10.remaining, t10b && t10b.remaining, (p10.parse_alerts || []).map((a) => a.context)]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

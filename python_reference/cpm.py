@@ -1125,6 +1125,17 @@ def _constraint_finish_num(cstr, calendar_info, *, alerts, ctx):
     cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
     if cd_num <= 0:
         return cd_num
+    # OW (P6 parity 2026-10-10) — a date the calendar does not work, whatever
+    # its time: the opening of the next working day, which is the close of the
+    # working day before it in working time (a Finish On or After dated Sunday
+    # 17:00 put a zero-duration task at the next working day's opening on
+    # P6's F9 of a real update, and a task at the Friday close). The bare
+    # non-working day named the same last worked day but left a zero-duration
+    # node on the working day BEFORE it.
+    if calendar_info:
+        _snapped = _snap_fwd(cd_num, calendar_info, alerts=alerts, ctx=ctx)
+        if _snapped != cd_num:
+            return _snapped
     tod = cstr.get('time_minutes')
     if tod is None:
         return cd_num                       # bare date: nothing to resolve
@@ -1148,6 +1159,38 @@ def _constraint_finish_num(cstr, calendar_info, *, alerts, ctx):
     if tod < close:
         return cd_num                       # the instant is inside the day
     return _advance_workdays(cd_num, 1, calendar_info, alerts=alerts, ctx=ctx)
+
+
+# Start-side constraint instants (P6 parity 2026-10-10, OW). P6 starts work at
+# the first WORKING instant at or after a start constraint's date and time on
+# the activity's own calendar. Measured on P6 23.12's own F9 of forty real
+# updates of one project (9-Oct-2026, private): eight rows whose Start On or
+# After / Start On (task, zero-duration task, start milestone) was dated 00:00
+# on a Saturday or a holiday all started at the next working day's opening, a
+# seasonal shutdown moving one by a month; the engine started them ON the
+# non-working day, and since an activity's duration is counted in the working
+# days after its start day, a two-day activity there worked one. A time at or
+# after the day's close starts the next working day; a time inside the day
+# keeps the day (the engine counts whole days). Without a calendar, or one
+# with no hour detail for a working day, the bare date stands as before.
+def _constraint_start_num(cstr, calendar_info, *, alerts, ctx):
+    """The day number a START-side constraint (SNET / SNLT / SO / MS_Start)
+    clamps `es` / `ls` against: its date, moved to the next working day of
+    `calendar_info` when that date is not a working day or its time is at or
+    after the day's close."""
+    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
+    if cd_num <= 0 or not calendar_info:
+        return cd_num
+    snapped = _snap_fwd(cd_num, calendar_info, alerts=alerts, ctx=ctx)
+    if snapped != cd_num:
+        return snapped
+    tod = cstr.get('time_minutes')
+    if tod is None:
+        return cd_num
+    close = _calendar_day_close(cd_num, calendar_info)
+    if close is not None and tod >= close:
+        return _advance_workdays(cd_num, 1, calendar_info, alerts=alerts, ctx=ctx)
+    return cd_num
 
 
 # XF (P6 parity 2026-10-07, TD-13) — "Use Expected Finish Dates"
@@ -1335,11 +1378,18 @@ def _underway_finish_noop(code, ef, cstr, label, node_cal, alerts):
 # Constraint clamp helpers (mirrors cpm-engine.js v2.9.7)
 # =============================================================================
 
-def _apply_forward_es_constraint(code, max_es, cstr, label, alerts):
-    """Forward-pass ES-side clamp. Returns (possibly clamped) ES."""
+def _apply_forward_es_constraint(code, max_es, cstr, label, alerts, node_cal=None):
+    """Forward-pass ES-side clamp. Returns (possibly clamped) ES.
+
+    OW (2026-10-10) — the date is resolved on the activity's calendar by
+    _constraint_start_num: a constraint on time the calendar does not work
+    holds the start to the next working time, as P6 does."""
     if not cstr:
         return max_es
-    cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
+    if cstr.get('type') in ('SNET', 'SNLT', 'SO', 'MS_Start'):
+        cd_num = _constraint_start_num(cstr, node_cal, alerts=[], ctx=code)
+    else:
+        cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
     tag = ' (secondary)' if label == 'secondary' else ''
     ctype = cstr.get('type')
     if ctype == 'SNET' and cd_num > 0:
@@ -1517,6 +1567,9 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
     # ef_last_worked_date derivation.
     if ctype in _FINISH_CLAMP_TYPES:
         cd_num = _constraint_finish_num(cstr, node_cal, alerts=[], ctx=code)
+    elif ctype in ('SNLT', 'SO', 'MS_Start'):
+        # OW — the same resolved start the forward clamp used.
+        cd_num = _constraint_start_num(cstr, node_cal, alerts=[], ctx=code)
     else:
         cd_num = date_to_num(cstr['date']) if cstr.get('date') else 0
     if ctype == 'FNLT' and cd_num > 0:
@@ -2620,7 +2673,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if not has_actual_start:
             # v2.9.15 P2 (F14-3) backport — track CONSTRAINT-driven driver.
             _es_before_primary = max_es
-            max_es = _apply_forward_es_constraint(code, max_es, cstr, 'primary', alerts)
+            max_es = _apply_forward_es_constraint(code, max_es, cstr, 'primary', alerts, node_cal)
             if max_es > _es_before_primary and cstr and cstr.get('date'):
                 driving_pred = {
                     'type': 'CONSTRAINT',
@@ -2629,7 +2682,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 }
                 finish_anchor_ef = None
             _es_before_secondary = max_es
-            max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts)
+            max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts, node_cal)
             if max_es > _es_before_secondary and cstr2 and cstr2.get('date'):
                 driving_pred = {
                     'type': 'CONSTRAINT',
@@ -2954,6 +3007,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         #     shifting (ES = EF - duration) is the only treatment consistent
         #     with every P6 row measured; stretching is consistent with none.
         _FIN_PIN_TYPES = ('MS_Finish', 'MFO', 'FO', 'FNET')
+        _mfc = None
         if not has_actual_start:
             # Select the slot whose date ACTUALLY held EF, not merely the first
             # slot carrying a finish-pin type: with FNET in the list a soft
@@ -3004,6 +3058,25 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             if (node.get('task_type') == 'TT_FinMile' and not has_actual_start
                     and node['ef'] == node['es']):
                 _cands = [inst for (v, inst) in _drive_instants if v == node['ef']]
+                # FM (P6 parity 2026-10-10) — a finish constraint holding the
+                # milestone places it AT the constraint's instant, moved to
+                # the next working time when that is not working time.
+                # Measured on P6 23.12's own F9 (private oracle repo,
+                # parity_2026_10_10): Finish On / On or After at Friday 17:00
+                # -> Friday 17:00, and seven-day successors start Saturday
+                # (the engine had left the instant at the boundary, the
+                # Monday opening); On or After at Sunday 17:00 -> Monday
+                # 08:00. A time inside the day stays on that day.
+                if _mfc and node_cal:
+                    _cd = date_to_num(_mfc['date'])
+                    if _snap_fwd(_cd, node_cal, alerts=[], ctx=code) != _cd:
+                        _ci = node['ef']            # the next working opening
+                    else:
+                        _ctod = _mfc.get('time_minutes')
+                        _cclose = _calendar_day_close(_cd, node_cal)
+                        _ci = _cd + 1 if (_ctod is not None and _cclose is not None
+                                          and _ctod >= _cclose) else _cd
+                    _cands.append(_ci)
                 if _cands:
                     node['ef_instant'] = max(_cands)
                 elif dd_num > 0 and node['ef'] == _snap_fwd(
@@ -3501,14 +3574,31 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         else:
             node['tf'] = node['tf_finish']
 
-    # v2.9.7 — ALAP post-pass per Oracle P6 docs. ALAP is a P6 constraint
-    # type; AACE 29R-03 does not define ALAP (constraint effects on the
-    # critical path: §4.3.D.4). ALAP activities slide their early dates to
-    # match their late dates (consume float). Only applied when the activity has no actual_start and is not
-    # complete.
-    # v2.9.12 T4.26 — ALAP honored on EITHER primary or secondary slot.
-    # Mirrors JS v2.9.8 Bug B7.
-    for c, n in nodes.items():
+    # v2.9.7 — ALAP post-pass. ALAP is a P6 constraint type; AACE 29R-03
+    # does not define ALAP (constraint effects on the critical path:
+    # §4.3.D.4). Only applied when the activity has no actual_start and is
+    # not complete. v2.9.12 T4.26 — honoured on EITHER primary or secondary
+    # slot. Mirrors JS v2.9.8 Bug B7.
+    # AL (P6 parity 2026-10-10) — P6 slides ALAP work by its FREE float, not
+    # its total float: the early dates move as late as they can go without
+    # delaying any successor's EARLY dates, and the late dates stay the
+    # backward pass's. Measured on P6 23.12's own F9 of real updates
+    # (9-Oct-2026, private): a chain of three ALAP activities slid one behind
+    # the other, the last up to its successor's early start and each earlier
+    # one up to the next (total float 680 h left on each); an ALAP activity
+    # whose successors start straight after it stayed put. Until v2.9.53 the
+    # engine set the early dates to the late dates, past successors' early
+    # starts (logic violated), and every later ALAP activity in the chain
+    # followed: nine months off P6 on one row. The bound mirrors the backward
+    # pass with the successors' EARLY anchors in place of their late ones,
+    # walked in reverse topological order so an ALAP successor has already
+    # slid; an open end slides to the project's early finish (where P6
+    # measures an open end's free float), and nothing slides past its own
+    # late finish.
+    for c in reversed(order):
+        n = nodes.get(c)
+        if n is None:
+            continue
         cstr = n.get('constraint')
         cstr2 = n.get('constraint2')
         is_alap = ((cstr and cstr.get('type') == 'ALAP') or
@@ -3517,23 +3607,73 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             continue
         if n['is_complete'] or n['actual_start']:
             continue
-        if n['ls'] > n['es']:
-            alerts.append({
-                'severity': 'WARN',
-                'context': 'constraint-applied',
-                'message': f'ALAP on {c} slides ES from {num_to_date(n["es"])} to {num_to_date(n["ls"])} (consumes {n["tf"]} days float)',
-            })
-            n['es'] = n['ls']
-            n['ef'] = n['lf']
-            # Round 6 — int 0 for JSON cross-engine parity (was 0.0).
-            n['tf'] = 0
-            # v2.9.44 — the finish instant slides with the finish.
-            _alap_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
-            if n['ef'] > n['es']:
-                n['ef_instant'] = _boundary_to_instant(
-                    n['ef'], _alap_cal, alerts=alerts, ctx=f'finish instant {c}')
+        _a_cal = _cal_for(n)
+        _a_ctx = f'ALAP free float {c}'
+        _ef_bound = None
+        _ls_bound = None
+        _seen = False
+        for s in succ_map.get(c, []):
+            sn = nodes.get(s['to_code'])
+            if not sn or sn.get('is_complete'):
+                continue
+            _seen = True
+            s_cal = _lag_cal_for(n, sn)
+            lag = s.get('lag_days', 0) or 0
+            _s_start = (sn['restart'] if (sn.get('actual_start') and sn.get('restart') is not None)
+                        else sn['es'])
+            t = s['type']
+            if t in ('FF', 'SF'):
+                _inst = _lag_back_from_instant(_finish_instant(sn), lag, s_cal, alerts=[], ctx=_a_ctx)
             else:
-                n['ef_instant'] = n['ef']
+                _inst = _lag_back_from_instant(_s_start, lag, s_cal, alerts=[], ctx=_a_ctx)
+            if t in ('SS', 'SF'):
+                _b = _snap_bwd(_inst, _a_cal, alerts=[], ctx=_a_ctx)
+                if _ls_bound is None or _b < _ls_bound:
+                    _ls_bound = _b
+            else:
+                _b = _snap_fwd(_inst, _a_cal, alerts=[], ctx=_a_ctx)
+                if _ef_bound is None or _b < _ef_bound:
+                    _ef_bound = _b
+        if not _seen:
+            _ef_bound = n['_ff_terminal'] if _pf_day > 0 else n['lf']
+        if _ls_bound is not None:
+            _from_ls = _advance_workdays(_ls_bound, n['duration_days'], _a_cal, alerts=[], ctx=_a_ctx)
+            if _ef_bound is None or _from_ls < _ef_bound:
+                _ef_bound = _from_ls
+        if _ef_bound is None:
+            continue
+        if _ef_bound > n['lf']:
+            _ef_bound = n['lf']
+        if _ef_bound <= n['ef']:
+            continue
+        _new_es = _retreat_workdays(_ef_bound, n['duration_days'], _a_cal, alerts=[], ctx=_a_ctx)
+        if _ls_bound is not None and _new_es > _ls_bound:
+            _new_es = _ls_bound
+            _ef_bound = _advance_workdays(_new_es, n['duration_days'], _a_cal, alerts=[], ctx=_a_ctx)
+        if _new_es <= n['es']:
+            continue
+        alerts.append({
+            'severity': 'WARN',
+            'context': 'constraint-applied',
+            'message': (f'ALAP on {c} slides ES from {num_to_date(n["es"])} to '
+                        f'{num_to_date(_new_es)} (its free float; the late dates stand)'),
+        })
+        n['es'] = _new_es
+        n['ef'] = _ef_bound
+        # v2.9.44 — the finish instant slides with the finish.
+        if n['duration_days'] > 0 or n.get('task_type') == 'TT_FinMile':
+            n['ef_instant'] = _boundary_to_instant(
+                n['ef'], _a_cal, alerts=alerts, ctx=f'finish instant {c}')
+        else:
+            n['ef_instant'] = n['ef']
+        n['tf_finish'] = _round_half_up_to(n['lf'] - n['ef'], 3)
+        n['tf_start'] = _round_half_up_to(n['ls'] - n['es'], 3)
+        if _float_type == 'FT_Start':
+            n['tf'] = n['tf_start']
+        elif _float_type == 'FT_Min':
+            n['tf'] = min(n['tf_start'], n['tf_finish'])
+        else:
+            n['tf'] = n['tf_finish']
 
     for n in nodes.values():
         n['es_date'] = num_to_date(n['es'])

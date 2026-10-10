@@ -1493,6 +1493,15 @@ const _FINISH_CLAMP_TYPES = ['FNET', 'FNLT', 'FO', 'MS_Finish', 'MFO'];
 function _constraintFinishNum(cstr, calendarInfo, alerts, ctx) {
     const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
     if (cdNum <= 0) return cdNum;
+    // OW (P6 parity 2026-10-10) — a date the calendar does not work, whatever
+    // its time: the opening of the next working day, which is the close of
+    // the working day before it in working time (a Finish On or After dated
+    // Sunday 17:00 put a zero-duration task at the next working day's opening
+    // on P6's F9 of a real update). Python paired site: _constraint_finish_num.
+    if (calendarInfo) {
+        const _snapped = _snapFwd(cdNum, calendarInfo, alerts || [], ctx);
+        if (_snapped !== cdNum) return _snapped;
+    }
     const tod = (cstr.time_minutes === undefined || cstr.time_minutes === null)
         ? null : cstr.time_minutes;
     if (tod === null) return cdNum;          // bare date: nothing to resolve
@@ -1516,6 +1525,30 @@ function _constraintFinishNum(cstr, calendarInfo, alerts, ctx) {
     }
     if (tod < close) return cdNum;           // the instant is inside the day
     return _advanceWithAlerts(cdNum, 1, calendarInfo, alerts || [], ctx);
+}
+
+// OW (P6 parity 2026-10-10) — start-side constraint instants. P6 starts work at
+// the first WORKING instant at or after a start constraint's date and time on
+// the activity's own calendar: eight rows of P6's own F9 of real updates whose
+// Start On or After / Start On was dated 00:00 on a Saturday or a holiday all
+// started at the next working day's opening; the engine started them ON the
+// non-working day (and a two-day activity there worked one). A time at or after
+// the day's close starts the next working day; a time inside the day keeps the
+// day. Without a calendar, or without hour detail for a working day, the bare
+// date stands. Python paired site: _constraint_start_num.
+function _constraintStartNum(cstr, calendarInfo, alerts, ctx) {
+    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+    if (cdNum <= 0 || !calendarInfo) return cdNum;
+    const snapped = _snapFwd(cdNum, calendarInfo, alerts || [], ctx);
+    if (snapped !== cdNum) return snapped;
+    const tod = (cstr.time_minutes === undefined || cstr.time_minutes === null)
+        ? null : cstr.time_minutes;
+    if (tod === null) return cdNum;
+    const close = _calendarDayClose(cdNum, calendarInfo);
+    if (close !== null && tod >= close) {
+        return _advanceWithAlerts(cdNum, 1, calendarInfo, alerts || [], ctx);
+    }
+    return cdNum;
 }
 
 // XF (P6 parity 2026-10-07, TD-13) — "Use Expected Finish Dates"
@@ -1649,9 +1682,12 @@ function _underwayFinishNoop(code, ef, cstr, label, nodeCal, alerts) {
     }
 }
 
-function _applyForwardESConstraint(code, maxES, cstr, label, alerts) {
+function _applyForwardESConstraint(code, maxES, cstr, label, alerts, nodeCal) {
     if (!cstr) return maxES;
-    const cdNum = cstr.date ? dateToNum(cstr.date) : 0;
+    // OW (2026-10-10) — resolved on the activity's calendar.
+    const cdNum = (['SNET', 'SNLT', 'SO', 'MS_Start'].indexOf(cstr.type) !== -1)
+        ? _constraintStartNum(cstr, nodeCal || null, [], code)
+        : (cstr.date ? dateToNum(cstr.date) : 0);
     const tag = label === 'secondary' ? ' (secondary)' : '';
     if (cstr.type === 'SNET' && cdNum > 0) {
         if (cdNum > maxES) {
@@ -1841,7 +1877,10 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
     // this constraint, and the same disclosure twice reads as two findings.
     const cdNum = _FINISH_CLAMP_TYPES.indexOf(cstr.type) !== -1
         ? _constraintFinishNum(cstr, nodeCal, [], code)
-        : (cstr.date ? dateToNum(cstr.date) : 0);
+        : ((['SNLT', 'SO', 'MS_Start'].indexOf(cstr.type) !== -1)
+            // OW — the same resolved start the forward clamp used.
+            ? _constraintStartNum(cstr, nodeCal, [], code)
+            : (cstr.date ? dateToNum(cstr.date) : 0));
     if (cstr.type === 'FNLT' && cdNum > 0) {
         if (cdNum < minLF) return cdNum;
     } else if (cstr.type === 'MS_Finish' || cstr.type === 'MFO') {
@@ -2925,6 +2964,8 @@ function computeCPM(activities, relationships, opts) {
         }
         const preds = predMap[code] || [];
         const nodeCal = calFor(node);
+        // FM — the finish constraint holding EF, when one does (set below).
+        let _mfcHeld = null;
         // v2.9.5 in-progress ES pin (corrected pin order). When an activity has
         // an actual_start, that recorded actual governs the early start: this is
         // Oracle P6 / CPM forward-pass behaviour, in which neither the data_date
@@ -3280,7 +3321,7 @@ function computeCPM(activities, relationships, opts) {
             // {type:'CONSTRAINT', constraint_type, date} sentinel so analysts
             // can see the constraint is the actual driver (not a real pred).
             const _esBeforePrimary = maxES;
-            maxES = _applyForwardESConstraint(code, maxES, cstr, 'primary', alerts);
+            maxES = _applyForwardESConstraint(code, maxES, cstr, 'primary', alerts, nodeCal);
             if (maxES > _esBeforePrimary && cstr && cstr.date) {
                 drivingPred = {
                     type: 'CONSTRAINT',
@@ -3295,9 +3336,11 @@ function computeCPM(activities, relationships, opts) {
             // v2.9.42 — SO dropped: Start On is soft, so a secondary constraint
             // is allowed to move ES off it. Only the mandatory pin is protected.
             const _isPrimaryMandatoryStart = cstr && cstr.type === 'MS_Start' && cstr.date;
-            const _primaryMandatoryStartNum = _isPrimaryMandatoryStart ? dateToNum(cstr.date) : -1;
+            // OW (2026-10-10) — the pin is the date as the clamp resolved it.
+            const _primaryMandatoryStartNum = _isPrimaryMandatoryStart
+                ? _constraintStartNum(cstr, nodeCal, [], code) : -1;
             const _esBeforeSecondary = maxES;
-            maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts);
+            maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts, nodeCal);
             if (maxES > _esBeforeSecondary && cstr2 && cstr2.date) {
                 drivingPred = {
                     type: 'CONSTRAINT',
@@ -3328,7 +3371,7 @@ function computeCPM(activities, relationships, opts) {
             // v2.9.42 — SO dropped (soft), same reasoning as the primary above.
             const _isSecondaryMandatoryStart = cstr2 && cstr2.type === 'MS_Start' && cstr2.date;
             if (_isSecondaryMandatoryStart) {
-                const _secondaryMandatoryStartNum = dateToNum(cstr2.date);
+                const _secondaryMandatoryStartNum = _constraintStartNum(cstr2, nodeCal, [], code);
                 if (maxES !== _secondaryMandatoryStartNum) {
                     // Secondary mandatory should be honored. If a soft primary
                     // (SNET) pushed maxES past it, the mandatory pin still wins.
@@ -3714,6 +3757,7 @@ function computeCPM(activities, relationships, opts) {
             // the constraint really holding EF, and the back-compute would be
             // skipped. Single-pin behaviour is unchanged.
             let _mfc = null;
+            _mfcHeld = null;
             for (const _c of [cstr, cstr2]) {
                 if (!_c || !_c.date) continue;
                 if (_FIN_PIN_TYPES.indexOf(_c.type) === -1) continue;
@@ -3722,7 +3766,7 @@ function computeCPM(activities, relationships, opts) {
                 // actually holding EF and the activity would stretch instead
                 // of shift.
                 const _cNum = _constraintFinishNum(_c, nodeCal, [], code);
-                if (_cNum > 0 && node.ef === _cNum) { _mfc = _c; break; }
+                if (_cNum > 0 && node.ef === _cNum) { _mfc = _c; _mfcHeld = _c; break; }
             }
             if (_mfc) {
                 let _bes = _retreatWithAlerts(node.ef, node.duration_days,
@@ -3755,6 +3799,26 @@ function computeCPM(activities, relationships, opts) {
                 let _best = null;
                 for (const _di of _driveInstants) {
                     if (_di[0] === node.ef && (_best === null || _di[1] > _best)) _best = _di[1];
+                }
+                // FM (P6 parity 2026-10-10) — a finish constraint holding the
+                // milestone places it AT the constraint's instant, moved to the
+                // next working time when that is not working time: Finish On /
+                // On or After at Friday 17:00 -> Friday 17:00 (seven-day
+                // successors start Saturday); On or After at Sunday 17:00 ->
+                // Monday 08:00 (P6 23.12's own F9). Python paired site: the
+                // same block.
+                if (_mfcHeld && nodeCal) {
+                    const _cd = dateToNum(_mfcHeld.date);
+                    let _mi;
+                    if (_snapFwd(_cd, nodeCal, [], code) !== _cd) {
+                        _mi = node.ef;
+                    } else {
+                        const _ctod = (_mfcHeld.time_minutes === undefined || _mfcHeld.time_minutes === null)
+                            ? null : _mfcHeld.time_minutes;
+                        const _cclose = _calendarDayClose(_cd, nodeCal);
+                        _mi = (_ctod !== null && _cclose !== null && _ctod >= _cclose) ? _cd + 1 : _cd;
+                    }
+                    if (_best === null || _mi > _best) _best = _mi;
                 }
                 if (_best !== null) {
                     node.ef_instant = _best;
@@ -4421,65 +4485,113 @@ function computeCPM(activities, relationships, opts) {
         }
     }
 
-    // v2.9.5 — ALAP (As Late As Possible) post-pass per Oracle P6
-    // documentation. ALAP is a P6 constraint type; AACE 29R-03 does not
-    // define ALAP (constraint effects on the critical path: §4.3.D.4). ALAP
-    // activities slide their early dates to match their
-    // late dates (consuming float). Only applied when the activity has no
+    // v2.9.5 — ALAP (As Late As Possible) post-pass. ALAP is a P6 constraint
+    // type; AACE 29R-03 does not define ALAP (constraint effects on the
+    // critical path: §4.3.D.4). Only applied when the activity has no
     // actual_start (a recorded actual start governs ES) and is not complete.
-    for (const c in nodes) {
+    // v2.9.8 Bug B7 — honoured on EITHER primary or secondary slot.
+    // AL (P6 parity 2026-10-10) — P6 slides ALAP work by its FREE float, not
+    // its total float: the early dates move as late as they can go without
+    // delaying any successor's EARLY dates; the late dates stay the backward
+    // pass's. Measured on P6 23.12's own F9 of real updates: a chain of three
+    // ALAP activities slid one behind the other, the last up to its
+    // successor's early start and each earlier one up to the next; an ALAP
+    // activity whose successors start straight after it stayed put. Until
+    // v2.9.53 the early dates were set to the late dates, past successors'
+    // early starts (the v2.9.23 alap-slide-violates-succ WARN reported it),
+    // and every later ALAP activity in a chain followed. The bound mirrors the
+    // backward pass with the successors' EARLY anchors, walked in reverse
+    // topological order so an ALAP successor has already slid; an open end
+    // slides to the project's early finish (where P6 measures an open end's
+    // free float); nothing slides past its own late finish. Python paired
+    // site: the ALAP post-pass in compute_cpm.
+    for (let __ai = sortRes.order.length - 1; __ai >= 0; __ai--) {
+        const c = sortRes.order[__ai];
         const n = nodes[c];
-        // v2.9.8 Bug B7 — ALAP honored on EITHER primary or secondary constraint slot.
-        // Previously only primary slot was checked; secondary ALAP was silently ignored.
+        if (!n) continue;
         const isALAP = (n.constraint && n.constraint.type === 'ALAP') ||
                        (n.constraint2 && n.constraint2.type === 'ALAP');
         if (!isALAP) continue;
         if (n.is_complete || n.actual_start) continue;
-        if (n.ls > n.es) {
-            alerts.push({
-                severity: 'WARN',
-                context: 'constraint-applied',
-                message: 'ALAP on ' + c + ' slides ES from ' + numToDate(n.es) +
-                    ' to ' + numToDate(n.ls) + ' (consumes ' + n.tf + ' days float)',
-            });
-            n.es = n.ls;
-            n.ef = n.lf;
-            n.tf = 0;
-            // v2.9.44 — the finish instant slides with the finish.
-            const _alapCal = n.clndr_id ? calMap[n.clndr_id] : null;
-            if (n.ef > n.es) {
-                n.ef_instant = _boundaryToInstant(n.ef, _alapCal, alerts, 'finish instant ' + c);
+        const _aCal = calFor(n);
+        const _aCtx = 'ALAP free float ' + c;
+        let _efBound = null;
+        let _lsBound = null;
+        let _seen = false;
+        for (const s of (succMap[c] || [])) {
+            const sn = nodes[s.to_code];
+            if (!sn || sn.is_complete) continue;
+            _seen = true;
+            const sCal = lagCalFor(n, sn);
+            const lag = s.lag_days || 0;
+            const _sStart = (sn.actual_start && Number.isFinite(sn.restart)) ? sn.restart : sn.es;
+            const _inst = (s.type === 'FF' || s.type === 'SF')
+                ? _lagBackFromInstant(_finishInstant(sn), lag, sCal, [], _aCtx)
+                : _lagBackFromInstant(_sStart, lag, sCal, [], _aCtx);
+            if (s.type === 'SS' || s.type === 'SF') {
+                const _b = _snapBwd(_inst, _aCal, [], _aCtx);
+                if (_lsBound === null || _b < _lsBound) _lsBound = _b;
             } else {
-                n.ef_instant = n.ef;
+                const _b = _snapFwd(_inst, _aCal, [], _aCtx);
+                if (_efBound === null || _b < _efBound) _efBound = _b;
             }
-            // v2.9.23 — audit LOW R9. The ALAP slide shifts THIS activity's
-            // ES/EF forward without re-running the forward pass through its
-            // successors. If A is ALAP and A→B (FS+0), B.ES was set when A.EF
-            // was earlier; after the slide, A.EF can exceed B.ES — a logic
-            // violation the forward pass would have caught. Detect and emit
-            // a WARN per affected successor so the analyst sees the gap.
-            const succsAfter = succMap[c] || [];
-            for (const s of succsAfter) {
-                const bn = nodes[s.to_code];
-                if (!bn) continue;
-                // FS predicate: predEF must <= succES. SS: predES <= succES.
-                // FF: predEF <= succEF. SF: predES <= succEF.
-                let predRef, succRef, edgeDesc;
-                if (s.type === 'FS') { predRef = n.ef; succRef = bn.es; edgeDesc = 'pred.EF > succ.ES'; }
-                else if (s.type === 'SS') { predRef = n.es; succRef = bn.es; edgeDesc = 'pred.ES > succ.ES'; }
-                else if (s.type === 'FF') { predRef = n.ef; succRef = bn.ef; edgeDesc = 'pred.EF > succ.EF'; }
-                else if (s.type === 'SF') { predRef = n.es; succRef = bn.ef; edgeDesc = 'pred.ES > succ.EF'; }
-                else continue;
-                if (predRef > succRef) {
-                    alerts.push({
-                        severity: 'WARN',
-                        context: 'alap-slide-violates-succ',
-                        message: 'ALAP slide on ' + c + ' produced ' + edgeDesc +
-                            ' for ' + s.type + ' relation to ' + s.to_code +
-                            ' (no forward-pass rerun; successor dates are stale). ' +
-                            'Re-run computeCPM or accept the documented limitation.',
-                    });
-                }
+        }
+        if (!_seen) _efBound = _projectDeadlineNum ? n._ff_terminal : n.lf;
+        if (_lsBound !== null) {
+            const _fromLs = _advanceWithAlerts(_lsBound, n.duration_days, _aCal, [], _aCtx);
+            if (_efBound === null || _fromLs < _efBound) _efBound = _fromLs;
+        }
+        if (_efBound === null || !Number.isFinite(_efBound)) continue;
+        if (_efBound > n.lf) _efBound = n.lf;
+        if (_efBound <= n.ef) continue;
+        let _newEs = _retreatWithAlerts(_efBound, n.duration_days, _aCal, [], _aCtx);
+        if (_lsBound !== null && _newEs > _lsBound) {
+            _newEs = _lsBound;
+            _efBound = _advanceWithAlerts(_newEs, n.duration_days, _aCal, [], _aCtx);
+        }
+        if (_newEs <= n.es) continue;
+        alerts.push({
+            severity: 'WARN',
+            context: 'constraint-applied',
+            message: 'ALAP on ' + c + ' slides ES from ' + numToDate(n.es) + ' to ' +
+                numToDate(_newEs) + ' (its free float; the late dates stand)',
+        });
+        n.es = _newEs;
+        n.ef = _efBound;
+        // v2.9.44 — the finish instant slides with the finish.
+        if (n.duration_days > 0 || n.task_type === 'TT_FinMile') {
+            n.ef_instant = _boundaryToInstant(n.ef, _aCal, alerts, 'finish instant ' + c);
+        } else {
+            n.ef_instant = n.ef;
+        }
+        n.tf_finish = _roundHalfUpTo(n.lf - n.ef, 3);
+        n.tf_start = _roundHalfUpTo(n.ls - n.es, 3);
+        n.tf = (_floatType === 'FT_Start')
+            ? n.tf_start
+            : (_floatType === 'FT_Min')
+                ? Math.min(n.tf_start, n.tf_finish)
+                : n.tf_finish;
+        // v2.9.23 — audit LOW R9, kept as an invariant: the slide is bounded by
+        // the successors' early dates, so no successor may now start (or
+        // finish) before this activity lets it. A breach would mean stale
+        // successor dates; strict mode treats it as fatal.
+        for (const s of (succMap[c] || [])) {
+            const bn = nodes[s.to_code];
+            if (!bn || bn.is_complete) continue;
+            let predRef, succRef, edgeDesc;
+            if (s.type === 'FS') { predRef = n.ef; succRef = bn.es; edgeDesc = 'pred.EF > succ.ES'; }
+            else if (s.type === 'SS') { predRef = n.es; succRef = bn.es; edgeDesc = 'pred.ES > succ.ES'; }
+            else if (s.type === 'FF') { predRef = n.ef; succRef = bn.ef; edgeDesc = 'pred.EF > succ.EF'; }
+            else if (s.type === 'SF') { predRef = n.es; succRef = bn.ef; edgeDesc = 'pred.ES > succ.EF'; }
+            else continue;
+            if ((s.lag_days || 0) === 0 && predRef > succRef) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'alap-slide-violates-succ',
+                    message: 'ALAP slide on ' + c + ' produced ' + edgeDesc +
+                        ' for ' + s.type + ' relation to ' + s.to_code +
+                        ' (successor dates are stale).',
+                });
             }
         }
     }
@@ -5429,6 +5541,31 @@ function parseXER(content) {
                                     'reschedule of this file.',
                             });
                         } else if (_dec.decode_ok) {
+                            // SH (P6 parity 2026-10-10) — hours per day are the
+                            // hours the shifts work when every working day of
+                            // the week works the same and day_hr_cnt says
+                            // otherwise: P6 schedules on the shifts (a Mon-Sat
+                            // 07:00-17:00 calendar declaring 8 ran 40 h over
+                            // four days on its own F9 of a real update), and
+                            // day_hr_cnt only converts for display. Python
+                            // paired site: xer_parser.get_calendar_map.
+                            const _hrsSet = new Set(_dec.work_days.map(
+                                d => Math.round(_dec.week_hours[d] * 1e6) / 1e6));
+                            if (_hrsSet.size === 1) {
+                                const _h = _hrsSet.values().next().value;
+                                const _declared = _MC.calendarHoursPerDay[clndr_id];
+                                if (_h > 0 && Number.isFinite(_declared) && Math.abs(_h - _declared) > 1e-6) {
+                                    _MC.calendarHoursPerDay[clndr_id] = _h;
+                                    _MC.parseAlerts.push({
+                                        severity: 'WARN',
+                                        context: 'calendar-shift-hours',
+                                        message: 'Calendar ' + clndr_id + ' (' + (row.clndr_name || 'unnamed') +
+                                            ') works ' + _h + ' h on every working day but declares ' +
+                                            'day_hr_cnt ' + _declared + '; hours are converted to days on ' +
+                                            'the ' + _h + ' h its shifts work, as P6 schedules them.',
+                                    });
+                                }
+                            }
                             _MC.calMap[clndr_id] = {
                                 work_days: _dec.work_days.slice(),
                                 holidays: _dec.holidays.slice(),
@@ -6542,17 +6679,36 @@ function runCPM(opts) {
     // — the math is symmetric with Section C and Feature 4 verified.
     // v2.9.11 OPT-2: walk sorted[] instead of _MC.tasks (for...in is ~3-5×
     // slower on V8 for million-key-class workloads). Same activity set.
-    for (let __i = 0; __i < sortedLen; __i++) {
+    // AL (P6 parity 2026-10-10) — by FREE float, as Section C: the early dates
+    // move as late as they can without delaying any successor's EARLY dates,
+    // walked in reverse topological order so an ALAP successor has slid first;
+    // an open end slides to the project finish; never past its own LF.
+    for (let __i = sortedLen - 1; __i >= 0; __i--) {
         const t = tasks[sorted[__i]];
         // v2.9.8 Bug B7 — ALAP honored on EITHER primary or secondary constraint slot.
         const isALAP = (t.constraint && t.constraint.type === 'ALAP') ||
                        (t.constraint2 && t.constraint2.type === 'ALAP');
         if (!isALAP) continue;
         if (t.is_complete || t.actual_start) continue;
-        if (t.LS > t.ES) {
-            t.ES = t.LS;
-            t.EF = t.LF;
-            t.TF = 0;
+        let efB = Infinity;
+        let lsB = Infinity;
+        let seen = false;
+        for (const succ of t.succs) {
+            const st = tasks[succ.taskId];
+            if (!st || st.is_complete) continue;
+            seen = true;
+            if (succ.type === 'FS') efB = Math.min(efB, st.ES - succ.lag);
+            else if (succ.type === 'SS') lsB = Math.min(lsB, st.ES - succ.lag);
+            else if (succ.type === 'FF') efB = Math.min(efB, st.EF - succ.lag);
+            else if (succ.type === 'SF') lsB = Math.min(lsB, st.EF - succ.lag);
+        }
+        if (!seen) efB = projectFinish;
+        if (lsB !== Infinity) efB = Math.min(efB, lsB + t.remaining);
+        if (efB > t.LF) efB = t.LF;
+        if (Number.isFinite(efB) && efB > t.EF) {
+            t.EF = efB;
+            t.ES = efB - t.remaining;
+            t.TF = t.LF - t.EF;
             if (logOutput) {
                 log.push('ALAP: ' + t.code + ' slid ES=' + t.ES.toFixed(1) + ' EF=' + t.EF.toFixed(1));
             }
