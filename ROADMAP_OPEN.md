@@ -152,6 +152,14 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.9.57 (reviewed 2026-10-11)
+
+No audit item changed status. v2.9.57 adds two inputs and one free-float rule, measured on Primavera P6 Professional 23.12.1's own F9 of a synthetic probe (see CHANGELOG.md): an activity's external early start is a floor on its early start and its external late finish a cap on its late finish, unless "Ignore relationships to and from other projects" is set, and an open end's free float runs to the project's early finish whatever caps its late finish. Its change class under the operator procedure is A (computational).
+- The unit suite grew from 1,395 to 1,402.
+- The cross-validation surface grew from 114 to 116 fixtures (the probe's shapes with the dates applied and ignored) and from 3,924 of 4,022 to 4,244 of 4,342 comparisons, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.53% statements / 83.15% branches / 95.67% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before on the new bytes.
+
 ## Status at v2.9.56 (reviewed 2026-10-11)
 
 No audit item changed status. v2.9.56 changes what `parseXER` hands on, not the arithmetic: with no SCHEDOPTIONS table it now reports "Use Expected Finish Dates" on and the predecessor lag calendar, and with those fields blank, Use Expected Finish Dates on and the successor lag calendar, as Primavera P6 Professional 23.12.1 scheduled such files (see CHANGELOG.md). Its change class under the operator procedure is A (computational): a caller forwarding those options gets different dates.
@@ -192,4 +200,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.56. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.9.57. Update on every release that closes or opens an audit item.

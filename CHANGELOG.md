@@ -12,6 +12,100 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.57 - 2026-10-11 - external early start and external late finish, measured on P6's own F9
+
+**`computeCPM` now applies an activity's external dates.** P6 keeps
+`TASK.external_early_start_date` and `external_late_end_date` for an activity
+whose relationship to an activity in another project is not in the database.
+Until v2.9.56 the engine had no input for either date, so an activity carrying
+one came out earlier, or with more float, than P6 schedules it.
+
+- **`external_early_start`** (activity field, P6's time included) is a floor on
+  the early start, applied before constraints: the later of it and the
+  activity's logic wins, and beside a Start On or After the later of the two.
+  A date on time the calendar does not work, or at or after a day's close,
+  starts at the next working time, as a Start On or After does. On a started
+  activity under retained logic the restart moves to it. A start milestone
+  sits on it.
+- **`external_late_finish`** caps the late finish, on work not started and on
+  work under way, and the cap reaches the predecessors. When it is earlier than
+  the early finish the float is negative. A date on a non-working day falls
+  back to the close of the working day before, as a Finish On or Before does.
+- **The free float of an activity with no successor** runs to the project's
+  early finish whatever caps its late finish (a Start or Finish On or Before, a
+  Start or Finish On, an external late finish), and is none on an activity a
+  Mandatory Start or Mandatory Finish pins or whose remaining work an applied
+  expected finish re-sized. Until v2.9.56 it ran to the late finish, so a cap
+  shortened it.
+- **`opts.useExternalDates`** (default on; `false` or the raw token `'SD_None'`
+  turns it off) is P6's "Ignore relationships to and from other projects"
+  (SCHEDOPTIONS `sched_outer_depend_type`, stored `SD_None` when ticked). Off,
+  both dates are ignored. `parseXER` hands each task's `external_early_start`
+  and `external_late_finish` on as P6 wrote them, and `use_external_dates` (off
+  only under `SD_None`; `SD_Both`, a blank field or a missing table is P6's
+  default, on) with `use_external_dates_source`.
+- An applied date raises a WARN (context `external-date-applied`). An external
+  early start that holds the early start is the activity's
+  `driving_predecessor`: `{ type: 'CONSTRAINT', constraint_type:
+  'EXTERNAL_EARLY_START', date }`.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+11-Oct-2026 on Dana's instruction to fix the defect. Dates and float move on any
+schedule that carries an external date; free float moves on an open end whose
+late finish a constraint caps or that an applied expected finish holds.
+
+**How it was measured.** A 24-activity synthetic project (a 25-day spine and
+sixteen cases) was imported into P6 Professional 23.12.1 and scheduled with F9
+on 11-Oct-2026 (retained logic, data date Monday 19-Oct-2026 08:00, Monday to
+Friday 08:00-17:00), once as exported (`SD_Both`) and once with "Ignore
+relationships to and from other projects" ticked (`SD_None`). The cases put an
+external early start behind and ahead of FS logic, on a Saturday, at a Friday
+close, mid-day, on a started activity, on a start milestone, beside a Start On
+or After and on a seven-day calendar, and an external late finish with a
+successor, before the early finish, on a Saturday, on started work, between a
+predecessor and a successor and on a finish milestone. Every unfinished
+activity was compared on its start (the restart for started work), early
+finish, late finish and total and free float in working days, in both runs: the
+engine matched P6 on 184 of 240 comparisons before and 233 of 240 after. Of the
+7 left, 4 are a display convention that shows with the dates ignored too (P6
+writes a finish milestone's start and a start milestone's finish at the
+milestone's own instant, where the engine prints its boundary day) and 3 are the
+mid-day case (P6 starts at 13:00, the engine on the day, half a day of float
+apart).
+
+The free-float rule was also read from P6's own F9 of the v2.9.55 float probe
+(a Mandatory Start and Mandatory Finish, and an applied expected finish, each 0
+h on an open end), and refereed against the projects P6 last scheduled in the
+measuring machine's P6 database: across 313 projects the engine now matches
+P6's stored free float on 7,940 of 8,829 unconstrained open ends (7,736 before)
+and 436 of 546 constrained ones (370 before), and no project matches fewer.
+
+**Verified.**
+- JS unit suite: 1,402 checks green, up from 1,395 (EX-1 to EX-7). Six of the
+  seven fail against the v2.9.56 engine; EX-5 (both dates ignored) passes there
+  because that engine ignored them anyway.
+- Cross-validation: 116 fixtures, 4244 of 4342 executed, 98 skipped, 0 failures.
+  F119 hands both engines the probe's shapes with the dates applied, F120 the
+  same with `use_external_dates` off; the Python reference carries the same
+  rules, and F119 fails against a reference copy with them switched off.
+- The 13-case P6 matrix regenerated on these bytes reads 13 / 13 over 27 field
+  checks with zero changed engine values; cases 19-21 read 256 of 256 on six
+  fields at each data date.
+- Coverage re-measured on these bytes: 94.53% statements, 83.15% branches,
+  95.67% functions.
+
+**Who is affected.** On the measuring machine 446 distinct real exports were
+run through `parseXER`, `getTasks()` and `computeCPM` with the options
+`parseXER` hands on. None carries an external date or `SD_None`. 99 move the
+free float of at least one open end (3,789 activities in all); nothing else
+moves in any of them: no date, no total float, no project finish. Through the
+CPP converters the same exports move free float only (95 files, 3,774
+activities).
+
+**Not measured, not claimed.** An external early start on a started activity
+under progress override; a part-day external date other than the mid-day case
+(the engine schedules in whole days).
+
 ## v2.9.56 - 2026-10-11 - parseXER reads a missing or blank scheduling option the way P6 does, measured on P6's own F9
 
 **What parseXER hands on changed; computeCPM's arithmetic did not.** `parseXER`

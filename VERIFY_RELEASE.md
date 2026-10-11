@@ -1,13 +1,14 @@
-# VERIFY_RELEASE.md — `cpm-engine` v2.9.56 Forensic Verification Packet
+# VERIFY_RELEASE.md — `cpm-engine` v2.9.57 Forensic Verification Packet
 
-This document is the **courtroom-exhibit-form** of the engine release verification chain. Cite **this file**, the **Sigstore-signed witness** attached to the [v2.9.56 release](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.56), and the [DAUBERT.md](DAUBERT.md) disclosure together — that triad is the engine's reliability record under FRE 702 / Daubert Prong 1 (testability).
+This document is the **courtroom-exhibit-form** of the engine release verification chain. Cite **this file**, the **Sigstore-signed witness** attached to the [v2.9.57 release](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.56), and the [DAUBERT.md](DAUBERT.md) disclosure together — that triad is the engine's reliability record under FRE 702 / Daubert Prong 1 (testability).
 
-> **Status:** v2.9.56. **Change class under the operator procedure: Class A (computational)**; a deliverable already issued on an earlier version is re-checked under that class. `parseXER` now hands on the scheduling options P6 applies by default, measured on Primavera P6 Professional 23.12.1's own F9 of synthetic probes:
+> **Status:** v2.9.57. **Change class under the operator procedure: Class A (computational)**; a deliverable already issued on an earlier version is re-checked under that class. `computeCPM` now applies an activity's external dates, measured on Primavera P6 Professional 23.12.1's own F9 of a synthetic probe:
 >
-> - **No SCHEDOPTIONS table** (MS Project conversions, some export profiles): "Use Expected Finish Dates" on and relationship lag on the predecessor's calendar, P6's project default.
-> - **The two fields blank:** Use Expected Finish Dates on and lag on the successor's calendar.
+> - **External early start** (P6's `TASK.external_early_start_date`): a floor on the early start, and on a started activity's restart.
+> - **External late finish** (`external_late_end_date`): a cap on the late finish; negative float when it is earlier than the early finish.
+> - **An open end's free float** runs to the project's early finish whatever caps its late finish, and is none under a mandatory constraint or an applied expected finish.
 >
-> A result computed on v2.9.55 or earlier can differ only where a caller forwarded `parseXER`'s options for such a file. `computeCPM`'s arithmetic and its own defaults are unchanged. See [CHANGELOG.md](CHANGELOG.md) for the measurements.
+> `opts.useExternalDates` `false` ("Ignore relationships to and from other projects", `SD_None`) ignores both dates. A result computed on v2.9.56 or earlier can differ where an activity carries an external date, and in the free float of an open end whose late finish a constraint caps or that an applied expected finish holds. See [CHANGELOG.md](CHANGELOG.md) for the measurements.
 
 
 ## What this file proves
@@ -23,22 +24,22 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 
 ---
 
-## Release manifest — v2.9.56
+## Release manifest — v2.9.57
 
 | Item | Value |
 |---|---|
-| Tag | `v2.9.56` |
-| Commit SHA | `488bf1c66d0a5e4c3580b7a7875cfad7f646f2d0` (the content commit the `v2.9.56` tag names) |
+| Tag | `v2.9.57` |
+| Commit SHA | `<commit_sha>` (named in a follow-up commit once the tagged content commit has a hash to cite) |
 | Release date | 2026-10-11 |
 | Engine source | `cpm-engine.js` |
 | Engine SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/cpm-engine.js.sha256` (the top-level `cpm-engine.js.sha256` is **gitignored** per `scripts/attestation.js` — it is a per-machine regenerated artifact, not a committed pin). |
 | Python reference | `python_reference/cpm.py` |
 | Python reference SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/python_reference-cpm.py.sha256` (the top-level `python_reference/cpm.py.sha256` is **gitignored** for the same reason — generated artifact, not committed pin). |
-| Witness JSON (release asset) | `attestations/latest.json` on [the v2.9.56 release page](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.56) |
-| Unit tests | 1,395 / 1,395 passing |
-| Cross-validation | 3924 of 4022 enumerated comparisons bit-identical across 114 fixtures, 0 deviations. The harness prints `Checks: 3924 / 3924` because its denominator is the executed count: 98 comparisons on the enumerated surface (49 `ff_signed`, 49 `ff_signed_working_days`) are skipped by the field guards, all on completed activities where NEITHER engine emits the field, so none is an open port gap. The 58 one-sided skips that were open port gaps closed when the has-successors branch was ported (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)) |
-| Branch coverage | 82.97% (2,514 / 3,030 branches), measured on the v2.9.56 bytes 2026-10-11; see [DAUBERT.md §2.1](DAUBERT.md#21-test-coverage-v2956-baseline) |
-| Statement coverage | 94.47% (11,309 / 11,970 statements), same §2.1 baseline measurement |
+| Witness JSON (release asset) | `attestations/latest.json` on [the v2.9.57 release page](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.57) |
+| Unit tests | 1,402 / 1,402 passing |
+| Cross-validation | 4244 of 4342 enumerated comparisons bit-identical across 116 fixtures, 0 deviations. The harness prints `Checks: 4244 / 4244` because its denominator is the executed count: 98 comparisons on the enumerated surface (49 `ff_signed`, 49 `ff_signed_working_days`) are skipped by the field guards, all on completed activities where NEITHER engine emits the field, so none is an open port gap. The 58 one-sided skips that were open port gaps closed when the has-successors branch was ported (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)) |
+| Branch coverage | 83.15% (2,553 / 3,070 branches), measured on the v2.9.57 bytes 2026-10-11; see [DAUBERT.md §2.1](DAUBERT.md#21-test-coverage-v2957-baseline) |
+| Statement coverage | 94.53% (11,433 / 12,094 statements), same §2.1 baseline measurement |
 | Citation regression | PASS |
 | `npm run verify` verdict | PASS |
 
@@ -54,7 +55,7 @@ This is the cheapest verification step. It does not require the verifier to trus
 # Clone the repository at the tagged commit
 git clone https://github.com/danafitkowski/cpp-cpm-engine
 cd cpp-cpm-engine
-git checkout v2.9.56
+git checkout v2.9.57
 
 # Compute the SHA-256 of the engine source
 shasum -a 256 cpm-engine.js
@@ -81,7 +82,7 @@ This is the cryptographic integrity layer. The verifier confirms that the witnes
 # From the GitHub release page, download attestations/latest.json
 # (it is attached as a release asset, not committed to the repo tree;
 # the asset is named `latest.json`)
-gh release download v2.9.56 \
+gh release download v2.9.57 \
     --repo danafitkowski/cpp-cpm-engine \
     --pattern "latest.json"
 ```
@@ -133,7 +134,7 @@ This is the strongest verification step. The verifier ignores all of the propone
 ```bash
 git clone https://github.com/danafitkowski/cpp-cpm-engine
 cd cpp-cpm-engine
-git checkout v2.9.56
+git checkout v2.9.57
 
 # Optional — install c8 devDep for coverage reporting
 npm install --no-save
@@ -146,16 +147,16 @@ npm run verify
 
 ```
 === cpm-engine verification ===
-package version:  2.9.56
+package version:  2.9.57
 engine.sha256:    <engine_sha from manifest>
 python_ref.sha256: <python_sha from manifest>
 
 [1/3] unit tests
-  1395 passed, 0 failed
+  1402 passed, 0 failed
 
 [2/3] cross-validation
-  Fixtures: 114 passed, 0 failed
-  Checks:   3924 / 3924
+  Fixtures: 116 passed, 0 failed
+  Checks:   4244 / 4244
 
 [3/3] citation regression
   PASS
@@ -165,7 +166,7 @@ Verdict: PASS
 Witness written to: attestations/latest.json
 ```
 
-**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,395 / 3924 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
+**What this proves.** The verifier's machine reproduces the same SHA-256 hashes, the same 1,402 / 4244 pass counts, and the same PASS verdict — without any code from the proponent running at verification time other than the source files the verifier just downloaded and hashed.
 
 **Drift documents itself.** Any mismatch — different SHA, different pass count, different verdict — is itself usable evidence. The verifier can publish a witness from their own machine showing the drift; it is the same JSON shape as the proponent's witness.
 
@@ -177,13 +178,13 @@ Layers 1-3 verify the engine against itself. The next layer — outside the prop
 
 This packet does **not** yet include a third-party reproduction memo from an outside scheduler / programmer / academic. The single biggest credibility step beyond Layers 1-3 is a signed Layer 4 attestation; pursuit of that attestation is on the [DAUBERT.md §10 roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-What an opposing expert can do **today** without waiting for that memo: clone v2.9.56, run `npm run verify`, run the engine against three or four of their own P6 schedule exports, compare outputs to P6 native values field-by-field, and either confirm or document the discrepancy. The engine's source is open and the verification surface is one command.
+What an opposing expert can do **today** without waiting for that memo: clone v2.9.57, run `npm run verify`, run the engine against three or four of their own P6 schedule exports, compare outputs to P6 native values field-by-field, and either confirm or document the discrepancy. The engine's source is open and the verification surface is one command.
 
 ---
 
 ## What this packet does **not** claim
 
-- It does not claim the engine produces results "identical to Primavera P6" outside the disclosed comparison surface. The disclosed P6 surface is the 13-case matrix at [`validation/p6-comparison/`](validation/p6-comparison/), which reads 13 / 13 against a single Primavera P6 23.12 capture; two further by-construction divergence cases are excluded and documented in [`validation/engine-limitations/`](validation/engine-limitations/). That 13 / 13 is fitted, not held out: the capture first scored 6 PASS / 7 FAIL, the engine was then corrected against it, and no second independent capture exists. The capture sheet is gitignored, so a clean clone cannot regenerate the matrix, though the per-case `comparison.csv` files do carry the P6 columns. Since v2.9.50 the same folder carries three capture cases (19-21), which read 256 of 256 open activities of the synthetic Larchmere update on early and late dates and total and free float at three data dates against P6 Professional 23.12.1's own F9 under "opened projects". The scheduling arithmetic was not changed against them: before v2.9.50 the engine already matched their early dates and free float, and v2.9.56 leaves them unchanged. The `parseXER` rule that hands the Must Finish By on under that setting was derived from them. The three demo-update capture cases v2.9.49 shipped (16-18) were withdrawn in v2.9.50 because the demo schedule they were built from is no longer published.
+- It does not claim the engine produces results "identical to Primavera P6" outside the disclosed comparison surface. The disclosed P6 surface is the 13-case matrix at [`validation/p6-comparison/`](validation/p6-comparison/), which reads 13 / 13 against a single Primavera P6 23.12 capture; two further by-construction divergence cases are excluded and documented in [`validation/engine-limitations/`](validation/engine-limitations/). That 13 / 13 is fitted, not held out: the capture first scored 6 PASS / 7 FAIL, the engine was then corrected against it, and no second independent capture exists. The capture sheet is gitignored, so a clean clone cannot regenerate the matrix, though the per-case `comparison.csv` files do carry the P6 columns. Since v2.9.50 the same folder carries three capture cases (19-21), which read 256 of 256 open activities of the synthetic Larchmere update on early and late dates and total and free float at three data dates against P6 Professional 23.12.1's own F9 under "opened projects". The scheduling arithmetic was not changed against them: before v2.9.50 the engine already matched their early dates and free float, and v2.9.57 leaves them unchanged. The `parseXER` rule that hands the Must Finish By on under that setting was derived from them. The three demo-update capture cases v2.9.49 shipped (16-18) were withdrawn in v2.9.50 because the demo schedule they were built from is no longer published.
 - It does not claim "zero error rate" in any general sense. The §4 framing is explicit: 0% **observed** mismatch on the disclosed validation suite, not a general error-rate claim. See [DAUBERT.md §4](DAUBERT.md#4-error-rate).
 - It does not claim Bayesian / kinematic surfaces are bit-identical with the Python reference. Those surfaces are JS-only; see [DAUBERT.md §11](DAUBERT.md).
 - It does not claim peer-reviewed status. The engine has not been peer-reviewed in a journal; [DAUBERT.md §3](DAUBERT.md#3-peer-review) discloses this.
@@ -194,26 +195,26 @@ What an opposing expert can do **today** without waiting for that memo: clone v2
 ## How to cite this verification packet in an expert report
 
 ```
-Verification chain for cpm-engine v2.9.56:
-  Tag:               v2.9.56
+Verification chain for cpm-engine v2.9.57:
+  Tag:               v2.9.57
   Commit SHA:        <commit_sha>
   Engine SHA-256:    <engine_sha>
   Python ref SHA-256: <python_sha>
   Witness:           attestations/latest.json (Sigstore-signed via GitHub OIDC,
                      recorded on Rekor transparency log)
-  Verification:      `npm run verify` PASS, 1,395 / 1,395 unit tests,
-                     3924 / 3924 crossval checks executed across 114 fixtures
-                     (3924 of a 4022-comparison enumerated surface; 98 skipped)
-  Coverage:          94.47% stmts / 82.97% branches / 95.59% funcs,
-                     measured on the v2.9.56 bytes 2026-10-11
+  Verification:      `npm run verify` PASS, 1,402 / 1,402 unit tests,
+                     4244 / 4244 crossval checks executed across 116 fixtures
+                     (4244 of a 4342-comparison enumerated surface; 98 skipped)
+  Coverage:          94.53% stmts / 83.15% branches / 95.67% funcs,
+                     measured on the v2.9.57 bytes 2026-10-11
                      (see cpp-cpm-engine/DAUBERT.md §2.1)
   Disclosure:        cpp-cpm-engine/DAUBERT.md
   Reproduction:      `git clone github.com/danafitkowski/cpp-cpm-engine && \
-                      git checkout v2.9.56 && npm run verify`
+                      git checkout v2.9.57 && npm run verify`
 ```
 
 This packet is intended to be attached as an exhibit to an FRCP 26(a)(2)(B) report alongside DAUBERT.md. It is also referenced from the engine's own [Daubert disclosure surface](DAUBERT.md) §3.1 Layer 2.
 
 ---
 
-*Document version: aligned to `cpm-engine` v2.9.56. SHA values populate at tag time from `cpm-engine.js.sha256` and `python_reference/cpm.py.sha256` in the release tree, and from the Sigstore-signed `attestations/latest.json` release asset.*
+*Document version: aligned to `cpm-engine` v2.9.57. SHA values populate at tag time from `cpm-engine.js.sha256` and `python_reference/cpm.py.sha256` in the release tree, and from the Sigstore-signed `attestations/latest.json` release asset.*

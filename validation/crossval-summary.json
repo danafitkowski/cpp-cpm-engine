@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.9.56",
-  "generated_utc": "2026-10-11T17:02:07.883Z",
+  "engine_version": "2.9.57",
+  "generated_utc": "2026-10-11T19:00:01.218Z",
   "fixtures": {
-    "total": 114,
-    "passed": 114,
+    "total": 116,
+    "passed": 116,
     "failed": 0
   },
   "checks": {
-    "executed": 3924,
+    "executed": 4244,
     "failed": 0,
-    "passed": 3924,
+    "passed": 4244,
     "skipped": 98,
-    "surface": 4022
+    "surface": 4342
   },
   "skips_by_field": {
     "ff_signed": 49,
@@ -22,13 +22,13 @@
     "mutual": 98
   },
   "checks_by_field": {
-    "project_finish_num": 112,
-    "project_finish": 112,
-    "critical_codes": 112,
-    "topo_order": 112,
-    "alert_count": 106,
-    "alert_severity_counts": 106,
-    "node <id>": 3262,
+    "project_finish_num": 114,
+    "project_finish": 114,
+    "critical_codes": 114,
+    "topo_order": 114,
+    "alert_count": 108,
+    "alert_severity_counts": 108,
+    "node <id>": 3570,
     "threw (both engines)": 2
   },
   "rows": [
@@ -1048,6 +1048,22 @@
       "id": "F118",
       "name": "F118 - SR: start float of work under way, FT_Min, progress override",
       "checks": 55,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F119",
+      "name": "F119 - EX: external early start and late finish (SD_Both)",
+      "checks": 160,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F120",
+      "name": "F120 - EX: the same with relationships to other projects ignored (SD_None)",
+      "checks": 160,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

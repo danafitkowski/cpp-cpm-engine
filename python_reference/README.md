@@ -78,11 +78,37 @@ have been applied:
    remaining duration, the partner of the remaining late start, and an open
    end's free float is the finish window whatever `float_type` selected. See
    CHANGELOG.md v2.9.55.
+9. v2.9.57 (external dates) is applied here by the same patch as the
+   canonical engine: `compute_cpm(use_external_dates=True)` reads each
+   activity's `external_early_start` (a floor on the early start, applied
+   before constraints, and on a started activity's restart under retained
+   logic) and `external_late_finish` (a cap on the late finish), resolved onto
+   the calendar as a Start On or After and a Finish On or Before are; an open
+   end's free float runs to the project's early finish whatever caps its late
+   finish, and is none under a mandatory constraint or an applied expected
+   finish (`_open_end_ff_held`). `use_external_dates=False` (P6's "Ignore
+   relationships to and from other projects", SCHEDOPTIONS
+   `sched_outer_depend_type` `SD_None`) ignores both dates. See CHANGELOG.md
+   v2.9.57.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  71e3a07aa432145387ff95f765f6f12b7848f4179df7f072b8cd46fc3e62a70f
+cpm.py  SHA-256:  e306a2335f945533450cf60a45da591c4c481b784ddaed987355fb6da49a20f7
+
+(v2.9.57 external dates 2026-10-11 - bumped from 71e3a07a...: ENGINE_VERSION
+reads 2.9.57, compute_cpm takes use_external_dates and reads
+external_early_start (a floor on the early start and on a started activity's
+restart) and external_late_finish (a cap on the late finish), an open end's
+free float runs to the project's early finish whatever caps its late finish
+and is none under a mandatory constraint or an applied expected finish, and
+the comments that carry the cross-validation figures carry the measured ones
+(116 fixtures, 4244 of 4342 executed). Measured on Primavera P6 Professional
+23.12.1's own F9 of a synthetic probe, as exported and with "Ignore
+relationships to and from other projects" ticked; computed values move where
+a schedule carries an external date, and free float moves on open ends whose
+late finish a constraint caps or that an applied expected finish holds. The
+harness gains 2 fixtures (F119-F120).)
 
 (v2.9.56 parseXER reads missing or blank scheduling options as P6 does
 2026-10-11 - bumped from 05278a48...: ENGINE_VERSION reads 2.9.56. No computed
@@ -416,15 +442,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 236062
-  sha-256:  71e3a07aa432145387ff95f765f6f12b7848f4179df7f072b8cd46fc3e62a70f
+  bytes: 243073
+  sha-256:  e306a2335f945533450cf60a45da591c4c481b784ddaed987355fb6da49a20f7
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 114 passed, 0 failed
-  Checks:   3924 / 3924 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 116 passed, 0 failed
+  Checks:   4244 / 4244 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

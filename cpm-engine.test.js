@@ -6137,11 +6137,11 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
     check('R-v298-B10: no remaining "× 747 checks" reference (stale pre-alignment-wave)',
         src.indexOf('× 747 checks') < 0);
     check('R-v298-B10: no remaining "13 fixtures" reference in source',
-        src.indexOf('13 fixtures') === -1);
+        !/(^|[^0-9])13 fixtures/.test(src));
     check('R-v298-B10: no remaining "16 fixtures" reference in source',
-        src.indexOf('16 fixtures') === -1);
+        !/(^|[^0-9])16 fixtures/.test(src));
     check('R-v298-B10: no remaining "25 fixtures" reference in source',
-        src.indexOf('25 fixtures') === -1);
+        !/(^|[^0-9])25 fixtures/.test(src));
     // NOTE: this literal list is deliberately NOT extended for each retired
     // count. The JSON block above fails on any fixture count or tally in the
     // disclosure that the harness run does not carry, whichever release it
@@ -12406,6 +12406,107 @@ console.log('\n=== PD — parseXER reads a missing or blank scheduling option th
         r1.nodes['LAG-S'].es_date === '2026-10-30' && r2.nodes['LAG-S'].es_date === '2026-10-31',
         JSON.stringify([r1.nodes['XF-N'].ef_last_worked_date, r1.nodes['XF-A'].ef_last_worked_date,
             r1.nodes['LAG-S'].es_date, r2.nodes['XF-N'].ef_last_worked_date, r2.nodes['LAG-S'].es_date]));
+}
+
+console.log('\n=== EX — external early start and external late finish (P6 parity 11-Oct) ===');
+// P6 23.12.1 F9'd a synthetic probe twice on 11-Oct-2026 (private oracle repo
+// external_2026_10_11, ZZ-CPP-EXT2, data date Mon 19-Oct 08:00): as exported
+// (sched_outer_depend_type SD_Both) the external early start floored the early
+// start (and a started activity's restart), the external late finish capped the
+// late finish, and an open end's free float still ran to the project finish;
+// with "Ignore relationships to and from other projects" (SD_None) both were
+// ignored. Every figure is P6's (hours / 8). Python paired file: _cpp_common
+// tests/test_external_dates_2026_10_11.py.
+{
+    const DAY = '(0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())';
+    const RAW = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        ['2', '3', '4', '5', '6'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '(0||7()())))(0||Exceptions()())))';
+    const RAW7 = '(0||CalendarData()((0||DaysOfWeek()(' +
+        ['1', '2', '3', '4', '5', '6', '7'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '))(0||Exceptions()())))';
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW },
+        D7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], raw: RAW7 } };
+    const ST = '2026-10-12 08:00';
+    const N = (code, dur, c, extra) => Object.assign({ code, duration_days: dur, clndr_id: c || 'MF' }, extra || {});
+    const acts = () => [
+        N('SPINE', 25),
+        N('E1-P', 5), N('E1', 2, 'MF', { external_early_start: '2026-10-21 08:00' }),
+        N('E2-P', 1), N('E2', 2, 'MF', { external_early_start: '2026-10-29 08:00' }), N('E2-S', 1),
+        N('E3', 2, 'MF', { external_early_start: '2026-10-24 08:00' }),
+        N('E4', 2, 'MF', { external_early_start: '2026-10-23 17:00' }),
+        N('E5', 2, 'MF', { external_early_start: '2026-10-21 13:00' }),
+        N('E6', 5, 'MF', { actual_start: ST, remaining_duration: 2, external_early_start: '2026-10-21 08:00' }),
+        N('E7', 0, 'MF', { task_type: 'TT_Mile', external_early_start: '2026-10-27 08:00' }),
+        N('E8', 2, 'MF', { external_late_finish: '2026-10-22 17:00' }), N('E8-S', 2),
+        N('E9', 5, 'MF', { external_late_finish: '2026-10-20 17:00' }),
+        N('E10', 2, 'MF', { external_late_finish: '2026-10-24 17:00' }),
+        N('E11', 2, 'MF', { external_early_start: '2026-10-26 08:00', external_late_finish: '2026-10-30 17:00' }),
+        N('E12', 2, 'MF', { external_early_start: '2026-10-26 08:00', constraint: { type: 'SNET', date: '2026-10-28 08:00' } }),
+        N('E13', 5, 'MF', { actual_start: ST, remaining_duration: 2, external_late_finish: '2026-10-19 17:00' }),
+        N('E14-P', 2), N('E14', 2, 'MF', { external_late_finish: '2026-10-21 17:00' }), N('E14-S', 1),
+        N('E15-P', 2), N('E15', 0, 'MF', { task_type: 'TT_FinMile', external_late_finish: '2026-10-21 17:00' }),
+        N('E16', 2, 'D7', { external_early_start: '2026-10-24 08:00' }),
+    ];
+    const R = (f, t) => ({ from_code: f, to_code: t, type: 'FS', lag_days: 0 });
+    const rels = () => [R('E1-P', 'E1'), R('E2-P', 'E2'), R('E2', 'E2-S'), R('E8', 'E8-S'),
+        R('E14-P', 'E14'), R('E14', 'E14-S'), R('E15-P', 'E15')];
+    const run = (extra) => E.computeCPM(acts(), rels(), Object.assign({ dataDate: '2026-10-19 08:00', calMap: cal,
+        scheduleMode: 'retained_logic', relationshipLagCalendar: 'rcal_Predecessor', useExpectedFinish: true }, extra || {})).nodes;
+    const n = run();
+    const es = (c) => n[c].es_date;
+    check('EX-1: the external early start floors the early start behind and ahead of logic, off working time, on a milestone, beside SNET',
+        es('E1') === '2026-10-26' && es('E2') === '2026-10-29' && es('E2-S') === '2026-11-02' &&
+        es('E3') === '2026-10-26' && es('E4') === '2026-10-26' && es('E5') === '2026-10-21' &&
+        es('E16') === '2026-10-24' && es('E7') === '2026-10-27' && es('E12') === '2026-10-28',
+        ['E1', 'E2', 'E2-S', 'E3', 'E4', 'E5', 'E16', 'E7', 'E12'].map(es).join(' '));
+    check('EX-2: a started activity restarts on its external early start (Wed 10-21, finishes Thu 10-22)',
+        n.E6.restart_date === '2026-10-21' && n.E6.ef_last_worked_date === '2026-10-22',
+        n.E6.restart_date + ' ' + n.E6.ef_last_worked_date);
+    const tf = (c) => n[c].tf_working_days;
+    check('EX-3: the external late finish caps the late finish: P6 float 2, -3, 3, 3, 1, started -1, propagated -1 / -1 / 20',
+        tf('E8') === 2 && tf('E9') === -3 && tf('E10') === 3 && n.E10.lf_last_worked_date === '2026-10-23' &&
+        tf('E11') === 3 && tf('E15') === 1 && tf('E13') === -1 && tf('E14') === -1 && tf('E14-P') === -1 && tf('E14-S') === 20,
+        ['E8', 'E9', 'E10', 'E11', 'E15', 'E13', 'E14', 'E14-P', 'E14-S'].map(tf).join(' '));
+    check('EX-4: an open end\'s free float runs to the project finish whatever caps its late finish (P6 20, 23, 18, 23, 23)',
+        n.E9.ff_working_days === 20 && n.E10.ff_working_days === 23 && n.E11.ff_working_days === 18 &&
+        n.E13.ff_working_days === 23 && n.E15.ff_working_days === 23,
+        ['E9', 'E10', 'E11', 'E13', 'E15'].map((c) => n[c].ff_working_days).join(' '));
+    const off = run({ useExternalDates: false });
+    const raw = run({ useExternalDates: 'SD_None' });
+    check('EX-5: "Ignore relationships to and from other projects" (false or SD_None) ignores both dates',
+        off.E2.es_date === '2026-10-20' && off.E6.restart_date === '2026-10-19' && off.E8.tf_working_days === 21 &&
+        off.E9.tf_working_days === 20 && raw.E2.es_date === '2026-10-20' && off.SPINE.tf_working_days === n.SPINE.tf_working_days,
+        [off.E2.es_date, off.E6.restart_date, off.E8.tf_working_days, off.E9.tf_working_days, raw.E2.es_date].join(' '));
+
+    // Mandatory dates and an applied expected finish hold an open end's free
+    // float at none (P6's float probe: F5-F7 and F16 0 h, F3-F4 to the finish).
+    const h = E.computeCPM([N('SP', 25), N('MS', 2, 'MF', { constraint: { type: 'MS_Start', date: '2026-10-21 08:00' } }),
+        N('SO', 5, 'MF', { constraint: { type: 'SO', date: '2026-10-21 08:00' } }),
+        N('XF', 6, 'MF', { actual_start: ST, remaining_duration: 5, expected_finish: '2026-10-21 17:00' })], [],
+    { dataDate: '2026-10-19 08:00', calMap: cal, scheduleMode: 'retained_logic', useExpectedFinish: true }).nodes;
+    check('EX-6: open-end free float is none under a Mandatory Start or an applied expected finish, to the finish under Start On (P6 0, 0, 18)',
+        h.MS.ff_working_days === 0 && h.XF.ff_working_days === 0 && h.SO.ff_working_days === 18,
+        [h.MS.ff_working_days, h.XF.ff_working_days, h.SO.ff_working_days].join(' '));
+
+    // parseXER hands on both dates and the option.
+    const T = String.fromCharCode(9);
+    const xer = (outer) => ['%T' + T + 'PROJECT', ['%F', 'proj_id', 'last_recalc_date'].join(T),
+        ['%R', 'P1', '2026-10-19 08:00'].join(T)].concat(outer === null ? [] : ['%T' + T + 'SCHEDOPTIONS',
+        ['%F', 'proj_id', 'sched_retained_logic', 'sched_outer_depend_type'].join(T), ['%R', 'P1', 'Y', outer].join(T)],
+    ['%T' + T + 'TASK', ['%F', 'task_id', 'task_code', 'task_type', 'remain_drtn_hr_cnt', 'external_early_start_date',
+        'external_late_end_date'].join(T), ['%R', '1', 'A', 'TT_Task', '16', '2026-10-29 08:00', '2026-11-05 17:00'].join(T), '%E'])
+        .join(String.fromCharCode(10));
+    E.resetMC();
+    const pBoth = E.parseXER(xer('SD_Both'));
+    const ta = Object.values(E.getTasks())[0];
+    const pNone = E.parseXER(xer('SD_None'));
+    const pAbsent = E.parseXER(xer(null));
+    E.resetMC();
+    check('EX-7: parseXER hands on each task\'s external dates and use_external_dates (off only under SD_None)',
+        !!ta && ta.external_early_start === '2026-10-29 08:00' && ta.external_late_finish === '2026-11-05 17:00' &&
+        pBoth.use_external_dates === true && pNone.use_external_dates === false && pAbsent.use_external_dates === true,
+        JSON.stringify([ta && ta.external_early_start, pBoth.use_external_dates, pNone.use_external_dates, pAbsent.use_external_dates]));
 }
 
 console.log('\n========================================');

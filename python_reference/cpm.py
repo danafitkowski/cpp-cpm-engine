@@ -16,8 +16,8 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 3924 of 4022
-# across 114 as measured 2026-10-11 (validation/crossval-summary.json carries
+# measured 2026-08-27, and the fixtures added since took it to 4244 of 4342
+# across 116 as measured 2026-10-11 (validation/crossval-summary.json carries
 # the figures of the latest run). The 98 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
 # populates (49 ff_signed, 49 ff_signed_working_days).
@@ -63,8 +63,8 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 114 fixtures in cpm-engine.crossval.js. As
-measured 2026-10-11 that is 3924 of a 4022-comparison surface; the 98 that are
+the harness executes across the 116 fixtures in cpm-engine.crossval.js. As
+measured 2026-10-11 that is 4244 of a 4342-comparison surface; the 98 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
 field (49 ff_signed, 49 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.56'
+ENGINE_VERSION = '2.9.57'
 
 
 # =============================================================================
@@ -1339,6 +1339,61 @@ def _start_float_from(node):
     return node['es']
 
 
+# EX (P6 parity 2026-10-11) — external early start and external late finish.
+# P6 keeps TASK.external_early_start_date and external_late_end_date for an
+# activity whose relationship to another project is not in the database (an
+# export of one project out of several). Measured on P6 23.12.1's own F9 of a
+# synthetic probe (private oracle repo, external_2026_10_11, ZZ-CPP-EXT2):
+# under SCHEDOPTIONS sched_outer_depend_type SD_Both (every real export's
+# value) the external early start is a floor on the early start, behind or
+# ahead of the activity's own logic, and a started activity's restart moves to
+# it; the external late finish caps the late finish, and negative float follows
+# when it is earlier than the early finish. A start date on time the calendar
+# does not work, or at or after a day's close, moves to the next working day,
+# as a start constraint does (_constraint_start_num); a finish date on a
+# non-working day falls back to the close of the working day before, as a
+# finish constraint does (_constraint_finish_num). With "Ignore relationships
+# to and from other projects" (SD_None) P6 ignores both dates
+# (use_external_dates=False).
+def _external_early_start_num(raw, calendar_info, *, ctx):
+    """The day number an external early start floors `es` (or a started
+    activity's restart) at, resolved as a start constraint dated there."""
+    if not raw:
+        return 0
+    c = _with_constraint_instant({'type': 'SNET', 'date': raw}, raw)
+    return _constraint_start_num(c, calendar_info, alerts=[], ctx=ctx)
+
+
+def _external_late_finish_num(raw, calendar_info, *, ctx):
+    """The exclusive boundary an external late finish caps `lf` at, resolved
+    as a Finish On or Before dated there."""
+    if not raw:
+        return 0
+    c = _with_constraint_instant({'type': 'FNLT', 'date': raw}, raw)
+    return _constraint_finish_num(c, calendar_info, alerts=[], ctx=ctx)
+
+
+# EX (P6 parity 2026-10-11) — an open end's free float runs to the project's
+# early finish whatever caps its late finish (a Start / Finish On or Before,
+# a Start / Finish On, an external late finish), but is NONE on an activity
+# whose dates a Mandatory Start or Mandatory Finish pins, or whose remaining
+# work an applied expected finish re-sized: measured on P6 23.12.1's own F9 of
+# the float probe (float_2026_10_11: F5-F7 mandatory, F16 expected finish,
+# each 0 h where the same shape without them carries 120-176 h) and of the
+# external-dates probe (external_2026_10_11).
+_FF_HOLDING_TYPES = ('MS_Start', 'MS_Finish', 'MFO')
+
+
+def _open_end_ff_held(node):
+    """True when P6 gives this open end no free float (see above)."""
+    if (node.get('expected_finish_applied') or {}).get('applied'):
+        return True
+    if node.get('actual_start') and not node.get('is_complete'):
+        return False        # the mandatory pins are dropped on work under way
+    return any((c or {}).get('type') in _FF_HOLDING_TYPES
+               for c in (node.get('constraint'), node.get('constraint2')))
+
+
 def _assignment_count(value):
     """A whole, non-negative count of resource assignments; 0 for anything
     that is not a number."""
@@ -1665,7 +1720,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 project_calendar='', schedule_mode='retained_logic',
                 relationship_lag_calendar='successor',
                 float_type='FT_FF', ss_lag_from='early_start',
-                project_finish='', use_expected_finish=False):
+                project_finish='', use_expected_finish=False,
+                use_external_dates=True):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -1708,6 +1764,14 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             expected finish leaves it no working time (v2.9.53; see
             _expected_finish_leaves_work). Default False: the expected finish
             is ignored, as P6 does with the option off.
+        use_external_dates: P6 SCHEDOPTIONS sched_outer_depend_type: True
+            (SD_Both, P6's default and every real export's value) applies
+            each activity's ``external_early_start`` (P6
+            TASK.external_early_start_date) as a floor on its early start, or
+            on a started activity's restart, and ``external_late_finish``
+            (TASK.external_late_end_date) as a cap on its late finish
+            (v2.9.57; see _external_early_start_num). False (SD_None, "Ignore
+            relationships to and from other projects") ignores both.
 
     Returns:
         dict with ``nodes``, ``project_finish``, ``project_finish_num``,
@@ -1942,6 +2006,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # the activity carries; read only beside an expected finish that
             # leaves no working time (see _expected_finish_leaves_work).
             'resource_assignments': _assignment_count(a.get('resource_assignments')),
+            # EX (v2.9.57) — P6 TASK.external_early_start_date and
+            # external_late_end_date as written; read only when
+            # use_external_dates is on (see _external_early_start_num).
+            'external_early_start': (str(a.get('external_early_start') or '').strip()
+                                     if use_external_dates else ''),
+            'external_late_finish': (str(a.get('external_late_finish') or '').strip()
+                                     if use_external_dates else ''),
         }
 
     # v2.9.42 PAIRED FIX — missing-data-date gate. Mirrors cpm-engine.js.
@@ -2687,6 +2758,29 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if driving_pred is not None and driving_pred.get('code') in _pt_via:
             driving_pred['passthrough'] = True
 
+        # EX (v2.9.57) — the external early start is logic from another
+        # project: a floor on the early start, applied before the constraints
+        # (which may still move it). A started activity takes it on its
+        # restart below.
+        _ext_es_num = (_external_early_start_num(
+            node['external_early_start'], node_cal, ctx=f'external early start {code}')
+            if node['external_early_start'] else 0)
+        if not has_actual_start and _ext_es_num > max_es:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'external-date-applied',
+                'message': (f'{code}: external early start {node["external_early_start"]} '
+                            f'holds the early start to {num_to_date(_ext_es_num)} (P6 '
+                            f'TASK.external_early_start_date: a relationship to another project)'),
+            })
+            max_es = _ext_es_num
+            driving_pred = {
+                'type': 'CONSTRAINT',
+                'constraint_type': 'EXTERNAL_EARLY_START',
+                'date': node['external_early_start'],
+            }
+            finish_anchor_ef = None
+
         # v2.9.7 — P6 constraint application (forward pass). Primary then
         # secondary; secondary tightens further per P6 spec.
         cstr = node.get('constraint')
@@ -2769,6 +2863,17 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     _ef_anchor = dd_num
                 if _restart_max_drive > _ef_anchor:
                     _ef_anchor = _restart_max_drive
+                # EX (v2.9.57) — the external early start holds the restart.
+                if _ext_es_num > _ef_anchor:
+                    alerts.append({
+                        'severity': 'WARN',
+                        'context': 'external-date-applied',
+                        'message': (f'{code}: external early start '
+                                    f'{node["external_early_start"]} holds the restart to '
+                                    f'{num_to_date(_ext_es_num)} (P6 '
+                                    f'TASK.external_early_start_date)'),
+                    })
+                    _ef_anchor = _ext_es_num
                 # RES — no remaining work before the resume date.
                 _rf = _resume_floor(node)
                 if _rf > _ef_anchor:
@@ -3341,9 +3446,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         n['_seed_lf'] = _seed_lf_for(n)
         n['lf'] = n['_seed_lf']
         # MFB — free float that would run to the seed runs to the EARLY
-        # finish instead (the free-float pass below).
-        if _pf_day > 0:
-            n['_ff_terminal'] = _natural_seed_lf_for(n)
+        # finish instead (the free-float pass below). EX (v2.9.57) — and so
+        # does an open end's whose late finish a constraint or an external
+        # late finish caps: P6 measures it to the early finish whatever caps
+        # the late finish (external_2026_10_11; the float probe's constrained
+        # open ends, float_2026_10_11). Uncapped, the two are the same.
+        n['_ff_terminal'] = _natural_seed_lf_for(n)
         n['ls'] = _retreat_workdays(
             n['lf'], n['duration_days'], n_cal,
             alerts=alerts, ctx=f'init-LS {n["code"]}')
@@ -3548,6 +3656,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 continue
             min_lf = _apply_backward_lf_constraint(
                 code, min_lf, _c, node_cal, node['duration_days'], alerts)
+        # EX (v2.9.57) — the external late finish caps the late finish.
+        if node['external_late_finish']:
+            _ext_lf_num = _external_late_finish_num(
+                node['external_late_finish'], node_cal, ctx=f'external late finish {code}')
+            if 0 < _ext_lf_num < min_lf:
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'external-date-applied',
+                    'message': (f'{code}: external late finish {node["external_late_finish"]} '
+                                f'caps the late finish (P6 TASK.external_late_end_date: a '
+                                f'relationship to another project)'),
+                })
+                min_lf = _ext_lf_num
 
         node['lf'] = min_lf
         node['ls'] = _retreat_workdays(
@@ -3660,7 +3781,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 if _ef_bound is None or _b < _ef_bound:
                     _ef_bound = _b
         if not _seen:
-            _ef_bound = n['_ff_terminal'] if _pf_day > 0 else n['lf']
+            _ef_bound = n['_ff_terminal']
         if _ls_bound is not None:
             _from_ls = _advance_workdays(_ls_bound, n['duration_days'], _a_cal, alerts=[], ctx=_a_ctx)
             if _ef_bound is None or _from_ls < _ef_bound:
@@ -3794,6 +3915,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # imposed project finish exists. Every affected activity is enumerated.
     _any_constraint = any(
         (n.get('constraint') or {}).get('type') or (n.get('constraint2') or {}).get('type')
+        or n.get('external_early_start') or n.get('external_late_finish')
         for n in nodes.values()
     )
     # A Must Finish By (project_finish) is an imposed project finish: negative
@@ -3833,9 +3955,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
     # comparisons are absent on both sides rather than one: 98 of them (49
-    # ff_signed, 49 ff_signed_working_days) on the 114-fixture harness as
-    # measured 2026-10-11, whose line reads 3924 / 3924 executed against a
-    # 4022-comparison surface (validation/crossval-summary.json in the engine
+    # ff_signed, 49 ff_signed_working_days) on the 116-fixture harness as
+    # measured 2026-10-11, whose line reads 4244 / 4244 executed against a
+    # 4342-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.
@@ -3852,12 +3974,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # MFB — with a Must Finish By the seed is not the early finish,
             # and P6 still measures an open end's free float to the early
             # finish (all 78 open ends of three P6 files).
-            _ff_end = n['_ff_terminal'] if _pf_day > 0 else n['lf']
-            # SR (v2.9.55) — the finish window whatever float_type selected
-            # (n['tf'] is start float under FT_Start; ff_signed_working_days
-            # below always counted the finish window).
-            n['ff_signed'] = (_round_half_up_to(_ff_end - n['ef'], 3)
-                              if _pf_day > 0 else n['tf_finish'])
+            _ff_end = n['ef'] if _open_end_ff_held(n) else n['_ff_terminal']
+            # SR (v2.9.55) — the finish window whatever float_type selected;
+            # EX (v2.9.57) — to the early finish whatever caps the late finish,
+            # none on an activity held by a mandatory date (_open_end_ff_held).
+            n['ff_signed'] = _round_half_up_to(_ff_end - n['ef'], 3)
             n['ff_signed_working_days'] = _count_work_days_between(
                 n['ef'], _ff_end, n_cal)
             n['ff'] = max(0, n['ff_signed'])
@@ -3970,8 +4091,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # in ff_signed so the forensic negative-FF signal survives.
         if min_slack == float('inf'):
             # MFB — every successor skipped: measured as for an open end.
-            ff_signed = (_round_half_up_to(n['_ff_terminal'] - n['ef'], 3)
-                         if _pf_day > 0 else n['tf_finish'])
+            ff_signed = (0 if _open_end_ff_held(n)
+                         else _round_half_up_to(n['_ff_terminal'] - n['ef'], 3))
         else:
             ff_signed = _round_half_up_to(min_slack, 3)
         n['ff_signed'] = ff_signed
@@ -4009,7 +4130,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # carry the identical anchor error and stay green.
         _ff_from = binding_pred_anchor if binding_pred_anchor is not None else n['ef']
         _ff_to = (binding_succ_anchor if binding_succ_anchor is not None
-                  else (n['_ff_terminal'] if _pf_day > 0 else n['lf']))
+                  else (n['ef'] if _open_end_ff_held(n) else n['_ff_terminal']))
         n['ff_signed_working_days'] = _count_work_days_between(
             _ff_from, _ff_to, ff_cal)
         n['ff_working_days'] = max(0, n['ff_signed_working_days'])

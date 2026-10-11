@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.56';
+const ENGINE_VERSION = '2.9.57';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1656,6 +1656,46 @@ function _startFloatFrom(node) {
     return node.es;
 }
 
+// EX (P6 parity 2026-10-11) — external early start and external late finish.
+// P6 keeps TASK.external_early_start_date and external_late_end_date for an
+// activity whose relationship to another project is not in the database.
+// Measured on P6 23.12.1's own F9 of a synthetic probe (ZZ-CPP-EXT2): under
+// SCHEDOPTIONS sched_outer_depend_type SD_Both the external early start is a
+// floor on the early start, behind or ahead of the activity's own logic, and a
+// started activity's restart moves to it; the external late finish caps the
+// late finish, and negative float follows when it is earlier than the early
+// finish. A start date on time the calendar does not work, or at or after a
+// day's close, moves to the next working day (_constraintStartNum); a finish
+// date on a non-working day falls back to the close of the working day before
+// (_constraintFinishNum). Under SD_None ("Ignore relationships to and from
+// other projects") both are ignored (opts.useExternalDates false). Python
+// paired sites: _external_early_start_num, _external_late_finish_num.
+function _externalEarlyStartNum(raw, calendarInfo, ctx) {
+    if (!raw) return 0;
+    const c = _withConstraintInstant({ type: 'SNET', date: raw }, raw);
+    return _constraintStartNum(c, calendarInfo, [], ctx);
+}
+
+function _externalLateFinishNum(raw, calendarInfo, ctx) {
+    if (!raw) return 0;
+    const c = _withConstraintInstant({ type: 'FNLT', date: raw }, raw);
+    return _constraintFinishNum(c, calendarInfo, [], ctx);
+}
+
+// EX (P6 parity 2026-10-11) — an open end's free float runs to the project's
+// early finish whatever caps its late finish (a Start / Finish On or Before, a
+// Start / Finish On, an external late finish), but is none on an activity whose
+// dates a Mandatory Start or Mandatory Finish pins, or whose remaining work an
+// applied expected finish re-sized (P6's own F9 of the float probe: F5-F7
+// mandatory, F16 expected finish, each 0 h where the same shape without them
+// carries 120-176 h). Python paired site: _open_end_ff_held.
+function _openEndFFHeld(node) {
+    if (node.expected_finish_applied && node.expected_finish_applied.applied) return true;
+    if (node.actual_start && !node.is_complete) return false;
+    return [node.constraint, node.constraint2].some((c) => c &&
+        (c.type === 'MS_Start' || c.type === 'MS_Finish' || c.type === 'MFO'));
+}
+
 // A whole, non-negative count of resource assignments; 0 for anything that
 // is not a number. Python paired site: _assignment_count.
 function _assignmentCount(value) {
@@ -2060,6 +2100,14 @@ function computeCPM(activities, relationships, opts) {
     // Without this, an activity code like "2170" would silently change its
     // position in topo_order vs Python and break Section 3's alphabetical
     // edge-drop tiebreak when cycles include numeric-only codes.
+    // EX (v2.9.57) — P6 SCHEDOPTIONS sched_outer_depend_type: external early
+    // start / late finish dates apply unless the project ignores relationships
+    // to and from other projects (opts.useExternalDates false, or the raw token
+    // 'SD_None'). Default on (SD_Both, P6's default). Python paired site: the
+    // use_external_dates parameter of compute_cpm.
+    const _extOpt = (opts.useExternalDates !== undefined) ? opts.useExternalDates
+        : opts.use_external_dates;
+    const _useExternalDates = !(_extOpt === false || _extOpt === 'SD_None');
     const nodes = Object.create(null);
     // v2.9.42 — TT_LOE / TT_WBS activities excluded from the network.
     const excludedByTaskType = [];
@@ -2386,6 +2434,11 @@ function computeCPM(activities, relationships, opts) {
             // the activity carries; read only beside an expected finish that
             // leaves no working time (see _expectedFinishLeavesWork).
             resource_assignments: _assignmentCount(a.resource_assignments),
+            // EX (v2.9.57) — P6 TASK.external_early_start_date and
+            // external_late_end_date as written; read only when
+            // opts.useExternalDates is on (see _externalEarlyStartNum).
+            external_early_start: _useExternalDates ? String(a.external_early_start || '').trim() : '',
+            external_late_finish: _useExternalDates ? String(a.external_late_finish || '').trim() : '',
             // v2.9.12 T1.6 — thread `alerts` + activity code so unrecognized
             // tokens / incomplete dates emit a forensically-visible WARN
             // instead of silently dropping. Backward-compat: callers that
@@ -3334,6 +3387,29 @@ function computeCPM(activities, relationships, opts) {
         // already had `if not has_actual_start` around the ES-constraint
         // calls. A WARN is emitted per-constraint so opposing experts can
         // see what was suppressed.
+        // EX (v2.9.57) — the external early start is logic from another
+        // project: a floor on the early start, applied before the constraints
+        // (which may still move it). A started activity takes it on its
+        // restart below. Python paired site: the same block in compute_cpm.
+        const _extESNum = node.external_early_start
+            ? _externalEarlyStartNum(node.external_early_start, nodeCal, 'external early start ' + code)
+            : 0;
+        if (!hasActualStart && _extESNum > maxES) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'external-date-applied',
+                message: code + ': external early start ' + node.external_early_start +
+                    ' holds the early start to ' + numToDate(_extESNum) + ' (P6 ' +
+                    'TASK.external_early_start_date: a relationship to another project)',
+            });
+            maxES = _extESNum;
+            drivingPred = {
+                type: 'CONSTRAINT',
+                constraint_type: 'EXTERNAL_EARLY_START',
+                date: node.external_early_start,
+            };
+            finishAnchorEF = null;
+        }
         const cstr = node.constraint;
         const cstr2 = node.constraint2;
         if (!hasActualStart) {
@@ -3472,6 +3548,17 @@ function computeCPM(activities, relationships, opts) {
                 }
                 if (_restartMaxDrive > efAnchor) {
                     efAnchor = _restartMaxDrive;
+                }
+                // EX (v2.9.57) — the external early start holds the restart.
+                if (_extESNum > efAnchor) {
+                    alerts.push({
+                        severity: 'WARN',
+                        context: 'external-date-applied',
+                        message: code + ': external early start ' + node.external_early_start +
+                            ' holds the restart to ' + numToDate(_extESNum) +
+                            ' (P6 TASK.external_early_start_date)',
+                    });
+                    efAnchor = _extESNum;
                 }
                 // RES — no remaining work before the resume date.
                 const _rf = _resumeFloorOf(node);
@@ -4128,8 +4215,10 @@ function computeCPM(activities, relationships, opts) {
         n._seedLF = _seedLFFor(n);
         n.lf = n._seedLF;
         // MFB — free float that would run to the seed runs to the EARLY
-        // finish instead (the free-float pass below).
-        if (_projectDeadlineNum) n._ff_terminal = _naturalSeedLFFor(n);
+        // finish instead (the free-float pass below). EX (v2.9.57) — and so
+        // does an open end's whose late finish a constraint or an external
+        // late finish caps; uncapped, the two are the same.
+        n._ff_terminal = _naturalSeedLFFor(n);
         n.ls = _retreatWithAlerts(n.lf, n.duration_days, nCal, alerts,
             'init-LS ' + n.code);
     }
@@ -4387,6 +4476,21 @@ function computeCPM(activities, relationships, opts) {
             });
             minLF = _secondaryMandatoryLF;
         }
+        // EX (v2.9.57) — the external late finish caps the late finish.
+        if (node.external_late_finish) {
+            const _extLFNum = _externalLateFinishNum(node.external_late_finish, nodeCal,
+                'external late finish ' + code);
+            if (_extLFNum > 0 && _extLFNum < minLF) {
+                alerts.push({
+                    severity: 'WARN',
+                    context: 'external-date-applied',
+                    message: code + ': external late finish ' + node.external_late_finish +
+                        ' caps the late finish (P6 TASK.external_late_end_date: a ' +
+                        'relationship to another project)',
+                });
+                minLF = _extLFNum;
+            }
+        }
 
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
@@ -4477,7 +4581,8 @@ function computeCPM(activities, relationships, opts) {
         for (const _c in nodes) {
             const _n = nodes[_c];
             if ((_n.constraint && _n.constraint.type) ||
-                (_n.constraint2 && _n.constraint2.type)) { _anyConstraint = true; break; }
+                (_n.constraint2 && _n.constraint2.type) ||
+                _n.external_early_start || _n.external_late_finish) { _anyConstraint = true; break; }
         }
         if (!_projectDeadlineNum && !_anyConstraint) {
             const _impossible = [];
@@ -4559,7 +4664,7 @@ function computeCPM(activities, relationships, opts) {
                 if (_efBound === null || _b < _efBound) _efBound = _b;
             }
         }
-        if (!_seen) _efBound = _projectDeadlineNum ? n._ff_terminal : n.lf;
+        if (!_seen) _efBound = n._ff_terminal;
         if (_lsBound !== null) {
             const _fromLs = _advanceWithAlerts(_lsBound, n.duration_days, _aCal, [], _aCtx);
             if (_efBound === null || _fromLs < _efBound) _efBound = _fromLs;
@@ -4728,11 +4833,11 @@ function computeCPM(activities, relationships, opts) {
             // MFB — with a Must Finish By the seed is not the early finish,
             // and P6 still measures an open end's free float to the early
             // finish (all 78 open ends of three P6 files).
-            const _ffEnd = _projectDeadlineNum ? n._ff_terminal : n.lf;
-            // SR (v2.9.55) — the finish window whatever floatType selected
-            // (n.tf is start float under FT_Start; ff_signed_working_days
-            // always counted the finish window).
-            n.ff_signed = _projectDeadlineNum ? _roundHalfUpTo(_ffEnd - n.ef, 3) : n.tf_finish;
+            const _ffEnd = _openEndFFHeld(n) ? n.ef : n._ff_terminal;
+            // SR (v2.9.55) — the finish window whatever floatType selected;
+            // EX (v2.9.57) — to the early finish whatever caps the late finish,
+            // none on an activity held by a mandatory date (_openEndFFHeld).
+            n.ff_signed = _roundHalfUpTo(_ffEnd - n.ef, 3);
             n.ff_signed_working_days = _countWorkDaysBetween(n.ef, _ffEnd, nCal);
             n.ff = Math.max(0, n.ff_signed);
             n.ff_working_days = Math.max(0, n.ff_signed_working_days);
@@ -4866,7 +4971,7 @@ function computeCPM(activities, relationships, opts) {
         // terminal-branch comment).
         // MFB — every successor skipped: measured as for an open end.
         const ffSigned = (minSlack === Infinity)
-            ? (_projectDeadlineNum ? _roundHalfUpTo(n._ff_terminal - n.ef, 3) : n.tf_finish)
+            ? (_openEndFFHeld(n) ? 0 : _roundHalfUpTo(n._ff_terminal - n.ef, 3))
             : _roundHalfUpTo(minSlack, 3);
         n.ff_signed = ffSigned;
         n.ff = Math.max(0, ffSigned);
@@ -4904,7 +5009,7 @@ function computeCPM(activities, relationships, opts) {
         // windows coincide, which is why the defect hid.
         const _ffFromNum = (bindingPredAnchor !== null) ? bindingPredAnchor : n.ef;
         const _ffToNum = (bindingSuccAnchor !== null) ? bindingSuccAnchor
-            : (_projectDeadlineNum ? n._ff_terminal : n.lf);
+            : (_openEndFFHeld(n) ? n.ef : n._ff_terminal);
         n.ff_signed_working_days = _countWorkDaysBetween(_ffFromNum, _ffToNum, ffCal);
         n.ff_working_days = Math.max(0, n.ff_signed_working_days);
     }
@@ -5839,6 +5944,15 @@ function parseXER(content) {
                         // end there under opts.useExpectedFinish (activity
                         // field expected_finish).
                         expected_finish: (row.expect_end_date || '').trim(),
+                        // v2.9.57 — TASK.external_early_start_date and
+                        // external_late_end_date as P6 wrote them, time
+                        // included: a floor on the early start and a cap on
+                        // the late finish from a relationship to another
+                        // project (activity fields external_early_start and
+                        // external_late_finish, applied unless
+                        // opts.useExternalDates is off).
+                        external_early_start: (row.external_early_start_date || '').trim(),
+                        external_late_finish: (row.external_late_end_date || '').trim(),
                         // v2.9.53 — how many TASKRSRC rows the activity
                         // carries, counted after the parse (TASKRSRC follows
                         // TASK in a P6 export); computeCPM keeps the remaining
@@ -6098,6 +6212,16 @@ function parseXER(content) {
         sched_use_expect_end_flag: _xfRaw,
         use_expected_finish: _useXf,
         use_expected_finish_source: _xfSource,
+        // EX (v2.9.57) — "Ignore relationships to and from other projects"
+        // (sched_outer_depend_type), to hand computeCPM as
+        // opts.useExternalDates: off only under SD_None; SD_Both, a blank
+        // field or a missing table is P6's default, on (measured 11-Oct-2026).
+        use_external_dates: String(_MC.schedOptions.sched_outer_depend_type || '').trim() !== 'SD_None',
+        use_external_dates_source: !_soPresent
+            ? 'SCHEDOPTIONS table absent; P6 default (relationships to other projects not ignored, SD_Both)'
+            : (String(_MC.schedOptions.sched_outer_depend_type || '').trim()
+                ? 'SCHEDOPTIONS sched_outer_depend_type=' + String(_MC.schedOptions.sched_outer_depend_type).trim()
+                : 'SCHEDOPTIONS sched_outer_depend_type blank; P6 default (relationships to other projects not ignored, SD_Both)'),
         // v2.9.50: the Must Finish By (PROJECT.plan_end_date), and the value to hand
         // computeCPM as opts.projectFinish: the same date whenever one is
         // set, whatever SCHEDOPTIONS sched_use_project_end_date_for_float
@@ -9222,20 +9346,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '114 cross-validation fixtures. The harness defines 4022 ' +
+                '116 cross-validation fixtures. The harness defines 4342 ' +
                 'comparisons; 98 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
                 '(49 ff_signed, 49 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 3924 / 3924" counts executed comparisons only and ' +
+                'reported "Checks: 4244 / 4244" counts executed comparisons only and ' +
                 'is not a coverage figure. None of those 98 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 36 of the 114 fixtures contain at least one skipped ' +
-                'comparison. The 3924 comparisons that did run are bit-identical ' +
+                'branch. 36 of the 116 fixtures contain at least one skipped ' +
+                'comparison. The 4244 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 106 of the 114 fixtures). ' +
+                'severity-level alert parity, compared on 108 of the 116 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -9276,8 +9400,8 @@ function buildDaubertDisclosure(result, opts) {
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
                 'emit the field, so 98 checks are skipped rather than compared, counted, ' +
                 'or reported as failures (49 ff_signed, 49 ff_signed_working_days). The ' +
-                'printed 3924 / 3924 therefore sits on a nominal surface of 4022 checks, and ' +
-                'those two fields go uncompared somewhere in 36 of the 114 fixtures. In ' +
+                'printed 4244 / 4244 therefore sits on a nominal surface of 4342 checks, and ' +
+                'those two fields go uncompared somewhere in 36 of the 116 fixtures. In ' +
                 'all 98 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
@@ -9287,16 +9411,16 @@ function buildDaubertDisclosure(result, opts) {
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '114 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '116 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '3924 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 3924 / 3924 tally cannot express ' +
+                '4244 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 4244 / 4244 tally cannot express ' +
                 'the following gaps. Not executed: 98 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 106 of the 114 fixtures: not on those 2, which have no ' +
+                'parity runs on 108 of the 116 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +

@@ -120,6 +120,7 @@ try:
         project_finish=payload.get('project_finish', ''),
         use_expected_finish=payload.get('use_expected_finish', False),
         float_type=payload.get('float_type', 'FT_FF'),
+        use_external_dates=payload.get('use_external_dates', True),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -194,7 +195,8 @@ function runJS(payload) {
               ssLagFrom: payload.ss_lag_from || 'early_start',
               projectFinish: payload.project_finish || '',
               useExpectedFinish: payload.use_expected_finish === true,
-              floatType: payload.float_type || 'FT_FF' }
+              floatType: payload.float_type || 'FT_FF',
+              useExternalDates: payload.use_external_dates !== false }
         );
     } catch (e) {
         return {
@@ -2777,6 +2779,50 @@ compareFixture('F118 - SR: start float of work under way, FT_Min, progress overr
     relationship_lag_calendar: 'rcal_Predecessor',
     use_expected_finish: true,
     float_type: 'FT_Min',
+});
+
+// F119-F120 (P6 parity 11-Oct-2026): external early start and late finish
+// (EX). P6 23.12.1 F9'd a synthetic probe as exported (SD_Both) and with
+// "Ignore relationships to and from other projects" (SD_None) (private): the
+// external early start floors the early start (and a started activity's
+// restart), the external late finish caps the late finish, an open end's free
+// float runs to the project finish unless a mandatory date or an applied
+// expected finish holds it. Data date Mon 19-Oct-2026 08:00.
+const exActs = () => [
+    pN('SPINE', 25),
+    pN('A1P', 5), pN('A1', 2, 'MF', { external_early_start: '2026-10-21 08:00' }),
+    pN('A2P', 1), pN('A2', 2, 'MF', { external_early_start: '2026-10-29 08:00' }), pN('A2S', 1),
+    pN('A3', 2, 'MF', { external_early_start: '2026-10-24 08:00' }),
+    pN('A4', 2, 'MF', { external_early_start: '2026-10-23 17:00' }),
+    pN('A6', 5, 'MF', { actual_start: '2026-10-12 08:00', remaining_duration: 2, external_early_start: '2026-10-21 08:00' }),
+    pN('A7', 0, 'MF', { task_type: 'TT_Mile', external_early_start: '2026-10-27 08:00' }),
+    pN('B8', 2, 'MF', { external_late_finish: '2026-10-22 17:00' }), pN('B8S', 2),
+    pN('B9', 5, 'MF', { external_late_finish: '2026-10-20 17:00' }),
+    pN('B10', 2, 'MF', { external_late_finish: '2026-10-24 17:00' }),
+    pN('B13', 5, 'MF', { actual_start: '2026-10-12 08:00', remaining_duration: 2, external_late_finish: '2026-10-19 17:00' }),
+    pN('B14P', 2), pN('B14', 2, 'MF', { external_late_finish: '2026-10-21 17:00' }), pN('B14S', 1),
+    pN('C12', 2, 'MF', { external_early_start: '2026-10-26 08:00', constraint: { type: 'SNET', date: '2026-10-28 08:00' } }),
+    pN('H1', 2, 'MF', { constraint: { type: 'MS_Start', date: '2026-10-21 08:00' } }),
+    pN('H2', 5, 'MF', { constraint: { type: 'FNLT', date: '2026-10-30 17:00' } }),
+    pN('H3', 6, 'MF', { actual_start: '2026-10-12 08:00', remaining_duration: 5, expected_finish: '2026-10-21 17:00' }),
+];
+const exRels = () => [xR('A1P', 'A1'), xR('A2P', 'A2'), xR('A2', 'A2S'), xR('B8', 'B8S'), xR('B14P', 'B14'), xR('B14', 'B14S')];
+compareFixture('F119 - EX: external early start and late finish (SD_Both)', {
+    activities: exActs(),
+    relationships: exRels(),
+    data_date: '2026-10-19 08:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+});
+compareFixture('F120 - EX: the same with relationships to other projects ignored (SD_None)', {
+    activities: exActs(),
+    relationships: exRels(),
+    data_date: '2026-10-19 08:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+    use_external_dates: false,
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
