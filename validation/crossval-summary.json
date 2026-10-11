@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.9.54",
-  "generated_utc": "2026-10-10T16:35:34.337Z",
+  "engine_version": "2.9.55",
+  "generated_utc": "2026-10-11T15:07:21.884Z",
   "fixtures": {
-    "total": 112,
-    "passed": 112,
+    "total": 114,
+    "passed": 114,
     "failed": 0
   },
   "checks": {
-    "executed": 3814,
+    "executed": 3924,
     "failed": 0,
-    "passed": 3814,
+    "passed": 3924,
     "skipped": 98,
-    "surface": 3912
+    "surface": 4022
   },
   "skips_by_field": {
     "ff_signed": 49,
@@ -22,13 +22,13 @@
     "mutual": 98
   },
   "checks_by_field": {
-    "project_finish_num": 110,
-    "project_finish": 110,
-    "critical_codes": 110,
-    "topo_order": 110,
-    "alert_count": 104,
-    "alert_severity_counts": 104,
-    "node <id>": 3164,
+    "project_finish_num": 112,
+    "project_finish": 112,
+    "critical_codes": 112,
+    "topo_order": 112,
+    "alert_count": 106,
+    "alert_severity_counts": 106,
+    "node <id>": 3262,
     "threw (both engines)": 2
   },
   "rows": [
@@ -1032,6 +1032,22 @@
       "id": "F116",
       "name": "F116 - FM: a finish milestone held at Friday 17:00 drives seven-day work from Saturday",
       "checks": 62,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F117",
+      "name": "F117 - SR: start float of work under way, FT_Start, retained logic",
+      "checks": 55,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F118",
+      "name": "F118 - SR: start float of work under way, FT_Min, progress override",
+      "checks": 55,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

@@ -12,6 +12,91 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.55 - 2026-10-11 - the start float of work under way runs from the restart, measured on P6's own F9
+
+**Engine math changed, under start float and the smallest float only.** P6's
+"Compute Total Float As: Start Float" measures an activity from its early
+start to its late start, and on work under way both are the REMAINING dates:
+the restart at the data date and the remaining late start. The engine already
+carried the remaining late start, but measured from the actual start, so every
+started activity got the working days between its actual start and the data
+date as extra start float (`_startFloatFrom`). Under `floatType: 'FT_Start'`
+that figure is the total float. Under `'FT_Min'` the smaller of start and
+finish float was taken, and the inflated start float was never the smaller, so
+no FT_Min figure was wrong. A started activity with no remaining duration keeps
+the actual start: its finish is still forecast from it (the
+completion-data-incomplete ALERT).
+
+- **Free float does not follow the float method.** An open end with no Must
+  Finish By took `ff_signed` from `tf`, which is start float under FT_Start
+  and the smaller of the two under FT_Min, while `ff_signed_working_days`
+  always counted the finish window. Both now read the finish window.
+- **Under finish float (`'FT_FF'`, the default and what P6 uses unless told
+  otherwise) `tf`, free float and every date are byte-identical.** The
+  published `tf_start` and `tf_start_working_days` of started work move to the
+  restart-based figure.
+- **The cross-validation harness hands both engines a float method** for the
+  first time (`float_type` in the fixture payload, FT_FF when absent).
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+11-Oct-2026 on Dana's instruction to fix the defect. A computed value moves
+only when the caller selects FT_Start or FT_Min.
+
+**How it was measured.** Three synthetic projects carrying the same 26
+activities and differing only in "Compute Total Float As" (Finish Float, Start
+Float, the smallest of the two) were imported into P6 Professional 23.12.1 and
+scheduled with F9 on 11-Oct-2026: retained logic, data date Monday
+19-Oct-2026 08:00, Use Expected Finish Dates on, a 200 h spine setting the
+project finish. Cases: each start and finish constraint type including
+mandatory dates on a Saturday, three activities started the Monday before
+(one shrunk by an expected finish, one driving an FS successor), start and
+finish milestones, mixed calendars (seven-day into Monday-Friday,
+Monday-Saturday tied SS and FF) and As Late As Possible. P6 stored the same
+total float under all three methods on every activity. A database diff before
+and after showed the three projects added and nothing else changed.
+
+| Engine method | activities matching P6's total float |
+|---|---|
+| FT_FF, v2.9.54 and v2.9.55 | 26 of 26 |
+| FT_Min, v2.9.54 and v2.9.55 | 26 of 26 |
+| FT_Start, v2.9.54 | 23 of 26 |
+| FT_Start, v2.9.55 | 26 of 26 |
+
+**Verified.**
+- JS unit suite: 1,391 checks green, up from 1,387 (SR-1 to SR-4). Three fail
+  against the v2.9.54 engine; SR-4 pins what the change must leave alone.
+- Cross-validation: 114 fixtures, 3924 of 4022 executed, 98 skipped, 0
+  failures. F117 and F118 are new: started work under FT_Start with retained
+  logic and under FT_Min with progress override. F117 fails when only one
+  engine carries the change.
+- The 13-case P6 matrix regenerated on these bytes reads 13 / 13 over 27 field
+  checks with zero changed engine values; cases 19-21 read 256 of 256 on six
+  fields at each data date.
+- Coverage re-measured on these bytes: 94.45% statements, 82.82% branches,
+  95.59% functions.
+
+**Who is affected.** Callers that hand the engine FT_Start (or read
+`tf_start` on started work). The CPP tools hand it no float method, so they
+report finish float, which equals P6's total float under all three methods on
+every probe case; no tool output moves. The referee is P6's own scheduling: in
+the local P6 database, 157 real projects whose dates P6 computed (no task or
+relationship edited after their last F9) use start float or the smallest of
+the two and have work under way. Run with their own float method, the two
+start-float projects' 22 started activities now match P6's stored total float
+on all 22, up from none. On the 155 smallest-float projects working-day total
+and free float are unchanged on every one of 42,545 unfinished rows, and so are
+every critical set and project finish; 2,462 of their 6,174 started rows match
+P6 before and after, and of those that differ 3,699 are part-day (P6 holds a
+float that is not a whole number of days) and 13 are within one working day.
+The calendar-day `tf` moves there on 1,413 started rows (the smaller of the
+two windows can now be the start window) and the calendar-day `ff` on 867
+open ends (now always the finish window): the same working days, counted over
+a window that straddles a different number of weekend days.
+
+**Not measured, not claimed.** Start float under progress override (the
+change applies there by the same definition; the probe used retained logic).
+A case where P6's start and finish float differ on started work.
+
 ## v2.9.54 - 2026-10-10 - constraints dated on time the calendar does not work, ALAP by free float, finish-milestone instants and shift hours, measured on P6's own F9
 
 **Engine math changed.** Four rules, measured on Primavera P6 Professional

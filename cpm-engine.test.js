@@ -12254,6 +12254,57 @@ console.log('\n=== OW / AL / FM / SH — constraints off working time, ALAP free
         JSON.stringify([t10 && t10.remaining, t10b && t10b.remaining, (p10.parse_alerts || []).map((a) => a.context)]));
 }
 
+console.log('\n=== SR — the start float of work under way runs from the restart (P6 parity 11-Oct) ===');
+// P6 23.12.1 F9'd a 26-activity float probe (11-Oct-2026, private oracle repo
+// float_2026_10_11) under Finish Float, Start Float and the smallest of the two:
+// total float was identical under all three on every activity. On work under
+// way P6's start float runs from the remaining early start (the restart at the
+// data date) to the remaining late start; the engine measured it from the
+// actual start, 40 h too high on each of three started activities under
+// FT_Start. The network is those three cases plus the 200 h spine that sets the
+// project finish; every figure is P6's (hours / 8).
+// Python paired file: _cpp_common tests/test_start_float_in_progress_2026_10_11.py.
+{
+    const DAY = '(0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())';
+    const RAW = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        ['2', '3', '4', '5', '6'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '(0||7()())))(0||Exceptions()())))';
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW } };
+    const ST = '2026-10-12 08:00';
+    const N = (code, dur, extra) => Object.assign({ code, duration_days: dur, clndr_id: 'MF' }, extra || {});
+    const acts = () => [N('SPINE', 25), N('F8-S', 5, { actual_start: ST, remaining_duration: 3 }),
+        N('F9-A', 5, { actual_start: ST, remaining_duration: 2 }), N('F9-B', 2),
+        N('F16-S', 6, { actual_start: ST, remaining_duration: 5, expected_finish: '2026-10-21 17:00' })];
+    const rels = () => [{ from_code: 'F9-A', to_code: 'F9-B', type: 'FS', lag_days: 0 }];
+    const run = (ft, mode) => E.computeCPM(acts(), rels(), { dataDate: '2026-10-19 08:00', calMap: cal,
+        scheduleMode: mode || 'retained_logic', relationshipLagCalendar: 'rcal_Predecessor',
+        useExpectedFinish: true, floatType: ft });
+    const P6 = { 'F8-S': 22, 'F9-A': 21, 'F9-B': 21, 'F16-S': 22, SPINE: 0 };
+    const started = ['F8-S', 'F9-A', 'F16-S'];
+
+    const st = run('FT_Start');
+    check('SR-1: FT_Start on started work is P6\'s 176 / 168 / 176 h (22 / 21 / 22 wd), not 216 / 208 / 216',
+        started.every((c) => st.nodes[c].tf_working_days === P6[c] && st.nodes[c].tf_start_working_days === P6[c]),
+        started.map((c) => st.nodes[c].tf_working_days).join(' '));
+    const all = ['FT_FF', 'FT_Start', 'FT_Min'].map((ft) => run(ft).nodes);
+    check('SR-2: P6 stored the same total float under all three methods; start and finish float agree in working days',
+        Object.keys(P6).every((c) => all.every((n) => n[c].tf_working_days === P6[c]) &&
+            all[0][c].tf_start_working_days === all[0][c].tf_finish_working_days),
+        JSON.stringify(Object.keys(P6).map((c) => all.map((n) => n[c].tf_working_days))));
+    check('SR-3: free float is the finish window whatever the total float method',
+        Object.keys(P6).every((c) => [1, 2].every((i) => ['ff', 'ff_signed', 'ff_working_days']
+            .every((f) => all[i][c][f] === all[0][c][f]))),
+        JSON.stringify(started.map((c) => all.map((n) => n[c].ff))));
+    const ff = all[0];
+    const po = run('FT_Start', 'progress_override').nodes;
+    check('SR-4: dates, finish float and the display late start do not move; progress override measures the same pair',
+        ff['F8-S'].restart_date === '2026-10-19' && ff['F8-S'].ef_last_worked_date === '2026-10-21' &&
+        ff['F8-S'].remaining_late_start_date === '2026-11-18' && ff['F8-S'].ls_date === '2026-10-12' &&
+        ff['F16-S'].ef_last_worked_date === '2026-10-21' && ff['F9-A'].remaining_late_start_date === '2026-11-17' &&
+        started.every((c) => po[c].tf_start_working_days === po[c].tf_finish_working_days && po[c].tf_working_days === P6[c]),
+        JSON.stringify([ff['F8-S'].restart_date, ff['F8-S'].ls_date, started.map((c) => po[c].tf_working_days)]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

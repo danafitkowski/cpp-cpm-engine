@@ -119,6 +119,7 @@ try:
         ss_lag_from=payload.get('ss_lag_from', 'early_start'),
         project_finish=payload.get('project_finish', ''),
         use_expected_finish=payload.get('use_expected_finish', False),
+        float_type=payload.get('float_type', 'FT_FF'),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -192,7 +193,8 @@ function runJS(payload) {
               relationshipLagCalendar: payload.relationship_lag_calendar || 'successor',
               ssLagFrom: payload.ss_lag_from || 'early_start',
               projectFinish: payload.project_finish || '',
-              useExpectedFinish: payload.use_expected_finish === true }
+              useExpectedFinish: payload.use_expected_finish === true,
+              floatType: payload.float_type || 'FT_FF' }
         );
     } catch (e) {
         return {
@@ -2739,6 +2741,42 @@ compareFixture('F116 - FM: a finish milestone held at Friday 17:00 drives seven-
     data_date: '2026-10-14 17:00',
     cal_map: PCAL,
     relationship_lag_calendar: 'rcal_Predecessor',
+});
+
+// F117-F118 (P6 parity 11-Oct-2026): the start float of work under way (SR).
+// P6 23.12.1 F9'd a float probe under Finish Float, Start Float and the
+// smallest of the two (private): on started work start float runs from the
+// restart to the remaining late start. The first fixtures to hand the engines
+// a float_type: three started activities, one of them shrunk by an expected
+// finish, one started with no remaining duration (start float stays on the
+// actual start), and a Start On or Before. Data date Mon 19-Oct-2026 08:00.
+const srActs = () => [
+    pN('SPINE', 25),
+    pN('F8', 5, 'MF', { actual_start: '2026-10-12 08:00', remaining_duration: 3 }),
+    pN('F9A', 5, 'MF', { actual_start: '2026-10-12 08:00', remaining_duration: 2 }), pN('F9B', 2),
+    pN('F16', 6, 'MF', { actual_start: '2026-10-12 08:00', remaining_duration: 5,
+        expected_finish: '2026-10-21 17:00' }),
+    pN('NR', 5, 'MF', { actual_start: '2026-10-12 08:00' }),
+    pN('F1', 5, 'MF', pC('CS_MSOB', '2026-10-26 08:00')),
+];
+compareFixture('F117 - SR: start float of work under way, FT_Start, retained logic', {
+    activities: srActs(),
+    relationships: [xR('F9A', 'F9B')],
+    data_date: '2026-10-19 08:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+    float_type: 'FT_Start',
+});
+compareFixture('F118 - SR: start float of work under way, FT_Min, progress override', {
+    activities: srActs(),
+    relationships: [xR('F9A', 'F9B')],
+    data_date: '2026-10-19 08:00',
+    cal_map: PCAL,
+    schedule_mode: 'progress_override',
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+    float_type: 'FT_Min',
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

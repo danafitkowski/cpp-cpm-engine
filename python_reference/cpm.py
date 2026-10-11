@@ -16,8 +16,8 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 3814 of 3912
-# across 112 as measured 2026-10-10 (validation/crossval-summary.json carries
+# measured 2026-08-27, and the fixtures added since took it to 3924 of 4022
+# across 114 as measured 2026-10-11 (validation/crossval-summary.json carries
 # the figures of the latest run). The 98 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
 # populates (49 ff_signed, 49 ff_signed_working_days).
@@ -63,8 +63,8 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 112 fixtures in cpm-engine.crossval.js. As
-measured 2026-10-10 that is 3814 of a 3912-comparison surface; the 98 that are
+the harness executes across the 114 fixtures in cpm-engine.crossval.js. As
+measured 2026-10-11 that is 3924 of a 4022-comparison surface; the 98 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
 field (49 ff_signed, 49 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.54'
+ENGINE_VERSION = '2.9.55'
 
 
 # =============================================================================
@@ -1313,6 +1313,30 @@ def _expected_finish_leaves_work(raw, start_day, data_date, calendar_info):
     if share is None:
         return tod >= 720 > s_tod
     return share > (_calendar_day_worked_share(day, s_tod, calendar_info) or 0.0)
+
+
+# SR (P6 parity 2026-10-11) — the start float of work under way. P6's Start
+# Float is early start to late start, and on a started activity both are the
+# REMAINING dates: the restart and the remaining late start. Measured on P6
+# 23.12.1's own F9 of a synthetic probe (private oracle repo, float_2026_10_11,
+# data date Mon 08:00, retained logic): total float was identical under Finish
+# Float, Start Float and the smallest of the two on all 26 activities, three of
+# them started the Monday before. Until v2.9.54 the engine measured start float
+# from the ACTUAL start, so every started activity carried the working days
+# between its actual start and the data date as extra start float (40 h on
+# each of the three; the total float under FT_Start, and never smaller than
+# finish float under FT_Min, so FT_Min was unaffected). A started activity with
+# no remaining duration keeps the actual start: its finish is still forecast
+# from it (completion-data-incomplete ALERT).
+def _start_float_from(node):
+    """The early start that start float runs from: the restart on work under
+    way with a remaining duration, the early start otherwise."""
+    if (node.get('actual_start') and not node.get('is_complete')
+            and node.get('restart') is not None):
+        rd = node.get('remaining_duration')
+        if rd is not None and math.isfinite(rd) and rd >= 0:
+            return node['restart']
+    return node['es']
 
 
 def _assignment_count(value):
@@ -3565,8 +3589,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             node['ls'] = node['remaining_late_start']
         # v2.9.42 PAIRED FIX — both float definitions published; `tf` takes the
         # one sched_float_type selected. FT_FF leaves `tf` byte-identical.
+        # SR (v2.9.55) — start float of work under way runs from the restart.
         node['tf_finish'] = _round_half_up_to(node['lf'] - node['ef'], 3)
-        node['tf_start'] = _round_half_up_to(node['ls'] - node['es'], 3)
+        node['tf_start'] = _round_half_up_to(node['ls'] - _start_float_from(node), 3)
         if _float_type == 'FT_Start':
             node['tf'] = node['tf_start']
         elif _float_type == 'FT_Min':
@@ -3744,7 +3769,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         else:
             n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
             n['tf_finish_working_days'] = _count_work_days_between(n['ef'], n['lf'], n_cal)
-            n['tf_start_working_days'] = _count_work_days_between(n['es'], n['ls'], n_cal)
+            n['tf_start_working_days'] = _count_work_days_between(
+                _start_float_from(n), n['ls'], n_cal)
             if _float_type == 'FT_Start':
                 n['tf_working_days'] = n['tf_start_working_days']
             elif _float_type == 'FT_Min':
@@ -3807,9 +3833,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
     # comparisons are absent on both sides rather than one: 98 of them (49
-    # ff_signed, 49 ff_signed_working_days) on the 112-fixture harness as
-    # measured 2026-10-10, whose line reads 3814 / 3814 executed against a
-    # 3912-comparison surface (validation/crossval-summary.json in the engine
+    # ff_signed, 49 ff_signed_working_days) on the 114-fixture harness as
+    # measured 2026-10-11, whose line reads 3924 / 3924 executed against a
+    # 4022-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.
@@ -3827,8 +3853,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # and P6 still measures an open end's free float to the early
             # finish (all 78 open ends of three P6 files).
             _ff_end = n['_ff_terminal'] if _pf_day > 0 else n['lf']
+            # SR (v2.9.55) — the finish window whatever float_type selected
+            # (n['tf'] is start float under FT_Start; ff_signed_working_days
+            # below always counted the finish window).
             n['ff_signed'] = (_round_half_up_to(_ff_end - n['ef'], 3)
-                              if _pf_day > 0 else n['tf'])
+                              if _pf_day > 0 else n['tf_finish'])
             n['ff_signed_working_days'] = _count_work_days_between(
                 n['ef'], _ff_end, n_cal)
             n['ff'] = max(0, n['ff_signed'])
@@ -3942,7 +3971,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if min_slack == float('inf'):
             # MFB — every successor skipped: measured as for an open end.
             ff_signed = (_round_half_up_to(n['_ff_terminal'] - n['ef'], 3)
-                         if _pf_day > 0 else n['tf'])
+                         if _pf_day > 0 else n['tf_finish'])
         else:
             ff_signed = _round_half_up_to(min_slack, 3)
         n['ff_signed'] = ff_signed

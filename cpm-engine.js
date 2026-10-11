@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.54';
+const ENGINE_VERSION = '2.9.55';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1632,6 +1632,28 @@ function _expectedFinishLeavesWork(raw, startDay, dataDate, calendarInfo) {
     const share = _calendarDayWorkedShare(day, tod, calendarInfo);
     if (share === null) return tod >= 720 && sTod < 720;
     return share > (_calendarDayWorkedShare(day, sTod, calendarInfo) || 0);
+}
+
+// SR (P6 parity 2026-10-11) — the start float of work under way. P6's Start
+// Float is early start to late start, and on a started activity both are the
+// REMAINING dates: the restart and the remaining late start. Measured on P6
+// 23.12.1's own F9 of a synthetic probe (data date Mon 08:00, retained logic):
+// total float was identical under Finish Float, Start Float and the smallest
+// of the two on all 26 activities, three of them started the Monday before.
+// Until v2.9.54 the engine measured start float from the ACTUAL start, so every
+// started activity carried the working days between its actual start and the
+// data date as extra start float (40 h on each of the three; the total float
+// under FT_Start, and never smaller than finish float under FT_Min, so FT_Min
+// was unaffected). A started activity with no remaining duration keeps the
+// actual start: its finish is still forecast from it
+// (completion-data-incomplete ALERT). Python paired site: _start_float_from.
+function _startFloatFrom(node) {
+    if (node.actual_start && !node.is_complete &&
+        node.restart !== undefined && node.restart !== null &&
+        Number.isFinite(node.remaining_duration) && node.remaining_duration >= 0) {
+        return node.restart;
+    }
+    return node.es;
 }
 
 // A whole, non-negative count of resource assignments; 0 for anything that
@@ -4424,8 +4446,9 @@ function computeCPM(activities, relationships, opts) {
         // takes whichever SCHEDOPTIONS.sched_float_type selected. FT_FF (the
         // P6 default and this engine's historical hardcode) leaves `tf`
         // byte-identical to every prior release.
+        // SR (v2.9.55) — start float of work under way runs from the restart.
         node.tf_finish = _roundHalfUpTo(node.lf - node.ef, 3);
-        node.tf_start = _roundHalfUpTo(node.ls - node.es, 3);
+        node.tf_start = _roundHalfUpTo(node.ls - _startFloatFrom(node), 3);
         node.tf = (_floatType === 'FT_Start')
             ? node.tf_start
             : (_floatType === 'FT_Min')
@@ -4662,7 +4685,7 @@ function computeCPM(activities, relationships, opts) {
         // v2.9.42 — count over the window the selected float definition names,
         // not always over the finish window. FT_FF is unchanged.
         n.tf_finish_working_days = n.is_complete ? 0 : _countWorkDaysBetween(n.ef, n.lf, nCal);
-        n.tf_start_working_days = n.is_complete ? 0 : _countWorkDaysBetween(n.es, n.ls, nCal);
+        n.tf_start_working_days = n.is_complete ? 0 : _countWorkDaysBetween(_startFloatFrom(n), n.ls, nCal);
         n.tf_working_days = n.is_complete
             ? 0
             : ((_floatType === 'FT_Start')
@@ -4706,7 +4729,10 @@ function computeCPM(activities, relationships, opts) {
             // and P6 still measures an open end's free float to the early
             // finish (all 78 open ends of three P6 files).
             const _ffEnd = _projectDeadlineNum ? n._ff_terminal : n.lf;
-            n.ff_signed = _projectDeadlineNum ? _roundHalfUpTo(_ffEnd - n.ef, 3) : n.tf;
+            // SR (v2.9.55) — the finish window whatever floatType selected
+            // (n.tf is start float under FT_Start; ff_signed_working_days
+            // always counted the finish window).
+            n.ff_signed = _projectDeadlineNum ? _roundHalfUpTo(_ffEnd - n.ef, 3) : n.tf_finish;
             n.ff_signed_working_days = _countWorkDaysBetween(n.ef, _ffEnd, nCal);
             n.ff = Math.max(0, n.ff_signed);
             n.ff_working_days = Math.max(0, n.ff_signed_working_days);
@@ -4840,7 +4866,7 @@ function computeCPM(activities, relationships, opts) {
         // terminal-branch comment).
         // MFB — every successor skipped: measured as for an open end.
         const ffSigned = (minSlack === Infinity)
-            ? (_projectDeadlineNum ? _roundHalfUpTo(n._ff_terminal - n.ef, 3) : n.tf)
+            ? (_projectDeadlineNum ? _roundHalfUpTo(n._ff_terminal - n.ef, 3) : n.tf_finish)
             : _roundHalfUpTo(minSlack, 3);
         n.ff_signed = ffSigned;
         n.ff = Math.max(0, ffSigned);
@@ -9143,20 +9169,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '112 cross-validation fixtures. The harness defines 3912 ' +
+                '114 cross-validation fixtures. The harness defines 4022 ' +
                 'comparisons; 98 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
                 '(49 ff_signed, 49 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 3814 / 3814" counts executed comparisons only and ' +
+                'reported "Checks: 3924 / 3924" counts executed comparisons only and ' +
                 'is not a coverage figure. None of those 98 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 36 of the 112 fixtures contain at least one skipped ' +
-                'comparison. The 3814 comparisons that did run are bit-identical ' +
+                'branch. 36 of the 114 fixtures contain at least one skipped ' +
+                'comparison. The 3924 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 104 of the 112 fixtures). ' +
+                'severity-level alert parity, compared on 106 of the 114 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -9197,8 +9223,8 @@ function buildDaubertDisclosure(result, opts) {
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
                 'emit the field, so 98 checks are skipped rather than compared, counted, ' +
                 'or reported as failures (49 ff_signed, 49 ff_signed_working_days). The ' +
-                'printed 3814 / 3814 therefore sits on a nominal surface of 3912 checks, and ' +
-                'those two fields go uncompared somewhere in 36 of the 112 fixtures. In ' +
+                'printed 3924 / 3924 therefore sits on a nominal surface of 4022 checks, and ' +
+                'those two fields go uncompared somewhere in 36 of the 114 fixtures. In ' +
                 'all 98 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
@@ -9208,16 +9234,16 @@ function buildDaubertDisclosure(result, opts) {
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '112 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '114 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '3814 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 3814 / 3814 tally cannot express ' +
+                '3924 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 3924 / 3924 tally cannot express ' +
                 'the following gaps. Not executed: 98 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 104 of the 112 fixtures: not on those 2, which have no ' +
+                'parity runs on 106 of the 114 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +
