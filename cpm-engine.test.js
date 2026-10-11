@@ -9933,9 +9933,14 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
         '%R\t2\tB\tB\tTT_Task\tTK_NotStart\t40\t40',
     ].join('\n');
     const r2 = E.parseXER(xer2);
+    // PD (v2.9.56): a file with no SCHEDOPTIONS table hands on P6's default lag
+    // calendar, rcal_Predecessor, which is also the first file's value; the
+    // empty raw row and the source string prove it is the default, not a leak.
     check('V2942-12: SCHEDOPTIONS does not leak into the next parsed file',
-        r2.sched_float_type === '' && r2.sched_calendar_on_relationship_lag === '',
-        JSON.stringify([r2.sched_float_type, r2.sched_calendar_on_relationship_lag]));
+        r2.sched_float_type === '' && Object.keys(r2.sched_options).length === 0 &&
+        r2.sched_calendar_on_relationship_lag === 'rcal_Predecessor' &&
+        /table absent/.test(r2.relationship_lag_calendar_source),
+        JSON.stringify([r2.sched_float_type, r2.sched_options, r2.relationship_lag_calendar_source]));
     E.resetMC();
 }
 
@@ -12022,10 +12027,12 @@ console.log('\n=== XF / UW — expected finish dates and finish constraints on s
     const pN = E.parseXER(xer('N'));
     const pBlank = E.parseXER(xer(''));
     E.resetMC();
+    // PD (v2.9.56): a blank flag is P6's default, on (measured 11-Oct-2026;
+    // until v2.9.55 this read it as off).
     check('XF-12: parseXER hands on each task\'s expected finish and the "Use Expected Finish Dates" option',
         !!task && task.expected_finish === '2026-10-23 17:00' &&
         pY.use_expected_finish === true && pN.use_expected_finish === false &&
-        pBlank.use_expected_finish === false,
+        pBlank.use_expected_finish === true,
         JSON.stringify([task && task.expected_finish, pY.use_expected_finish, pN.use_expected_finish,
             pBlank.use_expected_finish]));
 }
@@ -12303,6 +12310,102 @@ console.log('\n=== SR — the start float of work under way runs from the restar
         ff['F16-S'].ef_last_worked_date === '2026-10-21' && ff['F9-A'].remaining_late_start_date === '2026-11-17' &&
         started.every((c) => po[c].tf_start_working_days === po[c].tf_finish_working_days && po[c].tf_working_days === P6[c]),
         JSON.stringify([ff['F8-S'].restart_date, ff['F8-S'].ls_date, started.map((c) => po[c].tf_working_days)]));
+}
+
+console.log('\n=== PD — parseXER reads a missing or blank scheduling option the way P6 does (P6 parity 11-Oct) ===');
+// P6 23.12.1 F9'd two synthetic probes on 11-Oct-2026 (private oracle repo,
+// defaults_2026_10_11): one export with no SCHEDOPTIONS table (as MS Project
+// conversions and some export profiles arrive) and one whose
+// sched_use_expect_end_flag and sched_calendar_on_relationship_lag are blank.
+// With no table P6 applied "Use Expected Finish Dates" and laid relationship
+// lag on the PREDECESSOR's calendar (its project default, stored on F9). With
+// the two fields blank it applied Use Expected Finish Dates and laid the lag on
+// the SUCCESSOR's calendar. Until v2.9.55 parseXER handed on Use Expected
+// Finish Dates off for both and an empty lag calendar, which computeCPM reads
+// as the successor's. The network is the probe's shape; every date is P6's.
+// Python paired site: tia_builder._detect_schedule_options.
+{
+    const T = String.fromCharCode(9);
+    const NL = String.fromCharCode(10);
+    const so = (xf, lag) => ['%T' + T + 'SCHEDOPTIONS',
+        ['%F', 'proj_id', 'sched_retained_logic', 'sched_use_expect_end_flag',
+            'sched_calendar_on_relationship_lag'].join(T),
+        ['%R', 'P1', 'Y', xf, lag].join(T)];
+    const xer = (schedRows) => [
+        '%T' + T + 'PROJECT',
+        ['%F', 'proj_id', 'proj_short_name', 'last_recalc_date'].join(T),
+        ['%R', 'P1', 'PD', '2026-10-19 08:00'].join(T),
+        '%T' + T + 'CALENDAR',
+        ['%F', 'clndr_id', 'clndr_name', 'day_hr_cnt'].join(T),
+        ['%R', 'MF', 'Mon-Fri', '8'].join(T),
+        ['%R', 'D7', 'Seven day', '8'].join(T),
+        ['%R', 'D6', 'Mon-Sat', '8'].join(T),
+    ].concat(schedRows, [
+        '%T' + T + 'TASK',
+        ['%F', 'task_id', 'proj_id', 'task_code', 'task_name', 'task_type', 'status_code', 'clndr_id',
+            'target_drtn_hr_cnt', 'remain_drtn_hr_cnt', 'act_start_date', 'expect_end_date'].join(T),
+        ['%R', 'T1', 'P1', 'XF-N', 'XF-N', 'TT_Task', 'TK_NotStart', 'MF', '16', '16', '',
+            '2026-10-30 17:00'].join(T),
+        ['%R', 'T2', 'P1', 'XF-A', 'XF-A', 'TT_Task', 'TK_Active', 'MF', '32', '16', '2026-10-12 08:00',
+            '2026-10-30 17:00'].join(T),
+        ['%R', 'T3', 'P1', 'LAG-P', 'LAG-P', 'TT_Task', 'TK_NotStart', 'D7', '40', '40', '', ''].join(T),
+        ['%R', 'T4', 'P1', 'LAG-S', 'LAG-S', 'TT_Task', 'TK_NotStart', 'D6', '8', '8', '', ''].join(T),
+        '%T' + T + 'TASKPRED',
+        ['%F', 'task_id', 'pred_task_id', 'pred_type', 'lag_hr_cnt'].join(T),
+        ['%R', 'T4', 'T3', 'PR_FS', '48'].join(T),
+        '%E',
+    ]).join(NL);
+    const opt = (rows) => { E.resetMC(); const p = E.parseXER(xer(rows)); E.resetMC(); return p; };
+
+    const none = opt([]);
+    check('PD-1: no SCHEDOPTIONS table: Use Expected Finish Dates on, lag on the predecessor calendar (P6\'s project default)',
+        none.use_expected_finish === true && none.sched_calendar_on_relationship_lag === 'rcal_Predecessor',
+        JSON.stringify([none.use_expected_finish, none.sched_calendar_on_relationship_lag]));
+    const blank = opt(so('', ''));
+    const odd = opt(so('X', ''));
+    check('PD-2: both fields blank: Use Expected Finish Dates on, lag on the successor calendar; an unrecognised flag reads as on',
+        blank.use_expected_finish === true && blank.sched_calendar_on_relationship_lag === 'rcal_Successor' &&
+        odd.use_expected_finish === true,
+        JSON.stringify([blank.use_expected_finish, blank.sched_calendar_on_relationship_lag, odd.use_expected_finish]));
+    const n = opt(so('N', 'rcal_Predecessor'));
+    const y = opt(so('Y', 'rcal_Successor'));
+    const bare = opt(so('Y', 'Successor'));
+    check('PD-3: values the file sets pass through (N, Y, rcal_ tokens; a bare Successor reads as rcal_Successor); the raw row is unchanged',
+        n.use_expected_finish === false && n.sched_calendar_on_relationship_lag === 'rcal_Predecessor' &&
+        y.use_expected_finish === true && y.sched_calendar_on_relationship_lag === 'rcal_Successor' &&
+        bare.sched_calendar_on_relationship_lag === 'rcal_Successor' &&
+        (blank.sched_options.sched_calendar_on_relationship_lag || '') === '' && blank.sched_use_expect_end_flag === '' &&
+        n.sched_use_expect_end_flag === 'N',
+        JSON.stringify([n.use_expected_finish, n.sched_calendar_on_relationship_lag, y.use_expected_finish,
+            bare.sched_calendar_on_relationship_lag, blank.sched_use_expect_end_flag]));
+
+    // Through getTasks() into computeCPM with the options parseXER hands on.
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] },
+        D7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [] },
+        D6: { work_days: [1, 2, 3, 4, 5, 6], holidays: [] } };
+    const run = (rows) => {
+        E.resetMC();
+        const p = E.parseXER(xer(rows));
+        const t = E.getTasks();
+        const acts = Object.values(t).map((k) => Object.assign({
+            code: k.code, duration_days: k.originalRemaining, clndr_id: k.clndr_id,
+            task_type: k.task_type, expected_finish: k.expected_finish,
+        }, k.actual_start ? { actual_start: k.actual_start, remaining_duration: k.remaining } : {}));
+        const rels = E.getRelationships().map((r) => ({
+            from_code: t[r.predTaskId].code, to_code: t[r.taskId].code, type: r.type, lag_days: r.lag,
+        }));
+        E.resetMC();
+        return E.computeCPM(acts, rels, { dataDate: '2026-10-19 08:00', calMap: cal,
+            useExpectedFinish: p.use_expected_finish, relationshipLagCalendar: p.sched_calendar_on_relationship_lag });
+    };
+    const r1 = run([]);
+    const r2 = run(so('', ''));
+    check('PD-4: P6\'s own F9: XF-N and XF-A finish Fri 10-30 in both files; LAG-S starts Fri 10-30 with no table, Sat 10-31 with the blank field',
+        r1.nodes['XF-N'].ef_last_worked_date === '2026-10-30' && r1.nodes['XF-A'].ef_last_worked_date === '2026-10-30' &&
+        r2.nodes['XF-N'].ef_last_worked_date === '2026-10-30' && r2.nodes['XF-A'].ef_last_worked_date === '2026-10-30' &&
+        r1.nodes['LAG-S'].es_date === '2026-10-30' && r2.nodes['LAG-S'].es_date === '2026-10-31',
+        JSON.stringify([r1.nodes['XF-N'].ef_last_worked_date, r1.nodes['XF-A'].ef_last_worked_date,
+            r1.nodes['LAG-S'].es_date, r2.nodes['XF-N'].ef_last_worked_date, r2.nodes['LAG-S'].es_date]));
 }
 
 console.log('\n========================================');

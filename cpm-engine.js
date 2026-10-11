@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.55';
+const ENGINE_VERSION = '2.9.56';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -6025,26 +6025,79 @@ function parseXER(content) {
         });
     }
     _MC.predecessors = validPreds;
+    // PD (P6 parity 2026-10-11) — a missing or blank scheduling option is read
+    // the way P6 schedules it. P6 Professional 23.12.1 F9'd two synthetic
+    // probes on 11-Oct-2026: with no SCHEDOPTIONS table it applied "Use
+    // Expected Finish Dates" and laid relationship lag on the PREDECESSOR's
+    // calendar (its project default, which it stores on F9); with the two
+    // fields blank it applied Use Expected Finish Dates and laid the lag on the
+    // SUCCESSOR's calendar (its help: "If you do not select a calendar,
+    // Successor Activity Calendar is used"; its log mislabels the blank as
+    // "Project Default Calendar"). Until v2.9.55 both read as expected finish
+    // off and an empty lag calendar. A bare "Successor", as P6 sometimes
+    // exports the field, is handed on as rcal_Successor. sched_options keeps
+    // the row verbatim. Python paired site: tia_builder._detect_schedule_options.
+    const _soPresent = Object.keys(_MC.schedOptions).length > 0;
+    const _xfRaw = String(_MC.schedOptions.sched_use_expect_end_flag || '').trim().toUpperCase();
+    const _lagRaw = String(_MC.schedOptions.sched_calendar_on_relationship_lag || '').trim();
+    const _LAG_CAL_AS_EXPORTED = { Successor: 'rcal_Successor' };
+    let _useXf;
+    let _xfSource;
+    let _lagToken;
+    let _lagSource;
+    if (!_soPresent) {
+        _useXf = true;
+        _xfSource = 'SCHEDOPTIONS table absent; P6 default (Use Expected Finish Dates on), ' +
+            'as P6 23.12.1 schedules such a file (measured 11-Oct-2026)';
+        _lagToken = 'rcal_Predecessor';
+        _lagSource = 'SCHEDOPTIONS table absent; P6 default (predecessor calendar, ' +
+            'rcal_Predecessor), as P6 23.12.1 schedules such a file (measured 11-Oct-2026)';
+    } else {
+        if (_xfRaw === 'Y' || _xfRaw === 'N') {
+            _useXf = _xfRaw === 'Y';
+            _xfSource = 'SCHEDOPTIONS sched_use_expect_end_flag=' + _xfRaw;
+        } else {
+            _useXf = true;
+            _xfSource = 'SCHEDOPTIONS sched_use_expect_end_flag blank/unrecognized (' +
+                (_xfRaw || 'absent') + '); P6 default (Use Expected Finish Dates on), ' +
+                'measured 11-Oct-2026';
+        }
+        if (_lagRaw) {
+            _lagToken = Object.prototype.hasOwnProperty.call(_LAG_CAL_AS_EXPORTED, _lagRaw)
+                ? _LAG_CAL_AS_EXPORTED[_lagRaw] : _lagRaw;
+            _lagSource = 'SCHEDOPTIONS sched_calendar_on_relationship_lag=' + _lagRaw +
+                (_lagToken !== _lagRaw ? ' (as P6 exports it; read as ' + _lagToken + ')' : '');
+        } else {
+            _lagToken = 'rcal_Successor';
+            _lagSource = 'SCHEDOPTIONS sched_calendar_on_relationship_lag blank; P6 ' +
+                'schedules a blank lag calendar on the successor calendar (rcal_Successor), ' +
+                'measured 11-Oct-2026';
+        }
+    }
     return {
         taskCount: Object.keys(_MC.tasks).length,
         relCount: validPreds.length,
         dropped_activities: droppedActivities,
-        // v2.9.42 — the file's own SCHEDOPTIONS row, plus the two settings that
+        // v2.9.42 — the file's own SCHEDOPTIONS row, plus the settings that
         // change computeCPM's answer, pre-extracted so a caller can forward them:
         //   computeCPM(acts, rels, {
         //       relationshipLagCalendar: p.sched_calendar_on_relationship_lag,
+        //       useExpectedFinish: p.use_expected_finish,
         //       floatType: p.sched_float_type })
+        // PD (v2.9.56) — the lag calendar is the token P6 schedules with (a
+        // missing table: rcal_Predecessor; a blank field: rcal_Successor), not
+        // the raw field; sched_options keeps the raw row.
         sched_options: _MC.schedOptions,
-        sched_calendar_on_relationship_lag:
-            _MC.schedOptions.sched_calendar_on_relationship_lag || '',
+        sched_calendar_on_relationship_lag: _lagToken,
+        relationship_lag_calendar_source: _lagSource,
         sched_float_type: _MC.schedOptions.sched_float_type || '',
-        // v2.9.52 — "Use Expected Finish Dates" (sched_use_expect_end_flag),
-        // to hand computeCPM as opts.useExpectedFinish: true only on Y, P6's
-        // default being N. Paired with tia_builder._detect_schedule_options.
-        sched_use_expect_end_flag:
-            String(_MC.schedOptions.sched_use_expect_end_flag || '').trim().toUpperCase(),
-        use_expected_finish:
-            String(_MC.schedOptions.sched_use_expect_end_flag || '').trim().toUpperCase() === 'Y',
+        // v2.9.52 — "Use Expected Finish Dates" (sched_use_expect_end_flag) as
+        // the file writes it, and the value to hand computeCPM as
+        // opts.useExpectedFinish. PD (v2.9.56): on unless the file says N; a
+        // missing table, a blank or an unrecognised flag is P6's default, on.
+        sched_use_expect_end_flag: _xfRaw,
+        use_expected_finish: _useXf,
+        use_expected_finish_source: _xfSource,
         // v2.9.50: the Must Finish By (PROJECT.plan_end_date), and the value to hand
         // computeCPM as opts.projectFinish: the same date whenever one is
         // set, whatever SCHEDOPTIONS sched_use_project_end_date_for_float

@@ -12,6 +12,78 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.56 - 2026-10-11 - parseXER reads a missing or blank scheduling option the way P6 does, measured on P6's own F9
+
+**What parseXER hands on changed; computeCPM's arithmetic did not.** `parseXER`
+pre-extracts the two SCHEDOPTIONS settings that change `computeCPM`'s answer so a
+caller can forward them. They are now the values P6 schedules with:
+
+- **`use_expected_finish`** (for `opts.useExpectedFinish`) is on unless the file
+  says `N`. A missing SCHEDOPTIONS table, a blank flag or an unrecognised one is
+  P6's default, on. Until v2.9.55 all three read as off.
+- **`sched_calendar_on_relationship_lag`** (for `opts.relationshipLagCalendar`)
+  is `rcal_Predecessor` when the export carries no SCHEDOPTIONS table (P6's
+  project default, which it stores on F9), `rcal_Successor` when the field is
+  blank (where P6 laid the lag; its help says "If you do not select a calendar,
+  Successor Activity Calendar is used", and its schedule log mislabels the blank
+  as "Project Default Calendar"), and the file's own token otherwise. A bare
+  `Successor`, as P6 sometimes exports the field, is handed on as
+  `rcal_Successor`. Until v2.9.55 a missing or blank field was handed on empty,
+  which `computeCPM` reads as the successor's calendar.
+- `use_expected_finish_source` and `relationship_lag_calendar_source` (new) say
+  which rule decided each; `sched_options` keeps the row verbatim and
+  `sched_use_expect_end_flag` the flag as written. `computeCPM`'s own defaults,
+  for a caller that passes nothing, are unchanged.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational), set
+11-Oct-2026 on Dana's instruction to fix the defect. A caller forwarding
+`parseXER`'s options for a file with no SCHEDOPTIONS table, or with these fields
+blank, gets different dates.
+
+**How it was measured.** Two synthetic projects were imported into P6
+Professional 23.12.1 and scheduled with F9 on 11-Oct-2026 (retained logic, data
+date Monday 19-Oct-2026 08:00): one with no SCHEDOPTIONS table, one with
+`sched_use_expect_end_flag` and `sched_calendar_on_relationship_lag` blank. Each
+carries a not-started and a started 16 h task with an expected finish of Friday
+30-Oct 17:00, and a seven-day 40 h task FS + 48 h to a Monday-Saturday task,
+where the successor's start names the lag calendar. P6 finished both expected-
+finish tasks on Friday 30-Oct in both files (the expected finish applied) and
+started the lag successor on Friday 30-Oct with no table (predecessor calendar)
+and on Saturday 31-Oct with the field blank (successor calendar; only that
+calendar works Saturday). After F9 P6 stored the first project's options as Use
+Expected Finish Dates Y and rcal_Predecessor. Through `parseXER`, `getTasks()`
+and `computeCPM` with the options `parseXER` hands on, the engine now gives P6's
+dates on all four (PD-4); before, it finished the expected-finish tasks on
+Tuesday 20-Oct and started the lag successor of the no-table file on Saturday.
+
+**Verified.**
+- JS unit suite: 1,395 checks green, up from 1,391 (PD-1 to PD-4). All four fail
+  against the v2.9.55 engine. XF-12 now expects a blank flag to read as on, and
+  V2942-12's no-leak check reads the empty raw row and the "table absent" source
+  (the default lag calendar equals the previous file's value).
+- Cross-validation unchanged: 114 fixtures, 3924 of 4022 executed, 98 skipped, 0
+  failures. `parseXER` has no Python counterpart in the harness; the CPP
+  converters already read these options this way (tia_builder, 11-Oct-2026).
+- The 13-case P6 matrix regenerated on these bytes reads 13 / 13 over 27 field
+  checks with zero changed engine values; cases 19-21 read 256 of 256 on six
+  fields at each data date.
+- Coverage re-measured on these bytes: 94.47% statements, 82.97% branches,
+  95.59% functions.
+
+**Who is affected.** Callers that forward `parseXER`'s options. On the measuring
+machine 449 distinct real exports were parsed: 19 carry no SCHEDOPTIONS table
+(MS Project conversions) and none has these fields blank. For all 19 `parseXER`
+now hands on Use Expected Finish Dates on and the predecessor lag calendar.
+Through `parseXER`, `getTasks()` and `computeCPM`, 8 of them move at least one
+unfinished activity's early dates (244 activities in all, at most 53 in one
+file) and 1 moves the project's early finish. P6 never scheduled those files, so
+there is no P6 answer for them; the probes are the referee. The CPP tools build
+their networks with the Python converters, which already read the options this
+way, so no CPP deliverable moves.
+
+**Not measured, not claimed.** A SCHEDOPTIONS table that carries a row for
+another project only (parseXER takes the first row, as before).
+
 ## v2.9.55 - 2026-10-11 - the start float of work under way runs from the restart, measured on P6's own F9
 
 **Engine math changed, under start float and the smallest float only.** P6's

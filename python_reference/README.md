@@ -82,7 +82,17 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  05278a48a5188fef036b9780c8bd058d718acea79986a07ac33c6344e7cfb488
+cpm.py  SHA-256:  71e3a07aa432145387ff95f765f6f12b7848f4179df7f072b8cd46fc3e62a70f
+
+(v2.9.56 parseXER reads missing or blank scheduling options as P6 does
+2026-10-11 - bumped from 05278a48...: ENGINE_VERSION reads 2.9.56. No computed
+value of compute_cpm moves: the change is in the JS engine's parseXER, which
+now hands on "Use Expected Finish Dates" on and the predecessor lag calendar
+when SCHEDOPTIONS is absent, and Use Expected Finish Dates on and the
+successor lag calendar when those fields are blank, as P6 Professional 23.12.1
+scheduled such files (measured 11-Oct-2026). This reference's callers (the CPP
+converters) already hand compute_cpm those values. The harness is unchanged:
+114 fixtures, 3924 of 4022 executed.)
 
 (v2.9.55 start float of work under way 2026-10-11 - bumped from df755780...:
 ENGINE_VERSION reads 2.9.55, start float on work under way runs from the
@@ -407,7 +417,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 236062
-  sha-256:  05278a48a5188fef036b9780c8bd058d718acea79986a07ac33c6344e7cfb488
+  sha-256:  71e3a07aa432145387ff95f765f6f12b7848f4179df7f072b8cd46fc3e62a70f
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
