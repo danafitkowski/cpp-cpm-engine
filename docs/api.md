@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.57'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.58'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -152,6 +152,19 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 > working day before it, because that is the instant successors are scheduled
 > from. Before that fix the closing-time form printed the working day before
 > its own finish date.
+>
+> **The dates a milestone prints** (since v2.9.58). A milestone occupies one
+> instant, a day's opening (08:00) or its close (17:00), and P6 prints that
+> instant's own date for its start and its finish. A start milestone, and any
+> zero-duration activity that is not a finish milestone (`task_type`
+> `'TT_FinMile'`), starts at an opening; a finish milestone's late instant is a
+> close; otherwise the instant takes the kind of what binds it (a link, a lag,
+> the data date, a start floor, a constraint), then working time on the
+> milestone's own calendar. `es_date`, `ef_last_worked_date`, `ls_date` and
+> `lf_last_worked_date` print it; `es` / `ef` / `ls` / `lf` and `ef_date` /
+> `lf_date` keep the boundary numbering. Until v2.9.57 a finish milestone after a
+> Friday finish printed its start as the Monday, and a start milestone printed
+> its finish as the working day before its start.
 
 **Relationships array:**
 
@@ -194,7 +207,9 @@ precision review before relying on the dates.
     nodes: {
         A: {
             es, ef, ls, lf,                      // Day offsets from epoch.
-            es_date, ef_date, ls_date, lf_date,  // 'YYYY-MM-DD' strings.
+            es_date, ef_date, ls_date, lf_date,  // 'YYYY-MM-DD' strings. ef_date / lf_date are the exclusive
+                                                 //   boundaries; es_date / ls_date print the start as P6 does
+                                                 //   (since v2.9.58 a milestone at a close prints that day).
             tf, ff,                              // Total / free float (calendar days).
             tf_working_days,                     // TF in working days on activity's own calendar.
             ff_working_days,                     // FF in working days.
@@ -203,6 +218,11 @@ precision review before relying on the dates.
                                                  //   on a completed activity whose actual finish
                                                  //   carries its closing time, which prints that
                                                  //   date itself (see the actual_finish note).
+                                                 //   Since v2.9.58 a milestone (any zero-duration
+                                                 //   activity) prints the date of the instant it
+                                                 //   sits at, a day's opening or its close, for its
+                                                 //   start, finish, late start and late finish, as
+                                                 //   P6 does (see the milestone note below).
             driving_predecessor,                 // Object describing what drove ES, or null.
                                                  //   {code, type, lag_days}  — real predecessor; `type` ∈ {'FS','SS','FF','SF'}.
                                                  //   {type:'CONSTRAINT', constraint_type, date}  — v2.9.15: an ES-side

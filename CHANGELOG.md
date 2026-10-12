@@ -12,6 +12,98 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.58 - 2026-10-12 - the dates a milestone prints, measured on P6's own output
+
+**What the engine prints changed; no computed value did.** A milestone occupies
+one instant, and P6 prints that instant's own date for its start and its
+finish. The instant is a day's opening (08:00) or its close (17:00). The engine
+numbers days on an exclusive boundary, where Tuesday 17:00 and Wednesday 08:00
+are the same number, and until v2.9.57 it printed both a milestone's dates from
+that number:
+
+- a **finish milestone** sitting at a close printed its start (`es_date`) and
+  late start (`ls_date`) one working day late: the opening after the close,
+  where P6 prints the day of the close;
+- a **start milestone** printed its finish (`ef_last_worked_date`) one working
+  day early, retreated from its opening, where P6 prints the opening's own day;
+  its late dates printed from the boundary whatever P6 printed;
+- a finish milestone sitting at an opening (held by the data date, a start
+  floor or a link from an opening) printed its finish one working day early.
+
+The engine now carries, beside each number, whether the milestone's instant is
+an opening or a close, and prints that instant's date for start and finish,
+early and late. `es`, `ef`, `ls`, `lf`, `ef_date`, `lf_date`, float, criticality
+and every driving relationship are unchanged; only `es_date`, `ls_date`,
+`ef_last_worked_date` and `lf_last_worked_date` of zero-duration activities
+move. A zero-duration activity that is not a finish milestone prints as a start
+milestone, as P6 prints a zero-duration task.
+
+**The rule, measured on P6's own output.** Every not-started zero-duration
+activity in every project P6 last scheduled in the measuring machine's P6
+database (313 projects, 12-Oct-2026) was read for where P6 put it:
+
+- a start milestone (and any zero-duration activity that is not a finish
+  milestone) starts at an opening: 1,897 of 1,897 rows;
+- a finish milestone's late instant is a close: 11,700+ rows, every one;
+- otherwise the milestone takes the kind of the instant that binds it: along a
+  zero-lag link the kind of the predecessor's finish (FS / FF) or start
+  (SS / SF), or of the successor's late start (FS / SS) or late finish
+  (FF / SF), with no counter-example on whole days in 4,900+ rows; a positive
+  lag lands on a close forward and on an opening backward, a negative lag the
+  other way; the data date (a close only at its calendar's close), a start
+  floor (Start On or After, Start On, Mandatory Start, an external early
+  start) and a constraint's own time count as candidates; where two candidates
+  share a number the later instant wins forward (the opening) and the earlier
+  backward (the close); an open end sits at the project's close;
+- the instant is then working time on the milestone's OWN calendar: a close on
+  a day it does not work falls back to its last working close (backward) or on
+  to its next opening (forward).
+
+**Change class under PROCEDURE.md §12.1:** Class B (disclosure), by the v2.9.48
+precedent (a printed date moved, decided by Dana 27-Sep-2026: no computed value
+moves). A deliverable issued on an earlier version printed a milestone's start
+or finish one working day from P6's on these shapes; §12.3 applies, not a
+re-run.
+
+**Verified.**
+- On every row of the 313 projects where the engine's instant is P6's,
+  the printed date now matches P6's on all four fields: 53,771 of 53,771
+  (v2.9.57: 26,885). Finish milestones' starts went from 1,138 to
+  11,643 of 11,643; start milestones' finishes from 0
+  to 1,900 of 1,900. On the 2,499 field-rows where the engine
+  computes a different instant from P6 (a separate question, not a printing
+  one) the print now follows the engine's instant: it coincided with P6's on
+  218 before and on 1 now. On the 4,802 part-day rows (13:00, 08:43) it matches
+  on 2,549 (2,259 before). Over every zero-duration row, 56,321 of 61,072
+  printed dates match P6's (29,362 before).
+- P6's own F9 of ZZ-CPP-EXT2 (external_2026_10_11) and ZZ-CPP-PARITY10
+  (parity_2026_10_10): every milestone's four printed dates match (MD-1 to
+  MD-3).
+- The Larchmere capture cases (19-21) gain a printed-dates check: 256 of 256
+  open activities print P6's dates at each data date (v2.9.57: 252; the four
+  finish milestones). The representation checks read the start-side numbers
+  directly and still read 256 of 256 on six fields.
+- JS unit suite: 1,409 checks green, up from 1,402 (MD-1 to MD-7, every one
+  failing on v2.9.57); CI-10 now expects the milestone held by Finish On at a
+  16:00 close to print the 16th (its boundary is still the 19th).
+- Cross-validation: 119 fixtures, 4675 of 4773 executed, 98 skipped, 0
+  failures. F121-F123 hand both engines the milestone shapes, and the dates
+  check now carries `ef_last_worked_date` and `lf_last_worked_date` beside the
+  four boundary and start strings (one check per node, as before). With the
+  v2.9.57 Python reference the harness fails 17 fixtures.
+- The 13-case P6 matrix reads 13 / 13 with zero changed engine values.
+- Coverage re-measured on these bytes: 94.44% statements, 82.93% branches,
+  96.02% functions.
+
+**Who is affected.** Through `parseXER`, `getTasks()` and `computeCPM`, 402 of
+446 distinct real exports on the measuring machine print at least one
+milestone date differently (19,657 activities); nothing else moves in any of
+them.
+
+**Not claimed.** Part-day milestones (an instant inside a working day) print
+the engine's day, as before. Where the engine computes a different instant
+from P6 (a separate question, not a printing one), it prints its own.
+
 ## v2.9.57 - 2026-10-11 - external early start and external late finish, measured on P6's own F9
 
 **`computeCPM` now applies an activity's external dates.** P6 keeps

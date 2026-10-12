@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.57';
+const ENGINE_VERSION = '2.9.58';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1150,6 +1150,78 @@ function _unexpiredLag(actualInstant, lag, lagCal, ddNum) {
     if (!(actualInstant > 0) || !(ddNum > 0) || actualInstant >= ddNum) return lag;
     if (!lagCal) return Math.max(0, lag - (ddNum - actualInstant));
     return Math.max(0, lag - _countWorkDaysBetween(actualInstant - 1, ddNum - 1, lagCal));
+}
+
+// MD (P6 parity 2026-10-12) — a milestone occupies one instant, and P6 prints
+// that instant's own date for its start and its finish. The instant is a day's
+// OPENING (08:00) or its CLOSE (17:00); on the engine's exclusive day numbering
+// Tuesday 17:00 and Wednesday 08:00 are the same number, so the kind travels
+// beside the number (true: an opening). Measured on every project P6 last
+// scheduled in the local database (313 projects, 12-Oct-2026): along a zero-lag
+// link the milestone takes the kind of the instant that binds it (4,900+ rows,
+// no counter-example on whole days); a positive lag lands on a close forward
+// and on an opening backward, a negative lag the other way. Printing only: no
+// date number moves. Python paired sites: _lag_kind_fwd / _lag_kind_bwd /
+// _day_slots / _opening_from / _opening_before / _md_on_calendar.
+function _lagKindFwd(atOpening, lag) {
+    if (lag > 0) return false;
+    if (lag < 0) return true;
+    return atOpening;
+}
+
+function _lagKindBwd(atOpening, lag) {
+    if (lag > 0) return true;
+    if (lag < 0) return false;
+    return atOpening;
+}
+
+// Working slots [start, finish] in minutes of `dayNum` on `calendarInfo`:
+// null when the calendar carries no hour detail, [] on a day it does not work.
+function _daySlots(dayNum, calendarInfo) {
+    if (!calendarInfo || typeof calendarInfo !== 'object') return null;
+    const raw = calendarInfo.raw;
+    if (!raw || String(raw).indexOf('(') === -1) return null;
+    const tables = _daySlotTables(String(raw));
+    if (!tables) return null;
+    const iso = numToDate(dayNum);
+    if (!iso) return null;
+    if (Object.prototype.hasOwnProperty.call(tables.exc, iso)) return tables.exc[iso] || [];
+    const d = new Date(iso + 'T00:00:00Z');
+    if (Number.isNaN(d.getTime())) return null;
+    return tables.week[d.getUTCDay()] || [];
+}
+
+// Is the first working instant at or after day `dayNum`, minute `tod`, a
+// day's opening (true) or that day's own close (false)? Only a time AT a
+// working day's close is a close; no time is the opening of the day; without
+// hour detail noon separates the two shapes.
+function _openingFrom(dayNum, tod, calendarInfo) {
+    if (tod === null || tod === undefined) return true;
+    const slots = _daySlots(dayNum, calendarInfo);
+    if (slots === null) return tod < 12 * 60;
+    if (!slots.length) return true;
+    return tod !== Math.max(...slots.map(s => s[1]));
+}
+
+// Is the last working instant at or before day `dayNum`, minute `tod`, a
+// day's opening (true) or a close (false)? Only a time AT a working day's
+// opening is an opening; no time is the opening of the day.
+function _openingBefore(dayNum, tod, calendarInfo) {
+    if (tod === null || tod === undefined) return true;
+    const slots = _daySlots(dayNum, calendarInfo);
+    if (slots === null) return tod > 0 && tod < 12 * 60;
+    return slots.length > 0 && tod === Math.min(...slots.map(s => s[0]));
+}
+
+// The instant P6 can place a milestone at on its OWN calendar: the binding
+// instant when it is a working opening or close there, else the first working
+// opening after it (forward) or the last working close before it (backward).
+function _mdOnCalendar(disp, atOpening, calendarInfo, forward) {
+    if (!calendarInfo || !disp || disp <= 0) return [disp, atOpening];
+    const day = atOpening ? disp : disp - 1;
+    if (_snapFwd(day, calendarInfo, [], 'milestone instant') === day) return [disp, atOpening];
+    if (forward) return [_snapFwd(day, calendarInfo, [], 'milestone instant'), true];
+    return [_snapBwd(day, calendarInfo, [], 'milestone instant') + 1, false];
 }
 
 function _finishInstant(pnode) {
@@ -2961,6 +3033,71 @@ function computeCPM(activities, relationships, opts) {
         return _lagFromInstant(_stampOf(pnode), _rem, lagCal, sink, ctx);
     }
 
+    // MD (P6 parity 2026-10-12) — the instant a predecessor hands a finish
+    // milestone, and its kind, for printing only. A task's finish is a close
+    // and its start an opening; a start milestone (any zero-duration activity
+    // that is not a finish milestone) an opening; a finish milestone its own;
+    // a completed activity's actual date a close at a closing time. Python
+    // paired sites: _ms_zero / _ms_fin_src / _ms_sta_src / _md_link / _md_done.
+    function _msZero(n) {
+        return n.duration_days === 0 && !n.is_complete && !n.actual_start;
+    }
+
+    function _msFinSrc(pnode) {
+        if (pnode.is_complete) {
+            const _i = _finishInstant(pnode);
+            return [_i, !(_i > pnode.ef)];
+        }
+        if (pnode.task_type === 'TT_FinMile' && _msZero(pnode) && pnode._ms_disp) {
+            return [pnode._ms_disp, pnode._ms_open];
+        }
+        if (pnode.duration_days === 0 || (pnode.actual_start && pnode.remaining_duration === 0)) {
+            return [pnode.ef, true];
+        }
+        return [_finishInstant(pnode), false];
+    }
+
+    function _msStaSrc(pnode, rtype) {
+        if (pnode.task_type === 'TT_FinMile' && _msZero(pnode) && pnode._ms_disp) {
+            return [pnode._ms_disp, pnode._ms_open];
+        }
+        if (pnode.is_complete) {
+            const _i = pnode.as_instant || pnode.es;
+            return [_i, !(_i > pnode.es)];
+        }
+        const _a = rtype === 'SS' ? _ssAnchorOf(pnode) : startDriveSrcFor(pnode);
+        if (_a === ddNum && ddNum > 0 && pnode.actual_start) {
+            return [_a, _openingFrom(dateToNum(dataDate || ''), _constraintTimeMinutes(dataDate || ''),
+                calFor(pnode))];
+        }
+        return [_a, true];
+    }
+
+    function _mdLink(pnode, rtype, lagUsed, lagCal, viaPt, ptInst, want) {
+        if (!want) return [null, null];
+        if (viaPt) return [ptInst, false];
+        const _src = (rtype === 'SS' || rtype === 'SF') ? _msStaSrc(pnode, rtype) : _msFinSrc(pnode);
+        let _d = _src[0];
+        if (lagUsed) _d = _lagFromInstant(_d, lagUsed, lagCal, [], 'milestone instant');
+        return [_d, _lagKindFwd(_src[1], lagUsed)];
+    }
+
+    function _mdDone(pnode, p, lagCal, inst, want, nCal) {
+        if (!want) return [null, null];
+        const _st = _stampOf(pnode);
+        let _o;
+        if (_st === ddNum) {
+            _o = _openingFrom(dateToNum(dataDate || ''), _constraintTimeMinutes(dataDate || ''), nCal);
+        } else if (_st === _rlPassthroughOf(pnode)) {
+            _o = false;
+        } else {
+            const _rd = pnode.resume_date || '';
+            _o = _openingFrom(dateToNum(_rd), _constraintTimeMinutes(_rd), calFor(pnode));
+        }
+        const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum);
+        return [inst, _lagKindFwd(_o, _rem)];
+    }
+
     // RES — the activities a resume date holds (retained logic), and under
     // progress override the ones it would have held (disclosed, not applied).
     const _resumeHeld = [];
@@ -3106,6 +3243,10 @@ function computeCPM(activities, relationships, opts) {
         // v2.9.44 — [snapped drive, instant] per relationship, so a finish
         // milestone can sit at the instant that actually drove it.
         const _driveInstants = [];
+        // MD — kinds are followed only where they are printed: a finish
+        // milestone that has not started.
+        const _msWant = node.task_type === 'TT_FinMile' && node.duration_days === 0 &&
+            !node.is_complete && !node.actual_start;
         // PT — predecessors whose drive was the date they carry from
         // unfinished work, so the recorded driver can say so.
         const _ptVia = new Set();
@@ -3186,17 +3327,20 @@ function computeCPM(activities, relationships, opts) {
                     drive = _retreatWithAlerts(_anchor, node.duration_days, nodeCal, alerts,
                         p.type + ' duration ' + code);
                     thisAnchorEF = _anchor;
-                    _driveInstants.push([_anchor, _inst]);
+                    _driveInstants.push([_anchor, _inst].concat(
+                        _mdDone(pnode, p, lagCal, _inst, _msWant, nodeCal)));
                 } else {
                     drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
-                    _driveInstants.push([drive, _inst]);
+                    _driveInstants.push([drive, _inst].concat(
+                        _mdDone(pnode, p, lagCal, _inst, _msWant, nodeCal)));
                 }
             } else if (p.type === 'FS') {
                 const _ctx = 'FS lag ' + pnode.code + '->' + code;
                 let driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
                 if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
                 drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
-                _driveInstants.push([drive, driveInstant]);
+                _driveInstants.push([drive, driveInstant].concat(
+                    _mdLink(pnode, 'FS', lag, lagCal, _viaPt, _ptInst, _msWant)));
             } else if (p.type === 'SS') {
                 // D1 — SS drives from the predecessor's remaining-start
                 // reference (restart for a started incomplete pred; es
@@ -3215,7 +3359,8 @@ function computeCPM(activities, relationships, opts) {
                 let driveInstant = _lagFromInstant(_ssAnchorOf(pnode), _lagHere, lagCal, alerts, _ctx);
                 if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
                 drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
-                _driveInstants.push([drive, driveInstant]);
+                _driveInstants.push([drive, driveInstant].concat(
+                    _mdLink(pnode, 'SS', _lagHere, lagCal, _viaPt, _ptInst, _msWant)));
             } else if (p.type === 'FF') {
                 const _ctx = 'FF lag ' + pnode.code + '->' + code;
                 let anchorInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
@@ -3224,7 +3369,8 @@ function computeCPM(activities, relationships, opts) {
                 drive = _retreatWithAlerts(ffAnchor, node.duration_days, nodeCal, alerts,
                     'FF duration ' + code);
                 thisAnchorEF = ffAnchor;
-                _driveInstants.push([ffAnchor, anchorInstant]);
+                _driveInstants.push([ffAnchor, anchorInstant].concat(
+                    _mdLink(pnode, 'FF', lag, lagCal, _viaPt, _ptInst, _msWant)));
             } else if (p.type === 'SF') {
                 // D1 — SF anchors from the predecessor's remaining-start
                 // reference, same as SS. INFERRED for SF specifically: the
@@ -3239,13 +3385,15 @@ function computeCPM(activities, relationships, opts) {
                 drive = _retreatWithAlerts(sfAnchor, node.duration_days, nodeCal, alerts,
                     'SF duration ' + code);
                 thisAnchorEF = sfAnchor;
-                _driveInstants.push([sfAnchor, anchorInstant]);
+                _driveInstants.push([sfAnchor, anchorInstant].concat(
+                    _mdLink(pnode, 'SF', _lagHere, lagCal, _viaPt, _ptInst, _msWant)));
             } else {
                 const _ctx = 'FS-default lag ' + pnode.code + '->' + code;
                 let driveInstant = _lagFromInstant(_finishInstant(pnode), lag, lagCal, alerts, _ctx);
                 if (_ptInst > driveInstant) { driveInstant = _ptInst; _viaPt = true; }
                 drive = _snapFwd(driveInstant, nodeCal, alerts, _ctx);
-                _driveInstants.push([drive, driveInstant]);
+                _driveInstants.push([drive, driveInstant].concat(
+                    _mdLink(pnode, p.type, lag, lagCal, _viaPt, _ptInst, _msWant)));
             }
             if (_viaPt) _ptVia.add(pnode.code);
             if (_xf && thisAnchorEF !== null) {
@@ -3916,6 +4064,7 @@ function computeCPM(activities, relationships, opts) {
                 // successors start Saturday); On or After at Sunday 17:00 ->
                 // Monday 08:00 (P6 23.12's own F9). Python paired site: the
                 // same block.
+                let _mdCand = null;
                 if (_mfcHeld && nodeCal) {
                     const _cd = dateToNum(_mfcHeld.date);
                     let _mi;
@@ -3928,6 +4077,7 @@ function computeCPM(activities, relationships, opts) {
                         _mi = (_ctod !== null && _cclose !== null && _ctod >= _cclose) ? _cd + 1 : _cd;
                     }
                     if (_best === null || _mi > _best) _best = _mi;
+                    _mdCand = [_mi, (_snapFwd(_cd, nodeCal, [], code) !== _cd) || _mi === _cd];
                 }
                 if (_best !== null) {
                     node.ef_instant = _best;
@@ -3935,6 +4085,48 @@ function computeCPM(activities, relationships, opts) {
                         'finish instant ' + code)) {
                     node.ef_instant = ddNum;
                 }
+                // MD (P6 parity 2026-10-12) — the instant P6 prints for the
+                // milestone: the latest candidate, an opening beating a close
+                // at the same number (Wednesday 08:00 is after Tuesday 17:00).
+                // With none, the data date (a close only at its calendar's
+                // close), else the opening the milestone was floored to; then
+                // working time on its own calendar. Python paired site: the
+                // same block.
+                let _msk = null;
+                const _mdBetter = (c) => _msk === null || c[0] > _msk[0] ||
+                    (c[0] === _msk[0] && c[1] && !_msk[1]);
+                for (const _di of _driveInstants) {
+                    if (_di[0] === node.ef && _di[2] !== null && _di[2] !== undefined) {
+                        const _c = [_di[2], !!_di[3]];
+                        if (_mdBetter(_c)) _msk = _c;
+                    }
+                }
+                if (_mdCand !== null && _mdBetter(_mdCand)) _msk = _mdCand;
+                // The data date and a start floor (Start On or After, Start On,
+                // Mandatory Start, an external early start) that hold the
+                // milestone are candidates too: at the same number their
+                // opening is later than a link's close.
+                if (ddNum > 0 && node.ef === _snapFwd(ddNum, nodeCal, [], code)) {
+                    const _c = [ddNum, _openingFrom(dateToNum(dataDate || ''),
+                        _constraintTimeMinutes(dataDate || ''), nodeCal)];
+                    if (_mdBetter(_c)) _msk = _c;
+                }
+                for (const _sc of [node.constraint, node.constraint2]) {
+                    if (_sc && (_sc.type === 'SNET' || _sc.type === 'SO' || _sc.type === 'MS_Start') &&
+                            _sc.date && _constraintStartNum(_sc, nodeCal, [], code) === node.es) {
+                        const _c = [node.es, true];
+                        if (_mdBetter(_c)) _msk = _c;
+                    }
+                }
+                if (node.external_early_start &&
+                        _externalEarlyStartNum(node.external_early_start, nodeCal, code) === node.es) {
+                    const _c = [node.es, true];
+                    if (_mdBetter(_c)) _msk = _c;
+                }
+                if (_msk === null) _msk = [node.ef, true];
+                const _mso = _mdOnCalendar(_msk[0], _msk[1], nodeCal, true);
+                node._ms_disp = _mso[0];
+                node._ms_open = _mso[1];
             }
         }
 
@@ -4208,6 +4400,30 @@ function computeCPM(activities, relationships, opts) {
         return snode.lf;
     }
 
+    // MD (P6 parity 2026-10-12) — the late instant a successor hands a
+    // zero-duration activity, and its kind: a task's late start is an opening
+    // and its late finish a close; a finish milestone's late instant is always
+    // a close; a start milestone's its own. Printing only. Python paired site:
+    // _md_late.
+    function _mdLate(snode, rtype, sLS, sLFInst, lagUsed, sCal, value) {
+        let _d;
+        let _o;
+        if (snode.is_complete) {
+            if (rtype === 'FF' || rtype === 'SF') { _d = sLFInst; _o = false; } else { _d = sLS; _o = true; }
+        } else if (_msZero(snode) && snode._ml_disp) {
+            _d = snode._ml_disp;
+            _o = snode._ml_open;
+        } else if (rtype === 'FF' || rtype === 'SF') {
+            _d = sLFInst;
+            _o = false;
+        } else {
+            _d = sLS;
+            _o = true;
+        }
+        if (lagUsed) _d = _lagBackFromInstant(_d, lagUsed, sCal, [], 'milestone late instant');
+        return [value, _d, _lagKindBwd(_o, lagUsed)];
+    }
+
     // Backward pass — initialize.
     for (let __i = 0; __i < _orderLen; __i++) {
         const n = nodes[_order[__i]];
@@ -4320,6 +4536,8 @@ function computeCPM(activities, relationships, opts) {
         // activities carry an SS/SF successor across 144 of 176 real
         // exports.
         let _minLSBound = null;
+        const _mlWant = _msZero(node);
+        const _mlc = [];
         if (succs.length) {
             minLF = null;
             for (const s of succs) {
@@ -4389,6 +4607,12 @@ function computeCPM(activities, relationships, opts) {
                     const _inst = _lagBackFromInstant(_sLS, lag, sCal, alerts, _ctx);
                     drive = _snapFwd(_inst, nodeCal, alerts, _ctx);
                 }
+                if (_mlWant) {
+                    const _lagMd = (s.type === 'SS' || s.type === 'SF')
+                        ? (_ssOffStarted(node) ? _startedLagLeft(node, lag, sCal) : lag) : lag;
+                    _mlc.push(_mdLate(snode, s.type, _sLS, _sLFInst, _lagMd, sCal,
+                        lsBound !== null ? lsBound : drive));
+                }
                 if (drive !== null && (minLF === null || drive < minLF)) minLF = drive;
                 if (lsBound !== null && (_minLSBound === null || lsBound < _minLSBound)) {
                     _minLSBound = lsBound;
@@ -4445,9 +4669,14 @@ function computeCPM(activities, relationships, opts) {
         const _primaryMandatoryLF = _isMandatoryConstraint(cstr)
             ? _applyBackwardLFConstraint(code, Infinity, cstr, nodeCal, node.duration_days, [])
             : null;
+        // MD — which constraint, if any, holds the late date (printing only).
+        let _mlBy = null;
+        const _mlPrev = minLF;
         minLF = _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, node.duration_days, alerts);
+        if (minLF !== _mlPrev) _mlBy = cstr;
         const _minLFBeforeSecondary = minLF;
         minLF = _applyBackwardLFConstraint(code, minLF, cstr2, nodeCal, node.duration_days, alerts);
+        if (minLF !== _minLFBeforeSecondary) _mlBy = cstr2;
         if (_primaryMandatoryLF !== null && Number.isFinite(_primaryMandatoryLF) &&
             minLF < _primaryMandatoryLF) {
             alerts.push({
@@ -4458,6 +4687,7 @@ function computeCPM(activities, relationships, opts) {
                     ' pin (' + cstr.date + '); secondary suppressed.',
             });
             minLF = _primaryMandatoryLF;
+            _mlBy = cstr;
         }
         // Symmetric — if secondary is mandatory, restore its pin if primary
         // (soft) pulled LF off it.
@@ -4475,6 +4705,7 @@ function computeCPM(activities, relationships, opts) {
                     ' restored LF to ' + cstr2.date + ' over soft primary.',
             });
             minLF = _secondaryMandatoryLF;
+            _mlBy = cstr2;
         }
         // EX (v2.9.57) — the external late finish caps the late finish.
         if (node.external_late_finish) {
@@ -4489,6 +4720,7 @@ function computeCPM(activities, relationships, opts) {
                         'relationship to another project)',
                 });
                 minLF = _extLFNum;
+                _mlBy = 'ext';
             }
         }
 
@@ -4503,6 +4735,44 @@ function computeCPM(activities, relationships, opts) {
         // the tightened LS through their own FS/SS drives.
         if (_minLSBound !== null && _minLSBound < node.ls) {
             node.ls = _minLSBound;
+        }
+        // MD (P6 parity 2026-10-12) — the late instant P6 prints for a
+        // zero-duration activity: the binding requirement, the earliest
+        // candidate and a close beating an opening at the same number; a
+        // constraint's own time (an opening only AT a working day's opening),
+        // an external late finish or the project's finish a close; then
+        // working time on its own calendar. A finish milestone's late instant
+        // is always a close (P6's database: 11,700+ rows, every one a close).
+        // Python paired site: the same block.
+        if (_mlWant && node.lf > 0) {
+            const _fin = node.lf;
+            const _mlBetter = (c, best) => best === null || c[0] < best[0] ||
+                (c[0] === best[0] && !c[1] && best[1]);
+            let _ml;
+            if (_mlBy === 'ext') {
+                _ml = [_boundaryToInstant(_fin, nodeCal, [], code), false];
+            } else if (_mlBy !== null) {
+                const _o = _openingBefore(dateToNum(_mlBy.date || ''),
+                    (_mlBy.time_minutes === undefined) ? null : _mlBy.time_minutes, nodeCal);
+                _ml = [_o ? _fin : _boundaryToInstant(_fin, nodeCal, [], code), _o];
+            } else {
+                let _pick = null;
+                for (const _c of _mlc) {
+                    if (_c[0] === _fin && _mlBetter([_c[1], _c[2]], _pick)) _pick = [_c[1], _c[2]];
+                }
+                if (_pick === null && _mlc.length && _fin !== node._seedLF) {
+                    for (const _c of _mlc) {
+                        if (_mlBetter([_c[1], _c[2]], _pick)) _pick = [_c[1], _c[2]];
+                    }
+                }
+                _ml = (_pick !== null) ? _pick : [_boundaryToInstant(_fin, nodeCal, [], code), false];
+            }
+            _ml = _mdOnCalendar(_ml[0], _ml[1], nodeCal, false);
+            if (node.task_type === 'TT_FinMile' && _ml[1]) {
+                _ml = [_boundaryToInstant(_ml[0], nodeCal, [], code), false];
+            }
+            node._ml_disp = _ml[0];
+            node._ml_open = _ml[1];
         }
         // v2.9.12 T3.19 — recorded-actual-start precedence on the backward
         // pass. When the activity has an actual_start (in-progress, not yet
@@ -4692,6 +4962,12 @@ function computeCPM(activities, relationships, opts) {
         } else {
             n.ef_instant = n.ef;
         }
+        if (n.task_type === 'TT_FinMile' && n.duration_days === 0) {
+            // MD — slid by its free float to the close before its successor
+            // (P6 23.12.1: A7, Wed 28-Oct 17:00).
+            n._ms_disp = n.ef_instant;
+            n._ms_open = false;
+        }
         n.tf_finish = _roundHalfUpTo(n.lf - n.ef, 3);
         n.tf_start = _roundHalfUpTo(n.ls - n.es, 3);
         n.tf = (_floatType === 'FT_Start')
@@ -4787,6 +5063,27 @@ function computeCPM(activities, relationships, opts) {
             ? (_lwOnFinishDay ? numToDate(n.lf)
                 : numToDate(_retreatWithAlerts(n.lf, 1, nCal, [], 'lf last-worked ' + c)))
             : '';
+        // MD (P6 parity 2026-10-12) — a milestone prints its instant's own
+        // date for start and finish, early and late, as P6 does: a start
+        // milestone (any zero-duration activity that is not a finish
+        // milestone) starts at an opening, so its finish prints its start; a
+        // finish milestone prints the close it sits at, or the opening; the
+        // late side prints the late instant. es / ef / ls / lf, ef_date and
+        // lf_date are unchanged. Until v2.9.57 a finish milestone at a close
+        // printed its start a working day late and a start milestone its
+        // finish a working day early. Python paired site: the same block.
+        if (n.duration_days === 0 && !n.is_complete && !n.actual_start && n.es > 0) {
+            if (n.task_type === 'TT_FinMile' && n._ms_disp) {
+                n.es_date = numToDate(n._ms_open ? n._ms_disp : n._ms_disp - 1);
+                n.ef_last_worked_date = n.es_date;
+            } else if (n.task_type !== 'TT_FinMile') {
+                n.ef_last_worked_date = n.es_date;
+            }
+            if (n._ml_disp) {
+                n.ls_date = numToDate(n._ml_open ? n._ml_disp : n._ml_disp - 1);
+                n.lf_last_worked_date = n.ls_date;
+            }
+        }
         // v2.9.42 — count over the window the selected float definition names,
         // not always over the finish window. FT_FF is unchanged.
         n.tf_finish_working_days = n.is_complete ? 0 : _countWorkDaysBetween(n.ef, n.lf, nCal);
@@ -5202,7 +5499,8 @@ function computeCPM(activities, relationships, opts) {
         finish_boundary_note: 'ef_date / lf_date are EXCLUSIVE (the opening of ' +
             'the first working day AFTER the last day worked). P6 prints the ' +
             'LAST WORKED DAY. Both name the same instant; ef_last_worked_date ' +
-            'and lf_last_worked_date carry the inclusive form for reports.',
+            'and lf_last_worked_date carry the inclusive form for reports.' +
+            ' Since v2.9.58 es_date / ls_date and the last-worked dates print what P6 prints, milestones included: a milestone prints the date of the instant it sits at, for its start and its finish.',
         relationship_lag_calendar: _lagCalMode,
         float_type: _floatType,
         // SSL measured (2026-09-23): P6's "Calculate start-to-start lag
@@ -9346,20 +9644,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '116 cross-validation fixtures. The harness defines 4342 ' +
+                '119 cross-validation fixtures. The harness defines 4773 ' +
                 'comparisons; 98 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
                 '(49 ff_signed, 49 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 4244 / 4244" counts executed comparisons only and ' +
+                'reported "Checks: 4675 / 4675" counts executed comparisons only and ' +
                 'is not a coverage figure. None of those 98 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 36 of the 116 fixtures contain at least one skipped ' +
-                'comparison. The 4244 comparisons that did run are bit-identical ' +
+                'branch. 36 of the 119 fixtures contain at least one skipped ' +
+                'comparison. The 4675 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 108 of the 116 fixtures). ' +
+                'severity-level alert parity, compared on 111 of the 119 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -9400,8 +9698,8 @@ function buildDaubertDisclosure(result, opts) {
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
                 'emit the field, so 98 checks are skipped rather than compared, counted, ' +
                 'or reported as failures (49 ff_signed, 49 ff_signed_working_days). The ' +
-                'printed 4244 / 4244 therefore sits on a nominal surface of 4342 checks, and ' +
-                'those two fields go uncompared somewhere in 36 of the 116 fixtures. In ' +
+                'printed 4675 / 4675 therefore sits on a nominal surface of 4773 checks, and ' +
+                'those two fields go uncompared somewhere in 36 of the 119 fixtures. In ' +
                 'all 98 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
@@ -9411,16 +9709,16 @@ function buildDaubertDisclosure(result, opts) {
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '116 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '119 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '4244 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 4244 / 4244 tally cannot express ' +
+                '4675 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 4675 / 4675 tally cannot express ' +
                 'the following gaps. Not executed: 98 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 108 of the 116 fixtures: not on those 2, which have no ' +
+                'parity runs on 111 of the 119 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +

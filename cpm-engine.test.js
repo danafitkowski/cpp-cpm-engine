@@ -11079,11 +11079,14 @@ const _RL_FF_GENUINE = '(0||CalendarData()((0||DaysOfWeek()(' +
         r.nodes.A.ef_date + ' / ' + r.nodes.A.lf_date);
 
     // CI-10 — Finish On, on the zero-duration milestone shape the corpus is
-    // full of: es must equal ef.
+    // full of: es must equal ef. MD (v2.9.58) — the milestone sits at the
+    // 16:00 close of the 16th and prints that day for its start, as P6 does;
+    // the boundary is still the 19th.
     r = ciRun([{ code: 'M', duration_days: 0, clndr_id: 'C8', task_type: 'TT_FinMile',
                  constraint: { type: 'CS_MEO', date: '2026-01-16 16:00' } }]);
-    check('CI-10: Finish On at the close puts the milestone on 2026-01-19',
-        r.nodes.M.ef_date === '2026-01-19' && r.nodes.M.es_date === '2026-01-19',
+    check('CI-10: Finish On at the close puts the milestone on 2026-01-19 (printed 2026-01-16)',
+        r.nodes.M.ef_date === '2026-01-19' && r.nodes.M.es === r.nodes.M.ef &&
+        r.nodes.M.es_date === '2026-01-16' && r.nodes.M.ef_last_worked_date === '2026-01-16',
         r.nodes.M.es_date + ' / ' + r.nodes.M.ef_date);
 
     // CI-11..13 — the start side was measured correct and must NOT move.
@@ -12507,6 +12510,127 @@ console.log('\n=== EX — external early start and external late finish (P6 pari
         !!ta && ta.external_early_start === '2026-10-29 08:00' && ta.external_late_finish === '2026-11-05 17:00' &&
         pBoth.use_external_dates === true && pNone.use_external_dates === false && pAbsent.use_external_dates === true,
         JSON.stringify([ta && ta.external_early_start, pBoth.use_external_dates, pNone.use_external_dates, pAbsent.use_external_dates]));
+}
+
+console.log('\n=== MD — the dates a milestone prints (P6 parity 12-Oct) ===');
+// A milestone occupies one instant, and P6 prints that instant's own date for
+// its start and its finish: a day's OPENING (08:00) or its CLOSE (17:00). Until
+// v2.9.57 a finish milestone at a close printed its start a working day late
+// and a start milestone its finish a working day early; es / ef / ls / lf were
+// right. P6's own values: ZZ-CPP-EXT2 (external_2026_10_11, data date Mon
+// 19-Oct 08:00, as exported and with other projects ignored) and
+// ZZ-CPP-PARITY10 (parity_2026_10_10, data date Wed 14-Oct 17:00). The rule
+// for the instant, measured on every project P6 last scheduled in the local
+// database (313 projects): a start milestone starts at an opening, a finish
+// milestone's late instant is a close, and otherwise the kind of the instant
+// that binds it, then working time on its own calendar. Python paired file:
+// _cpp_common tests/test_milestone_display_2026_10_12.py.
+{
+    const DAY = '(0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())';
+    const RAW = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        ['2', '3', '4', '5', '6'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '(0||7()())))(0||Exceptions()())))';
+    const RAW7 = '(0||CalendarData()((0||DaysOfWeek()(' +
+        ['1', '2', '3', '4', '5', '6', '7'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '))(0||Exceptions()())))';
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW },
+        HOL: { work_days: [1, 2, 3, 4, 5], holidays: ['2026-11-02'], raw: RAW },
+        D7: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], raw: RAW7 } };
+    const N = (code, dur, c, extra) => Object.assign({ code, duration_days: dur, clndr_id: c || 'MF' }, extra || {});
+    const R = (f, t, type, lag) => ({ from_code: f, to_code: t, type: type || 'FS', lag_days: lag || 0 });
+    const printed = (n) => [n.es_date, n.ef_last_worked_date, n.ls_date, n.lf_last_worked_date].join(' ');
+    const run = (acts, rels, dd, extra) => E.computeCPM(acts, rels, Object.assign({ dataDate: dd || '2026-10-19 08:00',
+        calMap: cal, scheduleMode: 'retained_logic', relationshipLagCalendar: 'rcal_Predecessor' }, extra || {})).nodes;
+
+    // ZZ-CPP-EXT2
+    const ext = (ignore) => run([N('SPINE', 25),
+        N('E7', 0, 'MF', { task_type: 'TT_Mile', external_early_start: '2026-10-27 08:00' }),
+        N('E15-P', 2), N('E15', 0, 'MF', { task_type: 'TT_FinMile', external_late_finish: '2026-10-21 17:00' })],
+    [R('E15-P', 'E15')], '2026-10-19 08:00', { useExternalDates: !ignore });
+    const x1 = ext(false);
+    const x2 = ext(true);
+    check('MD-1: P6\'s ZZ-CPP-EXT2: start milestone 10-27 / late 11-20 (10-19 ignored), finish milestone 10-20 / late 10-21 (11-20 ignored)',
+        printed(x1.E7) === '2026-10-27 2026-10-27 2026-11-20 2026-11-20' &&
+        printed(x2.E7) === '2026-10-19 2026-10-19 2026-11-20 2026-11-20' &&
+        printed(x1.E15) === '2026-10-20 2026-10-20 2026-10-21 2026-10-21' &&
+        printed(x2.E15) === '2026-10-20 2026-10-20 2026-11-20 2026-11-20' &&
+        printed(x1['E15-P']) === '2026-10-19 2026-10-20 2026-10-20 2026-10-21',
+        [printed(x1.E7), printed(x2.E7), printed(x1.E15), printed(x2.E15)].join(' | '));
+
+    // ZZ-CPP-PARITY10
+    const PDD = '2026-10-14 17:00';
+    const par = (acts, rels) => run([N('SPINE', 15)].concat(acts), rels || [], PDD);
+    const c21 = par([N('C21', 0, 'MF', { constraint: { type: 'CS_MEOA', date: '2026-10-25 17:00' } })]).C21;
+    const c22 = par([N('C22', 0, 'MF', { task_type: 'TT_FinMile', constraint: { type: 'CS_MEOA', date: '2026-10-25 17:00' } })]).C22;
+    const c23 = par([N('C23', 0, 'MF', { task_type: 'TT_Mile', constraint: { type: 'CS_MSOA', date: '2026-10-24 00:00' } })]).C23;
+    const c24 = par([N('C24', 0, 'HOL', { task_type: 'TT_Mile', constraint: { type: 'CS_MSO', date: '2026-11-02 00:00' } })]).C24;
+    check('MD-2: P6\'s ZZ-CPP-PARITY10: C21 / C22 / C23 at the Monday 10-26 opening (late 11-04), C24 11-03 early and Fri 10-30 17:00 late',
+        printed(c21) === '2026-10-26 2026-10-26 2026-11-04 2026-11-04' &&
+        printed(c22) === '2026-10-26 2026-10-26 2026-11-04 2026-11-04' &&
+        printed(c23) === '2026-10-26 2026-10-26 2026-11-04 2026-11-04' &&
+        printed(c24) === '2026-11-03 2026-11-03 2026-10-30 2026-10-30',
+        [printed(c21), printed(c22), printed(c23), printed(c24)].join(' | '));
+    const m = (ct) => par([N('P', 1), N('M', 0, 'MF', { task_type: 'TT_FinMile', constraint: { type: ct, date: '2026-10-23 17:00' } }),
+        N('S', 0, 'D7', { task_type: 'TT_FinMile' }), N('T', 2, 'D7')], [R('P', 'M'), R('M', 'S'), R('M', 'T')]);
+    const m1 = m('CS_MEO');
+    const m2 = m('CS_MEOA');
+    const m4 = par([N('P', 7), N('M', 0, 'MF', { task_type: 'TT_FinMile' }), N('T', 2, 'D7')], [R('P', 'M'), R('M', 'T')]);
+    const a7 = par([N('P', 2), N('M', 0, 'MF', { task_type: 'TT_FinMile', constraint: { type: 'ALAP' } }), N('T', 1), N('L', 10)],
+        [R('P', 'M'), R('M', 'T'), R('L', 'T')]);
+    check('MD-3: P6\'s ZZ-CPP-PARITY10: finish milestones at the Fri 10-23 close (M1, M2, M4; late 10-23 / 11-02, S late 11-04), ALAP A7 10-28 / 11-03',
+        printed(m1.M) === '2026-10-23 2026-10-23 2026-10-23 2026-10-23' &&
+        printed(m1.S) === '2026-10-23 2026-10-23 2026-11-04 2026-11-04' &&
+        printed(m2.M) === '2026-10-23 2026-10-23 2026-11-02 2026-11-02' &&
+        printed(m4.M) === '2026-10-23 2026-10-23 2026-11-02 2026-11-02' &&
+        printed(a7.M) === '2026-10-28 2026-10-28 2026-11-03 2026-11-03',
+        [printed(m1.M), printed(m1.S), printed(m2.M), printed(m4.M), printed(a7.M)].join(' | '));
+
+    // The measured rule, early side of a finish milestone.
+    const FM = { task_type: 'TT_FinMile' };
+    const em = (acts, rels, dd) => { const n = run(acts, rels, dd).M; return n.es_date + ' ' + n.ef_last_worked_date; };
+    const e1 = em([N('A', 2), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'M')]);
+    const e2 = em([N('S', 0, 'MF', { task_type: 'TT_Mile' }), N('M', 0, 'MF', FM), N('Z', 5)], [R('S', 'M')]);
+    const e3 = em([N('A', 1), N('B', 3), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'B'), R('B', 'M', 'SS')]);
+    const e4 = em([N('A', 1), N('B', 2), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'B'), R('A', 'M'), R('B', 'M', 'SS')]);
+    const e5 = em([N('A', 2), N('M', 0, 'MF', { task_type: 'TT_FinMile', constraint: { type: 'CS_MSOA', date: '2026-10-21 08:00' } }),
+        N('Z', 5)], [R('A', 'M')]);
+    const e6 = em([N('A', 3), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'M', 'FF', -1)]);
+    const e7 = em([N('A', 1), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'M', 'FS', 1)]);
+    const e8 = (() => { const n = run([N('A', 2), N('M1', 0, 'MF', FM), N('M', 0, 'MF', FM), N('Z', 5)],
+        [R('A', 'M1'), R('M1', 'M', 'SS')]).M; return n.es_date + ' ' + n.ef_last_worked_date; })();
+    check('MD-4: a finish milestone sits at the instant that binds it: a task\'s close, a start milestone\'s opening, an SS start, the opening of a tie, a negative lag\'s opening, a positive lag\'s close, a chain\'s close',
+        e1 === '2026-10-20 2026-10-20' && e2 === '2026-10-19 2026-10-19' && e3 === '2026-10-20 2026-10-20' &&
+        e4 === '2026-10-20 2026-10-20' && e5 === '2026-10-21 2026-10-21' && e6 === '2026-10-21 2026-10-21' &&
+        e7 === '2026-10-20 2026-10-20' && e8 === '2026-10-20 2026-10-20',
+        [e1, e2, e3, e4, e5, e6, e7, e8].join(' | '));
+    const d1 = em([N('M', 0, 'MF', FM), N('Z', 5)], []);
+    const d2 = em([N('M', 0, 'MF', FM), N('Z', 5)], [], '2026-10-16 17:00');
+    check('MD-5: with nothing later, the data date: a Monday 08:00 opening prints Monday, a Friday 17:00 close prints Friday',
+        d1 === '2026-10-19 2026-10-19' && d2 === '2026-10-16 2026-10-16', d1 + ' | ' + d2);
+
+    // The late side.
+    const lt = (acts, rels, code) => { const n = run(acts, rels)[code]; return n.ls_date + ' ' + n.lf_last_worked_date; };
+    const SM = { task_type: 'TT_Mile' };
+    const l1 = lt([N('M', 0, 'MF', FM), N('T', 3)], [R('M', 'T')], 'M');
+    const l2 = lt([N('S', 0, 'MF', SM), N('T', 3), N('Z', 5)], [R('S', 'T')], 'S');
+    const l3 = lt([N('S', 0, 'MF', SM), N('M', 0, 'MF', FM), N('Z', 5)], [R('S', 'M')], 'S');
+    const l4 = lt([N('S', 0, 'MF', SM), N('T', 2), N('Z', 5)], [R('S', 'T', 'SF')], 'S');
+    const l5 = lt([N('S', 0, 'MF', SM), N('Z', 5)], [], 'S');
+    const cf = run([N('Z', 7, 'D7'), N('M', 0, 'MF', FM), N('S', 0, 'D7', FM)], [R('M', 'S')]);
+    check('MD-6: late side: a finish milestone at the close before (Fri 10-16), a start milestone at its successor\'s late start (Wed 10-21), at a finish milestone\'s close and an SF / open end\'s close (Fri 10-23), a close off its own calendar back to Friday',
+        l1 === '2026-10-16 2026-10-16' && l2 === '2026-10-21 2026-10-21' && l3 === '2026-10-23 2026-10-23' &&
+        l4 === '2026-10-23 2026-10-23' && l5 === '2026-10-23 2026-10-23' &&
+        cf.S.ls_date === '2026-10-25' && cf.M.ls_date === '2026-10-23' && cf.M.lf_last_worked_date === '2026-10-23',
+        [l1, l2, l3, l4, l5, cf.S.ls_date, cf.M.ls_date].join(' | '));
+
+    const u = run([N('A', 2), N('M', 0, 'MF', FM), N('T', 3)], [R('A', 'M'), R('M', 'T')]).M;
+    const z = run([N('A', 2), N('M', 0), N('Z', 5)], [R('A', 'M')]).M;
+    const s = run([N('A', 1), N('S', 0, 'MF', SM), N('Z', 5)], [R('A', 'S')]).S;
+    check('MD-7: only printed dates move: es = ef and the boundaries stand; a zero-duration activity with no task type, and a start milestone after a close, print the next opening',
+        u.es === u.ef && u.ef_date === '2026-10-21' && u.lf_date === '2026-10-21' &&
+        z.es_date === '2026-10-21' && z.ef_last_worked_date === '2026-10-21' &&
+        s.es_date === '2026-10-20' && s.ef_last_worked_date === '2026-10-20',
+        [u.ef_date, u.lf_date, z.es_date, z.ef_last_worked_date, s.es_date, s.ef_last_worked_date].join(' '));
 }
 
 console.log('\n========================================');

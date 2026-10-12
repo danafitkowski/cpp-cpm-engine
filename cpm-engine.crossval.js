@@ -154,6 +154,9 @@ result_json = {
             'tf': n['tf'],
             'es_date': n['es_date'], 'ef_date': n['ef_date'],
             'ls_date': n['ls_date'], 'lf_date': n['lf_date'],
+            # MD (v2.9.58) — the printed finish dates join the dates check.
+            'ef_last_worked_date': n.get('ef_last_worked_date'),
+            'lf_last_worked_date': n.get('lf_last_worked_date'),
             # v2.9.27 — audit R9 LOW PAIRED FIX. Backported field.
             'tf_working_days': n.get('tf_working_days'),
             # v2.9.27 — audit F24 PAIRED FIX. Free Float backported.
@@ -213,6 +216,9 @@ function runJS(payload) {
             tf: n.tf,
             es_date: n.es_date, ef_date: n.ef_date,
             ls_date: n.ls_date, lf_date: n.lf_date,
+            // MD (v2.9.58) — the printed finish dates join the dates check.
+            ef_last_worked_date: n.ef_last_worked_date,
+            lf_last_worked_date: n.lf_last_worked_date,
             // v2.9.27 — audit R9 LOW PAIRED FIX. Backported field.
             tf_working_days: n.tf_working_days,
             // v2.9.27 — audit F24 PAIRED FIX. Free Float backported.
@@ -409,9 +415,14 @@ function compareFixture(name, payload, opts) {
         eq('node ' + code + '.es/ef/ls/lf/tf',
             { es: a.es, ef: a.ef, ls: a.ls, lf: a.lf, tf: a.tf },
             { es: b.es, ef: b.ef, ls: b.ls, lf: b.lf, tf: b.tf });
+        // MD (v2.9.58) — the dates check carries the printed finish dates
+        // (ef_last_worked_date / lf_last_worked_date) beside the four boundary
+        // and start strings: one check per node, as before.
         eq('node ' + code + '.dates',
-            { es_date: a.es_date, ef_date: a.ef_date, ls_date: a.ls_date, lf_date: a.lf_date },
-            { es_date: b.es_date, ef_date: b.ef_date, ls_date: b.ls_date, lf_date: b.lf_date });
+            { es_date: a.es_date, ef_date: a.ef_date, ls_date: a.ls_date, lf_date: a.lf_date,
+                ef_last_worked_date: a.ef_last_worked_date, lf_last_worked_date: a.lf_last_worked_date },
+            { es_date: b.es_date, ef_date: b.ef_date, ls_date: b.ls_date, lf_date: b.lf_date,
+                ef_last_worked_date: b.ef_last_worked_date, lf_last_worked_date: b.lf_last_worked_date });
         // v2.9.27 — audit R9 LOW. tf_working_days now backported to Python;
         // compare bit-identically. Only compare if BOTH sides emit the field.
         eqGuarded('node ' + code + '.tf_working_days', 'tf_working_days',
@@ -2823,6 +2834,83 @@ compareFixture('F120 - EX: the same with relationships to other projects ignored
     relationship_lag_calendar: 'rcal_Predecessor',
     use_expected_finish: true,
     use_external_dates: false,
+});
+
+// F121-F123 (P6 parity 12-Oct-2026): the dates a milestone prints (MD). A
+// milestone sits at one instant, a day's opening or its close, and prints that
+// instant's date for start and finish (private oracle repo: P6's own F9 of
+// ZZ-CPP-EXT2 and ZZ-CPP-PARITY10, and every project P6 last scheduled in the
+// local database). The rule follows the kind of the binding instant through
+// links, lags, the data date, start floors and constraints, then onto the
+// milestone's own calendar.
+const mR = (f, t, type, lag) => ({ from_code: f, to_code: t, type: type || 'FS', lag_days: lag || 0 });
+const FM = { task_type: 'TT_FinMile' };
+const SM = { task_type: 'TT_Mile' };
+compareFixture('F121 - MD: milestone instants at a Monday opening', {
+    activities: [
+        pN('SPINE', 25),
+        pN('E7', 0, 'MF', { task_type: 'TT_Mile', external_early_start: '2026-10-27 08:00' }),
+        pN('E15P', 2), pN('E15', 0, 'MF', { task_type: 'TT_FinMile', external_late_finish: '2026-10-21 17:00' }),
+        pN('A2', 2), pN('M1', 0, 'MF', FM),
+        pN('S1', 0, 'MF', SM), pN('M2', 0, 'MF', FM),
+        pN('B0', 1), pN('B1', 3), pN('M3', 0, 'MF', FM),
+        pN('C0', 1), pN('C1', 2), pN('M4', 0, 'MF', FM),
+        pN('D0', 2), pN('M5', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, pC('CS_MSOA', '2026-10-21 08:00'))),
+        pN('G0', 3), pN('M6', 0, 'MF', FM),
+        pN('H0', 1), pN('M7', 0, 'MF', FM),
+        pN('K0', 2), pN('K1', 0, 'MF', FM), pN('K2', 0, 'MF', FM),
+        pN('N1', 0, 'MF', FM),
+        pN('L1', 0, 'MF', FM), pN('L2', 3),
+        pN('P1', 0, 'MF', SM), pN('P2', 3),
+        pN('Q1', 0, 'MF', SM), pN('Q2', 0, 'MF', FM),
+        pN('R1', 0, 'MF', SM), pN('R2', 2),
+        pN('T1', 0, 'MF', SM),
+        pN('Y0', 2), pN('Z0', 0),
+    ],
+    relationships: [
+        mR('E15P', 'E15'), mR('A2', 'M1'), mR('S1', 'M2'), mR('B0', 'B1'), mR('B1', 'M3', 'SS'),
+        mR('C0', 'C1'), mR('C0', 'M4'), mR('C1', 'M4', 'SS'), mR('D0', 'M5'), mR('G0', 'M6', 'FF', -1),
+        mR('H0', 'M7', 'FS', 1), mR('K0', 'K1'), mR('K1', 'K2', 'SS'), mR('L1', 'L2'), mR('P1', 'P2'),
+        mR('Q1', 'Q2'), mR('R1', 'R2', 'SF'), mR('Y0', 'Z0'),
+    ],
+    data_date: '2026-10-19 08:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+});
+compareFixture('F122 - MD: milestone instants on the parity probe shapes (data date at a close)', {
+    activities: [
+        pN('SPINE', 15),
+        pN('C21', 0, 'MF', pC('CS_MEOA', '2026-10-25 17:00')),
+        pN('C22', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, pC('CS_MEOA', '2026-10-25 17:00'))),
+        pN('C23', 0, 'MF', Object.assign({ task_type: 'TT_Mile' }, pC('CS_MSOA', '2026-10-24 00:00'))),
+        pN('C24', 0, 'HOL', Object.assign({ task_type: 'TT_Mile' }, pC('CS_MSO', '2026-11-02 00:00'))),
+        pN('MP1', 1), pN('MM1', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, pC('CS_MEO', '2026-10-23 17:00'))),
+        pN('MS1', 0, 'D7', FM), pN('MT1', 2, 'D7'),
+        pN('MP2', 1), pN('MM2', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, pC('CS_MEOA', '2026-10-23 17:00'))),
+        pN('MS2', 0, 'D7', FM), pN('MT2', 2, 'D7'),
+        pN('MP4', 7), pN('MM4', 0, 'MF', FM), pN('MT4', 2, 'D7'),
+        pN('AP', 2), pN('AM', 0, 'MF', Object.assign({ task_type: 'TT_FinMile' }, { constraint: { type: 'ALAP' } })),
+        pN('AT', 1), pN('AL', 10),
+    ],
+    relationships: [
+        mR('MP1', 'MM1'), mR('MM1', 'MS1'), mR('MM1', 'MT1'), mR('MP2', 'MM2'), mR('MM2', 'MS2'), mR('MM2', 'MT2'),
+        mR('MP4', 'MM4'), mR('MM4', 'MT4'), mR('AP', 'AM'), mR('AM', 'AT'), mR('AL', 'AT'),
+    ],
+    data_date: '2026-10-14 17:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F123 - MD: a Friday-close data date and a close off the milestone\'s own calendar', {
+    activities: [
+        pN('Z7', 9, 'D7'),
+        pN('NM', 0, 'MF', FM),
+        pN('UM', 0, 'MF', FM), pN('US', 0, 'D7', FM),
+    ],
+    relationships: [mR('UM', 'US')],
+    data_date: '2026-10-16 17:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

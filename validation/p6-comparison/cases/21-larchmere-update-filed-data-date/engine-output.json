@@ -1,5 +1,5 @@
 {
- "engine_version": "2.9.57",
+ "engine_version": "2.9.58",
  "projectFinish": "2026-06-25",
  "criticalCodesArray": [
   "A1020",
@@ -171,9 +171,9 @@
   },
   "A1020": {
    "code": "A1020",
-   "es_date": "2025-12-03",
+   "es_date": "2025-12-02",
    "ef_date": "2025-12-03",
-   "ls_date": "2025-10-10",
+   "ls_date": "2025-10-09",
    "lf_date": "2025-10-10",
    "ef_last_worked_date": "2025-12-02",
    "lf_last_worked_date": "2025-10-09",
@@ -201,9 +201,9 @@
   },
   "A1040": {
    "code": "A1040",
-   "es_date": "2026-06-04",
+   "es_date": "2026-06-03",
    "ef_date": "2026-06-04",
-   "ls_date": "2026-04-13",
+   "ls_date": "2026-04-10",
    "lf_date": "2026-04-13",
    "ef_last_worked_date": "2026-06-03",
    "lf_last_worked_date": "2026-04-10",
@@ -216,9 +216,9 @@
   },
   "A1050": {
    "code": "A1050",
-   "es_date": "2026-06-25",
+   "es_date": "2026-06-24",
    "ef_date": "2026-06-25",
-   "ls_date": "2026-05-04",
+   "ls_date": "2026-05-01",
    "lf_date": "2026-05-04",
    "ef_last_worked_date": "2026-06-24",
    "lf_last_worked_date": "2026-05-01",
@@ -231,9 +231,9 @@
   },
   "A1060": {
    "code": "A1060",
-   "es_date": "2026-06-25",
+   "es_date": "2026-06-24",
    "ef_date": "2026-06-25",
-   "ls_date": "2026-05-04",
+   "ls_date": "2026-05-01",
    "lf_date": "2026-05-04",
    "ef_last_worked_date": "2026-06-24",
    "lf_last_worked_date": "2026-05-01",

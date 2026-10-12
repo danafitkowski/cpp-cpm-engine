@@ -90,11 +90,28 @@ have been applied:
    relationships to and from other projects", SCHEDOPTIONS
    `sched_outer_depend_type` `SD_None`) ignores both dates. See CHANGELOG.md
    v2.9.57.
+10. v2.9.58 (the dates a milestone prints) is applied here by the same
+   patch as the canonical engine: beside each finish milestone's early
+   instant and each zero-duration activity's late instant the forward and
+   backward passes carry whether it is a day's opening or its close
+   (`_md_link`, `_md_done`, `_md_late`, `_md_on_calendar`), and `es_date`,
+   `ls_date`, `ef_last_worked_date` and `lf_last_worked_date` of a
+   zero-duration activity print that instant's date, as P6 does. No computed
+   number moves. See CHANGELOG.md v2.9.58.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  e306a2335f945533450cf60a45da591c4c481b784ddaed987355fb6da49a20f7
+cpm.py  SHA-256:  dd140b1a16712e6733d062e76ba609bfaaaac719fdc9ad200766cce4c72815c5
+
+(v2.9.58 the dates a milestone prints 2026-10-12 - bumped from e306a233...:
+ENGINE_VERSION reads 2.9.58, a zero-duration activity prints the date of the
+instant it sits at (a day's opening or its close) for its start and finish,
+early and late, as P6 does, and the comments that carry the cross-validation
+figures carry the measured ones (119 fixtures, 4675 of 4773 executed). No
+computed number moves: es / ef / ls / lf, float and every relationship are
+unchanged. The harness gains 3 fixtures (F121-F123) and its dates check now
+carries the printed finish dates.)
 
 (v2.9.57 external dates 2026-10-11 - bumped from 71e3a07a...: ENGINE_VERSION
 reads 2.9.57, compute_cpm takes use_external_dates and reads
@@ -442,15 +459,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 243073
-  sha-256:  e306a2335f945533450cf60a45da591c4c481b784ddaed987355fb6da49a20f7
+  bytes: 258228
+  sha-256:  dd140b1a16712e6733d062e76ba609bfaaaac719fdc9ad200766cce4c72815c5
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 116 passed, 0 failed
-  Checks:   4244 / 4244 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 119 passed, 0 failed
+  Checks:   4675 / 4675 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

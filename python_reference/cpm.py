@@ -16,8 +16,8 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 4244 of 4342
-# across 116 as measured 2026-10-11 (validation/crossval-summary.json carries
+# measured 2026-08-27, and the fixtures added since took it to 4675 of 4773
+# across 119 as measured 2026-10-12 (validation/crossval-summary.json carries
 # the figures of the latest run). The 98 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
 # populates (49 ff_signed, 49 ff_signed_working_days).
@@ -63,8 +63,8 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 116 fixtures in cpm-engine.crossval.js. As
-measured 2026-10-11 that is 4244 of a 4342-comparison surface; the 98 that are
+the harness executes across the 119 fixtures in cpm-engine.crossval.js. As
+measured 2026-10-12 that is 4675 of a 4773-comparison surface; the 98 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
 field (49 ff_signed, 49 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.57'
+ENGINE_VERSION = '2.9.58'
 
 
 # =============================================================================
@@ -929,6 +929,100 @@ def _unexpired_lag(actual_instant, lag, lag_cal, dd_num):
     if not lag_cal:
         return max(0, lag - (dd_num - actual_instant))
     return max(0, lag - _count_work_days_between(actual_instant - 1, dd_num - 1, lag_cal))
+
+
+# MD (P6 parity 2026-10-12) — a milestone occupies one instant, and P6 prints
+# that instant's own date for its start and its finish. The instant is a
+# day's OPENING (08:00) or its CLOSE (17:00); on the engine's exclusive day
+# numbering Tuesday 17:00 and Wednesday 08:00 are the same number, so the
+# kind travels beside the number (True: an opening). Measured on every project
+# P6 last scheduled in the local database (313 projects, 12-Oct-2026): along a
+# zero-lag link the milestone takes the kind of the instant that binds it
+# (4,900+ rows, no counter-example on whole days); a positive lag lands on a
+# close forward and on an opening backward, a negative lag the other way (P6
+# counts lag in working hours: Friday 17:00 + 8 h is Monday 17:00, Friday
+# 17:00 - 8 h is Friday 08:00). Printing only: no date number moves. JS paired
+# sites: _lagKindFwd / _lagKindBwd / _openingFrom / _openingBefore.
+def _lag_kind_fwd(at_opening, lag):
+    if lag > 0:
+        return False
+    if lag < 0:
+        return True
+    return at_opening
+
+
+def _lag_kind_bwd(at_opening, lag):
+    if lag > 0:
+        return True
+    if lag < 0:
+        return False
+    return at_opening
+
+
+def _day_slots(day_num, calendar_info):
+    """Working slots (start, finish) in minutes of `day_num` on
+    `calendar_info`: None when the calendar carries no hour detail, [] on a
+    day it does not work."""
+    if not calendar_info or not isinstance(calendar_info, dict):
+        return None
+    raw = calendar_info.get('raw')
+    if not raw or '(' not in str(raw):
+        return None
+    week, exc = _day_slot_tables(str(raw))
+    if week is None:
+        return None
+    d = _date_from_num(day_num)
+    if d is None:
+        return None
+    iso = d.isoformat()
+    return (exc[iso] if iso in exc else week[(d.weekday() + 1) % 7]) or []
+
+
+def _opening_from(day_num, tod, calendar_info):
+    """MD — whether the first working instant at or after day `day_num`,
+    minute `tod`, is a day's opening (True) or that day's own close (False).
+    Only a time AT a working day's close is a close: P6 put a finish milestone
+    with no predecessor at a 17:00 data date on an 08:00-17:00 calendar, and at
+    the next opening when the data date was 00:00 or after its calendar's
+    close. No time is the opening of the day (the engine's convention); without
+    hour detail noon separates the two shapes, as _instant_of reads them."""
+    if tod is None:
+        return True
+    slots = _day_slots(day_num, calendar_info)
+    if slots is None:
+        return tod < 12 * 60
+    return not (slots and tod == max(f for _, f in slots))
+
+
+def _opening_before(day_num, tod, calendar_info):
+    """MD — whether the last working instant at or before day `day_num`,
+    minute `tod`, is a day's opening (True) or a close (False). Only a time AT
+    a working day's opening is an opening: P6 put a start milestone held by
+    Start On a holiday Monday 00:00 at the Friday 17:00 close (late side). No
+    time is the opening of the day."""
+    if tod is None:
+        return True
+    slots = _day_slots(day_num, calendar_info)
+    if slots is None:
+        return 0 < tod < 12 * 60
+    return bool(slots) and tod == min(s for s, _ in slots)
+
+
+def _md_on_calendar(disp, at_opening, calendar_info, forward):
+    """MD — the instant P6 can place a milestone at on its OWN calendar: the
+    binding instant when it is a working opening or close there, else the
+    first working opening after it (forward) or the last working close before
+    it (backward). A finish milestone on a Monday-Friday calendar whose
+    successor's late start is a Sunday 16:00 close on a calendar that works
+    Sundays sits at Friday 17:00 (P6's database, 12-Oct-2026)."""
+    if not calendar_info or not disp or disp <= 0:
+        return disp, at_opening
+    day = disp if at_opening else disp - 1
+    if _snap_fwd(day, calendar_info, alerts=[], ctx='milestone instant') == day:
+        return disp, at_opening
+    if forward:
+        return _snap_fwd(day, calendar_info, alerts=[], ctx='milestone instant'), True
+    return _snap_bwd(day, calendar_info, alerts=[], ctx='milestone instant') + 1, False
 
 
 def _finish_instant(pnode):
@@ -2378,6 +2472,65 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             return pnode.get('as_instant') or pnode['es']
         return _finish_instant(pnode)
 
+    # MD (P6 parity 2026-10-12) — the instant a predecessor hands a finish
+    # milestone, and its kind, for printing only. A task's finish is a close
+    # and its start an opening; a start milestone (any zero-duration activity
+    # that is not a finish milestone) an opening; a finish milestone its own;
+    # a completed activity's actual date a close at a closing time. JS paired
+    # sites: _msZero / _msFinSrc / _msStaSrc / _mdLink / _mdDone.
+    def _ms_zero(n):
+        return (n['duration_days'] == 0 and not n['is_complete']
+                and not n.get('actual_start'))
+
+    def _ms_fin_src(pnode):
+        if pnode['is_complete']:
+            _i = _finish_instant(pnode)
+            return _i, not _i > pnode['ef']
+        if pnode.get('task_type') == 'TT_FinMile' and _ms_zero(pnode) and pnode.get('_ms_disp'):
+            return pnode['_ms_disp'], pnode['_ms_open']
+        if pnode['duration_days'] == 0 or (pnode.get('actual_start')
+                                           and pnode.get('remaining_duration') == 0):
+            return pnode['ef'], True
+        return _finish_instant(pnode), False
+
+    def _ms_sta_src(pnode, rtype):
+        if pnode.get('task_type') == 'TT_FinMile' and _ms_zero(pnode) and pnode.get('_ms_disp'):
+            return pnode['_ms_disp'], pnode['_ms_open']
+        if pnode['is_complete']:
+            _i = pnode.get('as_instant') or pnode['es']
+            return _i, not _i > pnode['es']
+        _a = _ss_anchor_for(pnode) if rtype == 'SS' else _start_drive_src_for(pnode)
+        if _a == dd_num and dd_num > 0 and pnode.get('actual_start'):
+            return _a, _opening_from(date_to_num(data_date or ''), _constraint_time_minutes(data_date or ''),
+                                     _cal_for(pnode))
+        return _a, True
+
+    def _md_link(pnode, rtype, lag_used, lag_cal, via_pt, pt_inst, want):
+        if not want:
+            return (None, None)
+        if via_pt:
+            return (pt_inst, False)
+        _d, _o = (_ms_sta_src(pnode, rtype) if rtype in ('SS', 'SF')
+                  else _ms_fin_src(pnode))
+        if lag_used:
+            _d = _lag_from_instant(_d, lag_used, lag_cal, alerts=[], ctx='milestone instant')
+        return (_d, _lag_kind_fwd(_o, lag_used))
+
+    def _md_done(pnode, p, lag_cal, inst, want, node_cal):
+        if not want:
+            return (None, None)
+        _st = _stamp_of(pnode)
+        if _st == dd_num:
+            _o = _opening_from(date_to_num(data_date or ''), _constraint_time_minutes(data_date or ''),
+                               node_cal)
+        elif _st == _passthrough_of(pnode):
+            _o = False
+        else:
+            _rd = pnode.get('resume_date') or ''
+            _o = _opening_from(date_to_num(_rd), _constraint_time_minutes(_rd), _cal_for(pnode))
+        _rem = _unexpired_lag(_done_actual(pnode, p['type']), p['lag_days'], lag_cal, dd_num)
+        return (inst, _lag_kind_fwd(_o, _rem))
+
     def _done_drive(pnode, p, lag_cal, ctx, sink):
         _rem = _unexpired_lag(_done_actual(pnode, p['type']), p['lag_days'],
                               lag_cal, dd_num)
@@ -2502,6 +2655,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # v2.9.44 — (snapped drive, instant) per relationship, so a finish
         # milestone can sit at the instant that actually drove it.
         _drive_instants = []
+        # MD — kinds are followed only where they are printed: a finish
+        # milestone that has not started.
+        _ms_want = (node.get('task_type') == 'TT_FinMile' and node['duration_days'] == 0
+                    and not node['is_complete'] and not node.get('actual_start'))
         # PT — predecessors whose drive was the date they carry from
         # unfinished work, so the recorded driver can say so.
         _pt_via = set()
@@ -2576,10 +2733,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         succ_ef_anchor, node['duration_days'], node_cal,
                         alerts=alerts, ctx=f'{t} duration {code}')
                     this_anchor_ef = succ_ef_anchor
-                    _drive_instants.append((succ_ef_anchor, _inst))
+                    _drive_instants.append((succ_ef_anchor, _inst)
+                                           + _md_done(pnode, p, lag_cal, _inst, _ms_want, node_cal))
                 else:
                     drive = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
-                    _drive_instants.append((drive, _inst))
+                    _drive_instants.append((drive, _inst)
+                                           + _md_done(pnode, p, lag_cal, _inst, _ms_want, node_cal))
             elif t == 'FS':
                 _ctx = f'FS lag {pnode["code"]}->{code}'
                 drive_instant = _lag_from_instant(
@@ -2587,7 +2746,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 if _pt_inst > drive_instant:
                     drive_instant, _via_pt = _pt_inst, True
                 drive = _snap_fwd(drive_instant, node_cal, alerts=alerts, ctx=_ctx)
-                _drive_instants.append((drive, drive_instant))
+                _drive_instants.append((drive, drive_instant) + _md_link(
+                    pnode, t, (_lag_here if t == 'SS' else lag), lag_cal, _via_pt, _pt_inst, _ms_want))
             elif t == 'SS':
                 # D1 — SS drives from the predecessor's remaining-start
                 # reference (restart for a started incomplete pred; es
@@ -2609,7 +2769,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 if _pt_inst > drive_instant:
                     drive_instant, _via_pt = _pt_inst, True
                 drive = _snap_fwd(drive_instant, node_cal, alerts=alerts, ctx=_ctx)
-                _drive_instants.append((drive, drive_instant))
+                _drive_instants.append((drive, drive_instant) + _md_link(
+                    pnode, t, (_lag_here if t == 'SS' else lag), lag_cal, _via_pt, _pt_inst, _ms_want))
             elif t == 'FF':
                 _ctx = f'FF lag {pnode["code"]}->{code}'
                 anchor_instant = _lag_from_instant(
@@ -2621,7 +2782,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     succ_ef_anchor, node['duration_days'], node_cal,
                     alerts=alerts, ctx=f'FF duration {code}')
                 this_anchor_ef = succ_ef_anchor
-                _drive_instants.append((succ_ef_anchor, anchor_instant))
+                _drive_instants.append((succ_ef_anchor, anchor_instant) + _md_link(
+                    pnode, t, (_lag_here if t == 'SF' else lag), lag_cal, _via_pt, _pt_inst, _ms_want))
             elif t == 'SF':
                 # D1 — SF anchors from the predecessor's remaining-start
                 # reference, same as SS. INFERRED for SF specifically: the
@@ -2640,7 +2802,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     succ_ef_anchor, node['duration_days'], node_cal,
                     alerts=alerts, ctx=f'SF duration {code}')
                 this_anchor_ef = succ_ef_anchor
-                _drive_instants.append((succ_ef_anchor, anchor_instant))
+                _drive_instants.append((succ_ef_anchor, anchor_instant) + _md_link(
+                    pnode, t, (_lag_here if t == 'SF' else lag), lag_cal, _via_pt, _pt_inst, _ms_want))
             else:
                 _ctx = f'FS-default lag {pnode["code"]}->{code}'
                 drive_instant = _lag_from_instant(
@@ -2648,7 +2811,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 if _pt_inst > drive_instant:
                     drive_instant, _via_pt = _pt_inst, True
                 drive = _snap_fwd(drive_instant, node_cal, alerts=alerts, ctx=_ctx)
-                _drive_instants.append((drive, drive_instant))
+                _drive_instants.append((drive, drive_instant) + _md_link(
+                    pnode, t, (_lag_here if t == 'SS' else lag), lag_cal, _via_pt, _pt_inst, _ms_want))
             if _via_pt:
                 _pt_via.add(pnode['code'])
             if _xf and this_anchor_ef is not None:
@@ -3186,7 +3350,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             node['ef_instant'] = node['ef']
             if (node.get('task_type') == 'TT_FinMile' and not has_actual_start
                     and node['ef'] == node['es']):
-                _cands = [inst for (v, inst) in _drive_instants if v == node['ef']]
+                _cands = [c[1] for c in _drive_instants if c[0] == node['ef']]
+                _md_cand = None
                 # FM (P6 parity 2026-10-10) — a finish constraint holding the
                 # milestone places it AT the constraint's instant, moved to
                 # the next working time when that is not working time.
@@ -3200,17 +3365,48 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     _cd = date_to_num(_mfc['date'])
                     if _snap_fwd(_cd, node_cal, alerts=[], ctx=code) != _cd:
                         _ci = node['ef']            # the next working opening
+                        _ci_open = True
                     else:
                         _ctod = _mfc.get('time_minutes')
                         _cclose = _calendar_day_close(_cd, node_cal)
-                        _ci = _cd + 1 if (_ctod is not None and _cclose is not None
-                                          and _ctod >= _cclose) else _cd
+                        _ci_open = not (_ctod is not None and _cclose is not None
+                                        and _ctod >= _cclose)
+                        _ci = _cd if _ci_open else _cd + 1
                     _cands.append(_ci)
+                    _md_cand = (_ci, _ci_open)
                 if _cands:
                     node['ef_instant'] = max(_cands)
                 elif dd_num > 0 and node['ef'] == _snap_fwd(
                         dd_num, node_cal, alerts=alerts, ctx=f'finish instant {code}'):
                     node['ef_instant'] = dd_num
+                # MD (P6 parity 2026-10-12) — the instant P6 prints for the
+                # milestone: the latest candidate, an opening beating a close
+                # at the same number (Wednesday 08:00 is after Tuesday 17:00).
+                # With none, the data date (a close only at its calendar's
+                # close), else the opening the milestone was floored to.
+                _mdc = [(c[2], c[3]) for c in _drive_instants
+                        if c[0] == node['ef'] and c[2] is not None]
+                if _md_cand is not None:
+                    _mdc.append(_md_cand)
+                # The data date and a start floor (Start On or After, Start
+                # On, Mandatory Start, an external early start) that hold
+                # the milestone are candidates too: at the same number their
+                # opening is later than a link's close (P6's database: a
+                # 00:00 data date beside a predecessor's 17:00 close on the
+                # day before puts the milestone at the opening).
+                if dd_num > 0 and node['ef'] == _snap_fwd(dd_num, node_cal, alerts=[], ctx=code):
+                    _mdc.append((dd_num, _opening_from(
+                        date_to_num(data_date or ''), _constraint_time_minutes(data_date or ''), node_cal)))
+                for _sc in (node.get('constraint'), node.get('constraint2')):
+                    if (_sc and _sc.get('type') in ('SNET', 'SO', 'MS_Start') and _sc.get('date')
+                            and _constraint_start_num(_sc, node_cal, alerts=[], ctx=code) == node['es']):
+                        _mdc.append((node['es'], True))
+                if (node.get('external_early_start') and _external_early_start_num(
+                        node['external_early_start'], node_cal, ctx=code) == node['es']):
+                    _mdc.append((node['es'], True))
+                _msk = max(_mdc) if _mdc else (node['ef'], True)
+                node['_ms_disp'], node['_ms_open'] = _md_on_calendar(
+                    _msk[0], _msk[1], node_cal, True)
 
         # v2.9.15 P2 (F14-4) backport — DATA_DATE-driven driver. When no pred
         # and no constraint won, but max_es == dd_num AND the activity has preds,
@@ -3440,6 +3636,25 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 alerts=alerts, ctx=f'late finish instant {snode["code"]}')
         return snode['lf']
 
+    # MD (P6 parity 2026-10-12) — the late instant a successor hands a
+    # zero-duration activity, and its kind: a task's late start is an
+    # opening and its late finish a close; a finish milestone's late instant
+    # is always a close; a start milestone's its own. Printing only. JS
+    # paired site: _mdLate.
+    def _md_late(snode, rtype, s_ls, s_lf_inst, lag_used, s_cal, value):
+        if snode.get('is_complete'):
+            _d, _o = (s_lf_inst, False) if rtype in ('FF', 'SF') else (s_ls, True)
+        elif _ms_zero(snode) and snode.get('_ml_disp'):
+            _d, _o = snode['_ml_disp'], snode['_ml_open']
+        elif rtype in ('FF', 'SF'):
+            _d, _o = s_lf_inst, False
+        else:
+            _d, _o = s_ls, True
+        if lag_used:
+            _d = _lag_back_from_instant(_d, lag_used, s_cal, alerts=[],
+                                        ctx='milestone late instant')
+        return (value, _d, _lag_kind_bwd(_o, lag_used))
+
     # Backward Pass
     for n in nodes.values():
         n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
@@ -3532,6 +3747,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # four real exports to 100% exact against P6's own stored
         # ES/EF/LS/LF/TF with no field regressing on any file.
         min_ls_bound = None
+        _ml_want = _ms_zero(node)
+        _mlc = []
         if succs:
             min_lf = None
             for s in succs:
@@ -3609,6 +3826,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     _inst = _lag_back_from_instant(_s_ls, lag, s_cal,
                                                    alerts=alerts, ctx=_ctx)
                     drive = _snap_fwd(_inst, node_cal, alerts=alerts, ctx=_ctx)
+                if _ml_want:
+                    _mlc.append(_md_late(
+                        snode, t, _s_ls, _s_lf_inst,
+                        (_ss_lag if t == 'SS' else _sf_lag if t == 'SF' else lag),
+                        s_cal, drive if ls_bound is None else ls_bound))
                 if drive is not None and (min_lf is None or drive < min_lf):
                     min_lf = drive
                 if ls_bound is not None and (min_ls_bound is None or ls_bound < min_ls_bound):
@@ -3651,11 +3873,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # too once the activity is under way (late finish = the project end
         # on the measured case); Finish On / Finish On or Before still cap LF.
         _uw_back = bool(node.get('actual_start')) and not node['is_complete']
+        _ml_by = None
         for _c in (cstr, cstr2):
             if _uw_back and _c and _c.get('type') in _UNDERWAY_DROPPED_LATE_TYPES:
                 continue
+            _ml_prev = min_lf
             min_lf = _apply_backward_lf_constraint(
                 code, min_lf, _c, node_cal, node['duration_days'], alerts)
+            if min_lf != _ml_prev:
+                _ml_by = _c
         # EX (v2.9.57) — the external late finish caps the late finish.
         if node['external_late_finish']:
             _ext_lf_num = _external_late_finish_num(
@@ -3669,6 +3895,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                                 f'relationship to another project)'),
                 })
                 min_lf = _ext_lf_num
+                _ml_by = 'ext'
 
         node['lf'] = min_lf
         node['ls'] = _retreat_workdays(
@@ -3680,6 +3907,33 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # so LS is clamped directly rather than trusted to fall out of LF.
         if min_ls_bound is not None and min_ls_bound < node['ls']:
             node['ls'] = min_ls_bound
+        # MD (P6 parity 2026-10-12) — the late instant P6 prints for a
+        # zero-duration activity: the binding requirement, the earliest
+        # candidate and a close beating an opening at the same number; a
+        # constraint's own time (an opening only AT a working day's opening),
+        # an external late finish or the project's finish a close. A finish
+        # milestone's late instant is always a close: the close at or before
+        # the requirement (P6's database: 11,700+ rows, every one a close).
+        if _ml_want and node['lf'] > 0:
+            _fin = node['lf']
+            if _ml_by == 'ext':
+                _ml = (_boundary_to_instant(_fin, node_cal, alerts=[], ctx=code), False)
+            elif _ml_by is not None:
+                _o = _opening_before(date_to_num(_ml_by.get('date') or ''),
+                                     _ml_by.get('time_minutes'), node_cal)
+                _ml = ((_fin if _o else _boundary_to_instant(_fin, node_cal, alerts=[], ctx=code)), _o)
+            else:
+                _pick = [(c[1], c[2]) for c in _mlc if c[0] == _fin]
+                if _pick:
+                    _ml = min(_pick)
+                elif _mlc and _fin != node['_seed_lf']:
+                    _ml = min((c[1], c[2]) for c in _mlc)
+                else:
+                    _ml = (_boundary_to_instant(_fin, node_cal, alerts=[], ctx=code), False)
+            _ml = _md_on_calendar(_ml[0], _ml[1], node_cal, False)
+            if node.get('task_type') == 'TT_FinMile' and _ml[1]:
+                _ml = (_boundary_to_instant(_ml[0], node_cal, alerts=[], ctx=code), False)
+            node['_ml_disp'], node['_ml_open'] = _ml
         # v2.9.12 T3.19 — recorded-actual-start precedence on the backward
         # pass. An activity with actual_start cannot have LS later than ES (it
         # already started, so drifting LS through float-rich successor logic
@@ -3812,6 +4066,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 n['ef'], _a_cal, alerts=alerts, ctx=f'finish instant {c}')
         else:
             n['ef_instant'] = n['ef']
+        if n.get('task_type') == 'TT_FinMile' and n['duration_days'] == 0:
+            # MD — slid by its free float to the close before its successor
+            # (P6 23.12.1: A7, Wed 28-Oct 17:00).
+            n['_ms_disp'], n['_ms_open'] = n['ef_instant'], False
         n['tf_finish'] = _round_half_up_to(n['lf'] - n['ef'], 3)
         n['tf_start'] = _round_half_up_to(n['ls'] - n['es'], 3)
         if _float_type == 'FT_Start':
@@ -3876,6 +4134,27 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
              num_to_date(_retreat_workdays(n['lf'], 1, _bcal, alerts=[],
                                            ctx=f'lf last-worked {c}')))
             if n['lf'] > 0 else '')
+        # MD (P6 parity 2026-10-12) — a milestone prints its instant's own
+        # date for start and finish, early and late, as P6 does: a start
+        # milestone (any zero-duration activity that is not a finish
+        # milestone) starts at an opening, so its finish prints its start; a
+        # finish milestone prints the close it sits at, or the opening; the
+        # late side prints the late instant. es / ef / ls / lf, ef_date and
+        # lf_date are unchanged. Until v2.9.57 a finish milestone at a close
+        # printed its start a working day late and a start milestone its
+        # finish a working day early (P6's database, 313 projects: 10,991
+        # starts and 12,240 late starts of finish milestones, 2,035 finishes
+        # of start milestones).
+        if n['duration_days'] == 0 and not n['is_complete'] and not n.get('actual_start') \
+                and n['es'] > 0:
+            if n.get('task_type') == 'TT_FinMile' and n.get('_ms_disp'):
+                _md = n['_ms_disp'] if n['_ms_open'] else n['_ms_disp'] - 1
+                n['es_date'] = n['ef_last_worked_date'] = num_to_date(_md)
+            elif n.get('task_type') != 'TT_FinMile':
+                n['ef_last_worked_date'] = n['es_date']
+            if n.get('_ml_disp'):
+                _md = n['_ml_disp'] if n['_ml_open'] else n['_ml_disp'] - 1
+                n['ls_date'] = n['lf_last_worked_date'] = num_to_date(_md)
         # v2.9.27 — audit R9 LOW PAIRED FIX. tf_working_days companion to
         # tf (calendar days). P6 reports float in working days on the
         # activity's own calendar; an expert quoting tf=13 against a
@@ -3955,9 +4234,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
     # comparisons are absent on both sides rather than one: 98 of them (49
-    # ff_signed, 49 ff_signed_working_days) on the 116-fixture harness as
-    # measured 2026-10-11, whose line reads 4244 / 4244 executed against a
-    # 4342-comparison surface (validation/crossval-summary.json in the engine
+    # ff_signed, 49 ff_signed_working_days) on the 119-fixture harness as
+    # measured 2026-10-12, whose line reads 4675 / 4675 executed against a
+    # 4773-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.

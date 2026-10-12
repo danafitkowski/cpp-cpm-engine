@@ -24,6 +24,13 @@
  * ff_working_days). Completed rows carry no CPM answer in P6 and are
  * checked only for their actual dates passing through.
  *
+ * MD (v2.9.58): es_date / ls_date print what P6 prints, so the representation
+ * check above reads the start-side numbers (es, ls) directly, and a second
+ * check compares every open activity's PRINTED dates with P6's own: start,
+ * finish, late start and late finish as the engine prints them (es_date,
+ * ef_last_worked_date, ls_date, lf_last_worked_date; restart, remaining late
+ * start for work under way) against the date part of P6's stored instant.
+ *
  * Exit 1 when any comparison fails that is not a documented residual
  * (RESIDUALS below, each with its reason).
  */
@@ -72,7 +79,7 @@ function runCase(name) {
     const inp = JSON.parse(fs.readFileSync(path.join(dir, 'input.json'), 'utf8'));
     const p6 = JSON.parse(fs.readFileSync(path.join(dir, 'p6-export.json'), 'utf8'));
     const r = E.computeCPM(inp.activities, inp.relationships, inp.opts);
-    const counts = { open: 0, es: 0, ef: 0, ls: 0, lf: 0, tf: 0, ff: 0, completed: 0 };
+    const counts = { open: 0, es: 0, ef: 0, ls: 0, lf: 0, tf: 0, ff: 0, completed: 0, printed: 0 };
     const failures = [];
     const residuals = [];
     const csv = [HEADER];
@@ -85,7 +92,11 @@ function runCase(name) {
             continue;
         }
         const raw = row.p6;
-        const eng = [str(n.es_date), str(n.ef_date), str(n.ls_date), str(n.lf_date),
+        // The representation: the start-side numbers as dates (since v2.9.58
+        // es_date / ls_date print what P6 prints, which for a milestone at a
+        // close is the day before this boundary).
+        const eng = [str(E.numToDate(n.es)), str(n.ef_date),
+            str((n.actual_start && !n.is_complete) ? n.ls_date : E.numToDate(n.ls)), str(n.lf_date),
             str(n.tf_working_days), str(n.ff_working_days)];
         if (!row.compare) {
             // Completed: the actual dates must pass through untouched.
@@ -103,9 +114,9 @@ function runCase(name) {
         counts.open += 1;
         const c = row.compare;
         const got = {
-            es: c.started ? str(n.restart_date) : str(n.es_date),
+            es: c.started ? str(n.restart_date) : str(E.numToDate(n.es)),
             ef: str(n.ef_date),
-            ls: c.started ? str(n.remaining_late_start_date) : str(n.ls_date),
+            ls: c.started ? str(n.remaining_late_start_date) : str(E.numToDate(n.ls)),
             lf: str(n.lf_date),
             tf: n.tf_working_days,
             ff: n.ff_working_days,
@@ -121,6 +132,17 @@ function runCase(name) {
             if (Number.isFinite(got[f]) && Math.abs(got[f] - want[f]) < 0.001) counts[f] += 1;
             else bad.push(f + ': engine=' + got[f] + ' p6=' + want[f]);
         }
+        // MD — the dates P6 prints: the date part of its stored instants.
+        const printedGot = c.started
+            ? [n.restart_date, n.ef_last_worked_date, n.remaining_late_start_date, n.lf_last_worked_date]
+            : [n.es_date, n.ef_last_worked_date, n.ls_date, n.lf_last_worked_date];
+        const printedWant = (c.started
+            ? [raw.restart_date, raw.reend_date || raw.early_end_date, raw.rem_late_start_date || raw.late_start_date,
+                raw.late_end_date]
+            : [raw.early_start_date, raw.early_end_date, raw.late_start_date, raw.late_end_date])
+            .map((s) => str(s).slice(0, 10));
+        if (printedGot.every((v, i) => str(v) === printedWant[i])) counts.printed += 1;
+        else bad.push('printed: engine=' + printedGot.map(str).join('/') + ' p6=' + printedWant.join('/'));
         for (const b of bad) {
             const key = code + '.' + b.split(':')[0];
             if (RESIDUALS[key]) residuals.push(name + ' ' + key + ' (' + b + ')');
@@ -183,7 +205,8 @@ function main() {
         const c = summary.counts;
         console.log(name + ' (data date ' + summary.data_date + '): ' + c.open +
             ' open activities; ES ' + c.es + ', EF ' + c.ef + ', LS ' + c.ls + ', LF ' + c.lf +
-            ', TF ' + c.tf + ', FF ' + c.ff + '; ' + c.completed + ' completed rows pass through' +
+            ', TF ' + c.tf + ', FF ' + c.ff + ', printed dates ' + c.printed + '; ' + c.completed +
+            ' completed rows pass through' +
             ' | finish boundary ' + summary.engine_finish_boundary + ', P6 ' + summary.p6_finish);
         for (const x of summary.residuals) console.log('  residual (documented): ' + x);
         for (const f of summary.failures) console.log('  FAIL ' + f);
