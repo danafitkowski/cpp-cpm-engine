@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.59'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.0'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -205,7 +205,37 @@ which produces fractional days for any non-multiple-of-8 hour value (e.g. a
 fractional input and the rounded value. The forensic implication: 50
 successive 4-hour lags could silently inflate project finish by up to 50
 calendar days vs P6 — the alert flags the schedule as requiring sub-day
-precision review before relying on the dates.
+precision review before relying on the dates. Since v2.10.0 a caller that hands on P6's own hours
+(`remaining_hours` with `remaining_hours_days` on the activities, `lag_hours` on the
+relationships; `getTasks()` and `getRelationships()` carry them) gets the hours pass
+below, which schedules those lags to the minute; the alert is then an INFO.
+
+> **The hours pass** (since v2.10.0). With P6's hours handed on, `computeCPM` also
+> schedules the network in minutes on each calendar's own working periods (shifts,
+> breaks, exception days with their own hours) and every unfinished node gains:
+>
+> | Field | Meaning |
+> |---|---|
+> | `early_start_dt` | early start, `'YYYY-MM-DD HH:MM'` (the restart of work under way) |
+> | `early_finish_dt` | early finish |
+> | `late_start_dt` | late start (the remaining late start of work under way) |
+> | `late_finish_dt` | late finish |
+> | `tf_hours` / `ff_hours` | total and free float in working hours |
+> | `day_pass_dates` | the day pass's printed dates the hours pass replaced, where any moved |
+>
+> The printed dates (`es_date`, `ls_date`, `restart_date`, `remaining_late_start_date`,
+> `ef_last_worked_date`, `lf_last_worked_date`) take the dates of those instants; `es`,
+> `ef`, `ls`, `lf`, `ef_date`, `lf_date`, `tf` and the critical codes stay the day pass's.
+> `result.hours` is `{applied, unit, project_finish_dt, lag_calendar, float_type,
+> sized_from_days}`, or `{applied: false, reason}` when no activity carries hours or
+> there is no data date or no calendar. An activity without hours (inserted after
+> conversion) is sized from its days on its calendar's hours per day; one whose days
+> moved off `remaining_hours_days` has its hours scaled with them; both are named in
+> `sized_from_days`. `E.computeCPMHours(activities, relationships, opts)` runs the
+> minutes CPM on its own (snake_case inputs: `remaining_minutes`, `lag_minutes`,
+> `data_date`, `cal_map`, `schedule_mode`, `lag_calendar`, `project_calendar`,
+> `project_finish`, `ss_lag_from`, `use_expected_finish`, `use_external_dates`,
+> `float_type`) and returns instants in minutes since 2020-01-01 00:00.
 
 **opts:**
 

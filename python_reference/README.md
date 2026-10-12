@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **3924 of 4022 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **3924 of 4022** across 114 as measured 2026-10-11 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 98 comparisons still skipped (49 `ff_signed`, 49 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **5133 of 5233 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **5133 of 5233** across 127 as measured 2026-10-12 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 100 comparisons still skipped (50 `ff_signed`, 50 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
 
 ## Provenance
 
@@ -105,11 +105,29 @@ have been applied:
    override a started activity's restart honours its FF / SF predecessors
    (`_restart_ff_drive`) while FS / SS into started work are skipped on the
    backward pass. See CHANGELOG.md v2.9.59.
+12. v2.10.0 (the hours pass) is applied here by the same patch as the
+   canonical engine: where the caller hands on P6's own hours
+   (`remaining_hours`, `remaining_hours_days`, `lag_hours`), `compute_cpm`
+   also schedules the network in minutes and attaches each unfinished
+   activity's instants and float in hours (`_hours_pass`). The minutes
+   calendar and the minutes CPM are two further files in this directory,
+   `cpm_minutes.py` and `cpm_hours.py`, byte-identical to the canonical
+   engine's and loaded beside `cpm.py`; they are pinned below with it. See
+   CHANGELOG.md v2.10.0.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  80fcbd2bab412e12755ba3bc68829d3d03092ac9e778fba05981f7db83720259
+cpm.py          SHA-256:  eb4442e5632318def0707bcba732b493bba114aeb2d41f437f312edc3b488042
+cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
+cpm_hours.py    SHA-256:  12e529a467059f79cc9513257471ba0c814933cf23adfdd2ce8051db37e6d7f9
+
+(v2.10.0 the hours pass 2026-10-12 - cpm.py bumped from 80fcbd2b...:
+ENGINE_VERSION reads 2.10.0, compute_cpm runs the hours pass where the caller
+hands on P6's hours (cpm_minutes.py and cpm_hours.py, new in this directory),
+and the comments that carry the cross-validation figures carry the measured
+ones (127 fixtures, 5133 of 5233 executed). The harness gains 6 fixtures
+(F126-F131) and compares the hours pass on them.)
 
 (v2.9.59 P6 parity on whole-day schedules 2026-10-12 - bumped from dd140b1a...:
 ENGINE_VERSION reads 2.9.59, a zero-length task's late instant is a close,
@@ -473,15 +491,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 260495
-  sha-256:  80fcbd2bab412e12755ba3bc68829d3d03092ac9e778fba05981f7db83720259
+  bytes: 272589
+  sha-256:  eb4442e5632318def0707bcba732b493bba114aeb2d41f437f312edc3b488042
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 121 passed, 0 failed
-  Checks:   4869 / 4869 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 127 passed, 0 failed
+  Checks:   5133 / 5133 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

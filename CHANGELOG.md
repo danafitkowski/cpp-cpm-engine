@@ -12,6 +12,75 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.0 - 2026-10-12 - The hours pass: the engine schedules in hours and minutes, measured on P6's own output
+
+**Computed values move (Class A).** Primavera P6 schedules in hours and minutes. Until this release the engine
+rounded P6's hours to whole working days, and that rounding caused almost every difference left between the
+two: on the 313 projects in the measuring machine's P6 database, the engine differed on 74% of the activities
+whose own P6 dates fall inside a working day, against 7% of the rest. From this release, where the caller hands
+on P6's own hours, `computeCPM` also schedules the network in minutes:
+
+- **Inputs.** `remaining_hours` on each activity (P6 `TASK.remain_drtn_hr_cnt`) with `remaining_hours_days`, the
+  days the caller converted them to, and `lag_hours` on each relationship (`TASKPRED.lag_hr_cnt`). `parseXER`
+  hands all three on through `getTasks()` and `getRelationships()`. When no activity carries hours, or there is
+  no data date or no calendar, the pass does not run and `result.hours.applied` is `false`, with the reason.
+- **The pass.** Every date is an instant in minutes and every duration and lag working minutes on each
+  calendar's own working periods: shifts, breaks, and exception days with their own hours. Each rule the day
+  pass carries was measured again to the minute: retained logic and progress override, the unexpired lag,
+  completed work, resume dates, expected finish, external dates, constraints off working time, ALAP by free
+  float, the Must Finish By, and finish, start or smallest float. An SS lag off suspended work counts only the
+  time before the suspension. Three printing conventions P6 shows only in minutes are carried too. An SS or SF
+  bound that drives a late start keeps its instant, so a 17:00 close stays 17:00. An FF or SF requirement that
+  drives a finish keeps its time, such as 13:00 after lunch. Off working time, each moves as P6 moves it.
+- **Outputs.** Every unfinished node gains `early_start_dt`, `early_finish_dt`, `late_start_dt` and
+  `late_finish_dt` as `'YYYY-MM-DD HH:MM'`, plus `tf_hours` and `ff_hours`. For work under way the start fields
+  are the restart and the remaining late start. The node's printed dates (`es_date`, `ls_date`, `restart_date`,
+  `remaining_late_start_date`, `ef_last_worked_date`, `lf_last_worked_date`) take the dates of those instants.
+  Where one moved, the day pass's value is kept in `day_pass_dates`. `es`, `ef`, `ls`, `lf`, `ef_date`, `lf_date`,
+  `tf` and the critical codes stay the day pass's. `result.hours` carries the project finish instant
+  (`project_finish_dt`) and the activities sized from their days (`sized_from_days`).
+- **Work changed after conversion.** An activity a pipeline inserts without hours, such as a TIA fragnet, is
+  sized from its days on its calendar's hours per day. An activity whose days moved off the converted figure,
+  such as a collapsed delay, has its hours scaled with them.
+- **`computeCPMHours`** is exported: the minutes CPM on its own.
+- **Calendar exceptions.** The exception-date pattern of the calendar slot reader held a literal backspace where
+  a word boundary was meant (since v2.9.45). No calendar exception was read for its own hours: a worked
+  Saturday 08:00-16:00 took the weekday's hours or none. It now matches.
+- **The sub-day ALERT.** The day pass's `SUB_DAY_LAG_ROUNDED` ALERT becomes an INFO once the hours pass
+  applies, saying the printed dates come from the hours pass, and it no longer reads as a strict-mode fatal
+  there. Without the hours pass it is unchanged.
+
+**Verified.**
+- **Against P6, through CPP's converters and this engine.** On the 313 projects (94,873 unfinished activities),
+  start, finish, late start and late finish match P6 to the minute on 94,827. Total float matches on 94,844 and
+  free float on 94,856. On the same rows the day pass's printed dates matched P6 on all four, checking the date
+  alone, on 58,365. Of the 46 still off, 45 are resource-dependent activities in one project, which P6
+  schedules on the assigned resource's calendar (not modelled). The last is a row where P6 itself gives a
+  different answer on a second F9.
+- **JS against Python.** The two engines agree on every field of all 163,638 activities of those projects,
+  through the minutes CPM and through the hours pass of `computeCPM`.
+- **JS unit suite:** 1,435 checks green, up from 1,416 (HR-1 to HR-19).
+- **Cross-validation:** 127 fixtures, 5133 of 5233 executed, 100 skipped, 0 failures. F126-F131 hand both
+  engines P6's hours and also compare the hours pass.
+- **P6 comparison matrix:** 13 / 13 over 27 checks, with zero changed engine values against v2.9.59. The
+  Larchmere capture cases (19-21) read 256 of 256 at each data date, as before.
+- **Coverage,** re-measured on these bytes: 94.31% statements, 81.45% branches, 96.19% functions.
+
+**Who is affected.** Through `parseXER` and `computeCPM` with the hours handed on, 349 of 584 distinct real
+exports on the measuring machine print at least one date differently (76,095 unfinished activities). No other
+field moves in any of them. Without the hours, nothing moves in any of the 584.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version
+is re-run under §12.2 where its dates came, through a caller that hands on the hours, from a schedule with any
+of these: part-day durations, part-day lags, a part-day data date, or constraint times.
+
+**Not claimed.**
+- Resource-dependent activities (`TT_Rsrc` with assignments) are scheduled on the activity's calendar, not the
+  resources' (45 rows in one project).
+- The day numbers (`es`, `ef`, `ls`, `lf`) and the day float are still the day pass's.
+
+---
+
 ## v2.9.59 - 2026-10-12 - P6 parity on whole-day schedules, measured on P6's own output
 
 **Computed values move (Class A).** Measured on P6's own stored dates in every

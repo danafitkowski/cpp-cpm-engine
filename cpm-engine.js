@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.59';
+const ENGINE_VERSION = '2.10.0';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2076,6 +2076,873 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
         return lfFromMS;
     }
     return minLF;
+}
+
+// ============================================================================
+// HR (hours engine, 12-Oct-2026) — working time in MINUTES and a CPM on it,
+// as P6 schedules: every date an instant in minutes since 2020-01-01 00:00,
+// every duration and lag working minutes on a calendar's own working periods.
+// Python paired sites: cpm_minutes.py (WorkCalendar), cpm_hours.py
+// (compute_cpm_hours) and cpm._hours_pass (computeCPM's hours pass below).
+// Measured on every project P6 last scheduled in the local P6 database (313
+// projects, 94,873 unfinished activities): all four dates to the minute on
+// 94,827, total float on 94,844, free float on 94,856.
+// ============================================================================
+const _HR_DAY = 1440;
+const _HR_SEARCH_DAYS = 3660;
+const _HR_EPOCH_MS = Date.UTC(2020, 0, 1);
+
+// Python's round(): half to even, so both ports turn the same hours into the
+// same minutes.
+function _hrRound(x) {
+    const f = Math.floor(x);
+    const d = x - f;
+    if (d > 0.5) return f + 1;
+    if (d < 0.5) return f;
+    return (f % 2 === 0) ? f : f + 1;
+}
+
+// 'YYYY-MM-DD[ HH:MM[:SS]]' -> minutes since the epoch; null for blank or unreadable.
+function _hrParseInstant(s) {
+    if (s === null || s === undefined) return null;
+    if (typeof s === 'number') return Number.isFinite(s) ? Math.trunc(s) : null;
+    s = String(s).trim();
+    if (s.length < 10) return null;
+    const y = Number(s.slice(0, 4));
+    const mo = Number(s.slice(5, 7));
+    const d = Number(s.slice(8, 10));
+    if (!Number.isInteger(y) || !Number.isInteger(mo) || !Number.isInteger(d)) return null;
+    const ms = Date.UTC(y, mo - 1, d);
+    const chk = new Date(ms);
+    if (chk.getUTCFullYear() !== y || chk.getUTCMonth() !== mo - 1 || chk.getUTCDate() !== d) return null;
+    let m = 0;
+    if (s.length >= 16 && (s[10] === ' ' || s[10] === 'T')) {
+        const hh = Number(s.slice(11, 13));
+        const mm = Number(s.slice(14, 16));
+        if (Number.isInteger(hh) && Number.isInteger(mm)) m = hh * 60 + mm;
+    }
+    return Math.round((ms - _HR_EPOCH_MS) / 86400000) * _HR_DAY + m;
+}
+
+// Minutes since the epoch -> 'YYYY-MM-DD HH:MM' ('' for null).
+function _hrFormatInstant(t) {
+    if (t === null || t === undefined) return '';
+    const day = Math.floor(t / _HR_DAY);
+    const m = t - day * _HR_DAY;
+    const p2 = (x) => (x < 10 ? '0' : '') + x;
+    return new Date(_HR_EPOCH_MS + day * 86400000).toISOString().slice(0, 10) + ' ' +
+        p2(Math.floor(m / 60)) + ':' + p2(m % 60);
+}
+
+function _hrDefaultSlots(hoursPerDay) {
+    let h = Number(hoursPerDay || 8);
+    if (!Number.isFinite(h)) h = 8;
+    if (Math.abs(h - 8) < 1e-9) return [[480, 720], [780, 1020]];
+    if (h >= 24) return [[0, _HR_DAY]];
+    return [[480, Math.min(_HR_DAY, 480 + _hrRound(h * 60))]];
+}
+
+// The working periods of a P6 calendar, day by day, in minutes. A day resolves
+// as P6 resolves it: the calendar's own exception, else an inherited holiday,
+// else a special workday, else the weekday. Without hour detail the work_days
+// work 08:00-12:00 / 13:00-17:00 at 8 h (from 08:00 otherwise, the whole day at
+// 24 h); a corrupt record P6 cannot bind (p6_fallback) is P6's internal
+// Standard, Mon-Fri 08:00-16:00.
+function _HrWorkCalendar(info) {
+    info = (info && typeof info === 'object') ? info : {};
+    let raw = info.raw;
+    this.week = null;
+    this.exc = null;
+    if (info.p6_fallback) raw = null;
+    if (raw && String(raw).indexOf('(') !== -1) {
+        const t = _daySlotTables(String(raw));
+        if (t) {
+            this.week = t.week;
+            this.exc = t.exc;
+        }
+    }
+    this.holidays = new Set(info.holidays || []);
+    this.special = new Set(info.special_workdays || []);
+    const wd = info.work_days;
+    this.workDays = new Set((wd && wd.length) ? wd : [1, 2, 3, 4, 5]);
+    this.dflt = info.p6_fallback ? [[480, 960]] : _hrDefaultSlots(info.hours_per_day);
+    this._cache = new Map();
+}
+
+_HrWorkCalendar.prototype.slots = function (day) {
+    const hit = this._cache.get(day);
+    if (hit !== undefined) return hit;
+    const dt = new Date(_HR_EPOCH_MS + day * 86400000);
+    const iso = dt.toISOString().slice(0, 10);
+    const jsDow = dt.getUTCDay();
+    let out;
+    if (this.week !== null) {
+        const w = this.week[jsDow];
+        if (Object.prototype.hasOwnProperty.call(this.exc, iso)) out = this.exc[iso] || [];
+        else if (this.holidays.has(iso)) out = [];
+        else if (this.special.has(iso)) out = (w && w.length) ? w : this.dflt;
+        else out = w || [];
+    } else if (this.holidays.has(iso)) {
+        out = [];
+    } else if (this.special.has(iso) || this.workDays.has(jsDow)) {
+        out = this.dflt;
+    } else {
+        out = [];
+    }
+    this._cache.set(day, out);
+    return out;
+};
+
+// The first instant at or after `t` that work can start at.
+_HrWorkCalendar.prototype.nextWork = function (t) {
+    const day = Math.floor(t / _HR_DAY);
+    const m = t - day * _HR_DAY;
+    for (let i = 0; i < _HR_SEARCH_DAYS; i++) {
+        for (const sf of this.slots(day + i)) {
+            if (i === 0 && m >= sf[1]) continue;
+            return (day + i) * _HR_DAY + (i === 0 ? Math.max(sf[0], m) : sf[0]);
+        }
+    }
+    throw new Error('calendar has no working time after ' + _hrFormatInstant(t));
+};
+
+// The last instant at or before `t` that work can finish at.
+_HrWorkCalendar.prototype.prevWorkEnd = function (t) {
+    const day = Math.floor(t / _HR_DAY);
+    const m = t - day * _HR_DAY;
+    for (let i = 0; i < _HR_SEARCH_DAYS; i++) {
+        const sl = this.slots(day - i);
+        for (let k = sl.length - 1; k >= 0; k--) {
+            if (i === 0 && m <= sl[k][0]) continue;
+            return (day - i) * _HR_DAY + (i === 0 ? Math.min(sl[k][1], m) : sl[k][1]);
+        }
+    }
+    throw new Error('calendar has no working time before ' + _hrFormatInstant(t));
+};
+
+_HrWorkCalendar.prototype.isStart = function (t) { return this.nextWork(t) === t; };
+_HrWorkCalendar.prototype.isFinish = function (t) { return this.prevWorkEnd(t) === t; };
+
+// Work `minutes` of working time from `t`: the instant the work runs out.
+_HrWorkCalendar.prototype.add = function (t, minutes) {
+    minutes = _hrRound(minutes);
+    if (minutes < 0) return this.sub(t, -minutes);
+    t = this.nextWork(t);
+    if (minutes === 0) return t;
+    for (let it = 0; it < _HR_SEARCH_DAYS * 4; it++) {
+        const day = Math.floor(t / _HR_DAY);
+        const m = t - day * _HR_DAY;
+        let hit = false;
+        for (const sf of this.slots(day)) {
+            if (sf[0] <= m && m < sf[1]) {
+                const avail = sf[1] - m;
+                if (minutes <= avail) return t + minutes;
+                minutes -= avail;
+                t = this.nextWork(day * _HR_DAY + sf[1]);
+                hit = true;
+                break;
+            }
+        }
+        if (!hit) t = this.nextWork(t);
+    }
+    throw new Error('add ran past the search horizon');
+};
+
+// Work `minutes` of working time back from `t`: where it must have started.
+_HrWorkCalendar.prototype.sub = function (t, minutes) {
+    minutes = _hrRound(minutes);
+    if (minutes < 0) return this.add(t, -minutes);
+    t = this.prevWorkEnd(t);
+    if (minutes === 0) return t;
+    for (let it = 0; it < _HR_SEARCH_DAYS * 4; it++) {
+        let day = Math.floor(t / _HR_DAY);
+        let m = t - day * _HR_DAY;
+        if (m === 0) {
+            // Walking backward, midnight is the END of the previous day.
+            day -= 1;
+            m = _HR_DAY;
+        }
+        const sl = this.slots(day);
+        let hit = false;
+        for (let k = sl.length - 1; k >= 0; k--) {
+            const s = sl[k][0];
+            const f = sl[k][1];
+            if (s < m && m <= f) {
+                const avail = m - s;
+                if (minutes <= avail) return t - minutes;
+                minutes -= avail;
+                t = this.prevWorkEnd(day * _HR_DAY + s);
+                hit = true;
+                break;
+            }
+        }
+        if (!hit) t = this.prevWorkEnd(t);
+    }
+    throw new Error('sub ran past the search horizon');
+};
+
+// Working minutes from `a` to `b` (negative when `b` is before `a`).
+_HrWorkCalendar.prototype.between = function (a, b) {
+    a = Math.trunc(a);
+    b = Math.trunc(b);
+    if (b < a) return -this.between(b, a);
+    let total = 0;
+    const d0 = Math.floor(a / _HR_DAY);
+    const m0 = a - d0 * _HR_DAY;
+    const d1 = Math.floor(b / _HR_DAY);
+    const m1 = b - d1 * _HR_DAY;
+    for (let day = d0; day <= d1; day++) {
+        const lo = day === d0 ? m0 : 0;
+        const hi = day === d1 ? m1 : _HR_DAY;
+        for (const sf of this.slots(day)) total += Math.max(0, Math.min(sf[1], hi) - Math.max(sf[0], lo));
+    }
+    return total;
+};
+
+const _HR_P6_CSTR = {
+    CS_MSOA: 'SNET', CS_MSOB: 'SNLT', CS_MSO: 'SO', CS_MANDSTART: 'MS_Start', CS_MEOA: 'FNET', CS_MEOB: 'FNLT',
+    CS_MEO: 'FO', CS_MANDFIN: 'MS_Finish', CS_ALAP: 'ALAP', CS_MANSTART: 'MS_Start', CS_MANFINISH: 'MS_Finish',
+    CS_SO: 'SO', MFO: 'MS_Finish',
+};
+
+function _hrInst(v) {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') return Math.trunc(v);
+    return _hrParseInstant(v);
+}
+
+function _hrCstr(c) {
+    if (!c || !c.type) return null;
+    const t = Object.prototype.hasOwnProperty.call(_HR_P6_CSTR, c.type) ? _HR_P6_CSTR[c.type] : c.type;
+    return { type: t, at: _hrInst(c.date) };
+}
+
+// (start, finish) of unfinished work an expected finish re-sizes. Python
+// paired site: cpm_hours._expected_finish.
+function _hrExpectedFinish(n, cal, start, floor, startPred) {
+    const was = n.rem;
+    const xfEnd = cal.prevWorkEnd(n.xf);
+    let keep = false;
+    if (n.assigned > 0 && cal.between(start, xfEnd) <= 0) {
+        keep = true;
+    } else if (floor !== null && (xfEnd < floor || xfEnd <= start)) {
+        const pullWas = was > 0 ? cal.sub(floor, was) : cal.prevWorkEnd(floor);
+        keep = (!startPred) || pullWas > start;
+    }
+    n.xf_applied = !keep;
+    let rd;
+    if (keep) rd = was;
+    else if (xfEnd > start) rd = cal.between(start, xfEnd);
+    else rd = 0;
+    const begin = start;
+    if (floor !== null) {
+        // zero remaining work an FF / SF pulls sits at the next opening
+        const pull = rd > 0 ? cal.sub(floor, rd) : cal.nextWork(floor);
+        if (pull > begin) {
+            n.rem = rd;
+            return [pull, rd > 0 ? floor : pull];
+        }
+    }
+    n.rem = rd;
+    return [begin, rd > 0 ? cal.add(begin, rd) : begin];
+}
+
+// CPM in hours and minutes. Python paired site: cpm_hours.compute_cpm_hours
+// (same inputs, snake_case; the same rules in the same order). Returns
+// { code: {es, ef, ls, lf, restart, rls, tf_minutes, ff_minutes, status} }
+// plus '__project_finish__'.
+function computeCPMHours(activities, relationships, o) {
+    o = o || {};
+    const calMap = o.cal_map || {};
+    const scheduleMode = o.schedule_mode || 'retained_logic';
+    const lagCalendar = o.lag_calendar || 'predecessor';
+    const projectCalendar = (o.project_calendar === undefined) ? null : o.project_calendar;
+    const ssLagFrom = o.ss_lag_from || 'early_start';
+    const useExpectedFinish = !!o.use_expected_finish;
+    const useExternalDates = (o.use_external_dates === undefined) ? true : !!o.use_external_dates;
+    const floatType = o.float_type || 'FT_FF';
+    const cals = new Map();
+    // Python's `or`: an empty calendar entry falls back as a missing one does
+    const present = (x) => ((x && (typeof x !== 'object' || Object.keys(x).length > 0)) ? x : null);
+    const calOf = (cid) => {
+        if (!cals.has(cid)) {
+            const info = ((cid !== null && cid !== undefined) ? present(calMap[cid]) : null) ||
+                ((projectCalendar !== null && projectCalendar !== undefined) ? present(calMap[projectCalendar]) : null) ||
+                {};
+            cals.set(cid, new _HrWorkCalendar(info));
+        }
+        return cals.get(cid);
+    };
+    const H24 = new _HrWorkCalendar({ raw: '', work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 24 });
+    const dd = _hrInst(o.data_date);
+    if (dd === null) throw new Error('the data date is not a date');
+    const nodes = new Map();
+    for (const a of activities) {
+        const n = Object.assign({}, a);
+        n.cal = calOf(a.clndr_id || projectCalendar);
+        n.rem = _hrRound(a.remaining_minutes || 0);
+        n.as = _hrInst(a.actual_start);
+        n.af = _hrInst(a.actual_finish);
+        n.complete = n.af !== null;
+        n.started = n.as !== null && !n.complete;
+        n.c1 = _hrCstr(a.constraint);
+        n.c2 = _hrCstr(a.constraint2);
+        const rd = _hrInst(a.resume_date);
+        n.susp = _hrInst(a.suspend_date);
+        n.res = rd;
+        n.rf = (scheduleMode === 'retained_logic' && a.suspend_date && rd !== null && rd > dd) ? rd : null;
+        n.ext_es = useExternalDates ? _hrInst(a.external_early_start) : null;
+        n.ext_lf = useExternalDates ? _hrInst(a.external_late_finish) : null;
+        n.xf = (useExpectedFinish && !n.complete) ? _hrInst(a.expected_finish) : null;
+        n.assigned = Math.trunc(Number(a.resource_assignments || 0)) || 0;
+        nodes.set(a.code, n);
+    }
+    const preds = new Map();
+    const succs = new Map();
+    for (const c of nodes.keys()) {
+        preds.set(c, []);
+        succs.set(c, []);
+    }
+    for (const r of relationships) {
+        if (nodes.has(r.from_code) && nodes.has(r.to_code) && r.from_code !== r.to_code) {
+            const rr = Object.assign({}, r);
+            rr.lag = _hrRound(r.lag_minutes || 0);
+            preds.get(r.to_code).push(rr);
+            succs.get(r.from_code).push(rr);
+        }
+    }
+
+    // topological order (cycles left at the end in input order)
+    const indeg = new Map();
+    for (const c of nodes.keys()) indeg.set(c, preds.get(c).length);
+    const queue = [];
+    for (const c of nodes.keys()) if (indeg.get(c) === 0) queue.push(c);
+    const order = [];
+    for (let qi = 0; qi < queue.length; qi++) {
+        const c = queue[qi];
+        order.push(c);
+        for (const r of succs.get(c)) {
+            indeg.set(r.to_code, indeg.get(r.to_code) - 1);
+            if (indeg.get(r.to_code) === 0) queue.push(r.to_code);
+        }
+    }
+    const inOrder = new Set(order);
+    for (const c of nodes.keys()) if (!inOrder.has(c)) order.push(c);
+
+    const lagCal = (p, s) => {
+        if (lagCalendar === 'successor') return s.cal;
+        if (lagCalendar === '24h') return H24;
+        if (lagCalendar === 'project') return calOf(projectCalendar);
+        return p.cal;
+    };
+    const lagFwd = (t, lag, lc) => (lag === 0 ? t : lc.add(t, lag));
+    const lagBwd = (t, lag, lc) => (lag === 0 ? t : lc.sub(t, lag));
+    const retained = scheduleMode === 'retained_logic';
+    const restartOf = (p) => (p.restart !== undefined ? p.restart : p.es);
+
+    // The part of a lag out of progressed work the data date has not used up;
+    // off suspended work only the time outside the suspension counts.
+    const unexpired = (actual, lag, lc, p) => {
+        if (lag <= 0) return 0;
+        if (actual === null || actual === undefined || actual >= dd) return lag;
+        let used = lc.between(actual, dd);
+        if (p && p.susp !== null && p.susp !== undefined) {
+            const lo = Math.max(actual, p.susp);
+            const hi = Math.min(dd, (p.res !== null && p.res !== undefined) ? p.res : dd);
+            if (hi > lo) used -= lc.between(lo, hi);
+        }
+        return Math.max(0, lag - used);
+    };
+    const stamp = (p) => Math.max(dd, p.pt || dd, p.resume_hold || dd);
+    const ssAnchor = (p) => ((ssLagFrom === 'actual_start' && p.started && retained) ? dd : restartOf(p));
+    const drive = (p, r, n) => {
+        const lc = lagCal(p, n);
+        const t = r.type;
+        const kind = (t === 'FS' || t === 'SS') ? 'start' : 'finish';
+        if (p.complete) {
+            const actual = (t === 'FS' || t === 'FF') ? p.af : (p.as !== null ? p.as : p.af);
+            const base = retained ? stamp(p) : dd;
+            return [kind, lagFwd(base, unexpired(actual, r.lag, lc), lc)];
+        }
+        if (t === 'FS' || t === 'FF') return [kind, lagFwd(p.ef, r.lag, lc)];
+        if (p.started && retained) {
+            const src = t === 'SS' ? ssAnchor(p) : restartOf(p);
+            return [kind, lagFwd(src, unexpired(p.as, r.lag, lc, p), lc)];
+        }
+        return [kind, lagFwd(restartOf(p), r.lag, lc)];
+    };
+    const onWorkingTime = (cal, t) => {
+        const day = Math.floor(t / _HR_DAY);
+        const m = t - day * _HR_DAY;
+        return cal.slots(day).some((sf) => sf[0] <= m && m <= sf[1]);
+    };
+
+    // ---------------------------------------------------------------- forward
+    for (const c of order) {
+        const n = nodes.get(c);
+        const cal = n.cal;
+        const tt = n.task_type || 'TT_Task';
+        if (n.complete) {
+            n.es = n.as !== null ? n.as : n.af;
+            n.ef = n.af;
+            if (retained) {
+                let pt = null;
+                for (const r of preds.get(c)) {
+                    const p = nodes.get(r.from_code);
+                    if (p.ef === undefined) continue;
+                    let d;
+                    if (p.complete) {
+                        d = stamp(p);
+                    } else if (r.type === 'SS' || r.type === 'SF') {
+                        const src = r.type === 'SS' ? ssAnchor(p) : restartOf(p);
+                        d = lagFwd(src, p.started ? 0 : r.lag, lagCal(p, n));
+                    } else {
+                        d = lagFwd(p.ef, r.lag, lagCal(p, n));
+                    }
+                    pt = (pt === null) ? d : Math.max(pt, d);
+                }
+                if (pt !== null && pt > dd) n.pt = pt;
+                if (n.rf !== null && n.rf > Math.max(dd, pt !== null ? pt : dd)) n.resume_hold = n.rf;
+            }
+            continue;
+        }
+        let startReq = dd;
+        let finishReq = null;
+        // a milestone has no duration for an expected finish to re-size
+        const xfOn = n.xf !== null && tt !== 'TT_Mile' && tt !== 'TT_FinMile';
+        let xfFloor = null;
+        let xfStartPred = false;
+        for (const r of preds.get(c)) {
+            const p = nodes.get(r.from_code);
+            if (p.ef === undefined) continue;
+            const [kind, t] = drive(p, r, n);
+            if (kind === 'start') {
+                if (n.started && scheduleMode === 'progress_override') continue;
+                xfStartPred = true;
+                startReq = Math.max(startReq, t);
+            } else if (xfOn) {
+                xfFloor = (xfFloor === null) ? t : Math.max(xfFloor, t);
+            } else {
+                finishReq = (finishReq === null) ? t : Math.max(finishReq, t);
+            }
+        }
+        for (const cs of [n.c1, n.c2]) {
+            if (cs && cs.at !== null && (cs.type === 'SNET' || cs.type === 'SO' || cs.type === 'MS_Start') &&
+                    !n.started) {
+                startReq = cs.type !== 'MS_Start' ? Math.max(startReq, cs.at) : cs.at;
+            }
+        }
+        if (n.ext_es !== null) startReq = Math.max(startReq, n.ext_es);
+        if (n.started && n.rf !== null) startReq = Math.max(startReq, n.rf);
+        if (tt === 'TT_FinMile') {
+            const t = finishReq === null ? startReq : Math.max(startReq, finishReq);
+            const inst = onWorkingTime(cal, t) ? t : cal.nextWork(t);
+            n.es = inst;
+            n.ef = inst;
+        } else {
+            let es = cal.nextWork(startReq);
+            let ef = null;
+            if (n.rem > 0 && finishReq !== null) {
+                // an FF / SF requirement that drives the finish is kept as P6
+                // prints it; off working time it moves to the next opening
+                const onWork = cal.isStart(finishReq) || cal.isFinish(finishReq);
+                const fr = onWork ? finishReq : cal.nextWork(finishReq);
+                if (fr > cal.add(es, n.rem)) {
+                    es = Math.max(es, cal.sub(fr, n.rem));
+                    ef = fr;
+                }
+            } else if (n.rem === 0 && finishReq !== null) {
+                es = Math.max(es, cal.nextWork(finishReq));
+            }
+            if (ef === null) ef = n.rem > 0 ? cal.add(es, n.rem) : es;
+            if (xfOn) [es, ef] = _hrExpectedFinish(n, cal, es, xfFloor, xfStartPred);
+            if (n.started) {
+                n.restart = es;
+                n.es = n.as;
+            } else {
+                n.es = es;
+            }
+            n.ef = ef;
+        }
+        for (const cs of [n.c1, n.c2]) {
+            if (cs && cs.at !== null && (cs.type === 'FNET' || cs.type === 'FO' || cs.type === 'MS_Finish') &&
+                    !n.started) {
+                let fin = cs.at;
+                if (n.rem === 0 && !onWorkingTime(cal, fin)) fin = cal.nextWork(fin);
+                if (cs.type === 'MS_Finish' || fin > n.ef) {
+                    n.ef = n.rem > 0 ? cal.prevWorkEnd(fin) : fin;
+                    n.es = n.rem > 0 ? cal.sub(n.ef, n.rem) : n.ef;
+                }
+            }
+        }
+    }
+    let projEf = null;
+    for (const n of nodes.values()) {
+        if (n.ef !== undefined && n.ef !== null) projEf = (projEf === null) ? n.ef : Math.max(projEf, n.ef);
+    }
+    if (projEf === null) projEf = dd;
+
+    // ---------------------------------------------------------------- backward
+    const seed = o.project_finish ? _hrInst(o.project_finish) : projEf;
+    if (seed === null) throw new Error('the Must Finish By is not a date');
+    for (let oi = order.length - 1; oi >= 0; oi--) {
+        const c = order[oi];
+        const n = nodes.get(c);
+        const cal = n.cal;
+        if (n.complete) {
+            n.lf = n.af;
+            n.ls = n.as !== null ? n.as : n.af;
+            if (retained) {
+                let lpt = null;
+                for (const r of succs.get(c)) {
+                    const s = nodes.get(r.to_code);
+                    let bnd;
+                    if (s.complete) bnd = s.lpt;
+                    else if (r.type === 'FF' || r.type === 'SF') bnd = s.lf;
+                    else bnd = (s.rls !== undefined) ? s.rls : s.ls;
+                    if (bnd === undefined || bnd === null) continue;
+                    const lc = lagCal(n, s);
+                    const actual = (r.type === 'FS' || r.type === 'FF') ? n.af : (n.as !== null ? n.as : n.af);
+                    const rl = unexpired(actual, r.lag, lc);
+                    if (rl) bnd = lc.sub(bnd, rl);
+                    lpt = (lpt === null) ? bnd : Math.min(lpt, bnd);
+                }
+                if (lpt !== null) n.lpt = lpt;
+            }
+            continue;
+        }
+        let lf = n.rem > 0 ? cal.prevWorkEnd(seed) : seed;
+        let lsBound = null;
+        for (const r of succs.get(c)) {
+            const s = nodes.get(r.to_code);
+            if (s.lf === undefined) continue;
+            let sLs;
+            let sLf;
+            if (s.complete) {
+                if (!retained || s.lpt === undefined || s.lpt === null) continue;
+                sLs = s.lpt;
+                sLf = s.lpt;
+            } else {
+                if (s.started && scheduleMode === 'progress_override' && (r.type === 'FS' || r.type === 'SS')) {
+                    continue;
+                }
+                sLs = (s.rls !== undefined) ? s.rls : s.ls;
+                sLf = s.lf;
+            }
+            const lc = lagCal(n, s);
+            let lag = r.lag;
+            if ((r.type === 'SS' || r.type === 'SF') && n.started && retained) lag = unexpired(n.as, lag, lc);
+            if (r.type === 'FS') {
+                lf = Math.min(lf, lagBwd(sLs, lag, lc));
+            } else if (r.type === 'FF') {
+                lf = Math.min(lf, lagBwd(sLf, lag, lc));
+            } else if (r.type === 'SS' || r.type === 'SF') {
+                let b = lagBwd(r.type === 'SS' ? sLs : sLf, lag, lc);
+                // a lead walked forward to a close is a start: the next opening
+                if (lag < 0) b = lc.nextWork(b);
+                lsBound = (lsBound === null) ? b : Math.min(lsBound, b);
+            }
+        }
+        if (n.ext_lf !== null) lf = Math.min(lf, cal.prevWorkEnd(n.ext_lf));
+        for (const cs of [n.c1, n.c2]) {
+            if (!cs || cs.at === null) continue;
+            if (n.started && (cs.type === 'MS_Finish' || cs.type === 'MS_Start')) continue;
+            if (cs.type === 'FNLT' || cs.type === 'FO' || cs.type === 'MS_Finish') {
+                lf = Math.min(lf, cs.at);
+            } else if (cs.type === 'SNLT' || cs.type === 'SO' || cs.type === 'MS_Start') {
+                // a start constraint off working time resolves to the next
+                // opening on a task; zero-length work takes the close before it
+                const at = n.rem > 0 ? cal.nextWork(cs.at) : cs.at;
+                lsBound = (lsBound === null) ? at : Math.min(lsBound, at);
+            }
+        }
+        let ls;
+        if (n.rem > 0) {
+            lf = cal.prevWorkEnd(lf);
+            ls = cal.sub(lf, n.rem);
+            if (lsBound !== null && lsBound <= ls) {
+                // an SS / SF bound that drives the late start is kept as P6
+                // prints it; off working time it falls back to the close before
+                const onWork = cal.isFinish(lsBound) || cal.isStart(lsBound);
+                ls = onWork ? lsBound : cal.prevWorkEnd(lsBound);
+                lf = cal.add(ls, n.rem);
+            }
+        } else {
+            if (lsBound !== null) lf = Math.min(lf, lsBound);
+            // a start milestone keeps a working opening it is bound to; every
+            // other zero-length activity sits at the close at or before it
+            const tt = n.task_type || 'TT_Task';
+            if (!(tt === 'TT_Mile' && cal.isStart(lf))) lf = cal.prevWorkEnd(lf);
+            ls = lf;
+        }
+        n.lf = lf;
+        if (n.started) {
+            n.rls = ls;
+            n.ls = n.as;
+        } else {
+            n.ls = ls;
+        }
+    }
+
+    // ---------------------------------------------------------------- ALAP
+    for (let oi = order.length - 1; oi >= 0; oi--) {
+        const c = order[oi];
+        const n = nodes.get(c);
+        const alap = (n.c1 && n.c1.type === 'ALAP') || (n.c2 && n.c2.type === 'ALAP');
+        if (n.complete || n.started || !alap) continue;
+        const cal = n.cal;
+        let efB = null;
+        let lsB = null;
+        let seen = false;
+        for (const r of succs.get(c)) {
+            const s = nodes.get(r.to_code);
+            if (s.complete) continue;
+            seen = true;
+            const lc = lagCal(n, s);
+            const anchor = (r.type === 'FF' || r.type === 'SF') ? s.ef : restartOf(s);
+            const t = lagBwd(anchor, r.lag, lc);
+            if (r.type === 'SS' || r.type === 'SF') lsB = (lsB === null) ? t : Math.min(lsB, t);
+            else efB = (efB === null) ? t : Math.min(efB, t);
+        }
+        if (!seen) efB = projEf;
+        if (lsB !== null) {
+            const fromLs = n.rem > 0 ? cal.add(lsB, n.rem) : lsB;
+            efB = (efB === null) ? fromLs : Math.min(efB, fromLs);
+        }
+        if (efB === null) continue;
+        efB = Math.min(efB, n.lf);
+        if (efB <= n.ef) continue;
+        let newEs;
+        if (n.rem > 0) {
+            efB = cal.prevWorkEnd(efB);
+            newEs = cal.sub(efB, n.rem);
+        } else {
+            if (!((n.task_type || 'TT_Task') === 'TT_Mile' && cal.isStart(efB))) efB = cal.prevWorkEnd(efB);
+            newEs = efB;
+        }
+        if (newEs <= n.es) continue;
+        n.es = newEs;
+        n.ef = efB;
+    }
+
+    // ---------------------------------------------------------------- float
+    const out = Object.create(null);
+    for (const [c, n] of nodes) {
+        const cal = n.cal;
+        let tf = null;
+        let ff = null;
+        if (!n.complete) {
+            const tfFin = cal.between(n.ef, n.lf);
+            const tfSta = cal.between(restartOf(n), (n.rls !== undefined) ? n.rls : n.ls);
+            tf = floatType === 'FT_Start' ? tfSta : (floatType === 'FT_Min' ? Math.min(tfFin, tfSta) : tfFin);
+            const cands = [];
+            for (const r of succs.get(c)) {
+                const s = nodes.get(r.to_code);
+                const lc = lagCal(n, s);
+                const t = r.type;
+                if (s.started && !retained && (t === 'FS' || t === 'SS')) continue;
+                let sStart;
+                let sFin;
+                if (s.complete) {
+                    if (!retained) continue;
+                    sStart = cal.nextWork(stamp(s));
+                    sFin = sStart;
+                } else {
+                    sStart = restartOf(s);
+                    sFin = s.ef;
+                }
+                let pa;
+                if (t === 'FS' || t === 'FF') {
+                    pa = lagFwd(n.ef, r.lag, lc);
+                } else {
+                    const st = t === 'SS' ? ssAnchor(n) : restartOf(n);
+                    let lag = r.lag;
+                    if (n.started && retained) lag = s.complete ? 0 : unexpired(n.as, lag, lc, n);
+                    pa = lagFwd(st, lag, lc);
+                }
+                const sa = (t === 'FS' || t === 'SS') ? sStart : sFin;
+                cands.push(cal.between(pa, sa));
+            }
+            const pinned = !n.started && [n.c1, n.c2].some((cs) => cs && (cs.type === 'MS_Start' ||
+                cs.type === 'MS_Finish'));
+            if (n.xf !== null || pinned) ff = 0;
+            else if (cands.length) ff = Math.max(0, Math.min.apply(null, cands));
+            else ff = Math.max(0, cal.between(n.ef, projEf));
+        }
+        out[c] = {
+            es: n.es, ef: n.ef, ls: n.ls, lf: n.lf,
+            restart: n.restart !== undefined ? n.restart : null,
+            rls: n.rls !== undefined ? n.rls : null,
+            tf_minutes: tf, ff_minutes: ff,
+            status: n.complete ? 'complete' : (n.started ? 'started' : 'not started'),
+        };
+    }
+    out.__project_finish__ = projEf;
+    return out;
+}
+
+const _HOURS_LAG_CAL = {
+    predecessor: 'predecessor', successor: 'successor', rcal_Predecessor: 'predecessor',
+    rcal_Successor: 'successor', rcal_24Hour: '24h', rcal_24hour: '24h', '24hour': '24h',
+    rcal_Project: 'project', rcal_ProjDefault: 'project', project: 'project',
+    pred: 'predecessor', succ: 'successor',
+};
+
+// Python's float() on what a caller hands on: a number or numeric text, else null.
+function _hoursFloat(v) {
+    if (v === null || v === undefined) return null;
+    if (typeof v === 'boolean') return v ? 1 : 0;
+    if (typeof v === 'string' && v.trim() === '') return null;
+    const f = Number(v);
+    return Number.isFinite(f) ? f : null;
+}
+
+// computeCPM's hours pass. Python paired site: cpm._hours_pass (the HR block
+// above compute_cpm says what it attaches and when it runs).
+function _hoursPass(activities, relationships, nodes, p) {
+    const byCode = new Map();
+    for (const a of activities || []) {
+        if (a && a.code && Object.prototype.hasOwnProperty.call(nodes, a.code)) byCode.set(a.code, a);
+    }
+    if (!p.dataDate) return { applied: false, reason: 'no data date' };
+    if (!p.calMap || Object.keys(p.calMap).length === 0) return { applied: false, reason: 'no calendars' };
+    let anyHours = false;
+    for (const a of byCode.values()) if (_hoursFloat(a.remaining_hours) !== null) anyHours = true;
+    if (!anyHours) return { applied: false, reason: 'no remaining_hours handed on' };
+    const calHpd = (cid) => {
+        const h = _hoursFloat(((p.calMap || {})[cid] || {}).hours_per_day);
+        return (h && h > 0) ? h : null;
+    };
+    const sizedFromDays = [];
+    const remainingMinutes = (c, a) => {
+        if (nodes[c].is_complete) return 0;
+        let d = (a.actual_start && a.remaining_duration !== undefined && a.remaining_duration !== null)
+            ? a.remaining_duration : a.duration_days;
+        d = _hoursFloat(d);
+        const hpd = calHpd(a.clndr_id || p.projectCalendar);
+        let rh = _hoursFloat(a.remaining_hours);
+        const basis = _hoursFloat(a.remaining_hours_days);
+        if (rh !== null && basis !== null) {
+            // days moved off the figure the hours were converted to: the
+            // hours scale with them
+            if (d !== null && Math.abs(d - basis) > 1e-9) {
+                rh = basis > 0 ? rh * d / basis : d * (hpd || 8);
+                sizedFromDays.push(c);
+            }
+        } else if (rh === null || (d !== null && hpd && Math.abs(rh - d * hpd) > 0.01)) {
+            rh = (d || 0) * (hpd || 8);
+            sizedFromDays.push(c);
+        }
+        return _hrRound(Math.max(rh, 0) * 60);
+    };
+    const cstrInstant = (cs) => {
+        // the normalised constraint keeps the day in 'date' and its time of
+        // day apart in 'time_minutes'; the hours pass needs the instant
+        if (!cs || !cs.type) return null;
+        let d = String(cs.date || '').slice(0, 10);
+        const tm = cs.time_minutes;
+        if (d && tm !== null && tm !== undefined) {
+            const t = Math.trunc(tm);
+            d = d + ' ' + (Math.floor(t / 60) < 10 ? '0' : '') + Math.floor(t / 60) + ':' +
+                (t % 60 < 10 ? '0' : '') + (t % 60);
+        }
+        return { type: cs.type, date: d };
+    };
+    const acts = [];
+    for (const [c, a] of byCode) {
+        const n = nodes[c];
+        acts.push({
+            code: c, task_type: n.task_type || a.task_type || 'TT_Task',
+            clndr_id: a.clndr_id || p.projectCalendar,
+            remaining_minutes: remainingMinutes(c, a),
+            actual_start: a.actual_start || null,
+            actual_finish: n.is_complete ? (a.actual_finish || null) : null,
+            constraint: cstrInstant(n.constraint), constraint2: cstrInstant(n.constraint2),
+            suspend_date: a.suspend_date || null, resume_date: a.resume_date || null,
+            expected_finish: a.expected_finish || null,
+            external_early_start: a.external_early_start || null,
+            external_late_finish: a.external_late_finish || null,
+            resource_assignments: a.resource_assignments || 0,
+        });
+    }
+    const rawLagCal = String(p.relationshipLagCalendar || 'successor').trim();
+    const rels = [];
+    for (const r of relationships || []) {
+        if (!r || !byCode.has(r.from_code) || !byCode.has(r.to_code)) continue;
+        let lagH = _hoursFloat(r.lag_hours);
+        if (lagH === null) {
+            // a tie a pipeline added works in days: its lag on the hours per
+            // day of the calendar it is walked on
+            const lagD = _hoursFloat(r.lag_days) || 0;
+            const on = (rawLagCal === 'successor' || rawLagCal === 'rcal_Successor' || rawLagCal === 'succ')
+                ? byCode.get(r.to_code) : byCode.get(r.from_code);
+            lagH = lagD * (calHpd(on.clndr_id || p.projectCalendar) || 8);
+        }
+        rels.push({
+            from_code: r.from_code, to_code: r.to_code,
+            type: String(r.type || 'FS').toUpperCase().replace('PR_', ''),
+            lag_minutes: _hrRound(lagH * 60),
+        });
+    }
+    const lagCal = Object.prototype.hasOwnProperty.call(_HOURS_LAG_CAL, rawLagCal)
+        ? _HOURS_LAG_CAL[rawLagCal] : 'successor';
+    let out;
+    try {
+        out = computeCPMHours(acts, rels, {
+            data_date: p.dataDate, cal_map: p.calMap, schedule_mode: p.scheduleMode, lag_calendar: lagCal,
+            project_calendar: p.projectCalendar, project_finish: p.projectFinish || null,
+            ss_lag_from: p.ssLagFrom, use_expected_finish: p.useExpectedFinish,
+            use_external_dates: p.useExternalDates, float_type: p.floatType,
+        });
+    } catch (e) {
+        p.alerts.push({
+            severity: 'WARN', context: 'hours-engine-error',
+            message: 'The hours and minutes pass did not complete (' + (e && e.message) +
+                '); the dates are the whole-day pass only.',
+        });
+        return { applied: false, reason: 'error: ' + (e && e.message) };
+    }
+    for (const c of byCode.keys()) {
+        const r = out[c];
+        const n = nodes[c];
+        if (n.is_complete) continue;
+        const started = r.status === 'started';
+        n.early_start_dt = _hrFormatInstant(started && r.restart !== null ? r.restart : r.es);
+        n.early_finish_dt = _hrFormatInstant(r.ef);
+        n.late_start_dt = _hrFormatInstant(started && r.rls !== null ? r.rls : r.ls);
+        n.late_finish_dt = _hrFormatInstant(r.lf);
+        n.tf_hours = r.tf_minutes === null ? null : Math.round(r.tf_minutes / 60 * 1e4) / 1e4;
+        n.ff_hours = r.ff_minutes === null ? null : Math.round(r.ff_minutes / 60 * 1e4) / 1e4;
+        // The printed dates are the dates P6 prints, so they follow the hours
+        // pass; the day numbers stay the day pass's, and any printed date the
+        // hours pass moved keeps its day-pass value in day_pass_dates.
+        const printed = {
+            ef_last_worked_date: n.early_finish_dt.slice(0, 10),
+            lf_last_worked_date: n.late_finish_dt.slice(0, 10),
+        };
+        if (started) {
+            printed.restart_date = n.early_start_dt.slice(0, 10);
+            printed.remaining_late_start_date = n.late_start_dt.slice(0, 10);
+        } else {
+            printed.es_date = n.early_start_dt.slice(0, 10);
+            printed.ls_date = n.late_start_dt.slice(0, 10);
+        }
+        const moved = {};
+        let anyMoved = false;
+        for (const k of Object.keys(printed)) {
+            const was = (n[k] === undefined) ? null : n[k];
+            if (was !== printed[k]) {
+                moved[k] = was;
+                anyMoved = true;
+            }
+        }
+        if (anyMoved) n.day_pass_dates = moved;
+        Object.assign(n, printed);
+    }
+    return {
+        applied: true, unit: 'minutes', project_finish_dt: _hrFormatInstant(out.__project_finish__),
+        lag_calendar: lagCal, float_type: p.floatType, sized_from_days: sizedFromDays,
+    };
 }
 
 function computeCPM(activities, relationships, opts) {
@@ -5536,9 +6403,35 @@ function computeCPM(activities, relationships, opts) {
         ss_lag_from: _ssLagFrom,
         computed_at: new Date().toISOString(),
     };
+    // HR (hours engine) — the network also scheduled in hours and minutes when
+    // the caller hands on P6's hours (see _hoursPass). Python paired site: the
+    // _hours_pass call at the end of compute_cpm.
+    const _hours = _hoursPass(activities, relationships, nodes, {
+        dataDate, calMap: rawCalMap, projectCalendar: _projectCalId, scheduleMode: _scheduleMode,
+        relationshipLagCalendar: opts.relationshipLagCalendar || opts.relationship_lag_calendar ||
+            opts.sched_calendar_on_relationship_lag || 'successor',
+        floatType: _floatType, ssLagFrom: _ssLagFrom, projectFinish: _projectFinishOpt,
+        useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates, alerts,
+    });
+    // With the hours pass applied the printed dates and the float in hours are
+    // exact, so a fractional lag or duration the day pass rounded no longer
+    // reaches them: its SUB_DAY_LAG_ROUNDED ALERT becomes an INFO that says so
+    // (Dana, 12-Oct-2026), and no longer reads as the strict-mode fatal it is
+    // while the dates are rounded. The day numbers stay rounded.
+    if (_hours.applied) {
+        for (const a of alerts) {
+            if (a && a.severity === 'ALERT' && typeof a.message === 'string' &&
+                    a.message.indexOf('SUB_DAY_LAG_ROUNDED:') === 0) {
+                a.severity = 'INFO';
+                a.message = 'Day numbers only - the printed dates and the float in hours come from the hours ' +
+                    'pass, to the minute (result.hours): ' + a.message;
+            }
+        }
+    }
     const result = {
         nodes,
         projectFinishNum: maxEF,
+        hours: _hours,
         projectFinish: numToDate(maxEF),
         criticalCodes,
         criticalCodesArray: Array.from(criticalCodes),
@@ -5684,7 +6577,7 @@ function _d7hhmm(s) {
     const p = s.split(':');
     return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
 }
-const _D7_EXC_DATE_RE = /d\|(\d{3,7}|\d{4}-\d{2}-\d{2})/;
+const _D7_EXC_DATE_RE = /d\|(\d{3,7}|\d{4}-\d{2}-\d{2})\b/;
 function _d7SerialToDateString(rawVal) {
     const v = String(rawVal).trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
@@ -6246,6 +7139,10 @@ function parseXER(content) {
                         // placeholders for "missing" within one engine.
                         name: row.task_name || (row.task_code || taskId),
                         remaining: isMilestone ? 0 : remaining,
+                        // HR (hours engine) — P6's own hours and the days they
+                        // were converted to, for computeCPM's hours pass.
+                        remaining_hours: isMilestone ? 0 : (Number.isFinite(_remHrRaw) ? _remHrRaw : _tgtHr),
+                        remaining_hours_days: isMilestone ? 0 : remaining,
                         originalRemaining: isMilestone ? 0 : (targetDur > 0 ? targetDur : remaining),
                         actual_start: actStart,
                         actual_finish: actFinish,
@@ -6371,6 +7268,7 @@ function parseXER(content) {
                     taskId: row.task_id,
                     type: relType,
                     lag: _lagDays,
+                    lag_hours: _rawLag,
                 });
                 _relationshipCount++;
                 if (_relationshipCount > MAX_RELATIONSHIPS) {
@@ -9673,20 +10571,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '121 cross-validation fixtures. The harness defines 4967 ' +
-                'comparisons; 98 of them are never executed because neither ' +
+                '127 cross-validation fixtures. The harness defines 5233 ' +
+                'comparisons; 100 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
-                '(49 ff_signed, 49 ff_signed_working_days, all on completed ' +
+                '(50 ff_signed, 50 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 4869 / 4869" counts executed comparisons only and ' +
-                'is not a coverage figure. None of those 98 is a one-sided parity ' +
+                'reported "Checks: 5133 / 5133" counts executed comparisons only and ' +
+                'is not a coverage figure. None of those 100 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 36 of the 121 fixtures contain at least one skipped ' +
-                'comparison. The 4869 comparisons that did run are bit-identical ' +
+                'branch. 37 of the 127 fixtures contain at least one skipped ' +
+                'comparison. The 5133 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 113 of the 121 fixtures). ' +
+                'severity-level alert parity, compared on 115 of the 127 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -9725,34 +10623,36 @@ function buildDaubertDisclosure(result, opts) {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite actually executes. Coverage limit: the cross-validation harness ' +
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
-                'emit the field, so 98 checks are skipped rather than compared, counted, ' +
-                'or reported as failures (49 ff_signed, 49 ff_signed_working_days). The ' +
-                'printed 4869 / 4869 therefore sits on a nominal surface of 4967 checks, and ' +
-                'those two fields go uncompared somewhere in 36 of the 121 fixtures. In ' +
-                'all 98 cases NEITHER engine emits the field, so the skip is a ' +
+                'emit the field, so 100 checks are skipped rather than compared, counted, ' +
+                'or reported as failures (50 ff_signed, 50 ff_signed_working_days). The ' +
+                'printed 5133 / 5133 therefore sits on a nominal surface of 5233 checks, and ' +
+                'those two fields go uncompared somewhere in 37 of the 127 fixtures. In ' +
+                'all 100 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
-                'emit, 98 are comparisons where neither engine emits one. Every ' +
+                'emit, 100 are comparisons where neither engine emits one. Every ' +
                 'ES/EF/LS/LF/TF and date comparison is executed, on every activity ' +
                 'comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '121 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '127 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '4869 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 4869 / 4869 tally cannot express ' +
-                'the following gaps. Not executed: 98 node comparisons on the signed ' +
+                '5133 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 5133 / 5133 tally cannot express ' +
+                'the following gaps. Not executed: 100 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 113 of the 121 fixtures: not on those 2, which have no ' +
+                'parity runs on 115 of the 127 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +
                 'reference has never carried (a pre-existing gap, disclosed rather ' +
-                'than hidden). The former F20/F21/F27 carve-out (out-of-sequence ' +
+                'than hidden), nor on F126, F127, F129 and F131, where the JS engine also ' +
+                'emits its notice that the day pass rounds a fractional lag or duration, ' +
+                'which the Python reference has never carried either. The former F20/F21/F27 carve-out (out-of-sequence ' +
                 'ALERT believed JS-only) was retired 2026-08-19, the Python reference ' +
                 'having emitted that alert since the v2.9.27 paired-fix wave. All ' +
                 'ES/EF/LS/LF/TF, calendar-date, total-float-working-day, free-float ' +
@@ -12353,6 +13253,8 @@ function computeCPMForensicStrict(activities, relationships, opts) {
 const _api = {
     // Engine version
     ENGINE_VERSION,
+    // HR — the hours engine (minutes calendar, minute CPM)
+    computeCPMHours, _HrWorkCalendar, _hrParseInstant, _hrFormatInstant,
     // Section Q — Forensic Strict Mode (court-grade run gate)
     computeCPMForensicStrict,
     StrictForensicViolation,

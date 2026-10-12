@@ -150,6 +150,11 @@ const witness = {
     sha256: pythonRefSha,
     bytes: fs.statSync(path.join(REPO_ROOT, 'python_reference/cpm.py')).size,
   } : null,
+  // v2.10.0 — the hours pass's two modules, which the reference's compute_cpm
+  // loads beside itself; the reference's result depends on their bytes too.
+  python_reference_modules: ['python_reference/cpm_minutes.py', 'python_reference/cpm_hours.py']
+    .filter((f) => fs.existsSync(path.join(REPO_ROOT, f)))
+    .map((f) => ({ file: f, sha256: sha256File(f), bytes: fs.statSync(path.join(REPO_ROOT, f)).size })),
   git: {
     commit_sha: gitCommitSha(),
     ref: gitRef(),

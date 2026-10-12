@@ -12730,6 +12730,154 @@ console.log('\n=== WD — P6 parity on whole-day schedules (12-Oct) ===');
         [w6.S.lf_last_worked_date, w6.P.lf_last_worked_date, w6r.P.lf_last_worked_date].join(' '));
 }
 
+console.log('\n=== HR — the hours engine (12-Oct) ===');
+// Working time in minutes and a CPM on it, as P6 schedules (P6's database,
+// 313 projects, 94,873 unfinished activities: all four dates to the minute
+// on 94,827). One synthetic network per rule; the P6 case each was read from
+// is named. Calendar: Mon-Fri 08:00-12:00 / 13:00-17:00. Python paired file:
+// _cpp_common tests/test_hours_engine_2026_10_12.py.
+{
+    const C5 = { work_days: [1, 2, 3, 4, 5], hours_per_day: 8 };
+    const C7 = { work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 8 };
+    const P = E._hrParseInstant;
+    const F = E._hrFormatInstant;
+    const cal = new E._HrWorkCalendar(C5);
+    check('HR-1: work runs out at the end of a period (08:00 + 4 h = 12:00; Fri 17:00 + 8 h = Mon 17:00)',
+        F(cal.add(P('2026-10-05 08:00'), 240)) === '2026-10-05 12:00' &&
+        F(cal.add(P('2026-10-09 17:00'), 480)) === '2026-10-12 17:00' &&
+        F(cal.sub(P('2026-10-12 08:00'), 480)) === '2026-10-09 08:00' &&
+        cal.between(P('2026-10-05 08:00'), P('2026-10-06 17:00')) === 960);
+    const c24 = new E._HrWorkCalendar({ work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 24 });
+    check('HR-2: walking back, midnight is the previous day\'s end on a 24 h calendar',
+        F(c24.sub(P('2026-10-06 00:00'), 60)) === '2026-10-05 23:00');
+    const fb = new E._HrWorkCalendar({ raw: '(0||CalendarData()((0||DaysOfWeek()((0||2()((0||0(f|12:00|s|08:00)())))))))',
+        p6_fallback: true, work_days: [1, 2, 3, 4, 5], hours_per_day: 8 });
+    check('HR-3: a corrupt record P6 cannot bind is its internal Standard, Mon-Fri 08:00-16:00 (4622)',
+        F(fb.add(P('2026-10-05 08:00'), 480)) === '2026-10-05 16:00');
+
+    const act = (code, remH, tt, extra) => Object.assign({ code, task_type: tt || 'TT_Task', clndr_id: 'C5',
+        remaining_minutes: Math.round(remH * 60) }, extra || {});
+    const rel = (a, b, t, lagH) => ({ from_code: a, to_code: b, type: t || 'FS', lag_minutes: Math.round((lagH || 0) * 60) });
+    const run = (acts, rels, o) => E.computeCPMHours(acts, rels, Object.assign({ data_date: '2026-10-05 08:00',
+        cal_map: { C5, C7 }, project_calendar: 'C5' }, o || {}));
+    const r4 = run([act('C', 0, null, { actual_start: '2026-09-28 08:00', actual_finish: '2026-10-07 17:00' }), act('D', 8)],
+        [rel('C', 'D', 'FS', 16)], { schedule_mode: 'progress_override' });
+    check('HR-4: completed work drives from the data date in progress override (4648 L6-S)',
+        F(r4.D.es) === '2026-10-07 08:00', F(r4.D.es));
+    const r5 = run([act('P', 80, null, { actual_start: '2026-09-21 08:00', suspend_date: '2026-09-28 08:00',
+        resume_date: '2026-10-12 08:00' }), act('S', 40)], [rel('P', 'S', 'SS', 120)]);
+    check('HR-5: SS lag off suspended work counts only the time before the suspension (4651 S13-S)',
+        F(r5.P.restart) === '2026-10-12 08:00' && F(r5.S.es) === '2026-10-26 08:00', F(r5.S.es));
+    const r6 = run([act('H', 80), act('P', 80, null, { actual_start: '2026-09-21 08:00' }), act('S', 24)],
+        [rel('H', 'P'), rel('P', 'S', 'SF', 120)], { ss_lag_from: 'actual_start' });
+    check('HR-6: SF off started work ignores "SS lag from actual start" (4652 S09-S)',
+        F(r6.S.es) === '2026-10-21 08:00' && F(r6.S.ef) === '2026-10-23 17:00', F(r6.S.es));
+    const r7 = run([act('X', 40), act('A', 8, null, { constraint: { type: 'CS_ALAP' } }),
+        act('M', 0, 'TT_FinMile', { constraint: { type: 'CS_ALAP' } }), act('B', 8)],
+    [rel('X', 'B'), rel('A', 'B'), rel('M', 'B')]);
+    check('HR-7: ALAP slides by free float; a finish milestone sits at the close before an 08:00 start (4928 A7-S)',
+        F(r7.A.es) === '2026-10-09 08:00' && F(r7.A.ef) === '2026-10-09 17:00' && F(r7.M.ef) === '2026-10-09 17:00' &&
+        r7.A.tf_minutes === 0 && r7.A.ff_minutes === 0);
+    const r8 = run([act('T', 16, null, { constraint: { type: 'CS_MSO', date: '2026-10-10 00:00' } }),
+        act('M', 0, 'TT_Mile', { constraint: { type: 'CS_MSO', date: '2026-10-10 00:00' } }), act('L', 120)], []);
+    check('HR-8: a Start On off working time: next opening on a task, the close before on a start milestone (4928)',
+        F(r8.T.ls) === '2026-10-12 08:00' && F(r8.M.ls) === '2026-10-09 17:00', F(r8.T.ls) + ' ' + F(r8.M.ls));
+    const r9 = run([act('Z', 0), act('Y', 8), act('P', 8), act('L', 72)], [rel('Z', 'Y'), rel('P', 'Z', 'SS')]);
+    check('HR-9: a driving SS bound at a close prints as the close (4577 C04-1920)',
+        F(r9.P.ls) === '2026-10-14 17:00' && F(r9.P.lf) === '2026-10-15 17:00', F(r9.P.ls));
+    const r10 = run([act('X', 12), act('S', 4), act('T', 8)], [rel('X', 'S'), rel('S', 'T', 'SF')]);
+    check('HR-10: an SF requirement that drives the finish is kept, 13:00 after lunch (4708 A0009)',
+        F(r10.T.es) === '2026-10-05 13:00' && F(r10.T.ef) === '2026-10-06 13:00', F(r10.T.ef));
+    const r11 = run([act('Q', 8, null, { clndr_id: 'C7', constraint: { type: 'CS_MSOA', date: '2026-10-10 08:00' } }),
+        act('T', 8)], [rel('Q', 'T', 'FF')]);
+    check('HR-11: an FF requirement off working time moves to the next opening (4922 P11270)',
+        F(r11.T.es) === '2026-10-09 08:00' && F(r11.T.ef) === '2026-10-12 08:00', F(r11.T.ef));
+    const r12 = run([act('A', 8), act('C', 0, null, { actual_start: '2026-09-28 08:00', actual_finish: '2026-10-01 17:00' }),
+        act('D', 8), act('L', 120)], [rel('A', 'C'), rel('C', 'D')]);
+    check('HR-12: free float to completed work is measured at its stamp (4630 A0131)', r12.A.ff_minutes === 0);
+
+    // computeCPM's hours pass
+    const ACTS = [{ code: 'A', duration_days: 2, remaining_hours: 16, clndr_id: 'C5' },
+        { code: 'B', duration_days: 0.5, remaining_hours: 4, clndr_id: 'C5' },
+        { code: 'C', duration_days: 1, remaining_hours: 8, clndr_id: 'C5', actual_start: '2026-09-28 08:00',
+            remaining_duration: 1 }];
+    const RELS = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0.5, lag_hours: 4 },
+        { from_code: 'C', to_code: 'B', type: 'FS', lag_days: 0 }];
+    const O = { dataDate: '2026-10-05 08:00', calMap: { C5 }, relationshipLagCalendar: 'rcal_Predecessor' };
+    const h1 = E.computeCPM(ACTS, RELS, O);
+    const b1 = h1.nodes.B;
+    check('HR-13: computeCPM attaches the instants in hours; B prints Wed 10-07 13:00 where the whole-day pass printed Thu',
+        h1.hours.applied === true && h1.hours.project_finish_dt === '2026-10-07 17:00' &&
+        b1.early_start_dt === '2026-10-07 13:00' && b1.early_finish_dt === '2026-10-07 17:00' &&
+        b1.es_date === '2026-10-07' && b1.day_pass_dates.es_date === '2026-10-08' && h1.nodes.C.tf_hours === 12,
+        JSON.stringify([b1.early_start_dt, b1.es_date, h1.nodes.C.tf_hours]));
+    const plain = ACTS.map((a) => { const x = Object.assign({}, a); delete x.remaining_hours; return x; });
+    const h0 = E.computeCPM(plain, RELS, O);
+    const h2 = E.computeCPM(ACTS, RELS, Object.assign({}, O, { calMap: {} }));
+    check('HR-14: without hours, or without calendars, nothing is attached and the day pass is unchanged',
+        h0.hours.reason === 'no remaining_hours handed on' && h2.hours.reason === 'no calendars' &&
+        h0.nodes.B.early_start_dt === undefined && h0.nodes.B.es === h1.nodes.B.es &&
+        h0.nodes.B.ef_date === h1.nodes.B.ef_date && h0.alerts.length === h1.alerts.length);
+    const acts15 = ACTS.map((a) => Object.assign({}, a)).concat([{ code: 'FRAG', duration_days: 1, clndr_id: 'C5' }]);
+    acts15[0].duration_days = 1;
+    const h15 = E.computeCPM(acts15, RELS.concat([{ from_code: 'FRAG', to_code: 'B', type: 'FS', lag_days: 0.5 }]), O);
+    check('HR-15: work a pipeline inserted or re-sized is sized from its days (a fragnet, a collapsed delay)',
+        JSON.stringify(h15.hours.sized_from_days.slice().sort()) === '["A","FRAG"]' &&
+        h15.nodes.A.early_finish_dt === '2026-10-05 17:00' && h15.nodes.B.early_start_dt === '2026-10-06 13:00',
+        JSON.stringify(h15.hours.sized_from_days));
+    const h16 = E.computeCPM([{ code: 'M', duration_days: 0, remaining_hours: 0, clndr_id: 'C5', task_type: 'TT_Mile',
+        constraint: { type: 'CS_MSO', date: '2026-10-06 10:00' } }, { code: 'L', duration_days: 5, remaining_hours: 40,
+        clndr_id: 'C5' }], [], O);
+    check('HR-16: a constraint\'s time reaches the hours pass (4563 A0104)',
+        h16.nodes.M.early_start_dt === '2026-10-06 10:00', h16.nodes.M.early_start_dt);
+    // a 10 h map entry against the 8 h the converter divided by: the
+    // converted days decide, and a halved activity halves its hours
+    const h17 = E.computeCPM([
+        { code: 'A', duration_days: 2, remaining_hours: 16, remaining_hours_days: 2, clndr_id: 'C5' },
+        { code: 'B', duration_days: 1, remaining_hours: 16, remaining_hours_days: 2, clndr_id: 'C5' }], [],
+    Object.assign({}, O, { calMap: { C5: Object.assign({}, C5, { hours_per_day: 10 }) } }));
+    // HR-18 — a calendar exception with its own hours (a Saturday worked
+    // 08:00-16:00, entries on their own indented lines as P6 writes them).
+    // Until 12-Oct-2026 the exception-date pattern held a literal backspace
+    // where \b was meant (v2.9.45 back-port, 21-Sep), so no exception day was
+    // ever read for its hours and the JS engine fell back to the weekday's;
+    // the Python decoder read them (P6's database: 23 projects, 280 rows
+    // between the ports until the fix, none after).
+    const satRaw = '(0||CalendarData()(\r\n  (0||DaysOfWeek()(\r\n    (0||1()())\r\n' +
+        '    (0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))\r\n    (0||7()())))\r\n' +
+        '  (0||Exceptions()(\r\n    (0||0(d|46312)((0||0(s|08:00|f|16:00)())))\r\n    (0||1(d|46300)())))';
+    const satCal = new E._HrWorkCalendar({ raw: satRaw, work_days: [1], hours_per_day: 8 });
+    const satDay = Math.floor(P('2026-10-17 00:00') / 1440);
+    const monOff = Math.floor(P('2026-10-05 00:00') / 1440);
+    check('HR-18: an exception day is read for its own hours (Sat 17-Oct worked 08:00-16:00; Mon 05-Oct off)',
+        JSON.stringify(satCal.slots(satDay)) === '[[480,960]]' && JSON.stringify(satCal.slots(monOff)) === '[]',
+        JSON.stringify([satCal.slots(satDay), satCal.slots(monOff)]));
+    // HR-19 — with the hours pass applied, the day pass's rounding of a
+    // fractional lag or duration is an INFO, not a strict-mode fatal; without
+    // it the ALERT stands.
+    const sub = (alerts) => alerts.filter((a) => typeof a.message === 'string' &&
+        a.message.indexOf('SUB_DAY_LAG_ROUNDED:') !== -1);
+    const subOn = sub(h1.alerts);
+    const subOff = sub(h0.alerts);
+    let strictOn = 'ok';
+    try {
+        E.computeCPM(ACTS, RELS, Object.assign({}, O, { forensic_strict: true }));
+    } catch (e) { strictOn = e.name; }
+    let strictOff = 'ok';
+    try {
+        E.computeCPM(plain, RELS, Object.assign({}, O, { forensic_strict: true }));
+    } catch (e) { strictOff = e.name; }
+    check('HR-19: the day pass\'s sub-day rounding is an INFO under the hours pass (strict runs pass), an ALERT without it',
+        subOn.length > 0 && subOn.every((a) => a.severity === 'INFO' && a.message.indexOf('Day numbers only') === 0) &&
+        subOff.length > 0 && subOff.every((a) => a.severity === 'ALERT') &&
+        strictOn === 'ok' && strictOff === 'StrictForensicViolation',
+        JSON.stringify([subOn.length, subOff.length, strictOn, strictOff]));
+    check('HR-17: re-sized work scales its hours with the converted days; untouched work keeps its own',
+        JSON.stringify(h17.hours.sized_from_days) === '["B"]' &&
+        h17.nodes.A.early_finish_dt === '2026-10-06 14:00' && h17.nodes.B.early_finish_dt === '2026-10-05 16:00',
+        [h17.nodes.A.early_finish_dt, h17.nodes.B.early_finish_dt].join(' '));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

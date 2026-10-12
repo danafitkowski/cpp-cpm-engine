@@ -152,6 +152,14 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.0 (reviewed 2026-10-12)
+
+No audit item changed status. v2.10.0 moves computed values (change class A under the operator procedure): where the caller hands on P6's own hours the engine also schedules in hours and minutes and prints the dates P6 prints (see CHANGELOG.md); resource-dependent activities stay on the activity's calendar (open).
+- The unit suite grew from 1,416 to 1,435.
+- The cross-validation surface grew from 121 to 127 fixtures and from 4,869 of 4,967 to 5,133 of 5,233 comparisons, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.31% statements / 81.45% branches / 96.19% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+
 ## Status at v2.9.59 (reviewed 2026-10-12)
 
 No audit item changed status. v2.9.59 moves computed values (change class A under the operator procedure): on schedules whose every date sits at a working day's opening or close it closes the differences from Primavera P6 measured on P6's own stored dates (see CHANGELOG.md): a zero-length task's late close, progress override's links into a started activity's finish, and `parseXER` reading the remaining duration as P6 schedules it and keeping zero-length tasks. Schedules worked in part days, where P6 counts hours and the engine whole days, remain open.
@@ -216,4 +224,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.9.59. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.0. Update on every release that closes or opens an audit item.

@@ -1,35 +1,36 @@
 {
-  "engine_version": "2.9.59",
-  "generated_utc": "2026-10-12T13:54:20.881Z",
+  "engine_version": "2.10.0",
+  "generated_utc": "2026-10-12T21:21:48.855Z",
   "fixtures": {
-    "total": 121,
-    "passed": 121,
+    "total": 127,
+    "passed": 127,
     "failed": 0
   },
   "checks": {
-    "executed": 4869,
+    "executed": 5133,
     "failed": 0,
-    "passed": 4869,
-    "skipped": 98,
-    "surface": 4967
+    "passed": 5133,
+    "skipped": 100,
+    "surface": 5233
   },
   "skips_by_field": {
-    "ff_signed": 49,
-    "ff_signed_working_days": 49
+    "ff_signed": 50,
+    "ff_signed_working_days": 50
   },
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 98
+    "mutual": 100
   },
   "checks_by_field": {
-    "project_finish_num": 119,
-    "project_finish": 119,
-    "critical_codes": 119,
-    "topo_order": 119,
-    "alert_count": 113,
-    "alert_severity_counts": 113,
-    "node <id>": 4165,
-    "threw (both engines)": 2
+    "project_finish_num": 125,
+    "project_finish": 125,
+    "critical_codes": 125,
+    "topo_order": 125,
+    "alert_count": 115,
+    "alert_severity_counts": 115,
+    "node <id>": 4395,
+    "threw (both engines)": 2,
+    "hours": 6
   },
   "rows": [
     {
@@ -1107,6 +1108,57 @@
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
+    },
+    {
+      "id": "F126",
+      "name": "F126 - HR: a half-day lag and a half-day activity, to the minute",
+      "checks": 29,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F127",
+      "name": "F127 - HR: work a pipeline inserted (no hours) or re-sized (days moved) is sized from its days",
+      "checks": 29,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F128",
+      "name": "F128 - HR: SS lag off suspended work, SF off started work under \"lag from Actual Start\"",
+      "checks": 47,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F129",
+      "name": "F129 - HR: an SF requirement after lunch, an FF requirement off working time",
+      "checks": 45,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F130",
+      "name": "F130 - HR: ALAP by free float, a Start On off working time, a timed constraint",
+      "checks": 63,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F131",
+      "name": "F131 - HR: progress override, completed work after the data date, an exception day with hours",
+      "checks": 51,
+      "fails": 0,
+      "skips": 2,
+      "skips_by_field": {
+        "ff_signed": 1,
+        "ff_signed_working_days": 1
+      }
     }
   ]
 }

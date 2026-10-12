@@ -16,11 +16,11 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 4869 of 4967
-# across 121 as measured 2026-10-12 (validation/crossval-summary.json carries
-# the figures of the latest run). The 98 that remain are
+# measured 2026-08-27, and the fixtures added since took it to 5133 of 5233
+# across 127 as measured 2026-10-12 (validation/crossval-summary.json carries
+# the figures of the latest run). The 100 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
-# populates (49 ff_signed, 49 ff_signed_working_days).
+# populates (50 ff_signed, 50 ff_signed_working_days).
 # Why that mattered: the free-float working-day conversion carried a wrong
 # anchor in BOTH ports, and ff_signed_working_days — the field that would have
 # shown it — was one of the fields the harness was skipping.
@@ -63,10 +63,10 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 121 fixtures in cpm-engine.crossval.js. As
-measured 2026-10-12 that is 4869 of a 4967-comparison surface; the 98 that are
+the harness executes across the 127 fixtures in cpm-engine.crossval.js. As
+measured 2026-10-12 that is 5133 of a 5233-comparison surface; the 100 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
-field (49 ff_signed, 49 ff_signed_working_days on completed activities).
+field (50 ff_signed, 50 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
 DAUBERT.md §3 for verification methodology.
 """
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.59'
+ENGINE_VERSION = '2.10.0'
 
 
 # =============================================================================
@@ -1809,6 +1809,212 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
 # =============================================================================
 # Public surface: compute_cpm
 # =============================================================================
+
+# HR (hours engine, 12-Oct-2026) — the dates and float in hours and minutes,
+# as P6 computes them. The day pass above rounds P6's hours to whole working
+# days; where a caller hands on the hours themselves (``remaining_hours`` on
+# every unfinished activity: P6 TASK.remain_drtn_hr_cnt; ``lag_hours`` on a
+# relationship: TASKPRED.lag_hr_cnt) the same network is also scheduled in
+# minutes on each activity's own working periods (cpm_hours, on cpm_minutes),
+# and every unfinished node gains the instants P6 stores: early_start_dt (the
+# restart of work under way), early_finish_dt, late_start_dt (the remaining
+# late start of work under way), late_finish_dt, as 'YYYY-MM-DD HH:MM', and
+# tf_hours / ff_hours in working hours. Measured on every project P6 last
+# scheduled in the local P6 database (313 projects, 94,873 unfinished
+# activities): all four dates to the minute on 94,827, total float on 94,844,
+# free float on 94,856 (private oracle repo, hours_2026_10_12); the rest are
+# one project's resource-dependent activities, which P6 schedules on their
+# resources' calendars (not modelled), and one P6 non-idempotence (XFA4).
+# The printed dates (es_date, ls_date, restart_date, remaining_late_start_date,
+# ef_last_worked_date, lf_last_worked_date) are the dates P6 prints, so they
+# take the hours pass's; the day numbers, the exclusive ef_date / lf_date and
+# the day-based float stay the day pass's, and any printed date the hours pass
+# moved keeps its day-pass value in day_pass_dates. An activity a pipeline
+# inserted or re-sized after the conversion (no hours, or days that no longer
+# agree with them) is sized from its days on its calendar's hours per day, and
+# named in result['hours']['sized_from_days']. When no activity carries hours,
+# or without a data date or calendars (a uniform-day run), the pass does not
+# run and result['hours']['applied'] is False with the reason.
+_HOURS_LAG_CAL = {'predecessor': 'predecessor', 'successor': 'successor', 'rcal_Predecessor': 'predecessor',
+                  'rcal_Successor': 'successor', 'rcal_24Hour': '24h', 'rcal_24hour': '24h', '24hour': '24h',
+                  'rcal_Project': 'project', 'rcal_ProjDefault': 'project', 'project': 'project',
+                  'pred': 'predecessor', 'succ': 'successor'}
+
+
+def _hours_float(v):
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
+def _hours_sibling(name):
+    """cpm_minutes / cpm_hours from this module's own directory, whatever name this module was loaded under and
+    whatever sys.path holds: a skill's cpm shim loads the engine by path as _cpp_common_cpm_canonical, and its own
+    directory need not be on sys.path (12-Oct-2026)."""
+    import importlib.util
+    import os
+    import sys
+    here = os.path.dirname(os.path.abspath(__file__))
+    mod = sys.modules.get(name)
+    if mod is not None and os.path.dirname(os.path.abspath(getattr(mod, '__file__', '') or '')) == here:
+        return mod
+    spec = importlib.util.spec_from_file_location(name, os.path.join(here, name + '.py'))
+    if spec is None or spec.loader is None:
+        raise ImportError('no %s.py beside the engine' % name)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project_calendar, schedule_mode,
+                relationship_lag_calendar, float_type, ss_lag_from, project_finish, use_expected_finish,
+                use_external_dates, alerts):
+    """Schedule the network in minutes (cpm_hours) and attach the instants to `nodes` (see HR above)."""
+    by_code = {}
+    for a in activities or []:
+        if a and a.get('code') in nodes:
+            by_code[a['code']] = a
+    if not data_date:
+        return {'applied': False, 'reason': 'no data date'}
+    if not cal_map:
+        # a uniform-day run (no calendars) has no working hours to count
+        return {'applied': False, 'reason': 'no calendars'}
+    if not any(_hours_float(a.get('remaining_hours')) is not None for a in by_code.values()):
+        return {'applied': False, 'reason': 'no remaining_hours handed on'}
+
+    def _cal_hpd(cid):
+        h = _hours_float(((cal_map or {}).get(cid) or {}).get('hours_per_day'))
+        return h if h and h > 0 else None
+
+    # The work each unfinished activity has left, in hours. A converter hands
+    # on P6's own (remaining_hours) and the days it converted them to
+    # (remaining_hours_days). A pipeline that inserts an activity (a TIA
+    # fragnet, an impacted delay) or changes a duration (a collapsed delay)
+    # works in days, so the network is scheduled the way the pipeline left it:
+    # an activity whose days moved off the converted figure has its hours
+    # scaled with them; one with no hours is sized from its days on its
+    # calendar's hours per day (8 without one). Without the converted figure
+    # the days are checked against the calendar's hours per day instead.
+    sized_from_days = []
+
+    def _remaining_minutes(c, a):
+        if nodes[c]['is_complete']:
+            return 0
+        d = a.get('remaining_duration') if (a.get('actual_start') and a.get('remaining_duration') is not None) \
+            else a.get('duration_days')
+        d = _hours_float(d)
+        hpd = _cal_hpd(a.get('clndr_id') or project_calendar)
+        rh = _hours_float(a.get('remaining_hours'))
+        basis = _hours_float(a.get('remaining_hours_days'))
+        if rh is not None and basis is not None:
+            if d is not None and abs(d - basis) > 1e-9:
+                rh = rh * d / basis if basis > 0 else d * (hpd or 8.0)
+                sized_from_days.append(c)
+        elif rh is None or (d is not None and hpd and abs(rh - d * hpd) > 0.01):
+            rh = (d or 0.0) * (hpd or 8.0)
+            sized_from_days.append(c)
+        return int(round(max(rh, 0.0) * 60))
+    try:
+        _cm = _hours_sibling('cpm_minutes')
+        _cm.set_slot_decoder(_day_slot_tables)
+        _ch = _hours_sibling('cpm_hours')
+    except (ImportError, OSError) as e:
+        return {'applied': False, 'reason': 'hours engine not installed (%s)' % e}
+
+    def _cstr_instant(cs):
+        # the normalised constraint keeps the day in 'date' and its time of
+        # day apart in 'time_minutes'; the hours pass needs the instant
+        if not cs or not cs.get('type'):
+            return None
+        d = str(cs.get('date') or '')[:10]
+        tm = cs.get('time_minutes')
+        if d and tm is not None:
+            d = '%s %02d:%02d' % (d, int(tm) // 60, int(tm) % 60)
+        return {'type': cs['type'], 'date': d}
+
+    acts = []
+    for c, a in by_code.items():
+        n = nodes[c]
+        cs = [_cstr_instant(n.get('constraint')), _cstr_instant(n.get('constraint2'))]
+        acts.append({
+            'code': c, 'task_type': n.get('task_type') or a.get('task_type') or 'TT_Task',
+            'clndr_id': a.get('clndr_id') or project_calendar,
+            'remaining_minutes': _remaining_minutes(c, a),
+            'actual_start': a.get('actual_start') or None,
+            'actual_finish': (a.get('actual_finish') or None) if n['is_complete'] else None,
+            'constraint': cs[0], 'constraint2': cs[1],
+            'suspend_date': a.get('suspend_date') or None, 'resume_date': a.get('resume_date') or None,
+            'expected_finish': a.get('expected_finish') or None,
+            'external_early_start': a.get('external_early_start') or None,
+            'external_late_finish': a.get('external_late_finish') or None,
+            'resource_assignments': a.get('resource_assignments') or 0,
+        })
+    rels = []
+    for r in relationships or []:
+        if not r or r.get('from_code') not in by_code or r.get('to_code') not in by_code:
+            continue
+        lag_h = _hours_float(r.get('lag_hours'))
+        if lag_h is None:
+            # a tie a pipeline added works in days: its lag on the hours per
+            # day of the calendar it is walked on
+            lag_d = _hours_float(r.get('lag_days')) or 0.0
+            on = by_code[r['to_code']] if str(relationship_lag_calendar or 'successor').strip() in (
+                'successor', 'rcal_Successor', 'succ') else by_code[r['from_code']]
+            lag_h = lag_d * (_cal_hpd(on.get('clndr_id') or project_calendar) or 8.0)
+        rels.append({'from_code': r['from_code'], 'to_code': r['to_code'],
+                     'type': str(r.get('type') or 'FS').upper().replace('PR_', ''),
+                     'lag_minutes': int(round(lag_h * 60))})
+    lag_cal = _HOURS_LAG_CAL.get(str(relationship_lag_calendar or 'successor').strip(), 'successor')
+    try:
+        out = _ch.compute_cpm_hours(
+            acts, rels, data_date=data_date, cal_map=cal_map, schedule_mode=schedule_mode,
+            lag_calendar=lag_cal, project_calendar=project_calendar, project_finish=project_finish or None,
+            ss_lag_from=ss_lag_from, use_expected_finish=use_expected_finish,
+            use_external_dates=use_external_dates, float_type=float_type)
+    except Exception as e:  # noqa: BLE001 - the day result stands whatever happens here
+        alerts.append({'severity': 'WARN', 'context': 'hours-engine-error',
+                       'message': ('The hours and minutes pass did not complete (%s); the dates are '
+                                   'the whole-day pass only.' % (e,))})
+        return {'applied': False, 'reason': 'error: %s' % e}
+    fmt = _cm.format_instant
+    for c in by_code:
+        o, n = out[c], nodes[c]
+        if n['is_complete']:
+            continue
+        started = o['status'] == 'started'
+        n['early_start_dt'] = fmt(o['restart'] if started and o['restart'] is not None else o['es'])
+        n['early_finish_dt'] = fmt(o['ef'])
+        n['late_start_dt'] = fmt(o['rls'] if started and o['rls'] is not None else o['ls'])
+        n['late_finish_dt'] = fmt(o['lf'])
+        n['tf_hours'] = None if o['tf_minutes'] is None else round(o['tf_minutes'] / 60.0, 4)
+        n['ff_hours'] = None if o['ff_minutes'] is None else round(o['ff_minutes'] / 60.0, 4)
+        # The printed dates are the dates P6 prints, so they follow the hours
+        # pass: the date of each instant (the restart and remaining late start
+        # of work under way, whose es_date / ls_date stay the actual start).
+        # The day numbers (es / ef / ls / lf) and the exclusive ef_date /
+        # lf_date stay the day pass's; where a printed date moved, the day
+        # pass's is kept in day_pass_dates.
+        printed = {'ef_last_worked_date': n['early_finish_dt'][:10],
+                   'lf_last_worked_date': n['late_finish_dt'][:10]}
+        if started:
+            printed['restart_date'] = n['early_start_dt'][:10]
+            printed['remaining_late_start_date'] = n['late_start_dt'][:10]
+        else:
+            printed['es_date'] = n['early_start_dt'][:10]
+            printed['ls_date'] = n['late_start_dt'][:10]
+        moved = {k: n.get(k) for k, v in printed.items() if n.get(k) != v}
+        if moved:
+            n['day_pass_dates'] = moved
+        n.update(printed)
+    return {'applied': True, 'unit': 'minutes', 'project_finish_dt': fmt(out['__project_finish__']),
+            'lag_calendar': lag_cal, 'float_type': float_type,
+            # activities sized from their days (inserted or changed after the
+            # conversion), named so a deliverable can say so
+            'sized_from_days': sized_from_days}
+
 
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 project_calendar='', schedule_mode='retained_logic',
@@ -4267,10 +4473,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # well, so all four free-float fields cross-validate. Only the
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
-    # comparisons are absent on both sides rather than one: 98 of them (49
-    # ff_signed, 49 ff_signed_working_days) on the 121-fixture harness as
-    # measured 2026-10-12, whose line reads 4869 / 4869 executed against a
-    # 4967-comparison surface (validation/crossval-summary.json in the engine
+    # comparisons are absent on both sides rather than one: 100 of them (50
+    # ff_signed, 50 ff_signed_working_days) on the 127-fixture harness as
+    # measured 2026-10-12, whose line reads 5133 / 5133 executed against a
+    # 5233-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.
@@ -4565,9 +4771,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                            % (a['code'], len(_post_dd), data_date, _dd_list),
             })
 
+    _hours = _hours_pass(
+        activities, relationships, nodes, data_date=data_date, cal_map=cal_map,
+        project_calendar=project_calendar, schedule_mode=schedule_mode,
+        relationship_lag_calendar=relationship_lag_calendar, float_type=_float_type,
+        ss_lag_from=_ss_lag_from, project_finish=project_finish,
+        use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts)
+
     return {
         'nodes': nodes,
         'project_finish_num': max_ef,
+        # HR (hours engine) - whether the network was also scheduled in hours
+        # and minutes, and P6's project finish instant when it was.
+        'hours': _hours,
         'project_finish': num_to_date(max_ef),
         'critical_codes': critical,
         'topo_order': order,
