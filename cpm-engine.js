@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.9.58';
+const ENGINE_VERSION = '2.9.59';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -3240,6 +3240,9 @@ function computeCPM(activities, relationships, opts) {
         // duration rather than full duration (INFERRED — no P6 capture of
         // an FF/SF-into-in-progress combination exists yet; case 10 is FS).
         let _restartMaxDrive = 0;
+        // WD (P6 parity 2026-10-12) — the FF / SF part of that drive, which
+        // progress override still honours (see the efAnchor block).
+        let _restartFFDrive = 0;
         // v2.9.44 — [snapped drive, instant] per relationship, so a finish
         // milestone can sit at the instant that actually drove it.
         const _driveInstants = [];
@@ -3459,6 +3462,7 @@ function computeCPM(activities, relationships, opts) {
                             nodeCal, alerts, 'restart ' + p.type + ' rem ' + code);
                     }
                     if (_rDrive > _restartMaxDrive) _restartMaxDrive = _rDrive;
+                    if ((p.type === 'FF' || p.type === 'SF') && _rDrive > _restartFFDrive) _restartFFDrive = _rDrive;
                 }
                 continue;
             }
@@ -3729,16 +3733,26 @@ function computeCPM(activities, relationships, opts) {
                         'restart-snap ' + code);
                     if (_snapped !== efAnchor) efAnchor = _snapped;
                 }
-            } else if (_scheduleMode === 'progress_override' && nodeCal) {
+            } else if (_scheduleMode === 'progress_override') {
+                // WD (P6 parity 2026-10-12) — progress override ignores the
+                // links into a started activity's START, not the links into
+                // its FINISH: an FF / SF predecessor still holds the restart
+                // to its finish less the remaining work (P6's own F9 of the
+                // XFA3 probe, 23-Sep-2026; SF inferred). Until v2.9.58 the
+                // engine ignored every predecessor here. Python paired site:
+                // compute_cpm restart anchor.
+                if (_restartFFDrive > efAnchor) efAnchor = _restartFFDrive;
                 // PO_SNAP (P6 parity 2026-09-21) — progress_override applies
                 // the same D3 snap. Measured on a real-file oracle: a data
                 // date encoded as the open of a non-working day left the
                 // remaining-bar walk starting on it and landing 1 working day
                 // early on the great majority of in-progress rows; with the
                 // snap, exact.
-                const _snapped = _advanceWithAlerts(efAnchor, 0, nodeCal, alerts,
-                    'restart-snap ' + code);
-                if (_snapped !== efAnchor) efAnchor = _snapped;
+                if (nodeCal) {
+                    const _snapped = _advanceWithAlerts(efAnchor, 0, nodeCal, alerts,
+                        'restart-snap ' + code);
+                    if (_snapped !== efAnchor) efAnchor = _snapped;
+                }
             }
             node.restart = efAnchor;
             node.ef = _advanceWithAlerts(efAnchor, _remRaw, nodeCal, alerts,
@@ -4554,6 +4568,15 @@ function computeCPM(activities, relationships, opts) {
                     if (_lpt === null) { _skippedCompletedSucc += 1; continue; }
                     _sLS = _lpt;
                     _sLFInst = _lpt;
+                } else if (_scheduleMode === 'progress_override' && (s.type === 'FS' || s.type === 'SS') &&
+                        dateToNum(snode.actual_start || '') > 0) {
+                    // WD (P6 parity 2026-10-12) — under progress override the
+                    // links into a STARTED successor's start bound nothing on
+                    // the backward pass either, as they drive nothing forward
+                    // (P6's own F9 of project 4648: the FF link sets the late
+                    // finish, not the earlier SS one; FS inferred). Python
+                    // paired site: compute_cpm backward pass.
+                    continue;
                 }
                 // v2.9.42 — the backward lag walk must use the SAME calendar
                 // the forward walk used, or the two stop being inverses and
@@ -4768,7 +4791,12 @@ function computeCPM(activities, relationships, opts) {
                 _ml = (_pick !== null) ? _pick : [_boundaryToInstant(_fin, nodeCal, [], code), false];
             }
             _ml = _mdOnCalendar(_ml[0], _ml[1], nodeCal, false);
-            if (node.task_type === 'TT_FinMile' && _ml[1]) {
+            // WD (P6 parity 2026-10-12) — and so is a zero-length TASK's: P6
+            // puts every zero-duration activity but a start milestone at a
+            // close late (whole-day rows in its database: 400 of 400
+            // zero-length tasks, every finish milestone), and hands that close
+            // to what drives it. Python paired site: compute_cpm backward pass.
+            if (node.task_type !== 'TT_Mile' && _ml[1]) {
                 _ml = [_boundaryToInstant(_ml[0], nodeCal, [], code), false];
             }
             node._ml_disp = _ml[0];
@@ -5500,7 +5528,7 @@ function computeCPM(activities, relationships, opts) {
             'the first working day AFTER the last day worked). P6 prints the ' +
             'LAST WORKED DAY. Both name the same instant; ef_last_worked_date ' +
             'and lf_last_worked_date carry the inclusive form for reports.' +
-            ' Since v2.9.58 es_date / ls_date and the last-worked dates print what P6 prints, milestones included: a milestone prints the date of the instant it sits at, for its start and its finish.',
+            ' Since v2.9.58 es_date / ls_date and the last-worked dates print what P6 prints, milestones included: a milestone prints the date of the instant it sits at, for its start and its finish; a zero-length task prints a close for its late dates, as a finish milestone does.',
         relationship_lag_calendar: _lagCalMode,
         float_type: _floatType,
         // SSL measured (2026-09-23): P6's "Calculate start-to-start lag
@@ -6027,11 +6055,17 @@ function parseXER(content) {
                 // both NaN and ±Infinity so corrupt XER rows can't silently
                 // poison the duration field.
                 const _remHrRaw = parseFloat(row.remain_drtn_hr_cnt);
-                const _remHr = Number.isFinite(_remHrRaw) ? _remHrRaw : 0;
-                const remaining = _remHr / _dhpd;
                 const _tgtHrRaw = parseFloat(row.target_drtn_hr_cnt);
                 const _tgtHr = Number.isFinite(_tgtHrRaw) ? _tgtHrRaw : 0;
                 const targetDur = _tgtHr / _dhpd;
+                // WD (P6 parity 2026-10-12) — the remaining duration is the
+                // length P6 schedules whenever the file carries one, zero
+                // included (P6's database: 109 of 109 not-started rows where
+                // it differs from the original, 107 of them 0); a blank or
+                // unreadable cell falls back to the original duration, as the
+                // Python converters read it. Python paired sites:
+                // tia_builder._xer_to_canonical, cp_validator.
+                const remaining = (Number.isFinite(_remHrRaw) ? _remHrRaw : _tgtHr) / _dhpd;
                 const _taskType = row.task_type || '';
                 // Drop reasons. Finish milestones (TT_FinMile) and start
                 // milestones (TT_Mile) legitimately have 0 duration; they
@@ -6101,16 +6135,12 @@ function parseXER(content) {
                         duration: 0,
                         resolved: false,
                     };
-                } else if (remaining <= 0 && !isMilestone && !row.act_end_date) {
-                    // Zero-remaining non-milestone with no actual finish — degenerate row.
-                    droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'zero-remaining' });
-                    _MC.parseAlerts.push({
-                        severity: 'INFO',
-                        context: 'task-dropped',
-                        message: 'Task ' + (row.task_code || taskId) +
-                            ' dropped: reason=zero-remaining (no actual finish, zero remain_drtn_hr_cnt)',
-                    });
                 }
+                // WD (P6 parity 2026-10-12) — a task with no remaining work and
+                // no actual finish is a ZERO-LENGTH activity, kept in its chain
+                // as P6 keeps it (not started: it sits at an opening early and
+                // at a close late; started: work done, completion not yet
+                // recorded). Until v2.9.58 parseXER dropped it with its links.
 
                 const isDroppedType = (_taskType === 'TT_LOE' || _taskType === 'TT_WBS' || _taskType === 'TT_Hammock');
                 // v2.9.51 — a completed activity is kept, with its actual
@@ -6125,10 +6155,9 @@ function parseXER(content) {
                 // filed data date (05-Aug-2025) that path matched 254 of 256
                 // open activities on early dates (A2610, A2650: SS +16h from
                 // completed A2600, which started 18-Aug-2025); kept, 256.
-                const isCompleted = remaining <= 0 && !isMilestone && !!row.act_end_date;
-                // Retain: milestones (even zero-duration), completed activities,
-                // or any non-dropped type with remaining>0.
-                if (!isDroppedType && (isMilestone || remaining > 0 || isCompleted)) {
+                // Retain every activity of a type P6 schedules: milestones,
+                // completed work, and zero-length tasks among the rest (WD).
+                if (!isDroppedType) {
                     // Audit Alpha #1+#4: capture progress markers + per-activity
                     // calendar so Section C consumers (e.g. /try's
                     // _buildSectionCInput) can propagate them. v2.9.49 — kept
@@ -9644,20 +9673,20 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '119 cross-validation fixtures. The harness defines 4773 ' +
+                '121 cross-validation fixtures. The harness defines 4967 ' +
                 'comparisons; 98 of them are never executed because neither ' +
                 'implementation emits the field on the activity in question ' +
                 '(49 ff_signed, 49 ff_signed_working_days, all on completed ' +
                 'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 4675 / 4675" counts executed comparisons only and ' +
+                'reported "Checks: 4869 / 4869" counts executed comparisons only and ' +
                 'is not a coverage figure. None of those 98 is a one-sided parity ' +
                 'gap: both implementations are silent in every one. The 58 one-sided ' +
                 'skips disclosed through v2.9.41 closed when the Python reference ' +
                 'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 36 of the 119 fixtures contain at least one skipped ' +
-                'comparison. The 4675 comparisons that did run are bit-identical ' +
+                'branch. 36 of the 121 fixtures contain at least one skipped ' +
+                'comparison. The 4869 comparisons that did run are bit-identical ' +
                 '(including ' +
-                'severity-level alert parity, compared on 111 of the 119 fixtures). ' +
+                'severity-level alert parity, compared on 113 of the 121 fixtures). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -9698,8 +9727,8 @@ function buildDaubertDisclosure(result, opts) {
                 'compares ff_signed and ff_signed_working_days only when both engines ' +
                 'emit the field, so 98 checks are skipped rather than compared, counted, ' +
                 'or reported as failures (49 ff_signed, 49 ff_signed_working_days). The ' +
-                'printed 4675 / 4675 therefore sits on a nominal surface of 4773 checks, and ' +
-                'those two fields go uncompared somewhere in 36 of the 119 fixtures. In ' +
+                'printed 4869 / 4869 therefore sits on a nominal surface of 4967 checks, and ' +
+                'those two fields go uncompared somewhere in 36 of the 121 fixtures. In ' +
                 'all 98 cases NEITHER engine emits the field, so the skip is a ' +
                 'representation artifact on a completed activity rather than an ' +
                 'unverified one-sided value: 0 skips hide a value the JS engine did ' +
@@ -9709,16 +9738,16 @@ function buildDaubertDisclosure(result, opts) {
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '119 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '121 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '4675 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 4675 / 4675 tally cannot express ' +
+                '4869 comparisons with 0 mismatches, but it counts only executed ' +
+                'comparisons in its denominator, so its 4869 / 4869 tally cannot express ' +
                 'the following gaps. Not executed: 98 node comparisons on the signed ' +
                 'free-float variants (ff_signed and ff_signed_working_days on ' +
                 'completed activities), which neither engine emits; and node output ' +
                 'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 111 of the 119 fixtures: not on those 2, which have no ' +
+                'parity runs on 113 of the 121 fixtures: not on those 2, which have no ' +
                 'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
                 'the JS engine also ' +
                 'emits its per-activity future-actual-finish ALERT, which the Python ' +

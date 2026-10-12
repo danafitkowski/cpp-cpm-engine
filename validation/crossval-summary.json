@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.9.58",
-  "generated_utc": "2026-10-12T10:55:55.992Z",
+  "engine_version": "2.9.59",
+  "generated_utc": "2026-10-12T13:54:20.881Z",
   "fixtures": {
-    "total": 119,
-    "passed": 119,
+    "total": 121,
+    "passed": 121,
     "failed": 0
   },
   "checks": {
-    "executed": 4675,
+    "executed": 4869,
     "failed": 0,
-    "passed": 4675,
+    "passed": 4869,
     "skipped": 98,
-    "surface": 4773
+    "surface": 4967
   },
   "skips_by_field": {
     "ff_signed": 49,
@@ -22,13 +22,13 @@
     "mutual": 98
   },
   "checks_by_field": {
-    "project_finish_num": 117,
-    "project_finish": 117,
-    "critical_codes": 117,
-    "topo_order": 117,
-    "alert_count": 111,
-    "alert_severity_counts": 111,
-    "node <id>": 3983,
+    "project_finish_num": 119,
+    "project_finish": 119,
+    "critical_codes": 119,
+    "topo_order": 119,
+    "alert_count": 113,
+    "alert_severity_counts": 113,
+    "node <id>": 4165,
     "threw (both engines)": 2
   },
   "rows": [
@@ -1088,6 +1088,22 @@
       "id": "F123",
       "name": "F123 - MD: a Friday-close data date and a close off the milestone's own calendar",
       "checks": 34,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F124",
+      "name": "F124 - WD: zero-length tasks close late, and hand the close back",
+      "checks": 111,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F125",
+      "name": "F125 - WD: progress override honours the links into a started activity's finish",
+      "checks": 83,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

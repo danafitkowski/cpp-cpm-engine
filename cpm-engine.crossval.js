@@ -2913,6 +2913,51 @@ compareFixture('F123 - MD: a Friday-close data date and a close off the mileston
     relationship_lag_calendar: 'rcal_Predecessor',
 });
 
+// F124-F125 (P6 parity 12-Oct-2026, whole-day schedules): the two engine rules
+// left on schedules whose every date is a working day's opening or close
+// (private oracle repo: P6's own stored dates in the local P6 database, and
+// its F9 of the XFA3-family probes). F124: a zero-length task (TT_Task /
+// TT_Rsrc, no remaining work) sits at an opening early and at a close late, as
+// a finish milestone does, and hands that close to what drives it. F125: under
+// progress override a started activity's restart still honours its FF / SF
+// predecessors (their finish less its remaining work), and on the backward
+// pass FS / SS into started work bound nothing.
+compareFixture('F124 - WD: zero-length tasks close late, and hand the close back', {
+    activities: [
+        pN('SPINE', 10),
+        pN('A', 2), pN('Z', 0, 'MF', { task_type: 'TT_Task' }), pN('T', 3),
+        pN('S', 0, 'MF', { task_type: 'TT_Mile' }), pN('Z2', 0, 'MF', { task_type: 'TT_Task' }), pN('T2', 3),
+        pN('ZR', 0, 'MF', { task_type: 'TT_Rsrc' }), pN('T3', 2, 'D7'),
+        pN('ZF', 0, 'MF', { task_type: 'TT_Task' }), pN('T4', 2),
+        pN('ZO', 0, 'MF', { task_type: 'TT_Task' }),
+        pN('B1', 1), pN('ZS', 0, 'HOL', { task_type: 'TT_Task' }), pN('T5', 4, 'HOL'),
+    ],
+    relationships: [
+        mR('A', 'Z'), mR('Z', 'T'), mR('S', 'Z2'), mR('Z2', 'T2'), mR('ZR', 'T3'),
+        mR('ZF', 'T4', 'FF'), mR('B1', 'ZS'), mR('ZS', 'T5', 'SS', 1),
+    ],
+    data_date: '2026-10-19 08:00',
+    cal_map: PCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+const pS = (code, dur, rem, as, extra) => Object.assign({ code, duration_days: dur, clndr_id: 'MF',
+    actual_start: as || '2026-09-14 08:00', remaining_duration: rem }, extra || {});
+compareFixture('F125 - WD: progress override honours the links into a started activity\'s finish', {
+    activities: [
+        pS('P', 3, 3), pS('S', 2, 2), pS('S0', 0, 0), pS('F', 2, 2), pS('Q', 2, 2), pS('X', 1, 1),
+        pS('P2', 1, 1, '2026-04-16 08:00'), pS('S2', 2, 2, '2026-05-01 08:00'), pS('S3', 3, 3, '2026-05-01 08:00'),
+        pN('SPINE', 8), pN('N1', 2),
+    ],
+    relationships: [
+        mR('P', 'S', 'FF'), mR('P', 'S0', 'FF'), mR('P', 'F', 'FS'), mR('P', 'Q', 'SF', 4), mR('P', 'X', 'SS'),
+        mR('P2', 'S2', 'FF'), mR('P2', 'S2', 'SS'), mR('P2', 'S3', 'FS'), mR('S', 'N1'),
+    ],
+    data_date: '2026-10-05 08:00',
+    cal_map: PCAL,
+    schedule_mode: 'progress_override',
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

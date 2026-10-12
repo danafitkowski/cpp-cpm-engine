@@ -12633,6 +12633,103 @@ console.log('\n=== MD — the dates a milestone prints (P6 parity 12-Oct) ===');
         [u.ef_date, u.lf_date, z.es_date, z.ef_last_worked_date, s.es_date, s.ef_last_worked_date].join(' '));
 }
 
+console.log('\n=== WD — P6 parity on whole-day schedules (12-Oct) ===');
+// The engine-vs-P6 differences left on schedules whose every date is a
+// working day's opening or close (P6's database, 313 projects, 12-Oct-2026).
+// WD-1..3: a row's remaining duration is the length P6 schedules, zero
+// included, and a zero-length task stays in its chain (P6's database: 109 of
+// 109 not-started rows where remaining differs from the original, 107 of them
+// 0; parseXER dropped those rows and their links). WD-4: a zero-length task
+// sits at an opening early and at a close late, as P6 puts it (400 of 400
+// whole-day rows), and hands that close to what drives it. WD-5: under
+// progress override a started activity still honours the links into its
+// FINISH (P6's own F9 of the XFA3 probe: FF successors restart at the
+// predecessor's finish less their remaining work; FS successors at the data
+// date). Python paired file: _cpp_common tests/test_whole_day_parity_2026_10_12.py.
+{
+    const T = String.fromCharCode(9);
+    const NL = String.fromCharCode(10);
+    const xer = (rows, rels) => ['%T' + T + 'TASK',
+        ['%F', 'task_id', 'task_code', 'task_type', 'target_drtn_hr_cnt', 'remain_drtn_hr_cnt', 'act_start_date',
+            'act_end_date', 'clndr_id'].join(T)].concat(rows.map((r) => ['%R'].concat(r).join(T)),
+    ['%T' + T + 'TASKPRED', ['%F', 'pred_task_id', 'task_id', 'pred_type', 'lag_hr_cnt'].join(T)],
+    rels.map((r) => ['%R'].concat(r).join(T)), ['%E']).join(NL);
+    E.resetMC();
+    const r1 = E.parseXER(xer([['1', 'A', 'TT_Task', '16', '16', '', '', '1'],
+        ['2', 'Z', 'TT_Task', '24', '0', '', '', '1'], ['3', 'B', 'TT_Task', '8', '8', '', '', '1']],
+    [['1', '2', 'PR_FS', '0'], ['2', '3', 'PR_FS', '0']]));
+    const z1 = Object.values(E.getTasks()).find((t) => t.code === 'Z');
+    const links1 = E.getRelationships().length;
+    check('WD-1: parseXER keeps a not-started zero-remaining task as a zero-length activity, links and all',
+        r1.taskCount === 3 && !!z1 && z1.remaining === 0 && links1 === 2 &&
+        !(r1.dropped_activities || []).some((d) => d.reason === 'zero-remaining'),
+        JSON.stringify([r1.taskCount, z1 && z1.remaining, links1, r1.dropped_activities]));
+    const r2 = E.parseXER(xer([['1', 'S', 'TT_Task', '40', '0', '2026-09-14 08:00', '', '1']], []));
+    check('WD-2: a started task statused to zero remaining stays in the network',
+        r2.taskCount === 1 && Object.values(E.getTasks())[0].remaining === 0, JSON.stringify(r2.taskCount));
+    E.parseXER(xer([['1', 'Q', 'TT_Task', '24', '', '', '', '1']], []));
+    const q = Object.values(E.getTasks())[0];
+    E.resetMC();
+    check('WD-3: a blank remaining falls back to the original duration (24 h = 3 days)',
+        !!q && q.remaining === 3, JSON.stringify(q && q.remaining));
+
+    const DAY = '(0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())';
+    const RAW = '(0||CalendarData()((0||DaysOfWeek()((0||1()())' +
+        ['2', '3', '4', '5', '6'].map((d) => '(0||' + d + '()(' + DAY + '))').join('') +
+        '(0||7()())))(0||Exceptions()())))';
+    const cal = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW } };
+    const N = (code, dur, extra) => Object.assign({ code, duration_days: dur, clndr_id: 'MF' }, extra || {});
+    const R = (f, t, type) => ({ from_code: f, to_code: t, type: type || 'FS', lag_days: 0 });
+    const printed = (n) => [n.es_date, n.ef_last_worked_date, n.ls_date, n.lf_last_worked_date].join(' ');
+    const run = (acts, rels, extra) => E.computeCPM(acts, rels, Object.assign({ dataDate: '2026-10-19 08:00',
+        calMap: cal, scheduleMode: 'retained_logic', relationshipLagCalendar: 'rcal_Predecessor' }, extra || {})).nodes;
+    const w4 = run([N('SPINE', 10), N('A', 2), N('Z', 0, { task_type: 'TT_Task' }), N('T', 3)],
+        [R('A', 'Z'), R('Z', 'T')]);
+    const w4s = run([N('SPINE', 10), N('S', 0, { task_type: 'TT_Mile' }), N('Z', 0, { task_type: 'TT_Task' }), N('T', 3)],
+        [R('S', 'Z'), R('Z', 'T')]);
+    check('WD-4: a zero-length task opens Wed 10-21 and closes late on Tue 10-27, before its successor\'s Wed late start; a start milestone behind it takes that close',
+        printed(w4.Z) === '2026-10-21 2026-10-21 2026-10-27 2026-10-27' &&
+        w4.Z.ls === w4.T.ls && w4.A.lf_last_worked_date === '2026-10-27' &&
+        w4s.S.ls_date === '2026-10-27' && w4s.S.lf_last_worked_date === '2026-10-27',
+        [printed(w4.Z), w4.A.lf_last_worked_date, printed(w4s.S)].join(' | '));
+
+    const PO = { dataDate: '2026-10-05 08:00', scheduleMode: 'progress_override',
+        calMap: { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } } };
+    const started = (code, rem) => ({ code, duration_days: 10, clndr_id: 'MF', actual_start: '2026-09-14 08:00',
+        remaining_duration: rem });
+    const w5 = E.computeCPM([started('P', 3), started('S', 2), started('S0', 0), started('F', 2)],
+        [R('P', 'S', 'FF'), R('P', 'S0', 'FF'), R('P', 'F', 'FS')], PO).nodes;
+    check('WD-5: under progress override an FF successor restarts at the predecessor\'s finish less its remaining (Tue 10-06; none left: Thu 10-08), an FS successor at the data date',
+        w5.P.restart_date === '2026-10-05' && w5.P.ef_last_worked_date === '2026-10-07' &&
+        w5.S.restart_date === '2026-10-06' && w5.S.ef_last_worked_date === '2026-10-07' &&
+        w5.S0.restart_date === '2026-10-08' && w5.F.restart_date === '2026-10-05',
+        [w5.P.restart_date, w5.P.ef_last_worked_date, w5.S.restart_date, w5.S.ef_last_worked_date,
+            w5.S0.restart_date, w5.F.restart_date].join(' '));
+    const w5r = E.computeCPM([started('P', 3), started('S', 2)], [R('P', 'S', 'FF')],
+        Object.assign({}, PO, { scheduleMode: 'retained_logic' })).nodes;
+    check('WD-5: retained logic is unchanged (the FF successor restarts Tue 10-06 there already)',
+        w5r.S.restart_date === '2026-10-06', w5r.S.restart_date);
+
+    // WD-6 — the backward half (P6's own F9 of the XFA3-family probe of
+    // 28-Aug-2026, project 4648): a predecessor linked FF and SS to a started
+    // successor takes its late finish from the FF link (the successor's late
+    // finish, Thu 09-03), not from the SS link (the successor's remaining late
+    // start, Wed 09-02). FS is inferred by the same start / finish split.
+    const PO6 = { dataDate: '2026-08-28 08:00', scheduleMode: 'progress_override',
+        calMap: { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } } };
+    const st6 = (code, rem, as) => ({ code, duration_days: rem, clndr_id: 'MF', actual_start: as,
+        remaining_duration: rem });
+    const acts6 = [st6('P', 1, '2026-04-16 08:00'), st6('S', 2, '2026-05-01 08:00'),
+        { code: 'SPINE', duration_days: 5, clndr_id: 'MF' }];
+    const rels6 = [R('P', 'S', 'FF'), R('P', 'S', 'SS')];
+    const w6 = E.computeCPM(acts6, rels6, PO6).nodes;
+    const w6r = E.computeCPM(acts6, rels6, Object.assign({}, PO6, { scheduleMode: 'retained_logic' })).nodes;
+    check('WD-6: under progress override the late finish follows the FF link into a started successor (Thu 09-03), not its SS link; retained logic keeps the SS bound (Wed 09-02)',
+        w6.S.lf_last_worked_date === '2026-09-03' && w6.P.lf_last_worked_date === '2026-09-03' &&
+        w6r.P.lf_last_worked_date === '2026-09-02',
+        [w6.S.lf_last_worked_date, w6.P.lf_last_worked_date, w6r.P.lf_last_worked_date].join(' '));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

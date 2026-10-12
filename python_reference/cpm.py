@@ -16,8 +16,8 @@
 # number. That turned 58 silently-uncompared comparisons into executed ones,
 # taking the harness from 931 of 995 to 989 of 995; the F50 special-workdays
 # fixture then grew the surface again, to 1009 of 1015 across 46 fixtures as
-# measured 2026-08-27, and the fixtures added since took it to 4675 of 4773
-# across 119 as measured 2026-10-12 (validation/crossval-summary.json carries
+# measured 2026-08-27, and the fixtures added since took it to 4869 of 4967
+# across 121 as measured 2026-10-12 (validation/crossval-summary.json carries
 # the figures of the latest run). The 98 that remain are
 # null-vs-undefined artifacts on completed activities that NEITHER engine
 # populates (49 ff_signed, 49 ff_signed_working_days).
@@ -63,8 +63,8 @@ Public surface (consumed by cpm-engine.crossval.js):
     date_to_num(d)
 
 The math mirrors cpm-engine.js's computeCPM byte-for-byte on the comparisons
-the harness executes across the 119 fixtures in cpm-engine.crossval.js. As
-measured 2026-10-12 that is 4675 of a 4773-comparison surface; the 98 that are
+the harness executes across the 121 fixtures in cpm-engine.crossval.js. As
+measured 2026-10-12 that is 4869 of a 4967-comparison surface; the 98 that are
 skipped rather than compared are comparisons where NEITHER engine emits the
 field (49 ff_signed, 49 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
@@ -136,7 +136,7 @@ def _round_half_up_to(x, decimals=0):
 # ff_signed nor ff_signed_working_days, and neither does the JS engine, so
 # those comparisons (54 on the harness as measured 2026-09-23) are absent on
 # both sides rather than one.
-ENGINE_VERSION = '2.9.58'
+ENGINE_VERSION = '2.9.59'
 
 
 # =============================================================================
@@ -2652,6 +2652,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # Out: dict {code, type, lag_days} or None.
         driving_pred = None
         _restart_max_drive = 0
+        # WD (P6 parity 2026-10-12) — the FF / SF part of that drive, which
+        # progress override still honours (see the restart anchor below).
+        _restart_ff_drive = 0
         # v2.9.44 — (snapped drive, instant) per relationship, so a finish
         # milestone can sit at the instant that actually drove it.
         _drive_instants = []
@@ -2868,6 +2871,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                             alerts=alerts, ctx=f'restart {t} rem {code}')
                     if _r_drive > _restart_max_drive:
                         _restart_max_drive = _r_drive
+                    if t in ('FF', 'SF') and _r_drive > _restart_ff_drive:
+                        _restart_ff_drive = _r_drive
                 continue
             if drive > max_es:
                 max_es = drive
@@ -3059,15 +3064,28 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         alerts=alerts, ctx=f'restart-snap {code}')
                     if _snapped != _ef_anchor:
                         _ef_anchor = _snapped
-            # PO_SNAP (P6 parity 2026-09-21) — progress_override applies the
-            # same D3 snap. Measured on a real P6 export: data date
-            # 2026-09-18 15:00 encodes as the open of Saturday Sep 19; without
-            # this snap the remaining-bar walk starts on Saturday and lands 1
-            # working day early (194 of 201 rows off; with it, 201/201).
-            elif schedule_mode == 'progress_override' and node_cal:
-                _ef_anchor = _advance_workdays(
-                    _ef_anchor, 0, node_cal,
-                    alerts=alerts, ctx=f'restart-snap {code}')
+            elif schedule_mode == 'progress_override':
+                # WD (P6 parity 2026-10-12) — progress override ignores the
+                # links into a started activity's START, not the links into
+                # its FINISH: an FF / SF predecessor still holds the restart
+                # to its finish less the remaining work (P6's own F9 of the
+                # XFA3 probe, 23-Sep-2026: FF successors restart at the
+                # predecessor's finish less 16 h, or at it with none left;
+                # FS successors at the data date; SF inferred by the
+                # start / finish split). Until v2.9.58 the engine ignored
+                # every predecessor here. JS paired site: efAnchor block.
+                if _restart_ff_drive > _ef_anchor:
+                    _ef_anchor = _restart_ff_drive
+                # PO_SNAP (P6 parity 2026-09-21) — progress_override applies
+                # the same D3 snap. Measured on a real P6 export: data date
+                # 2026-09-18 15:00 encodes as the open of Saturday Sep 19;
+                # without this snap the remaining-bar walk starts on Saturday
+                # and lands 1 working day early (194 of 201 rows off; with
+                # it, 201/201).
+                if node_cal:
+                    _ef_anchor = _advance_workdays(
+                        _ef_anchor, 0, node_cal,
+                        alerts=alerts, ctx=f'restart-snap {code}')
             node['restart'] = _ef_anchor
             node['ef'] = _advance_workdays(
                 _ef_anchor, _rem_dur, node_cal,
@@ -3767,6 +3785,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         skipped_completed_succ += 1
                         continue
                     _s_ls = _s_lf_inst = _lpt
+                # WD (P6 parity 2026-10-12) — under progress override the
+                # links into a STARTED successor's start bound nothing on the
+                # backward pass either, as they drive nothing forward: P6's
+                # own F9 of project 4648 gives a predecessor linked FF and SS
+                # to started work the late finish of the FF link, not the
+                # earlier one of the SS link (5 rows); FS is inferred by the
+                # same start / finish split. JS paired site: backward pass.
+                elif (schedule_mode == 'progress_override' and s['type'] in ('FS', 'SS')
+                        and date_to_num(snode.get('actual_start') or '') > 0):
+                    continue
                 # v2.9.42 PAIRED FIX - the backward lag walk must use the SAME
                 # calendar the forward walk used, or the two stop being
                 # inverses and manufacture float out of nothing. `node` is
@@ -3913,7 +3941,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # constraint's own time (an opening only AT a working day's opening),
         # an external late finish or the project's finish a close. A finish
         # milestone's late instant is always a close: the close at or before
-        # the requirement (P6's database: 11,700+ rows, every one a close).
+        # the requirement (P6's database: 11,700+ rows, every one a close),
+        # and since v2.9.59 a zero-length task's too.
         if _ml_want and node['lf'] > 0:
             _fin = node['lf']
             if _ml_by == 'ext':
@@ -3931,7 +3960,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 else:
                     _ml = (_boundary_to_instant(_fin, node_cal, alerts=[], ctx=code), False)
             _ml = _md_on_calendar(_ml[0], _ml[1], node_cal, False)
-            if node.get('task_type') == 'TT_FinMile' and _ml[1]:
+            # WD (P6 parity 2026-10-12) — and so is a zero-length TASK's: P6
+            # puts every zero-duration activity but a start milestone at a
+            # close late (whole-day rows in its database: 400 of 400
+            # zero-length tasks, every finish milestone), and hands that close
+            # to what drives it.
+            if node.get('task_type') != 'TT_Mile' and _ml[1]:
                 _ml = (_boundary_to_instant(_ml[0], node_cal, alerts=[], ctx=code), False)
             node['_ml_disp'], node['_ml_open'] = _ml
         # v2.9.12 T3.19 — recorded-actual-start precedence on the backward
@@ -4234,9 +4268,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # completed-activity branch still emits neither ff_signed nor
     # ff_signed_working_days, and neither does the JS engine, so those
     # comparisons are absent on both sides rather than one: 98 of them (49
-    # ff_signed, 49 ff_signed_working_days) on the 119-fixture harness as
-    # measured 2026-10-12, whose line reads 4675 / 4675 executed against a
-    # 4773-comparison surface (validation/crossval-summary.json in the engine
+    # ff_signed, 49 ff_signed_working_days) on the 121-fixture harness as
+    # measured 2026-10-12, whose line reads 4869 / 4869 executed against a
+    # 4967-comparison surface (validation/crossval-summary.json in the engine
     # repo carries the current figures). An opposing expert can rely on this
     # file for all four free-float fields on the has-successors path.
     # Mirrors JS cpm-engine.js:2289-2367.

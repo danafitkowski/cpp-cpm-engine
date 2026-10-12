@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.58'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.9.59'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -165,6 +165,21 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 > `lf_date` keep the boundary numbering. Before v2.9.58 a finish milestone after a
 > Friday finish printed its start as the Monday, and a start milestone printed
 > its finish as the working day before its start.
+>
+> **Zero-length tasks** (since v2.9.59). A task (`task_type` `'TT_Task'` or
+> `'TT_Rsrc'`) with no remaining work sits at an opening early and at a close
+> late, as a finish milestone does: its late dates print the close before its
+> successor's late start, and it hands that close to what drives it. Only a
+> start milestone (`'TT_Mile'`) keeps the kind of the instant that binds it
+> late.
+>
+> **Progress override** (`opts.scheduleMode: 'progress_override'`, since
+> v2.9.59). A started activity's restart ignores the links into its start and
+> honours the links into its finish: an FF / SF predecessor holds it to that
+> predecessor's finish (start, for SF) less the remaining work. On the backward
+> pass FS / SS links into started work bound nothing. FF is measured on P6's
+> own output; SF and the backward FS are inferred by the same start / finish
+> split.
 
 **Relationships array:**
 
@@ -251,7 +266,8 @@ precision review before relying on the dates.
                                                  //             'out-of-sequence' (ALERT), 'driving-predecessor-anomaly', ...
                                                  //   message:  human-readable description with activity codes.
     dropped_activities,                          // Array of { task_code, task_type, reason } surfaced from parseXER.
-                                                 //   reason ∈ {'level-of-effort','wbs-summary','completed','zero-remaining'}.
+                                                 //   reason ∈ {'level-of-effort','wbs-summary','completed'}; until
+                                                 //   v2.9.58 also 'zero-remaining', a task no longer dropped.
     hammocks_resolved,                           // Count of hammock activities whose ES/LF were derived from preds/succs.
     hammocks_unresolved,                         // Count of hammocks that could not be resolved (no anchors / cycle).
     hammock_non_fs_alerts,                       // Back-compat: v2.9.8-era list of non-FS hammock rels. v2.9.9+ always [].
@@ -337,7 +353,7 @@ For the per-iteration hot loop in Monte Carlo schedule risk analysis.
 
 Parse a P6 XER export. Returns `{ taskCount, relCount, dropped_activities }` plus the SCHEDOPTIONS settings it read and, since v2.9.49, `plan_end_date` (the project's Must Finish By as P6 wrote it) and `project_finish` (the value to pass as `computeCPM`'s `opts.projectFinish`: the same date whenever one is set, whatever SCHEDOPTIONS `sched_use_project_end_date_for_float` says, `''` when none is set; v2.9.49 returned `''` under `N`, a setting P6 was not then measured under). Since v2.9.56 the two scheduling options it pre-extracts are the values P6 schedules with, so a caller can pass them straight on: `use_expected_finish` (for `opts.useExpectedFinish`) is `true` unless the file says `N`, because P6 Professional 23.12.1 applied "Use Expected Finish Dates" with no SCHEDOPTIONS table and with the flag blank (measured 11-Oct-2026); and `sched_calendar_on_relationship_lag` (for `opts.relationshipLagCalendar`) is `rcal_Predecessor` with no table (P6's project default), `rcal_Successor` with the field blank (where P6 laid the lag), the file's own token otherwise, a bare `Successor` read as `rcal_Successor`. Until v2.9.55 both read as off and empty. `use_expected_finish_source` and `relationship_lag_calendar_source` say which rule decided each; `sched_options` keeps the row verbatim and `sched_use_expect_end_flag` the flag as written. The `getTasks()` records carry `actual_start` / `actual_finish` as P6 wrote them, time included (they were cut to `YYYY-MM-DD` through v2.9.48), and each task's `suspend_date` and `resume_date`. Since v2.9.57 each task also carries `external_early_start` and `external_late_finish` (P6's `external_early_start_date` and `external_late_end_date`, time included), and the result carries `use_external_dates` (for `opts.useExternalDates`: `false` only under SCHEDOPTIONS `sched_outer_depend_type` `SD_None`; `SD_Both`, a blank field or a missing table is P6's default, on) with `use_external_dates_source`.
 
-- `dropped_activities: Array<{ task_code, task_type, reason }>` — activities dropped during parse (e.g. `TT_LOE` level-of-effort, `TT_WBS` summary, zero-remaining rows with no actual finish that are not milestones). Since v2.9.51 a completed activity is kept, with its actual dates and no remaining duration (`is_complete: true`), as P6 keeps it; until then it was dropped with its relationships. Caller can surface for transparency; no silent corruption.
+- `dropped_activities: Array<{ task_code, task_type, reason }>` — activities dropped during parse (e.g. `TT_LOE` level-of-effort, `TT_WBS` summary). Since v2.9.59 a task with no remaining work and no actual finish is kept as a zero-length activity, links and all, as P6 schedules it; until then it was dropped as `zero-remaining`, which broke the chains through it. Each row's remaining duration is the length P6 schedules, zero included; a blank remaining falls back to the original duration. Since v2.9.51 a completed activity is kept, with its actual dates and no remaining duration (`is_complete: true`), as P6 keeps it; until then it was dropped with its relationships. Caller can surface for transparency; no silent corruption.
 
 ### `E.runCPM(opts)`
 

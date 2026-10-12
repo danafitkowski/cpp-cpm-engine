@@ -12,6 +12,89 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.9.59 - 2026-10-12 - P6 parity on whole-day schedules, measured on P6's own output
+
+**Computed values move (Class A).** Measured on P6's own stored dates in every
+project P6 last scheduled in the measuring machine's P6 database (313
+projects). On the 79 whole-day projects, where the data date and every date of
+every unfinished activity sit at a working day's opening or close, the engine
+differed from P6's printed early start or late finish on 666 unfinished
+activities in 5 projects; it now differs on 2, in 1 project. Three causes are
+the engine's:
+
+- **A zero-length task closes late.** A task (`TT_Task` / `TT_Rsrc`) with no
+  remaining work sits at an opening early and at a close late, as a finish
+  milestone does, and hands that close to what drives it: 400 of 400
+  whole-day rows in P6's database. The engine printed its successor's
+  late-start opening. Printing only: `es`, `ef`, `ls`, `lf`, `ef_date`,
+  `lf_date` and float are unchanged by this rule.
+- **Progress override honours the links into a started activity's finish.**
+  P6 ignores the links into a started activity's start under progress
+  override, not the links into its finish. An FF predecessor holds the restart
+  to its finish less the remaining work: on P6's own F9 of a probe, a
+  successor with 16 h left restarts the working day before the predecessor
+  finishes, one with none left at the next opening, and FS successors at the
+  data date. On the backward pass a predecessor linked FF and SS to started
+  work takes the late finish of the FF link, not the earlier one of the SS
+  link (P6's own F9 of a second probe, 5 rows). SF, and FS on the backward
+  pass, are inferred by the same start / finish split. Until v2.9.58 the
+  engine ignored every predecessor of started work under progress override
+  and applied every successor link to it backward.
+- **`parseXER` reads the remaining duration as P6 schedules it, and keeps
+  zero-length tasks.** P6 schedules work that has not started on its remaining
+  duration, zero included: 109 of 109 not-started rows in its database where
+  remaining and original differ, 107 of them with remaining 0. `parseXER`
+  dropped a task with no remaining work and no actual finish, with its
+  relationships, which broke the chains through it; it now keeps it as a
+  zero-length activity, and `dropped_activities` no longer carries a
+  `zero-remaining` reason. A blank remaining falls back to the original
+  duration.
+
+The referee figures below also carry two changes to CPP's converters outside
+this repository: they read a not-started remaining duration the same way, and
+read a blank data date as the project's planned start, as P6 schedules it.
+
+**Verified.**
+- On the 79 whole-day projects: 666 activities differed, 2 now. The 2 are a
+  task whose late start P6 stored at the previous day's close (17:00, not the
+  next morning) and the start milestone before it.
+- Over all 313 projects, 28,787 of 94,873 unfinished activities differ from P6
+  on printed early start or late finish (29,484 before). The rest are
+  part-day: P6 works in hours and minutes and the engine in whole days.
+  Per project: 20 better, 292 unchanged, 1 worse by one activity, a part-day
+  row (a zero-length task whose late finish P6 stores at 08:10, inside the
+  day).
+- JS unit suite: 1,416 checks green, up from 1,409 (WD-1 to WD-6; every one
+  fails on v2.9.58 bar its retained-logic guard).
+- Cross-validation: 121 fixtures, 4869 of 4967 executed, 98 skipped, 0
+  failures. F124-F125 hand both engines zero-length tasks and progress
+  override's finish links; F49, an existing progress-override fixture, now
+  carries the backward rule. With the v2.9.58 Python reference the harness
+  fails 3 fixtures (F49, F124, F125).
+- The 13-case P6 matrix reads 13 / 13 over 27 checks with zero changed engine
+  values against v2.9.58. The Larchmere capture cases (19-21) read 256 of 256
+  at each data date on six fields and on the printed dates, as before.
+- Coverage re-measured on these bytes: 94.33% statements, 82.98% branches,
+  96.02% functions.
+
+**Who is affected.** Through `parseXER`, `getTasks()` and `computeCPM`, 92 of
+446 distinct real exports on the measuring machine carry zero-length tasks
+`parseXER` used to drop (790 activities now kept). Computed values of other
+activities move in 82 exports (6,603 activities), and the project finish in
+29. None of the 449 distinct exports on the machine uses progress override.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A
+deliverable issued on an earlier version is re-run under §12.2 where its
+schedule carries a not-started activity with no remaining work, progress
+override with an FF / SF link into started work, or, through the JS path, a
+zero-length task.
+
+**Not claimed.** Part-day schedules. P6 works in hours and minutes, the engine
+in whole days: on activities whose own P6 dates fall inside a working day the
+engine differs on 25,331 of 34,197, as before this release. The inferred SF
+and backward FS rules under progress override have no discriminating instance
+in P6's database.
+
 ## v2.9.58 - 2026-10-12 - the dates a milestone prints, measured on P6's own output
 
 **What the engine prints changed; no computed value did.** A milestone occupies

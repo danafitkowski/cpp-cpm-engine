@@ -98,11 +98,25 @@ have been applied:
    `ls_date`, `ef_last_worked_date` and `lf_last_worked_date` of a
    zero-duration activity print that instant's date, as P6 does. No computed
    number moves. See CHANGELOG.md v2.9.58.
+11. v2.9.59 (P6 parity on whole-day schedules) is applied here by the same
+   patch as the canonical engine: a zero-length task's late instant is a
+   close, as a finish milestone's (`_ml_open` forced off for every
+   zero-duration activity but a start milestone), and under progress
+   override a started activity's restart honours its FF / SF predecessors
+   (`_restart_ff_drive`) while FS / SS into started work are skipped on the
+   backward pass. See CHANGELOG.md v2.9.59.
 
 ## SHA-256 Pin
 
 ```
-cpm.py  SHA-256:  dd140b1a16712e6733d062e76ba609bfaaaac719fdc9ad200766cce4c72815c5
+cpm.py  SHA-256:  80fcbd2bab412e12755ba3bc68829d3d03092ac9e778fba05981f7db83720259
+
+(v2.9.59 P6 parity on whole-day schedules 2026-10-12 - bumped from dd140b1a...:
+ENGINE_VERSION reads 2.9.59, a zero-length task's late instant is a close,
+and under progress override FF / SF predecessors hold a started activity's
+restart while FS / SS into started work bound nothing backward; the comments
+that carry the cross-validation figures carry the measured ones (121
+fixtures, 4869 of 4967 executed). The harness gains 2 fixtures (F124-F125).)
 
 (v2.9.58 the dates a milestone prints 2026-10-12 - bumped from e306a233...:
 ENGINE_VERSION reads 2.9.58, a zero-duration activity prints the date of the
@@ -459,15 +473,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 258228
-  sha-256:  dd140b1a16712e6733d062e76ba609bfaaaac719fdc9ad200766cce4c72815c5
+  bytes: 260495
+  sha-256:  80fcbd2bab412e12755ba3bc68829d3d03092ac9e778fba05981f7db83720259
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 119 passed, 0 failed
-  Checks:   4675 / 4675 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 121 passed, 0 failed
+  Checks:   4869 / 4869 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 
