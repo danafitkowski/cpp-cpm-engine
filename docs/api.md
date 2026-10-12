@@ -173,9 +173,9 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 > start milestone (`'TT_Mile'`) keeps the kind of the instant that binds it
 > late.
 >
-> **Progress override** (`opts.scheduleMode: 'progress_override'`, since
-> v2.9.59). A started activity's restart ignores the links into its start and
-> honours the links into its finish: an FF / SF predecessor holds it to that
+> **Progress override** (`opts.scheduleMode: 'progress_override'`,
+> since v2.9.59). A started activity's restart ignores the links into its start
+> and honours the links into its finish: an FF / SF predecessor holds it to that
 > predecessor's finish (start, for SF) less the remaining work. On the backward
 > pass FS / SS links into started work bound nothing. FF is measured on P6's
 > own output; SF and the backward FS are inferred by the same start / finish
