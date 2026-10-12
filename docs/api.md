@@ -162,7 +162,7 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 > the data date, a start floor, a constraint), then working time on the
 > milestone's own calendar. `es_date`, `ef_last_worked_date`, `ls_date` and
 > `lf_last_worked_date` print it; `es` / `ef` / `ls` / `lf` and `ef_date` /
-> `lf_date` keep the boundary numbering. Before v2.9.58 a finish milestone after a
+> `lf_date` keep the boundary numbering. Before that rule a finish milestone after a
 > Friday finish printed its start as the Monday, and a start milestone printed
 > its finish as the working day before its start.
 >
@@ -266,8 +266,8 @@ precision review before relying on the dates.
                                                  //             'out-of-sequence' (ALERT), 'driving-predecessor-anomaly', ...
                                                  //   message:  human-readable description with activity codes.
     dropped_activities,                          // Array of { task_code, task_type, reason } surfaced from parseXER.
-                                                 //   reason ∈ {'level-of-effort','wbs-summary','completed'}; until
-                                                 //   v2.9.58 also 'zero-remaining', a task no longer dropped.
+                                                 //   reason ∈ {'level-of-effort','wbs-summary','completed'}; a task
+                                                 //   with no remaining work is kept (see parseXER below).
     hammocks_resolved,                           // Count of hammock activities whose ES/LF were derived from preds/succs.
     hammocks_unresolved,                         // Count of hammocks that could not be resolved (no anchors / cycle).
     hammock_non_fs_alerts,                       // Back-compat: v2.9.8-era list of non-FS hammock rels. v2.9.9+ always [].
