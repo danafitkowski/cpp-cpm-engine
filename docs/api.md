@@ -162,7 +162,7 @@ The flagship function. Calendar-aware forward + backward pass, total float, free
 > the data date, a start floor, a constraint), then working time on the
 > milestone's own calendar. `es_date`, `ef_last_worked_date`, `ls_date` and
 > `lf_last_worked_date` print it; `es` / `ef` / `ls` / `lf` and `ef_date` /
-> `lf_date` keep the boundary numbering. Until v2.9.57 a finish milestone after a
+> `lf_date` keep the boundary numbering. Before v2.9.58 a finish milestone after a
 > Friday finish printed its start as the Monday, and a start milestone printed
 > its finish as the working day before its start.
 
