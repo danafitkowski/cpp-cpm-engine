@@ -2,7 +2,7 @@
 
 This document is the **courtroom-exhibit-form** of the engine release verification chain. Cite **this file**, the **Sigstore-signed witness** attached to the [v2.9.58 release](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.9.56), and the [DAUBERT.md](DAUBERT.md) disclosure together — that triad is the engine's reliability record under FRE 702 / Daubert Prong 1 (testability).
 
-> **Status:** v2.9.58. **Change class under the operator procedure: Class B (disclosure)**, by the v2.9.48 precedent: no computed value moves; a deliverable issued on an earlier version is checked under §12.3, not re-run. What the engine prints for a milestone is now what P6 prints:
+> **Status:** v2.9.58. **Change class under the operator procedure: Class B (disclosure)**, as for the earlier release that changed only a printed finish date (see CHANGELOG.md): no computed value moves; a deliverable issued on an earlier version is checked under §12.3, not re-run. What the engine prints for a milestone is now what P6 prints:
 >
 > - **A finish milestone** prints the day of the close (or opening) it sits at for its start and its late start, where it printed the opening after a close.
 > - **A start milestone**, and any zero-duration activity that is not a finish milestone, prints its start day for its finish, where it printed the working day before; its late dates print the late instant's day.

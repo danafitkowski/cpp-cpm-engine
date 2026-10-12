@@ -92,11 +92,10 @@ function runCase(name) {
             continue;
         }
         const raw = row.p6;
-        // The representation: the start-side numbers as dates (since v2.9.58
-        // es_date / ls_date print what P6 prints, which for a milestone at a
-        // close is the day before this boundary).
-        const eng = [str(E.numToDate(n.es)), str(n.ef_date),
-            str((n.actual_start && !n.is_complete) ? n.ls_date : E.numToDate(n.ls)), str(n.lf_date),
+        // The CSV prints the engine's dates beside P6's (since v2.9.58 es_date /
+        // ls_date print what P6 prints); the representation check below reads
+        // the start-side numbers.
+        const eng = [str(n.es_date), str(n.ef_date), str(n.ls_date), str(n.lf_date),
             str(n.tf_working_days), str(n.ff_working_days)];
         if (!row.compare) {
             // Completed: the actual dates must pass through untouched.
