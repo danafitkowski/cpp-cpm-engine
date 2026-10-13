@@ -24,7 +24,7 @@
 | 3 | SHA sidecar wording | CLOSED v2.9.33 | — | Reframed as "gitignored generated artifact" |
 | 4 | `npm run verify` doesn't run new gates | CLOSED v2.9.33 | — | `scripts/attestation.js` now invokes truncation + version-drift |
 | 5 | Version-refs gate silently skips missing release-evidence | CLOSED v2.9.33 | — | Now WARN-by-default + FATAL when `CHECK_RELEASE_EVIDENCE=1` |
-| 6 | P6 comparison framework has no analyst captures | CLOSED v2.9.39 (fitted) | Q3 | One P6 23.12 capture covering all 13 cases landed 2026-08-11 (commit `9b748cc`) and scored 6 PASS / 7 FAIL; five divergence families were fixed against it in commits `23ffeca`, `264de84`, `bf442d5`, `05dc8b4` and the regenerated matrix now reads 13 / 13. Fitted to that one capture, no held-out case, so an independent second capture stays OPEN. |
+| 6 | P6 comparison framework has no analyst captures | CLOSED 2026-10-13 (held-out H1) | Q3 | One P6 23.12 capture covering all 13 cases landed 2026-08-11 (commit `9b748cc`) and scored 6 PASS / 7 FAIL; five divergence families were fixed against it in commits `23ffeca`, `264de84`, `bf442d5`, `05dc8b4` and the regenerated matrix now reads 13 / 13, fitted to that one capture. The independent capture landed 2026-10-13: held-out set H1, 12 new synthetic projects seeded by a drand round named in advance, frozen before P6 saw them and scored once against v2.10.1, reads 195 of 206 unfinished activities on all seven fields ([`validation/held-out/H1/RESULT.md`](validation/held-out/H1/RESULT.md)). The 13 matrix cases themselves stay fitted. |
 | 7 | Cases 14/15 in P6 matrix not P6-comparable | CLOSED v2.9.33 | Q11 | Moved to `validation/engine-limitations/` |
 | 8 | Synthetic XER corpus — no real-world XERs | CLOSED v2.9.43 (superseded) | Q4, Q5 | Closed 2026-09-08 as superseded by the maintainer's private P6 oracle harness, which exercises real project exports under confidentiality and cannot be published. No owner consent will be sought for a public corpus; the public validation surface remains the synthetic corpus plus the P6 comparison matrix. |
 | 9 | Clean baseline emits 23 alerts | **ACCEPTED-LIMITATION** | Q6 | Parser logs every event (INFO/WARN/ALERT) by forensic-discipline design; case READMEs explain breakdown. **v2.9.34** — full per-alert triage at `validation/xer-corpus/cases/01-small-clean-baseline/ALERT_TRIAGE.md` (single root cause: corpus harness does not pass `cal_map`; 9 forward + 14 backward variants of the same fallback). |
@@ -59,7 +59,7 @@ Remaining v2 work: real Sigstore + Fulcio + OIDC identity binding, full hashing-
 
 ## Validation surface roadmap
 
-- **P6 comparison matrix population** — Dana's action; cases 1-13 are populated from a single capture taken on 2026-08-11 against Primavera P6 Professional 23.12, and the matrix now stands 13 / 13 PASS. That result is fitted, not blind: the first capture scored 6/13 and five divergence families were then corrected against P6's pinned answers, so the remaining action is one independent held-out capture. (#6 / Q3) Engineering scaffolding shipped in v2.9.34 — `scripts/validate-p6-comparison.js` validates populated CSVs against schema + engine-column accuracy; `docs/p6-comparison-schema.md` documents the format.
+- **P6 comparison matrix population** — Dana's action; cases 1-13 are populated from a single capture taken on 2026-08-11 against Primavera P6 Professional 23.12, and the matrix now stands 13 / 13 PASS. That result is fitted, not blind: the first capture scored 6/13 and five divergence families were then corrected against P6's pinned answers, so it is a calibration record. The independent held-out capture it lacked now exists: [`validation/held-out/`](validation/held-out/), set H1 (2026-10-13), 195 of 206 unfinished activities on all seven fields. (#6 / Q3) Engineering scaffolding shipped in v2.9.34 — `scripts/validate-p6-comparison.js` validates populated CSVs against schema + engine-column accuracy; `docs/p6-comparison-schema.md` documents the format.
 - **Real-XER corpus** — closed 2026-09-08, superseded by the private oracle harness (see #8). No public corpus is planned.
 - **1k-10k DAG fixtures** — first 1k DAG fixture shipped v2.9.34 (`13-large-1000-dag-branching`, 10-phase diamond cascade with branching + merging). Expansion toward 10k DAG with parametric topology is a future engineering item.
 - **MPXJ Java-bridge crossval** — engineering roadmap; second-implementation external verification beyond JS↔Python parity. (DAUBERT §10)
@@ -151,6 +151,24 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 - The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before on the new bytes.
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
+
+## Held-out capture H1 (2026-10-13)
+
+Item 6 closes. The held-out comparison in [`validation/held-out/`](validation/held-out/) ran in this order:
+
+- The protocol, generator, scorer, read-back and freeze script were pushed first (`72895d3`), naming drand round 6549295.
+- The 12 cases were generated from that round's randomness once it was published, and pushed before P6 saw any of them (`287e0b7`).
+- Each case was scheduled by Primavera P6 Professional 23.12.1 on its own.
+- `cpm-engine.js` v2.10.1 was scored against P6 once (`683f1ab`).
+
+The result is 195 of 206 unfinished activities matching P6 on all seven fields (early and late start and finish to the minute, total and free float in hours, the critical flag), and 7 of the 12 projects on every field. The 11 that differ fall in four situations, all listed in [`H1/RESULT.md`](validation/held-out/H1/RESULT.md):
+
+- a Start On or Before on work already started;
+- As Late As Possible on work already started;
+- an expected finish before the data date on started work carrying a Mandatory Start;
+- free float measured across a lag on another calendar.
+
+The engine is not changed against H1. A later release that changes any of these is scored on a new held-out set.
 
 ## Status at v2.10.1 (reviewed 2026-10-13)
 

@@ -12,7 +12,7 @@
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
 **Open source. AACE-aligned. Daubert-disclosed. 1,456 JS unit tests, plus JS/Python parity on all 6994 enumerated cross-validation comparisons, none skipped (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
 
-Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), and the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
+Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/), and the held-out P6 comparison in [`validation/held-out/`](validation/held-out/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
 Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a forensic-scheduling consultancy.
 
