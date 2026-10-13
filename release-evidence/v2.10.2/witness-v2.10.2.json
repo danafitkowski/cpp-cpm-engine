@@ -1,0 +1,79 @@
+{
+  "$schema": "cpp-cpm-engine-attestation/v1",
+  "generated_by": "scripts/attestation.js",
+  "generated_at_utc": "2026-10-13T19:38:13.698Z",
+  "package": {
+    "name": "cpp-cpm-engine",
+    "version": "2.10.2"
+  },
+  "engine": {
+    "version": "2.10.2",
+    "file": "cpm-engine.js",
+    "sha256": "b0fb8089c58123a8f2bb316bc47a7511ba5ba49d7076aaab7a91c79bcfbbdfec",
+    "bytes": 711692
+  },
+  "python_reference": {
+    "file": "python_reference/cpm.py",
+    "sha256": "ac0191cb7179bfee00a7d46f3bfa4f5f882a02d0cf2cf45ad7da6a1239942c96",
+    "bytes": 281547
+  },
+  "python_reference_modules": [
+    {
+      "file": "python_reference/cpm_minutes.py",
+      "sha256": "d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c",
+      "bytes": 9736
+    },
+    {
+      "file": "python_reference/cpm_hours.py",
+      "sha256": "2065ce6bd6d30a8de5ec599ebd5f5b15d8f0e37c3713d2d7561fa9859043f549",
+      "bytes": 37424
+    }
+  ],
+  "git": {
+    "commit_sha": "0c50149184145420420bb70df95bf0d9d735213c",
+    "ref": "refs/tags/v2.10.2",
+    "workflow_run_url": "https://github.com/danafitkowski/cpp-cpm-engine/actions/runs/38454860583"
+  },
+  "environment": {
+    "node_version": "v20.20.2",
+    "platform": "linux",
+    "arch": "x64",
+    "runner": "Linux"
+  },
+  "results": {
+    "unit_tests": {
+      "command": "node cpm-engine.test.js",
+      "passed": 1461,
+      "failed": 0,
+      "ok": true
+    },
+    "crossval": {
+      "command": "node cpm-engine.crossval.js",
+      "fixtures_passed": 143,
+      "fixtures_failed": 0,
+      "checks_passed": 7634,
+      "checks_total": 7634,
+      "ok": true
+    },
+    "citation_regression": {
+      "command": "node tests/no-fabricated-citations.test.js",
+      "ok": true
+    },
+    "truncation_regression": {
+      "command": "node tests/no-truncation.test.js",
+      "ok": true
+    },
+    "version_drift_regression": {
+      "command": "node tests/no-stale-version-refs.test.js",
+      "ok": true
+    }
+  },
+  "verdict": "PASS",
+  "reproducibility_notes": [
+    "To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,",
+    "(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,",
+    "(4) run `npm run verify` on your own machine,",
+    "(5) compare your engine.sha256, python_reference.sha256, and results to the values above.",
+    "Bit-identical SHA-256s + matching pass counts = reproduced; any drift documents the delta."
+  ]
+}

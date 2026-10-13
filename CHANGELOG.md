@@ -48,6 +48,8 @@ Python reference change together.
 - **Against P6, through CPP's converters and this engine** (321 projects, 95,017 unfinished activities in the
   measuring machine's P6 database): no row moved. 95,015 match on all seven fields, as under v2.10.1; the two
   left are the P6 non-fixed points documented with v2.10.1.
+- **JS against Python.** The two engines agree on every field of all 164,368 activities of the 340 projects in
+  that database, through the minutes CPM and through `computeCPM`, critical sets included.
 - **Held-out set H2** ([`validation/held-out/H2/RESULT.md`](validation/held-out/H2/RESULT.md)) scored these exact
   bytes once, frozen before its seed was published: 169 of 171 unfinished activities on all seven fields, on the
   11 cases its read-back kept. The read-back left out one case on a false alarm (P6 stamps its F9 in
@@ -78,8 +80,9 @@ the measuring machine (4 unreadable by both versions):
 - The printed float moves on 83 unfinished activities in 13 exports.
 - The critical flag moves on 35 activities in 8 exports.
 - The printed dates move on 54 activities in 8 exports.
-- Against the float and dates each export itself stores, no export moved away; two moved toward them (printed
-  total float equal to the stored float on 100,000 of 198,576 unfinished activities, 99,998 on v2.10.1).
+- Against the total float and critical flag each export itself stores, no export moved away and two moved toward
+  them (printed total float equal to the stored float on 100,000 of 198,576 unfinished activities, 99,998 on
+  v2.10.1; all four printed dates equal to the stored dates on 75,719 of 184,515, 75,717 on v2.10.1).
 
 **Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version
 is re-run under §12.2 where its schedule has any of these:
