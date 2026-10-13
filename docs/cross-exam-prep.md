@@ -52,7 +52,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 - a Start On or Before on work already started;
 - As Late As Possible on work already started;
-- an expected finish before the data date on started work carrying a Mandatory Start;
+- an expected finish before the data date on started work carrying a Start On constraint;
 - free float across a lag on another calendar.
 
 **Concession to make on H1.** "Twelve synthetic networks, one copy of P6, the features the protocol lists and no others. On those, 195 of 206 match on every field, and I can show you every one of the 11 that do not and what they have in common. The engine was not changed after the score, and any later change is scored on a new set. It is held out, not independent of me: the generator and the scorer were written on my side, and P6 was run on my machine. What makes it blind is that the cases came from a beacon round nobody could know in advance, and were frozen and published before P6 or the scorer saw them."

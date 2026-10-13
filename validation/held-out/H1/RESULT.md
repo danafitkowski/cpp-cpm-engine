@@ -48,16 +48,16 @@ This is the first and only score of `cpm-engine.js` v2.10.1 (SHA-256 `cf87f327�
 
 ## The 11 activities that differ
 
-They fall into four kinds. Three involve work already under way at the data date that carries a constraint or an expected finish. The fourth is free float alone, with every date the same.
+They fall into four kinds. (Corrected 13 October 2026: situation 3 first called H1-12's `CS_MSO` constraint a Mandatory Start; `CS_MSO` is Start On, and P6's Mandatory Start is `CS_MANDSTART`. The scores are unchanged.) Three involve work already under way at the data date that carries a constraint or an expected finish. The fourth is free float alone, with every date the same.
 
 **1. Start On or Before on work already started (H1-02: A1070, A1100, A1130).** A1130 has a Start On or Before constraint dated 27 Jul 07:00, but it started on 28 Jul 12:30, before the data date (5 Aug 17:00). The engine sets A1130's late start to the constraint date, which gives it −69.5 h of total float. That float carries back to A1100 (start-to-start, −8 h lag), which also shows −69.5 h, and to A1070 (start-to-finish), which shows −176 h. P6 gives A1130 and A1100 a late start at the data date and 0 h of total float, and A1070 135.5 h. The engine also flags A1070 critical; P6 does not.
 
 **2. As Late As Possible on work already started (H1-03: A1170).** A1170 is As Late As Possible and was under way at the data date: it started 13 Jul with 5 h remaining, and the data date is 15 Jul 08:00. P6 schedules the remaining work as late as it can, with an early start of 30 Jul 09:30 and −40 h of total float, and flags it critical. The engine starts the remaining work at the data date, with 55 h of total float. Both give the same late dates.
 
-**3. An expected finish before the data date on started work with a Mandatory Start (H1-12: A1010, A1030, A1050, A1190).** A1190 is under way and carries two things:
+**3. An expected finish before the data date on started work with a Start On constraint (H1-12: A1010, A1030, A1050, A1190).** A1190 is under way and carries two things:
 
 - an expected finish of 2 Feb 18:00, earlier than both its actual start (5 Feb 06:00) and the data date (6 Feb 08:00);
-- a Mandatory Start of 3 Feb 06:00.
+- a Start On constraint (P6 `CS_MSO`) of 3 Feb 06:00.
 
 The engine's late finish for A1190 is the expected finish date, which gives it −103 h of float. That negative float carries back along the chain of links to A1010 (−59 h), A1030 and A1050 (−103 h each), and the engine flags A1010 and A1190 critical. P6 gives A1190 a late finish of 13 Feb 08:00 and 19 h of float, and gives its predecessors no negative float.
 

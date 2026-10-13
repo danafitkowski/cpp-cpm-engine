@@ -165,7 +165,7 @@ The result is 195 of 206 unfinished activities matching P6 on all seven fields (
 
 - a Start On or Before on work already started;
 - As Late As Possible on work already started;
-- an expected finish before the data date on started work carrying a Mandatory Start;
+- an expected finish before the data date on started work carrying a Start On constraint;
 - free float measured across a lag on another calendar.
 
 The engine is not changed against H1. A later release that changes any of these is scored on a new held-out set.

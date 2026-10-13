@@ -303,8 +303,8 @@ The engine honors the following Primavera P6 constraint types declared on activi
 | `SNLT` | `CS_MSOB` (Start On or Before) | If `ES > date` → ALERT `constraint-violated` | `LF = min(LF, date + duration)` |
 | `FNET` | `CS_MEOA` (Finish On or After) | `EF = max(EF, date)`; WARN | – |
 | `FNLT` | `CS_MEOB` (Finish On or Before) | If `EF > date` → ALERT | `LF = min(LF, date)` |
-| `MS_Start` / `SO` | `CS_MSO` (Mandatory Start) | `ES = date` (forced); if pred logic > date → ALERT | – |
-| `MS_Finish` / `MFO` | `CS_MEO` (Mandatory Finish) | `EF = date` (forced); `ES = EF - duration` back-computed on own calendar, overriding predecessor logic (conformed to P6 capture 9b748cc case 11, 2026-08-11, which the pre-fix engine failed; the rule was written to that case, and the held-out set H1 (2026-10-13) carries a Mandatory Finish only on started work, so for unstarted work this is calibration rather than independent validation; feasible side, unstarted work, floored at data date); infeasible side keeps ALERT | `LF = date`; `LS = LF - duration` |
+| `MS_Start` / `SO` | `CS_MANDSTART` (Mandatory Start); `CS_MSO` (Start On) maps to `SO` | `ES = date` (forced); if pred logic > date → ALERT | – |
+| `MS_Finish` / `MFO` | `CS_MANDFIN` (Mandatory Finish); `CS_MEO` (Finish On) maps to `FO` | `EF = date` (forced); `ES = EF - duration` back-computed on own calendar, overriding predecessor logic (conformed to P6 capture 9b748cc case 11, 2026-08-11, which the pre-fix engine failed; the rule was written to that case, and the held-out set H1 (2026-10-13) carries no Mandatory Finish, so this is calibration rather than independent validation; feasible side, unstarted work, floored at data date); infeasible side keeps ALERT | `LF = date`; `LS = LF - duration` |
 | `ALAP` | `CS_ALAP` | (no forward action — pinned in post-backward sweep) | Post-pass slides ES/EF to LS/LF if `LS > ES`; WARN `constraint-applied` |
 
 **Constraint date boundary (P6-validated 2026-08-11, comparison case 05):**
