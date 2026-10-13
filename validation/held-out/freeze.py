@@ -11,13 +11,14 @@ seed. The round was named in PROTOCOL.md before it was published, so nobody,
 the author included, could know the seed when the generator, the scorer and
 the protocol were committed. Writes <set>/cases/ (the XER files and
 cases.json) and <set>/cases/manifest.json: the round, its randomness and
-signature, and the SHA-256 of the engine, of each script in this folder and of
-each case file.
+signature, and the SHA-256 of the engine, of each script in this folder (and of
+<set>/PROTOCOL.md when the set has its own) and of each case file.
 """
 import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.request
@@ -30,6 +31,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def sha(path):
     with open(path, 'rb') as f:
         return hashlib.sha256(f.read()).hexdigest()
+
+
+def engine_version():
+    # The version the frozen engine file declares (H1's freeze wrote '2.10.1' as a literal; from H2 on it is read).
+    with open(os.path.join(HERE, '..', '..', 'cpm-engine.js'), encoding='utf-8') as f:
+        m = re.search(r"const ENGINE_VERSION = '([^']+)'", f.read())
+    return m.group(1) if m else 'unknown'
 
 
 def main():
@@ -54,9 +62,12 @@ def main():
                   'randomness': beacon['randomness'], 'signature': beacon['signature'],
                   'previous_signature': beacon.get('previous_signature', ''), 'url': url},
         'seed': seed,
-        'engine': {'file': 'cpm-engine.js', 'version': '2.10.1', 'sha256': sha(os.path.join(HERE, '..', '..', 'cpm-engine.js'))},
-        'scripts': {n: sha(os.path.join(HERE, n)) for n in ('generate_held_out.py', 'score_held_out.js',
-                                                           'readback_p6_sqlite.py', 'freeze.py', 'PROTOCOL.md')},
+        'engine': {'file': 'cpm-engine.js', 'version': engine_version(),
+                   'sha256': sha(os.path.join(HERE, '..', '..', 'cpm-engine.js'))},
+        'scripts': dict({n: sha(os.path.join(HERE, n)) for n in ('generate_held_out.py', 'score_held_out.js',
+                                                                'readback_p6_sqlite.py', 'freeze.py', 'PROTOCOL.md')},
+                        **({a.set + '/PROTOCOL.md': sha(os.path.join(HERE, a.set, 'PROTOCOL.md'))}
+                           if os.path.exists(os.path.join(HERE, a.set, 'PROTOCOL.md')) else {})),
         'cases': {c['file']: c['sha256'] for c in cases['cases']},
     }
     with open(os.path.join(out, 'manifest.json'), 'w', encoding='utf-8', newline='\n') as f:
