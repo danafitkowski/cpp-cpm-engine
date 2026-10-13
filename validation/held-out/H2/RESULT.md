@@ -1,6 +1,6 @@
 # Held-out set H2: result
 
-**169 of 171 unfinished activities match P6 on all seven fields,** on the 11 cases the frozen read-back kept. Ten of those 11 match on every field. The read-back left out H2-09 by a false alarm, explained below. Read back with that alarm corrected, all 12 cases score **174 of 176**, and H2-09's five activities all match. Both results are published here.
+**169 of 171 unfinished activities match P6 on all seven fields,** on the 11 cases the frozen read-back kept. Nine of those 11 match on every field. (First published as "ten"; corrected the same day: H2-03 and H2-06 each have one differing activity.) The read-back left out H2-09 by a false alarm, explained below. Read back with that alarm corrected, all 12 cases score **174 of 176**, and H2-09's five activities all match. Both results are published here.
 
 This is the first and only score of the engine 2.10.2 release candidate on this set. The engine is `cpm-engine.js`, SHA-256 `b0fb8089c58123a8f2bb316bc47a7511ba5ba49d7076aaab7a91c79bcfbbdfec`. Nothing was changed between the freeze and the score.
 
