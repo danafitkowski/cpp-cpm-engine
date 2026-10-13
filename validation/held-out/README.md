@@ -15,4 +15,4 @@ The rules are in [`PROTOCOL.md`](PROTOCOL.md).
 
 | Set | Status |
 |---|---|
-| H1 | Frozen from drand round 6549295 (12 cases, 206 unfinished activities); P6 capture and score to follow. |
+| H1 | Scored once on 13 Oct 2026: **195 of 206** unfinished activities match P6 on all seven fields; 7 of 12 projects match on every field. [Result](H1/RESULT.md) |

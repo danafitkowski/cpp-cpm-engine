@@ -14,3 +14,5 @@
 # XER files are pinned by SHA-256 (validation/held-out/<set>/cases/cases.json and
 # manifest.json). Store them byte for byte, CRLF line endings included.
 *.xer -text
+# Held-out read-back and result CSVs are read by score_held_out.js line by line: keep LF.
+validation/held-out/**/*.csv text eol=lf
