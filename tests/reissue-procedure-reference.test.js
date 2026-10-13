@@ -109,7 +109,9 @@ if (!fs.existsSync(CHANGELOG_PATH)) {
     failures.push('CHANGELOG.md not found at ' + CHANGELOG_PATH);
 } else {
     const changelog = fs.readFileSync(CHANGELOG_PATH, 'utf8');
-    const headingRe = /^##\s+v(\d+)\.(\d+)\.(\d+)\s+—\s+.*$/gm;
+    // Headings carry an em dash through v2.9.49 and a hyphen from v2.9.50; the
+    // em-dash-only pattern stopped checking every entry from v2.9.50 on.
+    const headingRe = /^##\s+v(\d+)\.(\d+)\.(\d+)\s+[—-]\s+.*$/gm;
 
     const entries = [];
     let m;

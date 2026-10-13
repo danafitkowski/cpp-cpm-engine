@@ -16,4 +16,4 @@ The rules are in [`PROTOCOL.md`](PROTOCOL.md).
 | Set | Status |
 |---|---|
 | H1 | Scored once on 13 Oct 2026: **195 of 206** unfinished activities match P6 on all seven fields; 7 of 12 projects match on every field. [Result](H1/RESULT.md) |
-| H2 | Scored once on 13 Oct 2026 against the engine 2.10.2 release candidate (branch `v2.10.2-candidate`): **169 of 171** on all seven fields on the 11 cases the read-back kept; **174 of 176** on all 12 with the read-back's false alarm on H2-09 corrected. [Result](H2/RESULT.md) |
+| H2 | Scored once on 13 Oct 2026 against engine 2.10.2, released with exactly the bytes H2 scored: **169 of 171** on all seven fields on the 11 cases the read-back kept; **174 of 176** on all 12 with the read-back's false alarm on H2-09 corrected. [Result](H2/RESULT.md) |

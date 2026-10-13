@@ -128,6 +128,16 @@ have been applied:
    `ff_signed` / `ff_signed_working_days` 0; and a constraint handed back
    already normalized (`date` plus `time_minutes`) keeps its time of day
    (`_with_constraint_instant`). See CHANGELOG.md v2.10.1.
+14. v2.10.2 (start constraints under way, As Late As Possible, free float
+   across a lag) is applied here by the same patch as the canonical engine:
+   on started work Start On or Before, Start On and Mandatory Start drop
+   from the late side, and a Start On or Before or Mandatory Start in either
+   slot takes the other constraint with it (`_UNDERWAY_LATE_DROP_ALL`); As
+   Late As Possible slides by free float under way too, from the restart,
+   and past its own late finish, and under progress override an SS / SF
+   link out of started work holds nothing back; in `cpm_hours.py` free
+   float runs to the successor's date less the lag walked back on the lag
+   calendar. See CHANGELOG.md v2.10.2.
 
 ## SHA-256 Pin
 

@@ -12,9 +12,92 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.2 - 2026-10-13 - Start constraints on work under way, As Late As Possible and free float across a lag, measured on P6's own output and scored on a held-out set
+
+**Computed values move (Class A): engine math changed.** Held-out set H1 scored v2.10.1 once against P6
+Professional 23.12.1 and found 11 unfinished activities of 206 that differ
+([`validation/held-out/H1/RESULT.md`](validation/held-out/H1/RESULT.md)). Read on the H1 data, they come down to
+three P6 rules. Seven synthetic probe projects then measured those rules in P6 beyond the H1 examples
+([`validation/p6-probes/h1-situations-2026-10-13/`](validation/p6-probes/h1-situations-2026-10-13/)), and this
+release reproduces them:
+
+- **Start constraints on work under way.** Once an activity has started, Start On or Before, Start On and
+  Mandatory Start no longer hold its late dates, whether dated before or after the data date. Its late dates come
+  from the network, and its predecessors' late dates follow.
+  - A Start On or Before or a Mandatory Start in either constraint slot takes the other constraint with it.
+  - A Finish On or Before or Finish On, alone or beside any other constraint type, still caps the late finish.
+  - On work not started, every constraint applies as before.
+- **As Late As Possible.** ALAP work slides by its free float on work under way too: its remaining work moves
+  from the restart.
+  - The slide is not capped at the activity's own late finish, started or not, so its total float can go
+    negative. v2.9.54 capped it there; P6 does not.
+  - An open end slides to the project's early finish.
+  - Under progress override, an SS or SF link out of started work holds nothing back.
+- **Free float across a lag (hours pass).** Free float to a successor runs from the activity's own date to the
+  successor's date less the lag, the lag walked back on the lag calendar, counted on the activity's calendar.
+  v2.10.1 walked the lag forward from the activity's date. The two differ where a lag crosses time one calendar
+  works and the other does not. The day pass's free float is unchanged.
+
+The first two rules apply in the whole-day pass and in the hours pass; the third in the hours pass. JS and the
+Python reference change together.
+
+**Verified.**
+- **The probes** (293 unfinished activities, seven projects, each scheduled once by P6's own F9): 293 of 293 match
+  on the four dates and both floats (231 under v2.10.1). The rules were written to these answers, so the probes
+  are fitted, not held out. `npm run test:p6-comparison` replays them (`tests/p6-h1-situations.test.js`).
+- **Against P6, through CPP's converters and this engine** (321 projects, 95,017 unfinished activities in the
+  measuring machine's P6 database): no row moved. 95,015 match on all seven fields, as under v2.10.1; the two
+  left are the P6 non-fixed points documented with v2.10.1.
+- **Held-out set H2** ([`validation/held-out/H2/RESULT.md`](validation/held-out/H2/RESULT.md)) scored these exact
+  bytes once, frozen before its seed was published: 169 of 171 unfinished activities on all seven fields, on the
+  11 cases its read-back kept. The read-back left out one case on a false alarm (P6 stamps its F9 in
+  milliseconds and writes the rows it changes in whole seconds); read back with that corrected, all 12 cases score
+  174 of 176. Both results are published.
+  - H2's draw exercised only the free-float rule, and the engine moved exactly two values, both onto P6's. It drew
+    no started activity under Start On or Before, Start On or Mandatory Start and no As Late As Possible work the
+    new rule moves, so those two rules rest on the fitted probes.
+  - Its two differences predate this release and are open: a Mandatory Start dated before the data date on work
+    not started (P6 starts the work at the data date and keeps the mandatory date on the late side), and free float
+    to a start-to-start successor out of work under way under "lag from Actual Start" (P6 measures it from the
+    restart). v2.10.1 scores 172 of 176 on the same 12 cases.
+- **JS unit suite:** 1,461 checks green, up from 1,456 (HR-40 to HR-44).
+- **Cross-validation:** 143 fixtures, 7634 of 7634 executed, 0 skipped, 0 failures; alert parity on 141 of 143
+  (the other 2 must throw). F141-F147 hand both engines the probe shapes: start and finish constraints on work
+  under way, a Start On or Before or Mandatory Start beside a second constraint, ALAP under way and past its late
+  finish under retained logic and progress override, and free float across a lag on another calendar.
+- **P6 comparison matrix:** 13 / 13. The Larchmere capture cases (19-21) read 256 of 256 at each data date, as
+  before.
+- **Coverage,** re-measured on these bytes: 94.45% statements, 81.68% branches, 96.77% functions.
+- **Re-issue gate.** `tests/reissue-procedure-reference.test.js` read only CHANGELOG headings with an em dash, and
+  the headings have carried a hyphen since v2.9.50, so it had checked no entry since v2.9.49. It now reads both.
+  The six entries from v2.9.56 to v2.10.1 stated their change in other words; each now also carries the sentence
+  the gate reads, matching the change class it already declared.
+
+**Who is affected.** Through `parseXER` and `computeCPM` with the hours handed on, on 611 distinct real exports on
+the measuring machine (4 unreadable by both versions):
+- The printed float moves on 83 unfinished activities in 13 exports.
+- The critical flag moves on 35 activities in 8 exports.
+- The printed dates move on 54 activities in 8 exports.
+- Against the float and dates each export itself stores, no export moved away; two moved toward them (printed
+  total float equal to the stored float on 100,000 of 198,576 unfinished activities, 99,998 on v2.10.1).
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version
+is re-run under §12.2 where its schedule has any of these:
+- a started activity carrying Start On or Before, Start On or Mandatory Start, in either constraint slot;
+- an As Late As Possible activity that is under way, or whose free float runs past its late finish;
+- through a caller that hands on the hours, a free float figure across a lag whose calendar differs from the
+  activity's.
+
+**Not claimed.**
+- The two H2 differences above.
+- The start-constraint and As Late As Possible rules have no held-out confirmation yet; the next held-out set
+  will be drawn after the fix for the two differences.
+
+---
+
 ## v2.10.1 - 2026-10-13 - Resource dependent work, and the float P6 prints, measured on P6's own output
 
-**Computed values move (Class A).** v2.10.0 scheduled in hours and minutes and printed P6's dates. On the 319
+**Computed values move (Class A): engine math changed.** v2.10.0 scheduled in hours and minutes and printed P6's dates. On the 319
 projects P6 last scheduled in the measuring machine's database it still differed from P6 on 46 unfinished
 activities. 45 of them were resource dependent work, which P6 schedules on the assigned resources' calendars.
 And the float and critical flag it printed were still the whole-day pass's. This release closes both, and every
@@ -103,7 +186,7 @@ is re-run under §12.2 where its schedule has any of these:
 
 ## v2.10.0 - 2026-10-12 - The hours pass: the engine schedules in hours and minutes, measured on P6's own output
 
-**Computed values move (Class A).** Primavera P6 schedules in hours and minutes. Until this release the engine
+**Computed values move (Class A): engine math changed.** Primavera P6 schedules in hours and minutes. Until this release the engine
 rounded P6's hours to whole working days, and that rounding caused almost every difference left between the
 two: on the 313 projects in the measuring machine's P6 database, the engine differed on 74% of the activities
 whose own P6 dates fall inside a working day, against 7% of the rest. From this release, where the caller hands
@@ -172,7 +255,7 @@ of these: part-day durations, part-day lags, a part-day data date, or constraint
 
 ## v2.9.59 - 2026-10-12 - P6 parity on whole-day schedules, measured on P6's own output
 
-**Computed values move (Class A).** Measured on P6's own stored dates in every
+**Computed values move (Class A): engine math changed.** Measured on P6's own stored dates in every
 project P6 last scheduled in the measuring machine's P6 database (313
 projects). On the 79 whole-day projects, where the data date and every date of
 every unfinished activity sit at a working day's opening or close, the engine
@@ -255,7 +338,7 @@ in P6's database.
 
 ## v2.9.58 - 2026-10-12 - the dates a milestone prints, measured on P6's own output
 
-**What the engine prints changed; no computed value did.** A milestone occupies
+**What the engine prints changed; no computed value did: engine math is unchanged.** A milestone occupies
 one instant, and P6 prints that instant's own date for its start and its
 finish. The instant is a day's opening (08:00) or its close (17:00). The engine
 numbers days on an exclusive boundary, where Tuesday 17:00 and Wednesday 08:00
@@ -347,7 +430,7 @@ from P6 (a separate question, not a printing one), it prints its own.
 
 ## v2.9.57 - 2026-10-11 - external early start and external late finish, measured on P6's own F9
 
-**`computeCPM` now applies an activity's external dates.** P6 keeps
+**`computeCPM` now applies an activity's external dates: engine math changed.** P6 keeps
 `TASK.external_early_start_date` and `external_late_end_date` for an activity
 whose relationship to an activity in another project is not in the database.
 Until v2.9.56 the engine had no input for either date, so an activity carrying
@@ -441,7 +524,7 @@ under progress override; a part-day external date other than the mid-day case
 
 ## v2.9.56 - 2026-10-11 - parseXER reads a missing or blank scheduling option the way P6 does, measured on P6's own F9
 
-**What parseXER hands on changed; computeCPM's arithmetic did not.** `parseXER`
+**What parseXER hands on changed; computeCPM's arithmetic did not. Engine math changed, in what `parseXER` hands a caller.** `parseXER`
 pre-extracts the two SCHEDOPTIONS settings that change `computeCPM`'s answer so a
 caller can forward them. They are now the values P6 schedules with:
 
