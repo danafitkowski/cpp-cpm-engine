@@ -11,3 +11,6 @@
 # the byte content and invalidate the hash documented in
 # python_reference/README.md and DAUBERT.md §3. Force LF for all .py.
 *.py text eol=lf
+# XER files are pinned by SHA-256 (validation/held-out/<set>/cases/cases.json and
+# manifest.json). Store them byte for byte, CRLF line endings included.
+*.xer -text

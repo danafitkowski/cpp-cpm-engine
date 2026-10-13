@@ -15,4 +15,4 @@ The rules are in [`PROTOCOL.md`](PROTOCOL.md).
 
 | Set | Status |
 |---|---|
-| H1 | Protocol committed; the set is seeded by a drand round published after this commit, then frozen, captured and scored. |
+| H1 | Frozen from drand round 6549295 (12 cases, 206 unfinished activities); P6 capture and score to follow. |
