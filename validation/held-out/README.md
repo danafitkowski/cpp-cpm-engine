@@ -16,4 +16,4 @@ The rules are in [`PROTOCOL.md`](PROTOCOL.md).
 | Set | Status |
 |---|---|
 | H1 | Scored once on 13 Oct 2026: **195 of 206** unfinished activities match P6 on all seven fields; 7 of 12 projects match on every field. [Result](H1/RESULT.md) |
-| H2 | Protocol committed on branch `v2.10.2-candidate` ([`H2/PROTOCOL.md`](H2/PROTOCOL.md)): engine 2.10.2 release candidate, seeded by drand round 6549541; frozen, captured and scored next. |
+| H2 | Frozen from drand round 6549541 on branch `v2.10.2-candidate` (12 cases, 176 unfinished activities; [`H2/PROTOCOL.md`](H2/PROTOCOL.md)): engine 2.10.2 release candidate; P6 capture and score to follow. |

@@ -1,0 +1,515 @@
+{
+ "set": "H2",
+ "seed": "6522a72b5d01ae8645194502049dcaa0afe502c5735e3cab33c3b1713a05ff41",
+ "count": 12,
+ "cases": [
+  {
+   "case": "H2-01",
+   "file": "H2-01.xer",
+   "sha256": "a2da8e7d18397ccebfbea3dc7925add70cfea51078c36c64c278857342e7ba19",
+   "features": {
+    "activities": 17,
+    "unfinished": 8,
+    "completed": 9,
+    "in_progress": 4,
+    "relationships": {
+     "PR_FS": 21,
+     "PR_SS": 4,
+     "PR_FF": 2,
+     "PR_SF": 3
+    },
+    "lags": {
+     "zero": 16,
+     "positive": 8,
+     "negative": 6
+    },
+    "constraints": [],
+    "secondary_constraints": 0,
+    "expected_finishes": 1,
+    "open_ends": 1,
+    "calendars": [
+     "H2-01 Mon-Fri 07:00-17:00",
+     "H2-01 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-11-26 17:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_Start",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-02",
+   "file": "H2-02.xer",
+   "sha256": "5e94caeeb3c777c8a467e6d4858de6fcb1eb40a7219c4e67c3fe51d53d36dfb9",
+   "features": {
+    "activities": 29,
+    "unfinished": 18,
+    "completed": 11,
+    "in_progress": 8,
+    "relationships": {
+     "PR_FS": 30,
+     "PR_SS": 2,
+     "PR_FF": 10,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 29,
+     "positive": 9,
+     "negative": 4
+    },
+    "constraints": [
+     "CS_ALAP"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-02 Every day 06:00-18:00",
+     "H2-02 Mon-Fri 07:00-17:00",
+     "H2-02 Every day 00:00-24:00"
+    ],
+    "data_date": "2026-03-31 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Successor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-03",
+   "file": "H2-03.xer",
+   "sha256": "52e79cfe6d0fe545241797bc331c3e6a42444465318ba3ffd10dab1c31398c78",
+   "features": {
+    "activities": 30,
+    "unfinished": 15,
+    "completed": 15,
+    "in_progress": 7,
+    "relationships": {
+     "PR_FS": 37,
+     "PR_SS": 4,
+     "PR_FF": 8,
+     "PR_SF": 4
+    },
+    "lags": {
+     "zero": 37,
+     "positive": 10,
+     "negative": 6
+    },
+    "constraints": [
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-03 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H2-03 Mon-Fri 08:00-12:00 and 13:00-17:00"
+    ],
+    "data_date": "2026-06-03 08:00",
+    "must_finish_by": "2026-07-02 12:00",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "N",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-04",
+   "file": "H2-04.xer",
+   "sha256": "6bcb132d95b30edaf94cfc7550f98ee6df6e3449cc09e2cc8d84335856e9ed03",
+   "features": {
+    "activities": 15,
+    "unfinished": 7,
+    "completed": 8,
+    "in_progress": 2,
+    "relationships": {
+     "PR_FS": 18,
+     "PR_SS": 4,
+     "PR_FF": 2,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 17,
+     "positive": 6,
+     "negative": 1
+    },
+    "constraints": [],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-04 Mon-Fri 08:00-12:00 and 13:00-17:00",
+     "H2-04 Mon-Thu 07:00-12:00 and 12:30-17:30"
+    ],
+    "data_date": "2026-07-31 00:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "N",
+     "sched_use_expect_end_flag": "N"
+    }
+   }
+  },
+  {
+   "case": "H2-05",
+   "file": "H2-05.xer",
+   "sha256": "25fb73cbd1c989ef09b450b91b129e59a1c627c44b3b458879930674dd0616fb",
+   "features": {
+    "activities": 32,
+    "unfinished": 19,
+    "completed": 13,
+    "in_progress": 8,
+    "relationships": {
+     "PR_FS": 42,
+     "PR_SS": 7,
+     "PR_FF": 9,
+     "PR_SF": 3
+    },
+    "lags": {
+     "zero": 36,
+     "positive": 20,
+     "negative": 5
+    },
+    "constraints": [
+     "CS_MSOA",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-05 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00",
+     "H2-05 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H2-05 Every day 00:00-24:00"
+    ],
+    "data_date": "2026-04-30 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-06",
+   "file": "H2-06.xer",
+   "sha256": "5ab6a192d6c40ceed19ea4fcb26e6b16c4f257520d8df7d14c4ecfa1868bf0f1",
+   "features": {
+    "activities": 15,
+    "unfinished": 7,
+    "completed": 8,
+    "in_progress": 4,
+    "relationships": {
+     "PR_FS": 18,
+     "PR_SS": 3,
+     "PR_FF": 2,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 20,
+     "positive": 2,
+     "negative": 2
+    },
+    "constraints": [
+     "CS_MANDSTART"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-06 Mon-Fri 08:00-12:00 and 13:00-17:00",
+     "H2-06 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00"
+    ],
+    "data_date": "2026-06-26 08:00",
+    "must_finish_by": "2026-07-14 17:00",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_Min",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "N",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-07",
+   "file": "H2-07.xer",
+   "sha256": "a0cc11d843d13ebf1f2098a01c12d4342d21afb291ec6d2ad9f974bd1f6b1cbc",
+   "features": {
+    "activities": 36,
+    "unfinished": 29,
+    "completed": 7,
+    "in_progress": 3,
+    "relationships": {
+     "PR_FS": 45,
+     "PR_SS": 7,
+     "PR_FF": 7,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 38,
+     "positive": 15,
+     "negative": 8
+    },
+    "constraints": [
+     "CS_MANDSTART",
+     "CS_MSOA",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 1,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-07 Mon-Sat 08:00-16:00",
+     "H2-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00"
+    ],
+    "data_date": "2026-11-17 08:00",
+    "must_finish_by": "2026-12-19 16:00",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "N",
+     "sched_use_expect_end_flag": "N"
+    }
+   }
+  },
+  {
+   "case": "H2-08",
+   "file": "H2-08.xer",
+   "sha256": "d7689633ebdd849ba7fbe4123fa5be6e23c85b5c6a51f2dd64a617b30a14e58e",
+   "features": {
+    "activities": 22,
+    "unfinished": 14,
+    "completed": 8,
+    "in_progress": 1,
+    "relationships": {
+     "PR_FS": 25,
+     "PR_SS": 4,
+     "PR_FF": 7,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 28,
+     "positive": 8,
+     "negative": 2
+    },
+    "constraints": [
+     "CS_MEO",
+     "CS_MSOA",
+     "CS_MSOA",
+     "CS_MSOB"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-08 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00",
+     "H2-08 Mon-Sat 08:00-16:00",
+     "H2-08 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-04-26 08:00",
+    "must_finish_by": "2026-05-29 11:00",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_Min",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-09",
+   "file": "H2-09.xer",
+   "sha256": "187840b30658bf14fffe2d71508baa50b5be15d99afb832d4370ca385472ecef",
+   "features": {
+    "activities": 18,
+    "unfinished": 5,
+    "completed": 13,
+    "in_progress": 2,
+    "relationships": {
+     "PR_FS": 28,
+     "PR_SS": 3,
+     "PR_FF": 1,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 18,
+     "positive": 13,
+     "negative": 1
+    },
+    "constraints": [
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-09 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H2-09 Mon-Sat 08:00-16:00"
+    ],
+    "data_date": "2026-09-09 17:00",
+    "must_finish_by": "2026-10-22 17:30",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Successor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-10",
+   "file": "H2-10.xer",
+   "sha256": "370e746555afb5eb7950cb9328baf5d589102faa0aceae1a6169b3071bbddb15",
+   "features": {
+    "activities": 37,
+    "unfinished": 26,
+    "completed": 11,
+    "in_progress": 11,
+    "relationships": {
+     "PR_FS": 46,
+     "PR_SS": 6,
+     "PR_FF": 5,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 41,
+     "positive": 15,
+     "negative": 1
+    },
+    "constraints": [
+     "CS_MEO"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 5,
+    "open_ends": 0,
+    "calendars": [
+     "H2-10 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H2-10 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-07-30 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-11",
+   "file": "H2-11.xer",
+   "sha256": "e2352fa2b1099bbcf1b67846d4833d24762711c08ab03913e14911126c7d4e09",
+   "features": {
+    "activities": 15,
+    "unfinished": 11,
+    "completed": 4,
+    "in_progress": 3,
+    "relationships": {
+     "PR_FS": 19,
+     "PR_SS": 2,
+     "PR_FF": 3,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 16,
+     "positive": 5,
+     "negative": 3
+    },
+    "constraints": [],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-11 Mon-Fri 07:00-17:00",
+     "H2-11 Mon-Sat 08:00-16:00",
+     "H2-11 Every day 06:00-18:00"
+    ],
+    "data_date": "2027-01-22 00:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_24Hour",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    }
+   }
+  },
+  {
+   "case": "H2-12",
+   "file": "H2-12.xer",
+   "sha256": "c5a8f25337c8b3db2b2b48abe2d6e36da81ba62d843ad18fafaafb2999d4fcd0",
+   "features": {
+    "activities": 18,
+    "unfinished": 17,
+    "completed": 1,
+    "in_progress": 2,
+    "relationships": {
+     "PR_FS": 18,
+     "PR_SS": 4,
+     "PR_FF": 5,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 14,
+     "positive": 10,
+     "negative": 5
+    },
+    "constraints": [
+     "CS_MEO"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H2-12 Every day 00:00-24:00",
+     "H2-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00"
+    ],
+    "data_date": "2026-07-17 00:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_Min",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    }
+   }
+  }
+ ]
+}
