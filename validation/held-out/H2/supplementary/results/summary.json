@@ -1,0 +1,143 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "b0fb8089c58123a8f2bb316bc47a7511ba5ba49d7076aaab7a91c79bcfbbdfec"
+ },
+ "cases": {
+  "H2-01": {
+   "unfinished": 8,
+   "all_fields_match": 8,
+   "engine_unfinished": 8,
+   "hours_pass": true
+  },
+  "H2-02": {
+   "unfinished": 18,
+   "all_fields_match": 18,
+   "engine_unfinished": 18,
+   "hours_pass": true
+  },
+  "H2-03": {
+   "unfinished": 15,
+   "all_fields_match": 14,
+   "engine_unfinished": 15,
+   "hours_pass": true
+  },
+  "H2-04": {
+   "unfinished": 7,
+   "all_fields_match": 7,
+   "engine_unfinished": 7,
+   "hours_pass": true
+  },
+  "H2-05": {
+   "unfinished": 19,
+   "all_fields_match": 19,
+   "engine_unfinished": 19,
+   "hours_pass": true
+  },
+  "H2-06": {
+   "unfinished": 7,
+   "all_fields_match": 6,
+   "engine_unfinished": 7,
+   "hours_pass": true
+  },
+  "H2-07": {
+   "unfinished": 29,
+   "all_fields_match": 29,
+   "engine_unfinished": 29,
+   "hours_pass": true
+  },
+  "H2-08": {
+   "unfinished": 14,
+   "all_fields_match": 14,
+   "engine_unfinished": 14,
+   "hours_pass": true
+  },
+  "H2-09": {
+   "unfinished": 5,
+   "all_fields_match": 5,
+   "engine_unfinished": 5,
+   "hours_pass": true
+  },
+  "H2-10": {
+   "unfinished": 26,
+   "all_fields_match": 26,
+   "engine_unfinished": 26,
+   "hours_pass": true
+  },
+  "H2-11": {
+   "unfinished": 11,
+   "all_fields_match": 11,
+   "engine_unfinished": 11,
+   "hours_pass": true
+  },
+  "H2-12": {
+   "unfinished": 17,
+   "all_fields_match": 17,
+   "engine_unfinished": 17,
+   "hours_pass": true
+  }
+ },
+ "fields": {
+  "early_start": {
+   "match": 175,
+   "differ": 1
+  },
+  "early_finish": {
+   "match": 175,
+   "differ": 1
+  },
+  "late_start": {
+   "match": 176,
+   "differ": 0
+  },
+  "late_finish": {
+   "match": 176,
+   "differ": 0
+  },
+  "total_float_hr": {
+   "match": 175,
+   "differ": 1
+  },
+  "free_float_hr": {
+   "match": 175,
+   "differ": 1
+  },
+  "critical": {
+   "match": 176,
+   "differ": 0
+  }
+ },
+ "rows": 176,
+ "rows_all_match": 174,
+ "left_out": {},
+ "differences": [
+  {
+   "case": "H2-03",
+   "task_code": "A1160",
+   "field": "free_float_hr",
+   "engine": 38,
+   "p6": 37
+  },
+  {
+   "case": "H2-06",
+   "task_code": "A1130",
+   "field": "early_start",
+   "engine": "2026-06-23 08:00",
+   "p6": "2026-06-26 08:00"
+  },
+  {
+   "case": "H2-06",
+   "task_code": "A1130",
+   "field": "early_finish",
+   "engine": "2026-06-29 17:00",
+   "p6": "2026-07-02 17:00"
+  },
+  {
+   "case": "H2-06",
+   "task_code": "A1130",
+   "field": "total_float_hr",
+   "engine": 0,
+   "p6": -24
+  }
+ ]
+}
