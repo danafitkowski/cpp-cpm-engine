@@ -6074,8 +6074,8 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         const X = ok ? s.checks.executed : NaN;          // comparisons executed
         const S = ok ? s.checks.surface : NaN;           // comparisons defined
         const K = ok ? s.checks.skipped : NaN;           // skipped, not failed
-        const K1 = ok ? s.skips_by_field.ff_signed : NaN;
-        const K2 = ok ? s.skips_by_field.ff_signed_working_days : NaN;
+        const K1 = ok ? (s.skips_by_field.ff_signed || 0) : NaN;
+        const K2 = ok ? (s.skips_by_field.ff_signed_working_days || 0) : NaN;
         const F = ok ? s.fixtures.total : NaN;
         const Fs = ok ? s.rows.filter((r) => r.skips > 0).length : NaN;
         const A = ok ? s.checks_by_field.alert_count : NaN;
@@ -6095,20 +6095,30 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
         const p3a = d.prong_3_error_rate.answer;
         const p3e = d.prong_3_error_rate.evidence;
         const has = (txt, parts) => parts.filter((p) => txt.indexOf(p) < 0);
-        const miss1 = has(p1, [
+        // v2.10.1: the harness skips nothing (completed work carries the signed
+        // free-float pair in both engines), so the disclosure states the whole
+        // surface executed; the skip wording comes back with any skip.
+        const miss1 = has(p1, K === 0 ? [
+            F + ' cross-validation fixtures', 'defines ' + S + ' comparisons and executes all of them',
+            '"Checks: ' + X + ' / ' + X + '"', 'All ' + X + ' comparisons',
+            'compared on ' + A + ' of the ' + F + ' fixtures'] : [
             F + ' cross-validation fixtures', 'defines ' + S + ' comparisons',
             K + ' of them are never executed', '(' + K1 + ' ff_signed, ' + K2 + ' ff_signed_working_days,',
             '"Checks: ' + X + ' / ' + X + '"', 'None of those ' + K + ' is a one-sided',
             Fs + ' of the ' + F + ' fixtures contain at least one skipped',
             'The ' + X + ' comparisons that did run', 'compared on ' + A + ' of the ' + F + ' fixtures']);
         check(B10_JSON_CHECKS[1], ok && O === 0 && miss1.length === 0, 'missing: ' + JSON.stringify(miss1));
-        const miss3a = has(p3a, [
+        const miss3a = has(p3a, K === 0 ? [
+            'executes all ' + S + ' comparisons it defines over ' + F + ' fixtures and skips none'] : [
             'so ' + K + ' checks are skipped', '(' + K1 + ' ff_signed, ' + K2 + ' ff_signed_working_days)',
             'printed ' + X + ' / ' + X + ' therefore sits on a nominal surface of ' + S + ' checks',
             'somewhere in ' + Fs + ' of the ' + F + ' fixtures', 'all ' + K + ' cases NEITHER engine emits',
             O + ' skips hide a value', M + ' are comparisons where neither engine emits one']);
         check(B10_JSON_CHECKS[2], ok && miss3a.length === 0, 'missing: ' + JSON.stringify(miss3a));
-        const miss3e = has(p3e, [
+        const miss3e = has(p3e, K === 0 ? [
+            F + ' fixtures + 282-activity real XER', 'all ' + X + ' comparisons it defines with 0 mismatches',
+            'on the ' + T + ' fixtures where both engines are required to throw',
+            'Alert parity runs on ' + A + ' of the ' + F + ' fixtures'] : [
             F + ' fixtures + 282-activity real XER', 'executed ' + X + ' comparisons with 0 mismatches',
             'its ' + X + ' / ' + X + ' tally', 'Not executed: ' + K + ' node comparisons',
             'on the ' + T + ' fixtures where both engines are required to throw',
@@ -7315,12 +7325,17 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
 // with a one-time WARN per unknown calendar.
 {
     // 10-hr shift calendar via XER CALENDAR table. Lag 20 hours = 2.0 days
-    // (was 2.5 days under hardcoded /8).
+    // (was 2.5 days under hardcoded /8). The record carries its week: an
+    // empty one is P6's internal 8-hour Standard whatever it declares
+    // (v2.10.1, probe ZZ-CPP-EMPTYCAL2).
     E.resetMC();
+    let shift10 = '(0||CalendarData()((0||DaysOfWeek()((0||1()())';
+    for (let d = 2; d <= 6; d++) shift10 += '(0||' + d + '()((0||0(s|07:00|f|17:00)())))';
+    shift10 += '(0||7()())))(0||Exceptions()())))';
     const xer = [
         '%T CALENDAR',
-        '%F clndr_id\tclndr_name\tday_hr_cnt',
-        '%R 10\tShift10\t10',
+        '%F clndr_id\tclndr_name\tday_hr_cnt\tclndr_data',
+        '%R 10\tShift10\t10\t' + shift10,
         '%T TASK',
         '%F task_id\ttask_code\ttask_name\ttask_type\tremain_drtn_hr_cnt\ttarget_drtn_hr_cnt\tclndr_id',
         '%R 1\tA\tA\tTT_Task\t40\t40\t10',   // 4 days @ 10hr/day
@@ -10640,6 +10655,7 @@ const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
         '%F clndr_id\tclndr_name\tday_hr_cnt\tclndr_data',
         '%R 5001\tStandard Five Day\t8\t' + std,
         '%R 5002\tBlank Data\t8\t',
+        '%R 5003\tBlank Ten Hour\t10\t',
         '%T TASK',
         '%F task_id\ttask_code\ttask_name\ttask_type\ttarget_drtn_hr_cnt\tremain_drtn_hr_cnt\tclndr_id',
         '%R 1\tA\tA\tTT_Task\t40\t40\t5001',
@@ -10652,8 +10668,21 @@ const _RL_CORRUPT = '(0||CalendarData()((0||DaysOfWeek()(' +
         JSON.stringify(cm['5001'].work_days) === JSON.stringify([1, 2, 3, 4, 5]) &&
         cm['5001'].holidays.indexOf('2026-09-07') >= 0,
         'calMap=' + JSON.stringify(cm && cm['5001']));
-    check('RL-13: empty clndr_data yields no calMap entry',
-        !(cm && cm['5002']));
+    // v2.10.1: an empty record declaring 8 h a day is P6's internal Standard
+    // (Mon-Fri 08:00-16:00, no exceptions: P6 probes ZZ-CPP-EMPTYCAL and
+    // ZZ-CPP-RSRC A1, project 4898), not "no entry"
+    check('RL-13: an empty 8 h clndr_data record is P6\'s internal Standard',
+        cm && cm['5002'] && cm['5002'].p6_fallback === true && cm['5002'].empty_record === true &&
+        JSON.stringify(cm['5002'].work_days) === JSON.stringify([1, 2, 3, 4, 5]) &&
+        cm['5002'].holidays.length === 0,
+        'calMap=' + JSON.stringify(cm && cm['5002']));
+    // and so is one declaring other hours (ZZ-CPP-EMPTYCAL2: 10, 6 and 24 h
+    // all ran 08:00-16:00): an eight-hour working day, the declared 10 kept
+    check('RL-13: an empty record declaring 10 h is P6\'s internal Standard too (8 h days, 10 declared)',
+        cm && cm['5003'] && cm['5003'].p6_fallback === true && cm['5003'].empty_record === true &&
+        cm['5003'].hours_per_day === 8 && cm['5003'].declared_hours_per_day === 10 &&
+        JSON.stringify(cm['5003'].work_days) === JSON.stringify([1, 2, 3, 4, 5]),
+        'calMap=' + JSON.stringify(cm && cm['5003']));
     const r = E.runCPM({});
     check('RL-13: clean calendars raise NO corrupt-fallback alert',
         !r.alerts.some(a => a.context === 'calendar-corrupt-p6-fallback'),
@@ -12876,6 +12905,169 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(h17.hours.sized_from_days) === '["B"]' &&
         h17.nodes.A.early_finish_dt === '2026-10-06 14:00' && h17.nodes.B.early_finish_dt === '2026-10-05 16:00',
         [h17.nodes.A.early_finish_dt, h17.nodes.B.early_finish_dt].join(' '));
+}
+
+// ── v2.10.1 — resource dependent work and the 13-Oct-2026 P6 rules ────────
+// Python paired file: _cpp_common/tests/test_rsrc_dependent_2026_10_13.py
+// (same networks; every expectation is P6 23.12.1's own F9 of the synthetic
+// probes ZZ-CPP-RSRC / -RSRC2 / -RSRC3 / -RSRCX / -XZ / -EMPTYCAL).
+{
+    const FMT = E._hrFormatInstant;
+    let xDays = '';
+    for (let d = 1; d <= 7; d++) xDays += '(0||' + d + '()((0||0(f|12:00|s|01:00)())(0||1(f|00:00|s|13:00)())))';
+    const xRaw = '(0||CalendarData()((0||DaysOfWeek()(' + xDays + '))(0||Exceptions()((0||0(d|41519)())))))';
+    const CALS = {
+        P: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: ['2013-09-04'] },
+        Q: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8 },
+        FB: { p6_fallback: true },
+        G: { p6_fallback: true, holidays: ['2013-09-02'] },
+        X: { raw: xRaw, work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 22 },
+    };
+    const T = (code, h, cstr, extra) => Object.assign({ code, task_type: 'TT_Task', clndr_id: 'P',
+        remaining_minutes: Math.round(h * 60) }, cstr ? { constraint: { type: cstr[0], date: cstr[1] } } : {}, extra || {});
+    const R = (code, asg, cstr, extra) => {
+        const full = asg.map((g) => [g[0], g[1], g[2] || 0, g.length > 3 ? g[3] : true]);
+        const rem = Math.max(0, ...full.filter((g) => g[3]).map((g) => g[1] + g[2]));
+        return Object.assign(T(code, rem, cstr, extra), { task_type: 'TT_Rsrc', assignments: full.map((g) => ({
+            clndr_id: g[0], remaining_minutes: Math.round(g[1] * 60), lag_minutes: Math.round(g[2] * 60), driving: g[3] })) });
+    };
+    const L = (a, b, type, lag) => ({ from_code: a, to_code: b, type: type || 'FS', lag_minutes: Math.round((lag || 0) * 60) });
+    const run = (acts, rels, o) => E.computeCPMHours(acts, rels || [], Object.assign(
+        { data_date: '2013-08-26 08:00', cal_map: CALS, project_calendar: 'P' }, o || {}));
+    const dates = (x) => FMT(x.status === 'started' ? x.restart : x.es) + ' / ' + FMT(x.ef);
+    const late = (x) => FMT(x.ls) + ' / ' + FMT(x.lf);
+
+    let o = run([R('A1', [['FB', 40]], ['CS_MSOA', '2013-08-30 08:00']), R('A2', [['G', 40]], ['CS_MSOA', '2013-08-30 08:00'])]);
+    check('HR-20: a resource on an empty record works P6\'s internal Standard (Labour Day worked); G does not',
+        dates(o.A1) === '2013-08-30 08:00 / 2013-09-05 16:00' && dates(o.A2) === '2013-08-30 08:00 / 2013-09-06 16:00',
+        dates(o.A1) + ' | ' + dates(o.A2));
+    o = run([T('B4-P', 4, ['CS_MSOA', '2013-08-27 08:00']), R('B4-S', [['G', 8]])], [L('B4-P', 'B4-S')]);
+    const o2 = run([R('B1', [['FB', 16]], ['CS_MSOA', '2013-09-04 08:00'])]);
+    check('HR-21: the start takes the activity calendar\'s opening first (13:00 after P\'s lunch; the day after P\'s holiday)',
+        dates(o['B4-S']) === '2013-08-27 13:00 / 2013-08-28 13:00' && dates(o2.B1) === '2013-09-05 08:00 / 2013-09-06 16:00',
+        dates(o['B4-S']) + ' | ' + dates(o2.B1));
+    o = run([R('S2-P', [['FB', 40]], ['CS_MSOA', '2013-09-27 08:00']), R('S2-S', [['FB', 4]])], [L('S2-P', 'S2-S', 'SF', -8)]);
+    check('HR-22: an SF -8 h requirement on an opening: 13:00 the day before to 09:00',
+        dates(o['S2-S']) === '2013-09-25 13:00 / 2013-09-26 09:00', dates(o['S2-S']));
+    o = run([T('C7-P', 8, ['CS_MSOA', '2013-08-30 08:00']), R('C7-S', [['Q', 4]])], [L('C7-P', 'C7-S', 'SF', -8)]);
+    const o3 = run([T('C6-P', 5, ['CS_MSOA', '2013-08-27 08:00']), R('C6-S', [['Q', 2]], ['CS_MSOA', '2013-08-27 08:00'])],
+        [L('C6-P', 'C6-S', 'FF', -1)]);
+    check('HR-23: a finish on the requirement\'s working instant prints the requirement (Thu 08:00; 13:00 after lunch)',
+        dates(o['C7-S']) === '2013-08-28 13:00 / 2013-08-29 08:00' && dates(o3['C6-S']) === '2013-08-27 10:00 / 2013-08-27 13:00',
+        dates(o['C7-S']) + ' | ' + dates(o3['C6-S']));
+    o = run([R('L14-P', [['X', 8]], ['CS_MSOA', '2013-09-12 08:00']), R('L14-S', [['FB', 4]])], [L('L14-P', 'L14-S', 'FF', -10)]);
+    check('HR-24: a requirement inside the resource\'s working time finishes there (15:00, 11:00-15:00)',
+        dates(o['L14-P']) === '2013-09-12 08:00 / 2013-09-12 17:00' && dates(o['L14-S']) === '2013-09-11 11:00 / 2013-09-11 15:00',
+        dates(o['L14-P']) + ' | ' + dates(o['L14-S']));
+    o = run([R('D5', [['X', 8, 4]], ['CS_MSOA', '2013-08-27 08:00']),
+        R('D3', [['G', 8], ['X', 40, 0, false]], ['CS_MSOA', '2013-08-27 08:00'])]);
+    check('HR-25: an assignment lag delays the assignment, not the activity; a non-driving assignment drives nothing',
+        dates(o.D5) === '2013-08-27 08:00 / 2013-08-27 21:00' && dates(o.D3) === '2013-08-27 08:00 / 2013-08-27 16:00',
+        dates(o.D5) + ' | ' + dates(o.D3));
+    o = run([T('E6-P', 7, ['CS_MSOA', '2013-09-03 08:00']), R('E6-S', [['G', 16]]), T('E6-T', 8)],
+        [L('E6-P', 'E6-S'), L('E6-S', 'E6-T')], { project_finish: '2013-09-09 17:00' });
+    check('HR-26: an early start on the activity calendar\'s holiday prints the remaining dates; the successor follows the early finish',
+        dates(o['E6-S']) === '2013-09-05 08:00 / 2013-09-06 16:00' && dates(o['E6-T']) === '2013-09-05 16:00 / 2013-09-06 16:00' &&
+        late(o['E6-S']) === '2013-09-05 08:00 / 2013-09-06 16:00' && o['E6-S'].tf_minutes === 0 && o['E6-T'].tf_minutes === 540,
+        [dates(o['E6-S']), dates(o['E6-T']), late(o['E6-S']), o['E6-S'].tf_minutes, o['E6-T'].tf_minutes].join(' | '));
+    o = run([R('F3', [['X', 16]], ['CS_MSOB', '2013-09-04 08:00'])], [], { project_finish: '2013-09-09 17:00' });
+    check('HR-27: a start-no-later-than caps the late finish through the activity\'s own duration (23:00 / 17:00)',
+        late(o.F3) === '2013-09-04 23:00 / 2013-09-05 17:00', late(o.F3));
+    o = run([R('L13-P', [['X', 8]], ['CS_MSOA', '2013-09-12 08:00']), R('L13-S', [['FB', 4]])], [L('L13-P', 'L13-S', 'SS', 6)],
+        { project_finish: '2013-09-13 12:00' });
+    check('HR-28: a late finish off the activity calendar takes its close (19:00 -> 17:00, 08:00-17:00)',
+        late(o['L13-P']) === '2013-09-12 08:00 / 2013-09-12 17:00', late(o['L13-P']));
+    o = run([R('H1-S', [['G', 8]], ['CS_ALAP', '']), T('H1-T', 4, ['CS_MSOA', '2013-08-30 08:00'])], [L('H1-S', 'H1-T')]);
+    check('HR-29: ALAP slides through the assignments (Thu 08:00-16:00 on G)',
+        dates(o['H1-S']) === '2013-08-29 08:00 / 2013-08-29 16:00', dates(o['H1-S']));
+    const st = { actual_start: '2013-08-22 08:00' };
+    o = run([R('X6', [['X', 16]], null, Object.assign({ expected_finish: '2013-08-27 20:00' }, st)),
+        R('X2', [['FB', 16]], null, Object.assign({ expected_finish: '2013-08-23 16:00' }, st))], [], { use_expected_finish: true });
+    check('HR-30: an expected finish re-sizes each assignment on its own calendar (20:00 on X); none left keeps 16 h',
+        dates(o.X6) === '2013-08-26 08:00 / 2013-08-27 20:00' && dates(o.X2) === '2013-08-26 08:00 / 2013-08-27 16:00',
+        dates(o.X6) + ' | ' + dates(o.X2));
+    const xz = { actual_start: '2013-08-01 08:00', expected_finish: '2013-08-20 17:00' };
+    o = run([T('P', 8, null, { actual_start: '2013-08-01 08:00' }), T('S16', 16, null, xz), T('S0', 0, null, xz)],
+        [L('P', 'S16', 'FF'), L('P', 'S16', 'SS'), L('P', 'S0', 'FF'), L('P', 'S0', 'SS')], { use_expected_finish: true });
+    check('HR-31: work an expected finish zeroes in this F9 stays at its start; already at nothing it is pulled',
+        dates(o.S16) === '2013-08-26 08:00 / 2013-08-26 08:00' && dates(o.S0) === '2013-08-27 08:00 / 2013-08-27 08:00',
+        dates(o.S16) + ' | ' + dates(o.S0));
+}
+
+// ── v2.10.1 — the printed float and the critical set follow the hours pass ─
+// Python paired file: _cpp_common/tests/test_printed_float_hours_2026_10_13.py
+// (P6's database, 319 projects: the hours float over the hours per day
+// matches total float on 95,004 of 95,006 and the critical flag on all).
+{
+    const hpdOf = { C5: 8, C10: 10 };
+    const A = (code, h, cal, extra) => Object.assign({ code, duration_days: h / hpdOf[cal || 'C5'], remaining_hours: h,
+        clndr_id: cal || 'C5' }, extra || {});
+    const L = (a, b, lagH, hpd) => {
+        const r = { from_code: a, to_code: b, type: 'FS', lag_days: (lagH || 0) / (hpd || 8) };
+        if (lagH !== undefined) r.lag_hours = lagH;
+        return r;
+    };
+    const O = (extra) => Object.assign({ dataDate: '2026-10-05 08:00', relationshipLagCalendar: 'rcal_Predecessor',
+        calMap: { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8 },
+            C10: { work_days: [1, 2, 3, 4, 5], hours_per_day: 10 } } }, extra || {});
+    const HALF_A = [A('H', 4), A('D', 8), A('S', 8)];
+    const HALF_R = [L('H', 'S'), L('D', 'S')];
+    let r = E.computeCPM(HALF_A, HALF_R, O());
+    let h = r.nodes.H;
+    check('HR-32: the printed float is the hours float in working days (4 h = 0.5); the day pass\'s 0 kept beside',
+        h.tf_hours === 4 && h.tf_working_days === 0.5 && h.tf_finish_working_days === 0.5 &&
+        h.ff_working_days === 0.5 && h.ff_signed_working_days === 0.5 &&
+        h.day_pass_float.tf_working_days === 0 && h.day_pass_float.ff_working_days === 0,
+        JSON.stringify([h.tf_working_days, h.ff_working_days, h.day_pass_float]));
+    check('HR-33: critical is total float at or below zero in hours (H off, D and S on)',
+        !r.criticalCodes.has('H') && r.criticalCodes.has('D') && r.criticalCodes.has('S') &&
+        r.criticalCodesArray.indexOf('H') < 0, JSON.stringify(r.criticalCodesArray));
+    r = E.computeCPM([A('L', 12), A('N', 9), A('S', 8)], [L('L', 'S'), L('N', 'S', 3)], O());
+    check('HR-34: 9 h + a 3 h lag beside 12 h is critical in hours; the day pass floated it a day',
+        r.nodes.N.tf_hours === 0 && r.nodes.N.tf_working_days === 0 && r.criticalCodes.has('N') &&
+        r.nodes.N.day_pass_float.tf_working_days === 1, JSON.stringify([r.nodes.N.tf_working_days, r.criticalCodesArray]));
+    r = E.computeCPM([A('H', 4, 'C10'), A('D', 8, 'C10'), A('S', 8, 'C10')],
+        [L('H', 'S', undefined, 10), L('D', 'S', undefined, 10)], O());
+    const r2 = E.computeCPM([A('X', 8), A('Y', 24), A('S', 8)], [L('X', 'S'), L('Y', 'S')], O());
+    const r3 = E.computeCPM(HALF_A, HALF_R, O({ floatType: 'FT_Min' }));
+    check('HR-35: working days on the activity\'s own hours per day (4 h of 10 = 0.4); whole days unmoved; FT_Min both floats',
+        r.nodes.H.tf_working_days === 0.4 && r2.nodes.X.tf_working_days === 2 && r2.nodes.X.day_pass_float === undefined &&
+        r3.nodes.H.tf_start_working_days === 0.5 && r3.nodes.H.tf_finish_working_days === 0.5 &&
+        r3.nodes.H.tf_working_days === 0.5,
+        JSON.stringify([r.nodes.H.tf_working_days, r2.nodes.X.tf_working_days, r3.nodes.H.tf_start_working_days]));
+    const plainA = HALF_A.map((a) => { const x = Object.assign({}, a); delete x.remaining_hours; return x; });
+    r = E.computeCPM(plainA, HALF_R.map((x) => { const y = Object.assign({}, x); delete y.lag_hours; return y; }), O());
+    check('HR-36: without hours the whole-day float and critical set stand',
+        r.hours.applied === false && r.nodes.H.tf_working_days === 0 && r.criticalCodes.has('H') &&
+        r.nodes.H.day_pass_float === undefined);
+    // Python paired files: test_calendarless_float_2026_10_13.py and
+    // test_alert_parity_2026_10_13.py.
+    r = E.computeCPM([{ code: 'A', duration_days: 10 }, { code: 'B', duration_days: 4 }],
+        [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }], { dataDate: '2026-01-05', projectFinish: '2026-01-12' });
+    check('HR-37: float on work with no calendar is counted on the 7-day days it was scheduled on (F93: -7)',
+        r.nodes.A.tf_working_days === -7 && r.nodes.B.tf_working_days === -7, JSON.stringify([r.nodes.A.tf_working_days]));
+    const MFc = { MF: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] } };
+    r = E.computeCPM([{ code: 'C', duration_days: 3, clndr_id: 'MF', actual_start: '2026-01-12 08:00',
+        actual_finish: '2026-01-16 17:00', is_complete: true }, { code: 'D', duration_days: 2, clndr_id: 'MF' }],
+    [{ from_code: 'C', to_code: 'D', type: 'FS', lag_days: 0 }], { dataDate: '2026-01-19 08:00', calMap: MFc });
+    const cN = r.nodes.C;
+    check('HR-38: completed work carries all four free-float fields at 0 (ff_signed and its working days included)',
+        cN.ff === 0 && cN.ff_working_days === 0 && cN.ff_signed === 0 && cN.ff_signed_working_days === 0,
+        JSON.stringify([cN.ff_signed, cN.ff_signed_working_days]));
+    // Python paired file: test_constraint_time_kept_2026_10_13.py. getTasks()
+    // hands back a constraint normalized (date + time_minutes); computeCPM
+    // re-normalizing it from the date alone lost the time (a real 24.12
+    // export: -2.5 h of float where P6 stores +7.5 h).
+    const ctRun = (cstr) => E.computeCPM([A('A', 16), Object.assign(A('B', 8), { constraint: cstr })],
+        [L('A', 'B')], O());
+    const ctRaw = ctRun({ type: 'CS_MEOB', date: '2026-10-07 12:00' });
+    const ctNorm = ctRun({ type: 'FNLT', date: '2026-10-07', time_minutes: 720 });
+    const ctS = ctRun({ type: 'SNET', date: '2026-10-08', time_minutes: 780 });
+    check('HR-39: a normalized constraint handed back keeps its time of day (FNLT 12:00: -4 h; SNET 13:00)',
+        ctNorm.nodes.B.late_finish_dt === '2026-10-07 12:00' && ctNorm.nodes.B.tf_hours === -4 &&
+        ctNorm.nodes.A.tf_hours === ctRaw.nodes.A.tf_hours && ctRaw.nodes.B.late_finish_dt === '2026-10-07 12:00' &&
+        ctS.nodes.B.early_start_dt === '2026-10-08 13:00',
+        JSON.stringify([ctNorm.nodes.B.late_finish_dt, ctNorm.nodes.B.tf_hours, ctS.nodes.B.early_start_dt]));
 }
 
 console.log('\n========================================');

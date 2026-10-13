@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.0'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.1'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -222,10 +222,23 @@ below, which schedules those lags to the minute; the alert is then an INFO.
 > | `late_finish_dt` | late finish |
 > | `tf_hours` / `ff_hours` | total and free float in working hours |
 > | `day_pass_dates` | the day pass's printed dates the hours pass replaced, where any moved |
+> | `day_pass_float` | the day pass's printed float the hours pass replaced, where any moved (since v2.10.1) |
 >
 > The printed dates (`es_date`, `ls_date`, `restart_date`, `remaining_late_start_date`,
-> `ef_last_worked_date`, `lf_last_worked_date`) take the dates of those instants; `es`,
-> `ef`, `ls`, `lf`, `ef_date`, `lf_date`, `tf` and the critical codes stay the day pass's.
+> `ef_last_worked_date`, `lf_last_worked_date`) take the dates of those instants. Since
+> v2.10.1 the printed float does too: `tf_working_days`, `tf_start_working_days`,
+> `tf_finish_working_days`, `ff_working_days` and `ff_signed_working_days` are the hours
+> pass's float over the activity calendar's hours per day (a whole number of days stays
+> an integer), and `criticalCodes` is total float at or below zero in hours. `es`, `ef`,
+> `ls`, `lf`, `ef_date`, `lf_date`, `tf` and `ff` stay the day pass's.
+>
+> **Resource dependent work** (since v2.10.1). A `TT_Rsrc` activity may carry
+> `assignments`: `[{clndr_id, remaining_hours, lag_hours, driving}]`, one per resource
+> assignment, each on its resource's calendar (`parseXER` builds them from TASKRSRC and
+> RSRC for unfinished resource dependent work). Each driving assignment is scheduled on
+> its own calendar, the start taking the activity calendar's next opening first; the
+> activity spans the earliest assignment start to the latest finish. An activity without
+> `assignments` is scheduled on its own calendar, as before.
 > `result.hours` is `{applied, unit, project_finish_dt, lag_calendar, float_type,
 > sized_from_days}`, or `{applied: false, reason}` when no activity carries hours or
 > there is no data date or no calendar. An activity without hours (inserted after

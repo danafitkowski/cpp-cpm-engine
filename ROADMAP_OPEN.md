@@ -152,6 +152,14 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.1 (reviewed 2026-10-13)
+
+No audit item changed status. v2.10.1 moves computed values (change class A under the operator procedure): resource-dependent activities are scheduled on their resources' calendars (open at v2.10.0, now closed), an empty calendar record is P6's internal Standard whatever hours it declares, and where the hours pass runs the printed float and the critical codes follow it (see CHANGELOG.md). Measured on P6's own stored dates (319 projects, 95,006 unfinished activities), the engine differs from P6 on 2 activities, both P6 non-fixed points.
+- The unit suite grew from 1,435 to 1,456.
+- The cross-validation surface grew from 127 to 136 fixtures and from 5,133 of 5,233 to 6,994 of 6,994 comparisons, 0 skipped, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.43% statements / 81.72% branches / 96.77% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+
 ## Status at v2.10.0 (reviewed 2026-10-12)
 
 No audit item changed status. v2.10.0 moves computed values (change class A under the operator procedure): where the caller hands on P6's own hours the engine also schedules in hours and minutes and prints the dates P6 prints (see CHANGELOG.md); resource-dependent activities stay on the activity's calendar (open).
@@ -224,4 +232,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.0. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.1. Update on every release that closes or opens an audit item.

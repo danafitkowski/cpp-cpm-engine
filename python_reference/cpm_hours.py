@@ -7,14 +7,16 @@ P6's hours to whole days; this core does not round anything.
 Inputs (all optional fields may be absent):
   activities: [{code, task_type ('TT_Task' | 'TT_Rsrc' | 'TT_Mile' | 'TT_FinMile'), clndr_id,
                 remaining_minutes, actual_start, actual_finish (instants or 'YYYY-MM-DD HH:MM'),
-                constraint {type, date}, constraint2 {type, date}}]
+                constraint {type, date}, constraint2 {type, date},
+                assignments [{clndr_id (the resource's calendar), remaining_minutes, lag_minutes, driving}]}]
   relationships: [{from_code, to_code, type ('FS' | 'SS' | 'FF' | 'SF'), lag_minutes}]
   data_date: instant or string; cal_map: {clndr_id: calendar_info}
   schedule_mode: 'retained_logic' | 'progress_override'
   lag_calendar: 'predecessor' | 'successor' | '24h' | 'project'; project_calendar: clndr_id
   project_finish: Must Finish By (instant or string), seeding the late dates instead of the early finish.
   float_type: 'FT_FF' (finish float, P6's default) | 'FT_Start' | 'FT_Min'.
-Output: {code: {es, ef, ls, lf (instants), restart, tf_minutes, ff_minutes, status}} plus 'project_finish'.
+Output: {code: {es, ef, ls, lf (instants), restart, tf_minutes, ff_minutes, tf_start_minutes, tf_finish_minutes,
+        ff_signed_minutes, status}} plus 'project_finish'.
 """
 from collections import defaultdict, deque
 
@@ -70,6 +72,13 @@ def _expected_finish(n, cal, start, floor, start_pred):
     else:
         rd = 0
     begin = start
+    if not keep and rd == 0 and was > 0:
+        # XZ (13-Oct-2026): work the expected finish cuts to nothing in this
+        # pass stays at its start; the FF / SF pull is not applied (P6's first
+        # F9 of the 4623 replica, XFA4 R1/R2/R3/R9). Work already at zero
+        # remaining going in is pulled as before (R7/R8, the second F9).
+        n['rem'] = 0
+        return begin, begin
     if floor is not None:
         # zero remaining work an FF / SF pulls sits at the next opening
         pull = cal.sub(floor, rd) if rd > 0 else cal.next_work(floor)
@@ -78,6 +87,132 @@ def _expected_finish(n, cal, start, floor, start_pred):
             return pull, (floor if rd > 0 else pull)
     n['rem'] = rd
     return begin, (cal.add(begin, rd) if rd > 0 else begin)
+
+
+def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
+    """(start, finish) of resource dependent work from its driving assignments (RD, 13-Oct-2026).
+
+    The start requirement first takes the activity's own calendar's next opening (4898: a constraint on a holiday of
+    the activity's calendar starts the next day there). Each assignment then works on its own resource's calendar: it
+    starts at that calendar's first opening at or after the activity's start (after its own lag) and runs its
+    remaining duration there. An FF / SF requirement (_rsrc_requirement) can move it later. The activity runs from
+    the earliest assignment start to the latest assignment finish (P6 help: resource dependent activity, driving
+    resource; 4898, resources on P6's internal Standard calendar).
+    """
+    starts, fins = [], []
+    act_start = act_cal.next_work(start_req)
+    for g in asg:
+        gc = g['cal']
+        a0 = gc.next_work(act_start)
+        # an assignment lag delays the assignment, not the activity (ZZ-CPP-RSRC
+        # D5: the activity starts 08:00, its 4 h lagged assignment 13:00)
+        s = gc.next_work(gc.add(a0, g['lag'])) if g['lag'] else a0
+        if xf is not None:
+            # XR (13-Oct-2026): an expected finish re-sizes the assignment on its
+            # own calendar, from its start to the expected finish, as P6 re-sizes
+            # its units; one the expected finish leaves no working time keeps its
+            # remaining duration (ZZ-CPP-RSRCX X1 X3 X5 X6, X2)
+            x_end = gc.prev_work_end(xf)
+            if gc.between(s, x_end) > 0:
+                g['rem'] = gc.between(s, x_end)
+        if g['rem'] > 0:
+            f = gc.add(s, g['rem'])
+            if finish_req is not None:
+                rs_, rf_ = _rsrc_requirement(gc, act_cal, finish_req, g['rem'])
+                if rs_ > s:
+                    s, f = rs_, rf_
+                    a0 = max(a0, gc.sub(s, g['lag']) if g['lag'] else s)
+        else:
+            if finish_req is not None:
+                s = max(s, gc.next_work(finish_req))
+                a0 = max(a0, gc.sub(s, g['lag']) if g['lag'] else s)
+            f = s
+        starts.append(a0)
+        fins.append(f)
+    return min(starts), max(fins)
+
+
+def _rsrc_requirement(gc, act_cal, fr, rem):
+    """(start, finish) an FF / SF finish requirement fr puts on an assignment of rem minutes on calendar gc (RQ).
+
+    Where fr is inside the resource's working time the assignment finishes there and starts rem earlier on its own
+    calendar (ZZ-CPP-RSRC3 L14: 15:00, 11:00-15:00 on an 08:00-16:00 resource; L3 L4 L8, ZZ-CPP-RSRC C2). Where fr
+    is an opening, a close or outside the resource's working time, P6 takes the resource's next opening, walks rem
+    back on the ACTIVITY's calendar to the assignment's start and works forward on the resource's: an SF -8 h
+    requirement at 08:00 starts a 4 h assignment at 13:00 the day before and finishes it 09:00 (ZZ-CPP-RSRC2 S2 S4
+    S12; S1 S3 S9 4898 24 with 16 h; ZZ-CPP-RSRC3 L1 L2). Where that finish and fr are the same working instant on
+    the activity's calendar, the assignment prints fr (13:00 after lunch, 08:00 after a weekend: ZZ-CPP-RSRC C6 C7,
+    ZZ-CPP-RSRC2 S5 S10 S11).
+    """
+    if gc.is_start(fr) and gc.is_finish(fr):
+        # interior: both a valid start and a valid finish on the resource's calendar, inside a working period
+        return gc.sub(fr, rem), fr
+    fg = gc.next_work(fr)
+    s = gc.next_work(act_cal.sub(fg, rem))
+    f = gc.add(s, rem)
+    if fr > f and act_cal.between(f, fr) == 0:
+        f = fr
+    return s, f
+
+
+def _rsrc_backward(asg, act_cal, lf_req, ls_bound):
+    """(late start, late finish) of resource dependent work from its driving assignments (RD).
+
+    The late finish requirement first takes the activity's own calendar's last close at or before it (ZZ-CPP-RSRC
+    F1: a successor's late start of 13:00, after the lunch of the activity's calendar, is 12:00), the backward mirror
+    of the forward start. Each assignment then finishes at its own calendar's last close at or before that and
+    starts its remaining duration earlier; an SS / SF bound or a start constraint caps the start as it caps a task's;
+    the assignment's lag comes off the activity's late start. The activity runs from the earliest of those starts to
+    the latest assignment finish.
+    """
+    starts, fins = [], []
+    lf_act = act_cal.prev_work_end(lf_req)
+    for g in asg:
+        gc = g['cal']
+        if g['rem'] > 0:
+            f = gc.prev_work_end(lf_act)
+            s = gc.sub(f, g['rem'])
+            act_s = gc.sub(s, g['lag']) if g['lag'] else s
+            if ls_bound is not None and ls_bound <= act_s:
+                act_s = ls_bound if (gc.is_finish(ls_bound) or gc.is_start(ls_bound)) else gc.prev_work_end(ls_bound)
+                s = gc.next_work(gc.add(act_s, g['lag'])) if g['lag'] else act_s
+                f = gc.add(s, g['rem'])
+                # the late finish that start gives takes the activity calendar's
+                # last close at or before it, and the assignment runs back from
+                # there (ZZ-CPP-RSRC3 L13: 19:00 on a seven-day resource is
+                # 17:00 on the activity's calendar, 08:00-17:00)
+                f2 = gc.prev_work_end(act_cal.prev_work_end(f))
+                if f2 < f:
+                    f = f2
+                    s = gc.sub(f, g['rem'])
+                    act_s = gc.sub(s, g['lag']) if g['lag'] else s
+        else:
+            bound = lf_act if ls_bound is None else min(lf_act, ls_bound)
+            f = s = gc.prev_work_end(bound)
+            act_s = gc.sub(s, g['lag']) if g['lag'] else s
+        starts.append(act_s)
+        fins.append(f)
+    return min(starts), max(fins)
+
+
+def _rsrc_place(n, cal, start_req, finish_req, xf=None):
+    """Place resource dependent work n from a start requirement (and an FF / SF finish requirement): its early
+    dates, its remaining dates where they differ (RD remaining dates, below) and its remaining duration."""
+    es, ef = _rsrc_forward(n['asg'], cal, start_req, finish_req, xf)
+    n.pop('rem_dates', None)
+    # RD remaining dates: an early start the resource's calendar puts on the
+    # activity's own non-working time (a holiday of its calendar, 4898 36) is
+    # not where the remaining work starts. The remaining work starts at the
+    # activity calendar's next opening and the assignments run again from
+    # there; the network keeps the early dates (successors follow them), the
+    # activity's printed dates and float follow the remaining ones.
+    rs = cal.next_work(es)
+    if rs != es and not n['started']:
+        n['rem_dates'] = _rsrc_forward(n['asg'], cal, rs, finish_req, xf)
+    # the activity's remaining duration, as P6 stores it: the working time
+    # between its remaining dates on its own calendar
+    n['rem'] = cal.between(*n.get('rem_dates', (es, ef)))
+    return es, ef
 
 
 def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, schedule_mode='retained_logic',
@@ -102,6 +237,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         n = dict(a)
         n['cal'] = cal_of(a.get('clndr_id') or project_calendar)
         n['rem'] = int(round(a.get('remaining_minutes') or 0))
+        n['rem_in'] = n['rem']
         n['as'] = _inst(a.get('actual_start'))
         n['af'] = _inst(a.get('actual_finish'))
         n['complete'] = n['af'] is not None
@@ -122,6 +258,18 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # XF (v2.9.52/53): the expected finish re-sizes the remaining work.
         n['xf'] = (_inst(a.get('expected_finish')) if use_expected_finish and not n['complete'] else None)
         n['assigned'] = int(a.get('resource_assignments') or 0)
+        # RD (13-Oct-2026): a resource dependent activity's driving assignments,
+        # each on its resource's calendar (the activity's when that is not in
+        # the calendar map); one with none schedules as a task on its own.
+        n['asg'] = []
+        if a.get('task_type') == 'TT_Rsrc':
+            for g in a.get('assignments') or []:
+                if not g.get('driving', True):
+                    continue
+                gid = g.get('clndr_id')
+                n['asg'].append({'cal': cal_of(gid) if gid not in (None, '') and gid in cal_map else n['cal'],
+                                 'rem': int(round(g.get('remaining_minutes') or 0)),
+                                 'lag': int(round(g.get('lag_minutes') or 0))})
         nodes[a['code']] = n
     preds, succs = defaultdict(list), defaultdict(list)
     for r in relationships:
@@ -272,6 +420,14 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             on = any(s <= m <= f for s, f in cal.slots(day))
             inst = t if on else cal.next_work(t)
             n['es'] = n['ef'] = inst
+        elif n['asg']:
+            es, ef = _rsrc_place(n, cal, start_req, finish_req, n['xf'])
+            if n['started']:
+                n['restart'] = es
+                n['es'] = n['as']
+            else:
+                n['es'] = es
+            n['ef'] = ef
         else:
             es = cal.next_work(start_req)
             ef = None
@@ -308,6 +464,16 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     day, m = divmod(fin, cm.DAY)
                     fin = fin if any(s <= m <= f for s, f in cal.slots(day)) else cal.next_work(fin)
                 if cs['type'] == 'MS_Finish' or fin > n['ef']:
+                    if n['asg']:
+                        # RD: the activity's own remaining duration back from
+                        # the constraint on its calendar sets the start, and
+                        # the assignments run from there (4898 54: FNET on a
+                        # Sunday, 7 h back from Friday 17:00 is 09:00, the 8 h
+                        # assignment then finishes Monday 09:00)
+                        rin = n['rem_in']
+                        st = cal.sub(cal.prev_work_end(fin), rin) if rin > 0 else fin
+                        n['es'], n['ef'] = _rsrc_place(n, cal, st, None)
+                        continue
                     n['ef'] = cal.prev_work_end(fin) if n['rem'] > 0 else fin
                     n['es'] = cal.sub(n['ef'], n['rem']) if n['rem'] > 0 else n['ef']
     proj_ef = max((n['ef'] for n in nodes.values() if n.get('ef') is not None), default=dd)
@@ -345,7 +511,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 if lpt is not None:
                     n['lpt'] = lpt
             continue
-        lf = cal.prev_work_end(seed) if n['rem'] > 0 else seed
+        # resource dependent work snaps on each assignment's calendar (RD)
+        lf = seed if n['asg'] else (cal.prev_work_end(seed) if n['rem'] > 0 else seed)
         ls_bound = None
         for r in succs[c]:
             s = nodes[r['to_code']]
@@ -390,8 +557,18 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     # 00:00); zero-length work takes the close before it
                     # (4928 C24-S, below)
                     at = cal.next_work(cs['at']) if n['rem'] > 0 else cs['at']
+                    if n['asg'] and n['rem'] > 0:
+                        # RD: the activity's own remaining duration (on its
+                        # calendar, as this pass sized it) from the bound caps
+                        # its late finish; the assignments run back from there
+                        # (ZZ-CPP-RSRC F3: SNLT on a holiday of the activity's
+                        # calendar, 8 h from the next opening is 17:00)
+                        lf = min(lf, cal.add(at, n['rem']))
+                        continue
                     ls_bound = at if ls_bound is None else min(ls_bound, at)
-        if n['rem'] > 0:
+        if n['asg']:
+            ls, lf = _rsrc_backward(n['asg'], cal, lf, ls_bound)
+        elif n['rem'] > 0:
             lf = cal.prev_work_end(lf)
             ls = cal.sub(lf, n['rem'])
             if ls_bound is not None and ls_bound <= ls:
@@ -455,6 +632,15 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         ef_b = min(ef_b, n['lf'])
         if ef_b <= n['ef']:
             continue
+        if n['asg']:
+            # RD: the assignments finish by the bound on their own calendars,
+            # as on the backward pass (ZZ-CPP-RSRC H1)
+            new_es, new_ef = _rsrc_backward(n['asg'], cal, ef_b, None)
+            if new_es > n['es']:
+                n['es'], n['ef'] = new_es, new_ef
+                n.pop('rem_dates', None)
+                n['rem'] = cal.between(new_es, new_ef)
+            continue
         if n['rem'] > 0:
             ef_b = cal.prev_work_end(ef_b)
             new_es = cal.sub(ef_b, n['rem'])
@@ -472,14 +658,15 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
     out = {}
     for c, n in nodes.items():
         cal = n['cal']
-        tf = None
+        tf = tf_fin = tf_sta = None
+        r_es, r_ef = n.get('rem_dates') or (n.get('restart', n.get('es')), n.get('ef'))
         if not n['complete']:
             # P6's Total Float column: finish float (LF - EF), start float
             # (remaining late start - remaining early start) or the smaller
-            tf_fin = cal.between(n['ef'], n['lf'])
-            tf_sta = cal.between(n.get('restart', n['es']), n.get('rls', n['ls']))
+            tf_fin = cal.between(r_ef, n['lf'])
+            tf_sta = cal.between(r_es, n.get('rls', n['ls']))
             tf = tf_sta if float_type == 'FT_Start' else (min(tf_fin, tf_sta) if float_type == 'FT_Min' else tf_fin)
-        ff = None
+        ff = ff_signed = None
         if not n['complete']:
             # Free float (day engine FF rules, in working minutes): the least
             # slack to any successor, floored at zero. A completed successor
@@ -502,9 +689,9 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 else:
                     s_start, s_fin = s.get('restart', s['es']), s['ef']
                 if t in ('FS', 'FF'):
-                    pa = lag_fwd(n['ef'], r['lag'], lc)
+                    pa = lag_fwd(r_ef, r['lag'], lc)
                 else:
-                    st = ss_anchor(n) if t == 'SS' else n.get('restart', n['es'])
+                    st = ss_anchor(n) if t == 'SS' else r_es
                     lag = r['lag']
                     if n['started'] and retained:
                         lag = 0 if s['complete'] else unexpired(n['as'], lag, lc, n)
@@ -516,13 +703,18 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 # none on work carrying an expected finish in force, or pinned
                 # by a mandatory date, open end or not (P6: 4683 A0229, 4882
                 # P18090, 4644 E01-S, 4880 683)
-                ff = 0
+                ff_signed = 0
             elif cands:
-                ff = max(0, min(cands))
+                ff_signed = min(cands)
             else:
-                ff = max(0, cal.between(n['ef'], proj_ef))
-        out[c] = {'es': n['es'], 'ef': n['ef'], 'ls': n['ls'], 'lf': n['lf'], 'restart': n.get('restart'),
+                ff_signed = cal.between(r_ef, proj_ef)
+            ff = max(0, ff_signed)
+        p_es, p_ef = n.get('rem_dates') or (n['es'], n['ef'])
+        out[c] = {'es': p_es, 'ef': p_ef, 'ls': n['ls'], 'lf': n['lf'], 'restart': n.get('restart'),
                   'rls': n.get('rls'), 'tf_minutes': tf, 'ff_minutes': ff,
+                  # the two total floats P6 picks between, and free float
+                  # before the floor at zero (printed float, v2.10.1)
+                  'tf_start_minutes': tf_sta, 'tf_finish_minutes': tf_fin, 'ff_signed_minutes': ff_signed,
                   'status': 'complete' if n['complete'] else ('started' if n['started'] else 'not started')}
     out['__project_finish__'] = proj_ef
     return out

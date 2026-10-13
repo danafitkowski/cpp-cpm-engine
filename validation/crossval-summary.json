@@ -1,42 +1,39 @@
 {
-  "engine_version": "2.10.0",
-  "generated_utc": "2026-10-12T21:21:48.855Z",
+  "engine_version": "2.10.1",
+  "generated_utc": "2026-10-13T10:33:22.001Z",
   "fixtures": {
-    "total": 127,
-    "passed": 127,
+    "total": 136,
+    "passed": 136,
     "failed": 0
   },
   "checks": {
-    "executed": 5133,
+    "executed": 6994,
     "failed": 0,
-    "passed": 5133,
-    "skipped": 100,
-    "surface": 5233
+    "passed": 6994,
+    "skipped": 0,
+    "surface": 6994
   },
-  "skips_by_field": {
-    "ff_signed": 50,
-    "ff_signed_working_days": 50
-  },
+  "skips_by_field": {},
   "skips_by_kind": {
     "one_sided": 0,
-    "mutual": 100
+    "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 125,
-    "project_finish": 125,
-    "critical_codes": 125,
-    "topo_order": 125,
-    "alert_count": 115,
-    "alert_severity_counts": 115,
-    "node <id>": 4395,
+    "project_finish_num": 134,
+    "project_finish": 134,
+    "critical_codes": 134,
+    "topo_order": 134,
+    "alert_count": 134,
+    "alert_severity_counts": 134,
+    "node <id>": 6175,
     "threw (both engines)": 2,
-    "hours": 6
+    "hours": 13
   },
   "rows": [
     {
       "id": "F1",
       "name": "F1 — A→B→C linear, no cal",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -44,7 +41,7 @@
     {
       "id": "F2",
       "name": "F2 — A→B→C linear, MonFri",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -52,7 +49,7 @@
     {
       "id": "F3",
       "name": "F3 — A→B→C + A→X (off-CP), MonFri",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -60,7 +57,7 @@
     {
       "id": "F4",
       "name": "F4 — Mixed FS/SS/FF/SF + lags",
-      "checks": 41,
+      "checks": 51,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -68,7 +65,7 @@
     {
       "id": "F5",
       "name": "F5 — MonFri + holidays",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -76,7 +73,7 @@
     {
       "id": "F6",
       "name": "F6 — 7-day calendar (no weekends)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -84,7 +81,7 @@
     {
       "id": "F6.5",
       "name": "F6.5 — SF + FS mix",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -92,7 +89,7 @@
     {
       "id": "F7",
       "name": "F7 — Diamond network",
-      "checks": 41,
+      "checks": 51,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -100,7 +97,7 @@
     {
       "id": "F8",
       "name": "F8 — Numeric codes interleaved with alpha codes",
-      "checks": 48,
+      "checks": 60,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -108,7 +105,7 @@
     {
       "id": "F9",
       "name": "F9 — FS-3 lead",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -116,18 +113,15 @@
     {
       "id": "F10",
       "name": "F10 — Completed + uncompleted mix",
-      "checks": 25,
+      "checks": 33,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F11",
       "name": "F11 — MonFri + 7-day calendars mixed",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -135,7 +129,7 @@
     {
       "id": "F12",
       "name": "F12 — early_start pin ahead of logic",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -143,7 +137,7 @@
     {
       "id": "F13",
       "name": "F13 — SNET primary constraint",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -151,7 +145,7 @@
     {
       "id": "F14",
       "name": "F14 — MS_Start + FNLT combo",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -159,7 +153,7 @@
     {
       "id": "F15",
       "name": "F15 — ALAP consumes float",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -167,7 +161,7 @@
     {
       "id": "F16",
       "name": "F16 — SNLT primary (forward ALERT + backward LF clamp)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -175,7 +169,7 @@
     {
       "id": "F17",
       "name": "F17 — FNET pushes EF forward (warn)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -183,7 +177,7 @@
     {
       "id": "F18",
       "name": "F18 — MS_Finish LF pin (forward warn + backward clamp)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -191,7 +185,7 @@
     {
       "id": "F19",
       "name": "F19 — Secondary constraint pair (SNET + FNLT window)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -199,18 +193,15 @@
     {
       "id": "F20",
       "name": "F20 — Out-of-sequence (completed B before A starts)",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F21",
       "name": "F21 — ALAP slide suppressed by actual_start",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -218,7 +209,7 @@
     {
       "id": "F22",
       "name": "F22 — Calendar fallback (missing clndr_id triggers ALERT)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -234,7 +225,7 @@
     {
       "id": "F24",
       "name": "F24 — Free-float parity DOCUMENTED GAP (no FF in Python ref)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -242,7 +233,7 @@
     {
       "id": "F26",
       "name": "F26 — Calendar fallback, 3 distinct missing clndr_ids",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -250,7 +241,7 @@
     {
       "id": "F27",
       "name": "F27 — actual_start AFTER data_date pins ES (P6 forward-pass semantics)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -258,7 +249,7 @@
     {
       "id": "F28",
       "name": "F28 — ALAP primary + FNLT secondary compound",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -266,7 +257,7 @@
     {
       "id": "F29",
       "name": "F29 — Mixed FF + SS predecessors converge on same successor",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -274,7 +265,7 @@
     {
       "id": "F30",
       "name": "F30 — Negative lag FS-2 (no calendar, ordinal arithmetic)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -290,7 +281,7 @@
     {
       "id": "F32",
       "name": "F32 — Far-future date arithmetic (2037-12-15 + 100d, post-Y2038)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -298,7 +289,7 @@
     {
       "id": "F33",
       "name": "F33 — MS_Start primary pins LS=ES, TF=0 (v2.9.12 T1.1)",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -306,7 +297,7 @@
     {
       "id": "F34",
       "name": "F34 — MS_Start suppressed by actual_start (v2.9.12 T1.2)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -314,7 +305,7 @@
     {
       "id": "F35",
       "name": "F35 — unrecognized constraint token (v2.9.12 T1.6)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -322,7 +313,7 @@
     {
       "id": "F36",
       "name": "F36 — empty work_days falls back to MonFri (v2.9.12 T2.16)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -330,7 +321,7 @@
     {
       "id": "F37",
       "name": "F37 — CS_MANSTART alias (v2.9.12 T1.7)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -338,7 +329,7 @@
     {
       "id": "F38",
       "name": "F38 — CS_MANFINISH alias (v2.9.12 T1.7)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -346,18 +337,15 @@
     {
       "id": "F43",
       "name": "F43 — actual_finish without actual_start (v2.9.12 T4.25)",
-      "checks": 11,
+      "checks": 15,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F44",
       "name": "F44 — ALAP on secondary slot (v2.9.12 T4.26)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -365,7 +353,7 @@
     {
       "id": "F45",
       "name": "F45 — in-progress retained-logic LF=EF pin (F1-Bug1/F1-Bug2)",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -373,7 +361,7 @@
     {
       "id": "F46",
       "name": "F46 — single in-progress activity retained-logic EF (F1-Bug2)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -381,7 +369,7 @@
     {
       "id": "F47",
       "name": "F47 — stored early_start NOT a SNET floor (F1-Bug5)",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -389,7 +377,7 @@
     {
       "id": "F48",
       "name": "F48 - out-of-sequence retained logic: remaining restarts behind pred (case 10)",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -397,7 +385,7 @@
     {
       "id": "F49",
       "name": "F49 - out-of-sequence progress_override: remaining continues from data date",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -405,7 +393,7 @@
     {
       "id": "F50",
       "name": "F50 — special_workdays: a forced-ON Saturday and a forced-OFF Monday",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -413,51 +401,39 @@
     {
       "id": "F51",
       "name": "F51 — pass-through: completed C carries unfinished P's date to X",
-      "checks": 25,
+      "checks": 33,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F52",
       "name": "F52 — progress_override ignores the pass-through (same topology as F51)",
-      "checks": 25,
+      "checks": 33,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F53",
       "name": "F53 — pass-through carries the lag into C; the lag out of C adds its unexpired part",
-      "checks": 25,
+      "checks": 33,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F54",
       "name": "F54 — pass-through survives a chain of two completed activities",
-      "checks": 30,
+      "checks": 42,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed": 2,
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F55",
       "name": "F55 — SS_U: restart wins over actual_start+lag",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -465,7 +441,7 @@
     {
       "id": "F56",
       "name": "F56 — SS_U: actual_start+lag wins when it exceeds the restart",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -473,7 +449,7 @@
     {
       "id": "F57",
       "name": "F57 — PO_SNAP: progress_override restart snaps off a weekend data date",
-      "checks": 13,
+      "checks": 15,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -481,7 +457,7 @@
     {
       "id": "F58",
       "name": "F58 — SSL: SS off a started predecessor whose restart is held past the data date",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -489,7 +465,7 @@
     {
       "id": "F59",
       "name": "F59 — SSL: a used-up lag lays nothing; X starts on the held restart",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -497,7 +473,7 @@
     {
       "id": "F60",
       "name": "F60 — SSL: SF off a started predecessor whose restart is held",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -505,18 +481,15 @@
     {
       "id": "F61",
       "name": "F61 — SSL: an SS link off started work lays no lag into a completed activity",
-      "checks": 32,
+      "checks": 42,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F62",
       "name": "F62 — SSL: a future actual start uses up none of the lag",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -524,7 +497,7 @@
     {
       "id": "F63",
       "name": "F63 — SSL: six-day predecessor, Mon-Fri successor, predecessor lag calendar",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -532,7 +505,7 @@
     {
       "id": "F64",
       "name": "F64 — SSL: a started successor restarts at the held restart + unused lag",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -540,128 +513,95 @@
     {
       "id": "F65",
       "name": "F65 — FA: FS+0 off an actual finish recorded weeks after the data date, beside an unfinished predecessor",
-      "checks": 30,
+      "checks": 42,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F66",
       "name": "F66 — FA: FS+2 off an actual finish after the data date is laid from the data date",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F67",
       "name": "F67 — FA: SS+3 off an actual start after the data date",
-      "checks": 16,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F68",
       "name": "F68 — FA: FF+2 off an actual finish after the data date",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F69",
       "name": "F69 — FA: the unexpired lag rides on a carried date",
-      "checks": 25,
+      "checks": 33,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F70",
       "name": "F70 — FA: the backward pass takes the unexpired lag off the carried bound",
-      "checks": 32,
+      "checks": 42,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F71",
       "name": "F71 — FA: a started successor restarts at the data date plus the unexpired lag",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F72",
       "name": "F72 — FA: progress override lays the lag from the data date too",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F73",
       "name": "F73 — FA: without a data date the actual dates still drive",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F74",
       "name": "F74 — FA: six-day predecessor, Mon-Fri successor, predecessor lag calendar",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F75",
       "name": "F75 — CC: a completed-to-completed link lays no lag",
-      "checks": 23,
+      "checks": 33,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed": 2,
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F76",
       "name": "F76 — SSL measured: SS under lag from Actual Start is laid from the data date",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -669,7 +609,7 @@
     {
       "id": "F77",
       "name": "F77 — SSL measured: under Actual Start the successor can start before the restart",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -677,7 +617,7 @@
     {
       "id": "F78",
       "name": "F78 — SSL measured: a used-up lag under Actual Start starts on the data date (flag N)",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -685,7 +625,7 @@
     {
       "id": "F79",
       "name": "F79 — SSL measured: Actual Start, six-day predecessor, Mon-Fri successor",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -693,7 +633,7 @@
     {
       "id": "F80",
       "name": "F80 — SSL measured: under Actual Start a started successor restarts at the data date + unused lag",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -701,7 +641,7 @@
     {
       "id": "F81",
       "name": "F81 — SSL measured: SF ignores lag from Actual Start",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -709,51 +649,39 @@
     {
       "id": "F82",
       "name": "F82 — SSL measured: no lag from started work into a completed activity; float through it",
-      "checks": 39,
+      "checks": 51,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F83",
       "name": "F83 — SSL measured: into a completed activity under Actual Start the data date is carried",
-      "checks": 39,
+      "checks": 51,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F84",
       "name": "F84 — SSL measured: SF into a completed activity carries the restart under Actual Start",
-      "checks": 32,
+      "checks": 42,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F85",
       "name": "F85 — SSL measured: other links into completed work keep their lag",
-      "checks": 70,
+      "checks": 96,
       "fails": 0,
-      "skips": 6,
-      "skips_by_field": {
-        "ff_signed": 3,
-        "ff_signed_working_days": 3
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F86",
       "name": "F86 — SSL measured: an unknown lag-from option alerts and keeps Early Start",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -761,7 +689,7 @@
     {
       "id": "F87",
       "name": "F87 — MFB: an earlier Must Finish By seeds negative float",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -769,7 +697,7 @@
     {
       "id": "F88",
       "name": "F88 — MFB: a later Must Finish By seeds positive float",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -777,7 +705,7 @@
     {
       "id": "F89",
       "name": "F89 — MFB: a Must Finish By inside the working day",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -785,7 +713,7 @@
     {
       "id": "F90",
       "name": "F90 — MFB: a Must Finish By on a non-working day",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -793,7 +721,7 @@
     {
       "id": "F91",
       "name": "F91 — MFB: a bare-date Must Finish By",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -801,7 +729,7 @@
     {
       "id": "F92",
       "name": "F92 — MFB: the Must Finish By on each activity's own calendar",
-      "checks": 27,
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -809,7 +737,7 @@
     {
       "id": "F93",
       "name": "F93 — MFB: an ordinal (calendar-less) network",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -817,7 +745,7 @@
     {
       "id": "F94",
       "name": "F94 — MFB: an unparseable Must Finish By",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -825,7 +753,7 @@
     {
       "id": "F95",
       "name": "F95 — MFB: a finish constraint beside the Must Finish By",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -833,18 +761,15 @@
     {
       "id": "F96",
       "name": "F96 — RES: a completed activity resumed after the data date holds its successors",
-      "checks": 30,
+      "checks": 42,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F97",
       "name": "F97 — RES: a suspended activity restarts on its resume date",
-      "checks": 20,
+      "checks": 24,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -852,95 +777,71 @@
     {
       "id": "F98",
       "name": "F98 — RES: a resume date at or before the data date",
-      "checks": 18,
+      "checks": 24,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F99",
       "name": "F99 — RES: progress override does not apply a resume date",
-      "checks": 23,
+      "checks": 33,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F100",
       "name": "F100 — CC: completed to completed, with and without a resume date",
-      "checks": 35,
+      "checks": 51,
       "fails": 0,
-      "skips": 6,
-      "skips_by_field": {
-        "ff_signed": 3,
-        "ff_signed_working_days": 3
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F101",
       "name": "F101 — FF: free float to a completed successor's stamp",
-      "checks": 23,
+      "checks": 33,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F102",
       "name": "F102 — MFB + RES + CC together",
-      "checks": 42,
+      "checks": 60,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed": 2,
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F103",
       "name": "F103 — RES: a resume date without a suspend date is not applied",
-      "checks": 32,
+      "checks": 42,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F104",
       "name": "F104 - MFB under \"opened projects\": the measured shape at a midnight data date",
-      "checks": 79,
+      "checks": 105,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed": 2,
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F105",
       "name": "F105 - MFB under \"opened projects\": the measured shape at the 17:00 close",
-      "checks": 79,
+      "checks": 105,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed": 2,
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F106",
       "name": "F106 - XF: expected finish on re-sizes remaining work (stretch, shrink, logic, weekend, FF)",
-      "checks": 125,
+      "checks": 159,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -948,7 +849,7 @@
     {
       "id": "F107",
       "name": "F107 - XF: the same network with the expected-finish option off",
-      "checks": 125,
+      "checks": 159,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -956,7 +857,7 @@
     {
       "id": "F108",
       "name": "F108 - UW: finish constraints on work already under way",
-      "checks": 83,
+      "checks": 105,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -964,51 +865,39 @@
     {
       "id": "F109",
       "name": "F109 - XF: an expected finish behind FF logic, retained logic",
-      "checks": 123,
+      "checks": 159,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F110",
       "name": "F110 - XF: an expected finish behind FF logic, progress override",
-      "checks": 123,
+      "checks": 159,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F111",
       "name": "F111 - XA: no working time left zeroes only unassigned work (data date Wed 17:00)",
-      "checks": 250,
+      "checks": 330,
       "fails": 0,
-      "skips": 8,
-      "skips_by_field": {
-        "ff_signed": 4,
-        "ff_signed_working_days": 4
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F112",
       "name": "F112 - XA: the 704 h activity on a seven-day calendar keeps its remaining work",
-      "checks": 30,
+      "checks": 42,
       "fails": 0,
-      "skips": 4,
-      "skips_by_field": {
-        "ff_signed": 2,
-        "ff_signed_working_days": 2
-      }
+      "skips": 0,
+      "skips_by_field": {}
     },
     {
       "id": "F113",
       "name": "F113 - OW: start constraints on a Saturday, a holiday and after the close",
-      "checks": 90,
+      "checks": 114,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1016,7 +905,7 @@
     {
       "id": "F114",
       "name": "F114 - OW: finish constraints on a Sunday (zero duration and two days)",
-      "checks": 41,
+      "checks": 51,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1024,7 +913,7 @@
     {
       "id": "F115",
       "name": "F115 - AL: ALAP by free float (FS, a chain, SS, no free float, an open end)",
-      "checks": 139,
+      "checks": 177,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1032,7 +921,7 @@
     {
       "id": "F116",
       "name": "F116 - FM: a finish milestone held at Friday 17:00 drives seven-day work from Saturday",
-      "checks": 62,
+      "checks": 78,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1040,7 +929,7 @@
     {
       "id": "F117",
       "name": "F117 - SR: start float of work under way, FT_Start, retained logic",
-      "checks": 55,
+      "checks": 69,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1048,7 +937,7 @@
     {
       "id": "F118",
       "name": "F118 - SR: start float of work under way, FT_Min, progress override",
-      "checks": 55,
+      "checks": 69,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1056,7 +945,7 @@
     {
       "id": "F119",
       "name": "F119 - EX: external early start and late finish (SD_Both)",
-      "checks": 160,
+      "checks": 204,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1064,7 +953,7 @@
     {
       "id": "F120",
       "name": "F120 - EX: the same with relationships to other projects ignored (SD_None)",
-      "checks": 160,
+      "checks": 204,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1072,7 +961,7 @@
     {
       "id": "F121",
       "name": "F121 - MD: milestone instants at a Monday opening",
-      "checks": 251,
+      "checks": 321,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1080,7 +969,7 @@
     {
       "id": "F122",
       "name": "F122 - MD: milestone instants on the parity probe shapes (data date at a close)",
-      "checks": 146,
+      "checks": 186,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1088,7 +977,7 @@
     {
       "id": "F123",
       "name": "F123 - MD: a Friday-close data date and a close off the milestone's own calendar",
-      "checks": 34,
+      "checks": 42,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1096,7 +985,7 @@
     {
       "id": "F124",
       "name": "F124 - WD: zero-length tasks close late, and hand the close back",
-      "checks": 111,
+      "checks": 141,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1104,7 +993,7 @@
     {
       "id": "F125",
       "name": "F125 - WD: progress override honours the links into a started activity's finish",
-      "checks": 83,
+      "checks": 105,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1112,7 +1001,7 @@
     {
       "id": "F126",
       "name": "F126 - HR: a half-day lag and a half-day activity, to the minute",
-      "checks": 29,
+      "checks": 37,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1120,7 +1009,7 @@
     {
       "id": "F127",
       "name": "F127 - HR: work a pipeline inserted (no hours) or re-sized (days moved) is sized from its days",
-      "checks": 29,
+      "checks": 37,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1128,7 +1017,7 @@
     {
       "id": "F128",
       "name": "F128 - HR: SS lag off suspended work, SF off started work under \"lag from Actual Start\"",
-      "checks": 47,
+      "checks": 57,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1136,7 +1025,7 @@
     {
       "id": "F129",
       "name": "F129 - HR: an SF requirement after lunch, an FF requirement off working time",
-      "checks": 45,
+      "checks": 57,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1144,7 +1033,7 @@
     {
       "id": "F130",
       "name": "F130 - HR: ALAP by free float, a Start On off working time, a timed constraint",
-      "checks": 63,
+      "checks": 77,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1152,13 +1041,82 @@
     {
       "id": "F131",
       "name": "F131 - HR: progress override, completed work after the data date, an exception day with hours",
-      "checks": 51,
+      "checks": 67,
       "fails": 0,
-      "skips": 2,
-      "skips_by_field": {
-        "ff_signed": 1,
-        "ff_signed_working_days": 1
-      }
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F132",
+      "name": "F132 - RD: assignments on their resources' calendars; a lag delays its assignment; a non-driving one drives nothing",
+      "checks": 47,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F133",
+      "name": "F133 - RD: the start takes the activity calendar's opening; the late side its close; a start-no-later-than caps it",
+      "checks": 57,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F134",
+      "name": "F134 - RQ: FF and SF requirements on resource dependent work, on an opening and inside working time",
+      "checks": 67,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F135",
+      "name": "F135 - XR / XZ: an expected finish re-sizes each assignment; work it zeroes in this pass stays at its start",
+      "checks": 47,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F136",
+      "name": "F136 - PF: the printed float is the hours float in working days; critical is total float <= 0 in hours",
+      "checks": 67,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F137",
+      "name": "F137 - PF: under FT_Min both floats follow the hours pass, on a seven-day calendar beside a five-day one",
+      "checks": 57,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F138",
+      "name": "F138 - float on work no calendar reaches is counted on the 7-day days it was scheduled on",
+      "checks": 33,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F139",
+      "name": "F139 - a completed activity finished on a later day than the data date: the alert in both engines, and every free-float field",
+      "checks": 33,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F140",
+      "name": "F140 - a constraint handed back normalized (date + time_minutes, as getTasks() carries it) keeps its time",
+      "checks": 57,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
     }
   ]
 }

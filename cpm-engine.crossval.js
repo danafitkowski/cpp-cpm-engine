@@ -169,6 +169,11 @@ result_json = {
             'late_start_dt': n.get('late_start_dt'), 'late_finish_dt': n.get('late_finish_dt'),
             'tf_hours': n.get('tf_hours'), 'ff_hours': n.get('ff_hours'),
             'day_pass_dates': n.get('day_pass_dates'),
+            # PF (v2.10.1) - the start / finish float parts and the day pass's
+            # float where the printed float moved to the hours pass's.
+            'tf_start_working_days': n.get('tf_start_working_days'),
+            'tf_finish_working_days': n.get('tf_finish_working_days'),
+            'day_pass_float': n.get('day_pass_float'),
         }
         for c, n in result['nodes'].items()
     },
@@ -237,6 +242,11 @@ function runJS(payload) {
             late_start_dt: n.late_start_dt, late_finish_dt: n.late_finish_dt,
             tf_hours: n.tf_hours, ff_hours: n.ff_hours,
             day_pass_dates: n.day_pass_dates,
+            // PF (v2.10.1) - the start / finish float parts and the day pass's
+            // float where the printed float moved to the hours pass's.
+            tf_start_working_days: n.tf_start_working_days,
+            tf_finish_working_days: n.tf_finish_working_days,
+            day_pass_float: n.day_pass_float,
         };
     }
     // Severity-level alert breakdown for crossval parity (Round 6).
@@ -295,7 +305,10 @@ const EMIT_JSON = process.argv.includes('--json');
 //   carve-outs claimed the OUT_OF_SEQUENCE ALERT was JS-only, but the Python
 //   reference has emitted it since the v2.9.27 paired-fix wave, so alert
 //   parity now runs on every fixture (925/989 -> 931/995). The option is
-//   kept for future genuine divergences; nothing sets it today.
+//   kept for future genuine divergences; nothing sets it today. (The ten
+//   fixtures that set it from v2.9.47 to v2.10.0, F65, F67, F96, F99, F101,
+//   F102, F126, F127, F129 and F131, stopped in v2.10.1, when the Python
+//   reference took the FUTURE_ACTUAL_FINISH and SUB_DAY_LAG_ROUNDED alerts.)
 // opts.note: string — printed under the fixture header for context.
 //
 // Round 6 expansion: compareFixture now compares alert_severity_counts
@@ -427,7 +440,8 @@ function compareFixture(name, payload, opts) {
     const _hrNull = (v) => (v === undefined ? null : v);
     const _hrOf = (n) => ({ early_start_dt: _hrNull(n.early_start_dt), early_finish_dt: _hrNull(n.early_finish_dt),
         late_start_dt: _hrNull(n.late_start_dt), late_finish_dt: _hrNull(n.late_finish_dt),
-        tf_hours: _hrNull(n.tf_hours), ff_hours: _hrNull(n.ff_hours), day_pass_dates: _hrNull(n.day_pass_dates) });
+        tf_hours: _hrNull(n.tf_hours), ff_hours: _hrNull(n.ff_hours), day_pass_dates: _hrNull(n.day_pass_dates),
+        day_pass_float: _hrNull(n.day_pass_float) });
     if (opts.hours) eq('hours', py.hours, js.hours);
     for (const code of Object.keys(py.nodes).sort()) {
         const a = py.nodes[code], b = js.nodes[code];
@@ -448,6 +462,12 @@ function compareFixture(name, payload, opts) {
         // compare bit-identically. Only compare if BOTH sides emit the field.
         eqGuarded('node ' + code + '.tf_working_days', 'tf_working_days',
             a.tf_working_days, b.tf_working_days, false);
+        // PF (v2.10.1) - the two floats P6 picks between under FT_Start /
+        // FT_Min, printed beside the total float.
+        eqGuarded('node ' + code + '.tf_start_working_days', 'tf_start_working_days',
+            a.tf_start_working_days, b.tf_start_working_days, false);
+        eqGuarded('node ' + code + '.tf_finish_working_days', 'tf_finish_working_days',
+            a.tf_finish_working_days, b.tf_finish_working_days, false);
         // v2.9.27 — audit F24. ff + ff_working_days backported to Python.
         eqGuarded('node ' + code + '.ff', 'ff', a.ff, b.ff, true);
         eqGuarded('node ' + code + '.ff_working_days', 'ff_working_days',
@@ -787,10 +807,8 @@ compareFixture('F15 — ALAP consumes float', {
 // fixtures were absent from the 16-fixture baseline. Each fixture below
 // exercises a code path that previously had ONLY JS-side test coverage
 // (cpm-engine.test.js Section R-*); crossval now confirms Python and JS
-// agree on the produced output. Where they intentionally diverge (e.g.
-// OoS detection is JS-only, FF computation is JS-only), the gap is
-// documented INLINE with the `skip_alert_parity` / "INTENTIONAL gap"
-// markers below.
+// agree on the produced output. Since v2.10.1 no fixture carries an
+// INTENTIONAL gap: alert parity runs on every fixture that has output.
 
 // =====================================================================
 // FIXTURE 16 — SNLT primary constraint (forward warn + backward LF clamp)
@@ -1708,14 +1726,13 @@ compareFixture('F64 — SSL: a started successor restarts at the held restart + 
 // predecessor restart started work. Data date Monday 2026-01-19 08:00.
 //
 // Alert parity. Where an actual finish is recorded on a LATER DAY than the
-// data date the JS engine also emits its per-activity FUTURE_ACTUAL_FINISH
-// ALERT ('future-actual-finish', v2.9.13 F1-Bug3), which the Python reference
-// has never carried; those fixtures (F65, F67) set skip_alert_parity and say
-// so. It is a pre-existing gap, not part of this change. Every other fixture
-// records its future actual later on the data date's own day (17:00 against
-// 08:00), where that ALERT compares dates and stays silent while the FA rule
-// compares instants, so alert parity runs on them, the new
-// 'actual-after-data-date' WARN included.
+// data date both engines emit the per-activity FUTURE_ACTUAL_FINISH ALERT
+// ('future-actual-finish', v2.9.13 F1-Bug3 in JS, in the Python reference
+// since v2.10.1; F65 and F67 skipped alert parity for it until then). Every
+// other fixture records its future actual later on the data date's own day
+// (17:00 against 08:00), where that ALERT compares dates and stays silent
+// while the FA rule compares instants, the 'actual-after-data-date' WARN
+// included.
 
 // F65 — the real-file shape: C's finish is recorded weeks after the data
 // date; S starts off its unfinished predecessor N (2026-01-21), not off C
@@ -1737,8 +1754,7 @@ compareFixture('F65 — FA: FS+0 off an actual finish recorded weeks after the d
     ],
     data_date: '2026-01-19 08:00',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
-}, { skip_alert_parity: true,
-     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+});
 
 // F66 — FS+2 off an actual finish later on the data date's own day: two
 // working days from the data date (Wed 2026-01-21; v2.9.46 Thu 2026-01-22).
@@ -1768,8 +1784,7 @@ compareFixture('F67 — FA: SS+3 off an actual start after the data date', {
     ],
     data_date: '2026-01-19 08:00',
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [] } },
-}, { skip_alert_parity: true,
-     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+});
 
 // F68 — FF+2 off an actual finish after the data date: S finishes no earlier
 // than two days from the data date (S on Tue 2026-01-20; v2.9.46 Wed 01-21).
@@ -2311,8 +2326,7 @@ compareFixture('F96 — RES: a completed activity resumed after the data date ho
     data_date: '2025-07-01 17:00',
     cal_map: RES_CAL,
     relationship_lag_calendar: 'predecessor',
-}, { skip_alert_parity: true,
-     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+});
 
 // F97 — probe S13: P suspended 28-Sep, resumed Mon 12-Oct-2026, data date
 // 05-Oct; P6 restarts it 12-Oct. Its SS + 15 d successor is where P6 counts
@@ -2371,8 +2385,7 @@ compareFixture('F99 — RES: progress override does not apply a resume date', {
     cal_map: RES_CAL,
     schedule_mode: 'progress_override',
     relationship_lag_calendar: 'predecessor',
-}, { skip_alert_parity: true,
-     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C; the Python reference never carried it' });
+});
 
 // F100 — the demo row A1020 -> A1370x -> A1380x: FS + 60 d between completed
 // activities lays no lag, and A1370x is stamped on its own resume date
@@ -2421,8 +2434,7 @@ compareFixture('F101 — FF: free float to a completed successor\'s stamp', {
     data_date: '2025-07-01 17:00',
     cal_map: RES_CAL,
     relationship_lag_calendar: 'predecessor',
-}, { skip_alert_parity: true,
-     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on D; the Python reference never carried it' });
+});
 
 // F102 — all three together on a small network with the demo's shape: a
 // resumed carrier ahead of the critical path, a Must Finish By behind it.
@@ -2451,8 +2463,7 @@ compareFixture('F102 — MFB + RES + CC together', {
     cal_map: { MF: { work_days: [1,2,3,4,5], holidays: [], raw: RAW_MF_0817 } },
     relationship_lag_calendar: 'predecessor',
     project_finish: '2025-10-31 17:00',
-}, { skip_alert_parity: true,
-     note: 'INTENTIONAL gap: the JS-only FUTURE_ACTUAL_FINISH ALERT (v2.9.13) fires on C2; the Python reference never carried it' });
+});
 
 // F103 — a resume date with NO suspend date is not applied. Every P6-scheduled
 // row the RES rule was measured on carries both (P6 enters a resume date only
@@ -3001,15 +3012,13 @@ compareFixture('F126 - HR: a half-day lag and a half-day activity, to the minute
     activities: [hA('A', 16), hA('B', 4), hA('C', 8, { actual_start: '2026-09-28 08:00', remaining_duration: 1 })],
     relationships: [hR('A', 'B', 'FS', 4), hR('C', 'B')],
     data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
-}, { hours: true, skip_alert_parity: true,
-    note: 'INTENTIONAL gap: the JS-only SUB_DAY_LAG_ROUNDED ALERT fires on the fractional days of the day pass (an INFO once the hours pass applies); the Python reference never carried it' });
+}, { hours: true });
 compareFixture('F127 - HR: work a pipeline inserted (no hours) or re-sized (days moved) is sized from its days', {
     activities: [hA('A', 16, { duration_days: 1 }), hA('B', 4),
         { code: 'FRAG', duration_days: 1, clndr_id: 'MF' }],
     relationships: [hR('A', 'B', 'FS', 4), { from_code: 'FRAG', to_code: 'B', type: 'FS', lag_days: 0.5 }],
     data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
-}, { hours: true, skip_alert_parity: true,
-    note: 'INTENTIONAL gap: the JS-only SUB_DAY_LAG_ROUNDED ALERT fires on the fractional days of the day pass (an INFO once the hours pass applies); the Python reference never carried it' });
+}, { hours: true });
 compareFixture('F128 - HR: SS lag off suspended work, SF off started work under "lag from Actual Start"', {
     activities: [
         hA('P', 80, { actual_start: '2026-09-21 08:00', remaining_duration: 10, suspend_date: '2026-09-28 08:00',
@@ -3025,8 +3034,7 @@ compareFixture('F129 - HR: an SF requirement after lunch, an FF requirement off 
         hA('Q', 8, { clndr_id: 'SD', constraint: { type: 'CS_MSOA', date: '2026-10-10 08:00' } }), hA('U', 8)],
     relationships: [hR('X', 'S'), hR('S', 'T', 'SF'), hR('Q', 'U', 'FF')],
     data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
-}, { hours: true, skip_alert_parity: true,
-    note: 'INTENTIONAL gap: the JS-only SUB_DAY_LAG_ROUNDED ALERT fires on the fractional days of the day pass (an INFO once the hours pass applies); the Python reference never carried it' });
+}, { hours: true });
 compareFixture('F130 - HR: ALAP by free float, a Start On off working time, a timed constraint', {
     activities: [hA('X', 40), hA('A', 8, { constraint: { type: 'CS_ALAP', date: '' } }),
         hA('M', 0, { task_type: 'TT_FinMile', constraint: { type: 'CS_ALAP', date: '' } }), hA('B', 8),
@@ -3053,8 +3061,130 @@ compareFixture('F131 - HR: progress override, completed work after the data date
             '    (0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))\r\n    (0||7()())))\r\n' +
             '  (0||Exceptions()(\r\n    (0||0(d|46305)((0||0(s|08:00|f|16:00)())))))' } }),
     schedule_mode: 'progress_override', relationship_lag_calendar: 'rcal_Predecessor',
-}, { hours: true, skip_alert_parity: true,
-    note: 'INTENTIONAL gap: the JS-only SUB_DAY_LAG_ROUNDED ALERT fires on the fractional days of the day pass (an INFO once the hours pass applies); the Python reference never carried it' });
+}, { hours: true });
+
+// =====================================================================
+// F132-F139 - v2.10.1 (13-Oct-2026). RD: resource dependent work, each
+// driving assignment on its resource's calendar; RQ: an FF / SF requirement
+// on such work; XR / XZ: an expected finish on it and on work it zeroes; PF:
+// the printed float and the critical set from the hours pass; and float on
+// work no calendar reaches. Every rule was read from P6 Professional 23.12.1's
+// own F9 of synthetic probes on the measuring machine; with them the engine
+// matches P6 on 95,004 of 95,006 unfinished activities in 319 projects (all
+// four dates, total float 95,004, free float 95,005, the critical flag 95,006;
+// the two left are P6 non-fixed points, where P6's own next F9 gives the
+// engine's answer). Data date Monday 2013-08-26 08:00; calendar P is
+// Mon-Fri 08:00-12:00 / 13:00-17:00 with a holiday on Wednesday 2013-09-04,
+// Q the same hours with no holiday, FB P6's internal Standard (an empty
+// calendar record: Mon-Fri 08:00-16:00, no holiday), G the Standard with
+// Labour Day 2013-09-02 off.
+// =====================================================================
+const RCAL = {
+    P: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: ['2013-09-04'] },
+    Q: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] },
+    FB: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [], p6_fallback: true, empty_record: true },
+    G: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: ['2013-09-02'], p6_fallback: true },
+};
+const RDD = '2013-08-26 08:00';
+const rT = (code, h, extra) => Object.assign({ code, duration_days: h / 8, remaining_hours: h,
+    remaining_hours_days: h / 8, clndr_id: 'P' }, extra || {});
+// resource dependent on P; asg: [calendar, hours, lag hours, driving]
+const rR = (code, asg, extra) => {
+    const full = asg.map((g) => [g[0], g[1], g[2] || 0, g[3] !== false]);
+    const rem = Math.max.apply(null, full.filter((g) => g[3]).map((g) => g[1] + g[2]).concat([0]));
+    return rT(code, rem, Object.assign({ task_type: 'TT_Rsrc', resource_assignments: full.length,
+        assignments: full.map((g) => ({ clndr_id: g[0], remaining_hours: g[1], lag_hours: g[2], driving: g[3] })) },
+    extra || {}));
+};
+const rL = (a, b, t, lagH) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: (lagH || 0) / 8,
+    lag_hours: lagH || 0 });
+compareFixture('F132 - RD: assignments on their resources\' calendars; a lag delays its assignment; a non-driving one drives nothing', {
+    activities: [
+        rR('R1', [['Q', 16], ['FB', 8, 4]]),
+        rR('R2', [['FB', 24, 0, false], ['Q', 8]]),
+        rR('R3', [['G', 40]], { constraint: { type: 'CS_MSOA', date: '2013-08-30 08:00' } }),
+        rT('S', 8),
+    ],
+    relationships: [rL('R1', 'S'), rL('R2', 'S'), rL('R3', 'S')],
+    data_date: RDD, cal_map: RCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F133 - RD: the start takes the activity calendar\'s opening; the late side its close; a start-no-later-than caps it', {
+    activities: [
+        rT('A', 3),
+        rR('B', [['FB', 8]]),
+        rR('C', [['Q', 16]], { constraint: { type: 'CS_MSOA', date: '2013-09-03 08:00' } }),
+        rR('D', [['FB', 16]], { constraint: { type: 'CS_MSOB', date: '2013-08-28 08:00' } }),
+        rT('E', 40),
+    ],
+    relationships: [rL('A', 'B'), rL('B', 'E', 'SS', 4), rL('C', 'E', 'FF'), rL('D', 'E')],
+    data_date: RDD, cal_map: RCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F134 - RQ: FF and SF requirements on resource dependent work, on an opening and inside working time', {
+    activities: [
+        rT('P1', 12), rR('S1', [['FB', 8]]),
+        rT('P2', 4), rR('S2', [['Q', 6]]),
+        rT('P3', 10), rR('S3', [['FB', 4]]),
+    ],
+    relationships: [rL('P1', 'S1', 'FF'), rL('P2', 'S2', 'SF', 8), rL('P3', 'S3', 'FF', -2)],
+    data_date: RDD, cal_map: RCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F135 - XR / XZ: an expected finish re-sizes each assignment; work it zeroes in this pass stays at its start', {
+    activities: [
+        rR('X1', [['Q', 16], ['FB', 16]], { actual_start: '2013-08-22 08:00', remaining_duration: 2,
+            expected_finish: '2013-08-27 16:00' }),
+        rT('Z0', 8, { actual_start: '2013-08-01 08:00' }),
+        rT('Z1', 16, { actual_start: '2013-08-01 08:00', remaining_duration: 2, expected_finish: '2013-08-20 17:00' }),
+        rT('N', 8),
+    ],
+    relationships: [rL('Z0', 'Z1', 'FF'), rL('Z0', 'Z1', 'SS'), rL('X1', 'N'), rL('Z1', 'N')],
+    data_date: RDD, cal_map: RCAL, relationship_lag_calendar: 'rcal_Predecessor', use_expected_finish: true,
+}, { hours: true });
+compareFixture('F136 - PF: the printed float is the hours float in working days; critical is total float <= 0 in hours', {
+    activities: [hA('H', 4), hA('D', 8), hA('S', 8), hA('L', 12), hA('N', 9), hA('T', 8)],
+    relationships: [hR('H', 'S'), hR('D', 'S'), hR('L', 'T'), hR('N', 'T', 'FS', 3)],
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F137 - PF: under FT_Min both floats follow the hours pass, on a seven-day calendar beside a five-day one', {
+    activities: [hA('H', 4), hA('D', 8), hA('S', 8), hA('W', 20, { clndr_id: 'SD' }), hA('Y', 12)],
+    relationships: [hR('H', 'S'), hR('D', 'S'), hR('W', 'Y', 'SS', 6)],
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    float_type: 'FT_Min',
+}, { hours: true });
+compareFixture('F138 - float on work no calendar reaches is counted on the 7-day days it was scheduled on', {
+    activities: [
+        { code: 'A', duration_days: 10, actual_start: '2026-01-01', remaining_duration: 8 },
+        { code: 'B', duration_days: 3 },
+        { code: 'C', duration_days: 2 },
+    ],
+    relationships: [
+        { from_code: 'A', to_code: 'B', type: 'SS', lag_days: 5 },
+        { from_code: 'A', to_code: 'C', type: 'FS', lag_days: 0 },
+    ],
+    data_date: '2026-01-05',
+});
+compareFixture('F139 - a completed activity finished on a later day than the data date: the alert in both engines, and every free-float field', {
+    activities: [
+        { code: 'C', duration_days: 3, clndr_id: 'MF', actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-21 17:00', is_complete: true },
+        { code: 'K', duration_days: 3, clndr_id: 'MF', actual_start: '2026-01-12 08:00',
+          actual_finish: '2026-01-16 17:00', is_complete: true },
+        { code: 'D', duration_days: 2, clndr_id: 'MF' },
+    ],
+    relationships: [
+        { from_code: 'C', to_code: 'D', type: 'FS', lag_days: 0 },
+        { from_code: 'K', to_code: 'D', type: 'FS', lag_days: 1 },
+    ],
+    data_date: '2026-01-19 08:00',
+    cal_map: { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } },
+});
+
+compareFixture('F140 - a constraint handed back normalized (date + time_minutes, as getTasks() carries it) keeps its time', {
+    activities: [hA('A', 16), hA('B', 8, { constraint: { type: 'FNLT', date: '2026-10-07', time_minutes: 720 } }),
+        hA('C', 8, { constraint: { type: 'SNET', date: '2026-10-08', time_minutes: 780 } }), hA('D', 8),
+        { code: 'E', duration_days: 2, clndr_id: 'MF', constraint: { type: 'FNLT', date: '2026-10-09', time_minutes: 600 } }],
+    relationships: [hR('A', 'B'), hR('B', 'D'), hR('C', 'D')],
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +

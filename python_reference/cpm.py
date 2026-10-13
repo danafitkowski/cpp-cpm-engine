@@ -124,19 +124,17 @@ def _round_half_up_to(x, decimals=0):
 #          is set but actual_start is missing; emit MISSING_ACTUAL_START WARN.
 #   T4.26 — ALAP honored on EITHER primary or secondary constraint slot.
 # Remaining JS-only paths (Section D Monte Carlo, hammock orphan /
-# duration_working_days, dateToNum rollover guard, SUB_DAY_LAG_ROUNDED
-# disclosure update) are not implemented here. Two surfaces formerly on this
-# list have since been ported and ARE cross-validated: free-float math (see
-# the v2.9.27 audit F24 paired fix below) and out-of-sequence enumeration
-# (the B4 parity port below, surfaced by crossval F48; compared at
-# alert_count / alert_severity_counts level). Free float is ported in full as
-# of v2.9.42: ff_signed_working_days is now assigned on the has-successors
-# branch too, so the 58 comparisons the skip-not-fail guards were silently
-# dropping are executed. Only the completed-activity branch still emits neither
-# ff_signed nor ff_signed_working_days, and neither does the JS engine, so
-# those comparisons (54 on the harness as measured 2026-09-23) are absent on
-# both sides rather than one.
-ENGINE_VERSION = '2.10.0'
+# duration_working_days, dateToNum rollover guard) are not implemented here.
+# Surfaces formerly on this list have since been ported and ARE
+# cross-validated: free-float math (see the v2.9.27 audit F24 paired fix
+# below), out-of-sequence enumeration (the B4 parity port below, surfaced by
+# crossval F48; compared at alert_count / alert_severity_counts level), and,
+# as of v2.10.1, the SUB_DAY_LAG_ROUNDED and FUTURE_ACTUAL_FINISH alerts, so
+# alert parity runs on every fixture that has output. Free float is ported in
+# full: since v2.10.1 the completed-activity branch also emits ff_signed and
+# ff_signed_working_days (0), as the JS engine does, so the harness skips no
+# free-float comparison.
+ENGINE_VERSION = '2.10.1'
 
 
 # =============================================================================
@@ -226,9 +224,14 @@ def _constraint_time_minutes(raw_date):
     return hh * 60 + mm
 
 
-def _with_constraint_instant(cstr, raw_date):
-    """Attach the constraint's time of day, when it has one."""
+def _with_constraint_instant(cstr, raw_date, kept=None):
+    """Attach the constraint's time of day, when it has one. A constraint
+    handed back already normalized (the date part in `date`, the time in
+    `time_minutes`, as the JS parseXER's getTasks() carries it) keeps its
+    time (13-Oct-2026); a date carrying its own time wins."""
     tod = _constraint_time_minutes(raw_date)
+    if tod is None and isinstance(kept, (int, float)) and not isinstance(kept, bool)             and math.isfinite(kept) and 0 <= kept <= 1440:
+        tod = int(kept)
     if tod is not None:
         cstr['time_minutes'] = tod
     return cstr
@@ -281,7 +284,7 @@ def _normalize_constraint(c, alerts=None, ctx=None):
     # (every consumer that reads a constraint back still sees the date P6
     # stored); `time_minutes` is what the finish-side clamp resolves the
     # instant with. See _constraint_finish_num.
-    return _with_constraint_instant({'type': canonical, 'date': date_str}, raw_date)
+    return _with_constraint_instant({'type': canonical, 'date': date_str}, raw_date, c.get('time_minutes'))
 
 
 def _normalize_constraint2(c, alerts=None, ctx=None):
@@ -325,7 +328,7 @@ def _normalize_constraint2(c, alerts=None, ctx=None):
             })
         return None
     # v2.9.45 — mirrors the primary; see _normalize_constraint.
-    return _with_constraint_instant({'type': canonical, 'date': date_str}, raw_date)
+    return _with_constraint_instant({'type': canonical, 'date': date_str}, raw_date, c.get('time_minutes'))
 
 
 # =============================================================================
@@ -589,6 +592,24 @@ def _count_work_days_between(from_num, to_num, calendar_info=None):
     return n
 
 
+def _count_float_days(from_num, to_num, calendar_info):
+    """compute_cpm's float in working days: on the activity's calendar, or, for
+    work no calendar reaches, on the 7-day ordinal days it was scheduled on
+    (_advance_workdays' disclosed fallback). Counted Monday to Friday on that
+    timeline the float was not the slack the work has: the crossval fixture
+    F93 printed -5 for a 7-day slip, where the JS engine prints -7 (13-Oct-
+    2026). Mirrors JS _countWorkDaysBetween with no calendar."""
+    if calendar_info:
+        return _count_work_days_between(from_num, to_num, calendar_info)
+    if not isinstance(from_num, (int, float)) or not isinstance(to_num, (int, float)):
+        return 0
+    if not math.isfinite(from_num) or not math.isfinite(to_num) or to_num == from_num:
+        return 0
+    if to_num < from_num:
+        return -_round_half_up(from_num - to_num)
+    return _round_half_up(to_num - from_num)
+
+
 def add_work_days(start_date, n_workdays, calendar_info=None):
     """Advance start_date by n_workdays working days on the given calendar."""
     if n_workdays is None:
@@ -766,7 +787,47 @@ def _topo_sort(node_codes, succ_map, pred_map):
 # Calendar-aware forward/backward step wrappers (with loud-fallback alerts)
 # =============================================================================
 
+class _AlertList(list):
+    """compute_cpm's alert list: a list that also remembers which
+    SUB_DAY_LAG_ROUNDED (value, call site) pairs it has carried."""
+
+
+def _emit_fractional_lag_alert(n_days, alerts, ctx):
+    """SUB_DAY_LAG_ROUNDED (13-Oct-2026, from JS _emitFractionalLagAlertIfNeeded):
+    the day pass rounds a fractional lag or duration to whole days; one ALERT
+    per value per call site (compute_cpm turns it into an INFO when the hours
+    pass gives the printed dates and float to the minute)."""
+    if alerts is None:
+        return
+    try:
+        raw = float(n_days)
+    except (TypeError, ValueError):
+        return
+    if not math.isfinite(raw) or raw.is_integer():
+        return
+    msg = ('SUB_DAY_LAG_ROUNDED: lag/duration value ' + repr(raw) + ' is fractional; engine rounds to '
+           + str(_round_half_up(raw)) + ' day(s). V8 Math.round rounds half toward +Infinity; sub-day '
+           'lags inflate, sub-day leads truncate to zero — sub-day precision is forensically unavailable in '
+           'this engine. P6 typically stores lags in hours; re-run with full-day lags or accept the '
+           'documented drift.')
+    key = (repr(raw), str(ctx))
+    seen = getattr(alerts, '_sub_day_lag_seen', None)
+    if seen is None:
+        try:
+            seen = alerts._sub_day_lag_seen = set()
+        except AttributeError:
+            # a plain list (a throwaway one at a display call site)
+            if any(a.get('context') == ctx and a.get('message') == msg for a in alerts if isinstance(a, dict)):
+                return
+            seen = set()
+    if key in seen:
+        return
+    seen.add(key)
+    alerts.append({'severity': 'ALERT', 'context': ctx, 'message': msg})
+
+
 def _advance_workdays(start_num, n_days, calendar_info, *, alerts, ctx):
+    _emit_fractional_lag_alert(n_days, alerts, ctx)
     if start_num <= 0:
         return start_num + _round_half_up(n_days)
     if not calendar_info:
@@ -787,6 +848,7 @@ def _advance_workdays(start_num, n_days, calendar_info, *, alerts, ctx):
 
 
 def _retreat_workdays(end_num, n_days, calendar_info, *, alerts, ctx):
+    _emit_fractional_lag_alert(n_days, alerts, ctx)
     if end_num <= 0:
         return end_num - _round_half_up(n_days)
     if not calendar_info:
@@ -1820,16 +1882,23 @@ def _apply_backward_lf_constraint(code, min_lf, cstr, node_cal, duration_days, a
 # restart of work under way), early_finish_dt, late_start_dt (the remaining
 # late start of work under way), late_finish_dt, as 'YYYY-MM-DD HH:MM', and
 # tf_hours / ff_hours in working hours. Measured on every project P6 last
-# scheduled in the local P6 database (313 projects, 94,873 unfinished
-# activities): all four dates to the minute on 94,827, total float on 94,844,
-# free float on 94,856 (private oracle repo, hours_2026_10_12); the rest are
-# one project's resource-dependent activities, which P6 schedules on their
-# resources' calendars (not modelled), and one P6 non-idempotence (XFA4).
+# scheduled in the local P6 database (319 projects, 95,006 unfinished
+# activities, resource dependent work on its resources' calendars since
+# v2.10.1): all four dates to the minute on 95,004, total float on 95,004,
+# free float on 95,005, the critical flag on all 95,006 (private oracle repo,
+# hours_2026_10_12 and rsrc_dependent_2026_10_13); the two left are P6
+# non-fixed points, where P6's own next F9 gives the engine's answer.
 # The printed dates (es_date, ls_date, restart_date, remaining_late_start_date,
 # ef_last_worked_date, lf_last_worked_date) are the dates P6 prints, so they
-# take the hours pass's; the day numbers, the exclusive ef_date / lf_date and
-# the day-based float stay the day pass's, and any printed date the hours pass
-# moved keeps its day-pass value in day_pass_dates. An activity a pipeline
+# take the hours pass's; the day numbers and the exclusive ef_date / lf_date
+# stay the day pass's, and any printed date the hours pass moved keeps its
+# day-pass value in day_pass_dates. The printed float (tf_working_days and its
+# start / finish parts, ff_working_days, ff_signed_working_days) is the hours
+# pass's over the activity calendar's hours per day, and critical_codes is
+# total float <= 0 in hours (PF, v2.10.1: the whole-day float matched P6's on
+# 75,396 total and 89,413 free, the whole-day critical set on 94,703); a
+# figure that moved keeps its day-pass value in day_pass_float, and tf / ff
+# stay the day pass's calendar days. An activity a pipeline
 # inserted or re-sized after the conversion (no hours, or days that no longer
 # agree with them) is sized from its days on its calendar's hours per day, and
 # named in result['hours']['sized_from_days']. When no activity carries hours,
@@ -1847,6 +1916,13 @@ def _hours_float(v):
     except (TypeError, ValueError):
         return None
     return f if math.isfinite(f) else None
+
+
+def _hours_working_days(minutes, hpd):
+    """Working minutes as working days of `hpd` hours: an int when whole, else to four places (half-up)."""
+    v = minutes / (hpd * 60.0)
+    r = math.floor(v + 0.5)
+    return int(r) if abs(v - r) < 1e-9 else _round_half_up_to(v, 4)
 
 
 def _hours_sibling(name):
@@ -1951,6 +2027,13 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             'external_early_start': a.get('external_early_start') or None,
             'external_late_finish': a.get('external_late_finish') or None,
             'resource_assignments': a.get('resource_assignments') or 0,
+            # resource dependent work: each assignment on its resource's
+            # calendar (RD, v2.10.1), in minutes
+            'assignments': [{'clndr_id': g.get('clndr_id'),
+                             'remaining_minutes': int(round((_hours_float(g.get('remaining_hours')) or 0.0) * 60)),
+                             'lag_minutes': int(round((_hours_float(g.get('lag_hours')) or 0.0) * 60)),
+                             'driving': g.get('driving', True) is not False}
+                            for g in (a.get('assignments') or []) if isinstance(g, dict)],
         })
     rels = []
     for r in relationships or []:
@@ -1991,6 +2074,19 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
         n['late_finish_dt'] = fmt(o['lf'])
         n['tf_hours'] = None if o['tf_minutes'] is None else round(o['tf_minutes'] / 60.0, 4)
         n['ff_hours'] = None if o['ff_minutes'] is None else round(o['ff_minutes'] / 60.0, 4)
+        # PF (v2.10.1) - the printed float is P6's: the hours pass's float in
+        # working days on the activity calendar's hours per day, a whole
+        # number as an int; any figure that moved keeps its day-pass value in
+        # day_pass_float.
+        hpd = _cal_hpd(by_code[c].get('clndr_id') or project_calendar) or 8.0
+        pf = {k: _hours_working_days(o.get(m), hpd) for k, m in (
+            ('tf_working_days', 'tf_minutes'), ('tf_start_working_days', 'tf_start_minutes'),
+            ('tf_finish_working_days', 'tf_finish_minutes'), ('ff_working_days', 'ff_minutes'),
+            ('ff_signed_working_days', 'ff_signed_minutes')) if o.get(m) is not None}
+        moved_f = {k: n.get(k) for k, v in pf.items() if n.get(k) != v}
+        if moved_f:
+            n['day_pass_float'] = moved_f
+        n.update(pf)
         # The printed dates are the dates P6 prints, so they follow the hours
         # pass: the date of each instant (the restart and remaining late start
         # of work under way, whose es_date / ls_date stay the actual start).
@@ -2085,7 +2181,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # a date-only or morning value is the opening of that day, unchanged.
     dd_num = _instant_of(data_date) if data_date else 0
     cal_map = cal_map or {}
-    alerts = []
+    alerts = _AlertList()
     # B4 (P6 alignment wave 2026-08-11): both P6 scheduling modes
     # implemented. retained_logic (default; capture 9b748cc case 10):
     # remaining work restarts at max(data date, driving pred logic).
@@ -2211,6 +2307,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if is_complete and actual_finish:
             ef = date_to_num(actual_finish)
             ef_instant = _instant_of(actual_finish)
+            # FUTURE_ACTUAL_FINISH (13-Oct-2026, from JS v2.9.13 F1-Bug3): an
+            # actual finish on a later day than the data date is a data-
+            # quality red flag; ALERT and continue. Later on the data date's
+            # own day stays silent (the day against the instant).
+            if dd_num > 0 and ef > dd_num:
+                alerts.append({
+                    'severity': 'ALERT',
+                    'context': 'future-actual-finish',
+                    'message': ('FUTURE_ACTUAL_FINISH on %s: actual_finish=%s is after data_date=%s. Completed '
+                                'activities cannot finish in the future relative to the schedule update — likely '
+                                'retroactive baseline edit or P6 data-entry error. Investigate.'
+                                % (code, actual_finish, data_date)),
+                })
         elif is_complete:
             ef_instant = ef
         # SSL (2026-09-23) — the actual start as an INSTANT too: an SS or SF
@@ -4408,8 +4517,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             n['tf_working_days'] = 0
         else:
             n_cal = cal_map.get(n.get('clndr_id', '')) if n.get('clndr_id') else None
-            n['tf_finish_working_days'] = _count_work_days_between(n['ef'], n['lf'], n_cal)
-            n['tf_start_working_days'] = _count_work_days_between(
+            n['tf_finish_working_days'] = _count_float_days(n['ef'], n['lf'], n_cal)
+            n['tf_start_working_days'] = _count_float_days(
                 _start_float_from(n), n['ls'], n_cal)
             if _float_type == 'FT_Start':
                 n['tf_working_days'] = n['tf_start_working_days']
@@ -4484,6 +4593,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if n['is_complete']:
             n['ff'] = 0
             n['ff_working_days'] = 0
+            # and the signed pair, so all four compare on every activity
+            # (13-Oct-2026; JS paired site)
+            n['ff_signed'] = 0
+            n['ff_signed_working_days'] = 0
             continue
         successors = succ_map.get(c, [])
         if not successors:
@@ -4498,7 +4611,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # EX (v2.9.57) — to the early finish whatever caps the late finish,
             # none on an activity held by a mandatory date (_open_end_ff_held).
             n['ff_signed'] = _round_half_up_to(_ff_end - n['ef'], 3)
-            n['ff_signed_working_days'] = _count_work_days_between(
+            n['ff_signed_working_days'] = _count_float_days(
                 n['ef'], _ff_end, n_cal)
             n['ff'] = max(0, n['ff_signed'])
             n['ff_working_days'] = max(0, n['ff_signed_working_days'])
@@ -4650,7 +4763,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         _ff_from = binding_pred_anchor if binding_pred_anchor is not None else n['ef']
         _ff_to = (binding_succ_anchor if binding_succ_anchor is not None
                   else (n['ef'] if _open_end_ff_held(n) else n['_ff_terminal']))
-        n['ff_signed_working_days'] = _count_work_days_between(
+        n['ff_signed_working_days'] = _count_float_days(
             _ff_from, _ff_to, ff_cal)
         n['ff_working_days'] = max(0, n['ff_signed_working_days'])
 
@@ -4777,6 +4890,23 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         relationship_lag_calendar=relationship_lag_calendar, float_type=_float_type,
         ss_lag_from=_ss_lag_from, project_finish=project_finish,
         use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts)
+    if _hours.get('applied'):
+        # With the hours pass applied the printed dates and the float in hours
+        # are exact, so the day pass's SUB_DAY_LAG_ROUNDED ALERT becomes an
+        # INFO that says so (Dana, 12-Oct-2026; JS paired site after the
+        # _hoursPass call). The day numbers stay rounded.
+        for _a in alerts:
+            if (isinstance(_a, dict) and _a.get('severity') == 'ALERT'
+                    and str(_a.get('message', '')).startswith('SUB_DAY_LAG_ROUNDED:')):
+                _a['severity'] = 'INFO'
+                _a['message'] = ('Day numbers only - the printed dates and the float in hours come from the hours '
+                                 'pass, to the minute (result.hours): ' + _a['message'])
+        # PF (v2.10.1) - critical is P6's: total float at or below zero in
+        # hours (P6's database: 95,006 of 95,006, against 94,703 on the whole-
+        # day float). An activity the pass left without float keeps the day
+        # pass's test.
+        critical = {c for c, n in nodes.items() if not n['is_complete'] and (
+            n['tf'] <= 0.0 if n.get('tf_hours') is None else n['tf_hours'] <= 0)}
 
     return {
         'nodes': nodes,

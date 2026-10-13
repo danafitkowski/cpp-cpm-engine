@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.0';
+const ENGINE_VERSION = '2.10.1';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -289,8 +289,15 @@ function _constraintTimeMinutes(rawDate) {
 }
 
 // Attach the constraint's time of day, when it has one.
-function _withConstraintInstant(cstr, rawDate) {
-    const tod = _constraintTimeMinutes(rawDate);
+function _withConstraintInstant(cstr, rawDate, kept) {
+    // A constraint handed back already normalized (the date part in `date`,
+    // the time in `time_minutes`, as getTasks() carries it) keeps its time
+    // (13-Oct-2026); a date carrying its own time wins. Python paired site:
+    // _with_constraint_instant.
+    let tod = _constraintTimeMinutes(rawDate);
+    if (tod === null && typeof kept === 'number' && Number.isFinite(kept) && kept >= 0 && kept <= 1440) {
+        tod = Math.trunc(kept);
+    }
     if (tod !== null) cstr.time_minutes = tod;
     return cstr;
 }
@@ -364,7 +371,7 @@ function _normalizeConstraint(c, alerts, _ctx) {
     // (every consumer that reads a constraint back still sees the date P6
     // stored); `time_minutes` is what the finish-side clamp resolves the
     // instant with. See _constraintFinishNum.
-    return _withConstraintInstant({ type: canonical, date: dateStr }, rawDate);
+    return _withConstraintInstant({ type: canonical, date: dateStr }, rawDate, c.time_minutes);
 }
 
 // v2.9.7 — Secondary-constraint normalization. Per Oracle P6 Database
@@ -426,7 +433,7 @@ function _normalizeConstraint2(c, alerts, _ctx) {
         return null;
     }
     // v2.9.45 — mirrors the primary; see _normalizeConstraint.
-    return _withConstraintInstant({ type: canonical, date: dateStr }, rawDate);
+    return _withConstraintInstant({ type: canonical, date: dateStr }, rawDate, c.time_minutes);
 }
 
 // ============================================================================
@@ -2084,9 +2091,11 @@ function _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, durationDays, al
 // every duration and lag working minutes on a calendar's own working periods.
 // Python paired sites: cpm_minutes.py (WorkCalendar), cpm_hours.py
 // (compute_cpm_hours) and cpm._hours_pass (computeCPM's hours pass below).
-// Measured on every project P6 last scheduled in the local P6 database (313
-// projects, 94,873 unfinished activities): all four dates to the minute on
-// 94,827, total float on 94,844, free float on 94,856.
+// Measured on every project P6 last scheduled in the local P6 database (319
+// projects, 95,006 unfinished activities): all four dates to the minute on
+// 95,004, total float on 95,004, free float on 95,005, the critical flag on
+// all 95,006; the two left are P6 non-fixed points. The printed float and the
+// critical set follow the hours pass (PF, v2.10.1; see _hoursPass).
 // ============================================================================
 const _HR_DAY = 1440;
 const _HR_SEARCH_DAYS = 3660;
@@ -2335,6 +2344,13 @@ function _hrExpectedFinish(n, cal, start, floor, startPred) {
     else if (xfEnd > start) rd = cal.between(start, xfEnd);
     else rd = 0;
     const begin = start;
+    if (!keep && rd === 0 && was > 0) {
+        // XZ: work the expected finish cuts to nothing in this pass stays at
+        // its start; the FF / SF pull is not applied (P6's first F9 of the
+        // 4623 replica). Work already at zero going in is pulled as before.
+        n.rem = 0;
+        return [begin, begin];
+    }
     if (floor !== null) {
         // zero remaining work an FF / SF pulls sits at the next opening
         const pull = rd > 0 ? cal.sub(floor, rd) : cal.nextWork(floor);
@@ -2345,6 +2361,117 @@ function _hrExpectedFinish(n, cal, start, floor, startPred) {
     }
     n.rem = rd;
     return [begin, rd > 0 ? cal.add(begin, rd) : begin];
+}
+
+// [start, finish] of resource dependent work from its driving assignments
+// (RD). Python paired site: cpm_hours._rsrc_forward. The start requirement
+// takes the activity calendar's next opening, then each assignment its own
+// calendar's; an assignment lag delays the assignment, not the activity; an
+// expected finish re-sizes each assignment on its own calendar (XR); an FF /
+// SF requirement can move it later (_hrRsrcRequirement).
+function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
+    const starts = [];
+    const fins = [];
+    const actStart = actCal.nextWork(startReq);
+    for (const g of asg) {
+        const gc = g.cal;
+        let a0 = gc.nextWork(actStart);
+        let s = g.lag ? gc.nextWork(gc.add(a0, g.lag)) : a0;
+        if (xf !== null && xf !== undefined) {
+            const xEnd = gc.prevWorkEnd(xf);
+            if (gc.between(s, xEnd) > 0) g.rem = gc.between(s, xEnd);
+        }
+        let f;
+        if (g.rem > 0) {
+            f = gc.add(s, g.rem);
+            if (finishReq !== null && finishReq !== undefined) {
+                const [rs, rf] = _hrRsrcRequirement(gc, actCal, finishReq, g.rem);
+                if (rs > s) {
+                    s = rs;
+                    f = rf;
+                    a0 = Math.max(a0, g.lag ? gc.sub(s, g.lag) : s);
+                }
+            }
+        } else {
+            if (finishReq !== null && finishReq !== undefined) {
+                s = Math.max(s, gc.nextWork(finishReq));
+                a0 = Math.max(a0, g.lag ? gc.sub(s, g.lag) : s);
+            }
+            f = s;
+        }
+        starts.push(a0);
+        fins.push(f);
+    }
+    return [Math.min.apply(null, starts), Math.max.apply(null, fins)];
+}
+
+// [start, finish] an FF / SF finish requirement fr puts on an assignment of
+// rem minutes on calendar gc (RQ). Python paired site:
+// cpm_hours._rsrc_requirement. Inside the resource's working time it finishes
+// there; on an opening, a close or off its working time the start is rem back
+// on the activity's calendar from the resource's next opening, the finish rem
+// forward on the resource's, printed as fr where the two are one working
+// instant on the activity's calendar.
+function _hrRsrcRequirement(gc, actCal, fr, rem) {
+    if (gc.isStart(fr) && gc.isFinish(fr)) return [gc.sub(fr, rem), fr];
+    const fg = gc.nextWork(fr);
+    const s = gc.nextWork(actCal.sub(fg, rem));
+    let f = gc.add(s, rem);
+    if (fr > f && actCal.between(f, fr) === 0) f = fr;
+    return [s, f];
+}
+
+// [late start, late finish] of resource dependent work from its driving
+// assignments (RD). Python paired site: cpm_hours._rsrc_backward.
+function _hrRsrcBackward(asg, actCal, lfReq, lsBound) {
+    const starts = [];
+    const fins = [];
+    const lfAct = actCal.prevWorkEnd(lfReq);
+    for (const g of asg) {
+        const gc = g.cal;
+        let f;
+        let s;
+        let actS;
+        if (g.rem > 0) {
+            f = gc.prevWorkEnd(lfAct);
+            s = gc.sub(f, g.rem);
+            actS = g.lag ? gc.sub(s, g.lag) : s;
+            if (lsBound !== null && lsBound <= actS) {
+                actS = (gc.isFinish(lsBound) || gc.isStart(lsBound)) ? lsBound : gc.prevWorkEnd(lsBound);
+                s = g.lag ? gc.nextWork(gc.add(actS, g.lag)) : actS;
+                f = gc.add(s, g.rem);
+                // the late finish that start gives takes the activity
+                // calendar's last close at or before it (L13)
+                const f2 = gc.prevWorkEnd(actCal.prevWorkEnd(f));
+                if (f2 < f) {
+                    f = f2;
+                    s = gc.sub(f, g.rem);
+                    actS = g.lag ? gc.sub(s, g.lag) : s;
+                }
+            }
+        } else {
+            const bound = lsBound === null ? lfAct : Math.min(lfAct, lsBound);
+            f = gc.prevWorkEnd(bound);
+            s = f;
+            actS = g.lag ? gc.sub(s, g.lag) : s;
+        }
+        starts.push(actS);
+        fins.push(f);
+    }
+    return [Math.min.apply(null, starts), Math.max.apply(null, fins)];
+}
+
+// Place resource dependent work: its early dates, its remaining dates where
+// they differ and its remaining duration. Python paired site:
+// cpm_hours._rsrc_place.
+function _hrRsrcPlace(n, cal, startReq, finishReq, xf) {
+    const [es, ef] = _hrRsrcForward(n.asg, cal, startReq, finishReq, xf);
+    delete n.rem_dates;
+    const rs = cal.nextWork(es);
+    if (rs !== es && !n.started) n.rem_dates = _hrRsrcForward(n.asg, cal, rs, finishReq, xf);
+    const rd = n.rem_dates || [es, ef];
+    n.rem = cal.between(rd[0], rd[1]);
+    return [es, ef];
 }
 
 // CPM in hours and minutes. Python paired site: cpm_hours.compute_cpm_hours
@@ -2381,6 +2508,7 @@ function computeCPMHours(activities, relationships, o) {
         const n = Object.assign({}, a);
         n.cal = calOf(a.clndr_id || projectCalendar);
         n.rem = _hrRound(a.remaining_minutes || 0);
+        n.rem_in = n.rem;
         n.as = _hrInst(a.actual_start);
         n.af = _hrInst(a.actual_finish);
         n.complete = n.af !== null;
@@ -2395,6 +2523,22 @@ function computeCPMHours(activities, relationships, o) {
         n.ext_lf = useExternalDates ? _hrInst(a.external_late_finish) : null;
         n.xf = (useExpectedFinish && !n.complete) ? _hrInst(a.expected_finish) : null;
         n.assigned = Math.trunc(Number(a.resource_assignments || 0)) || 0;
+        // RD: a resource dependent activity's driving assignments, each on its
+        // resource's calendar (the activity's when that is not in the map)
+        n.asg = [];
+        if (a.task_type === 'TT_Rsrc') {
+            for (const g of (a.assignments || [])) {
+                if (!g || !(g.driving === undefined ? true : g.driving)) continue;
+                const gid = g.clndr_id;
+                const known = gid !== null && gid !== undefined && gid !== '' &&
+                    Object.prototype.hasOwnProperty.call(calMap, gid);
+                n.asg.push({
+                    cal: known ? calOf(gid) : n.cal,
+                    rem: _hrRound(g.remaining_minutes || 0),
+                    lag: _hrRound(g.lag_minutes || 0),
+                });
+            }
+        }
         nodes.set(a.code, n);
     }
     const preds = new Map();
@@ -2539,6 +2683,15 @@ function computeCPMHours(activities, relationships, o) {
             const inst = onWorkingTime(cal, t) ? t : cal.nextWork(t);
             n.es = inst;
             n.ef = inst;
+        } else if (n.asg.length) {
+            const [es, ef] = _hrRsrcPlace(n, cal, startReq, finishReq, n.xf);
+            if (n.started) {
+                n.restart = es;
+                n.es = n.as;
+            } else {
+                n.es = es;
+            }
+            n.ef = ef;
         } else {
             let es = cal.nextWork(startReq);
             let ef = null;
@@ -2570,6 +2723,15 @@ function computeCPMHours(activities, relationships, o) {
                 let fin = cs.at;
                 if (n.rem === 0 && !onWorkingTime(cal, fin)) fin = cal.nextWork(fin);
                 if (cs.type === 'MS_Finish' || fin > n.ef) {
+                    if (n.asg.length) {
+                        // RD: the activity's own remaining duration back from
+                        // the constraint sets the start; the assignments run
+                        // from there
+                        const rin = n.rem_in;
+                        const st = rin > 0 ? cal.sub(cal.prevWorkEnd(fin), rin) : fin;
+                        [n.es, n.ef] = _hrRsrcPlace(n, cal, st, null, null);
+                        continue;
+                    }
                     n.ef = n.rem > 0 ? cal.prevWorkEnd(fin) : fin;
                     n.es = n.rem > 0 ? cal.sub(n.ef, n.rem) : n.ef;
                 }
@@ -2611,7 +2773,8 @@ function computeCPMHours(activities, relationships, o) {
             }
             continue;
         }
-        let lf = n.rem > 0 ? cal.prevWorkEnd(seed) : seed;
+        // resource dependent work snaps on each assignment's calendar (RD)
+        let lf = n.asg.length ? seed : (n.rem > 0 ? cal.prevWorkEnd(seed) : seed);
         let lsBound = null;
         for (const r of succs.get(c)) {
             const s = nodes.get(r.to_code);
@@ -2653,11 +2816,19 @@ function computeCPMHours(activities, relationships, o) {
                 // a start constraint off working time resolves to the next
                 // opening on a task; zero-length work takes the close before it
                 const at = n.rem > 0 ? cal.nextWork(cs.at) : cs.at;
+                if (n.asg.length && n.rem > 0) {
+                    // RD: the activity's own remaining duration from the
+                    // bound caps its late finish
+                    lf = Math.min(lf, cal.add(at, n.rem));
+                    continue;
+                }
                 lsBound = (lsBound === null) ? at : Math.min(lsBound, at);
             }
         }
         let ls;
-        if (n.rem > 0) {
+        if (n.asg.length) {
+            [ls, lf] = _hrRsrcBackward(n.asg, cal, lf, lsBound);
+        } else if (n.rem > 0) {
             lf = cal.prevWorkEnd(lf);
             ls = cal.sub(lf, n.rem);
             if (lsBound !== null && lsBound <= ls) {
@@ -2712,6 +2883,17 @@ function computeCPMHours(activities, relationships, o) {
         if (efB === null) continue;
         efB = Math.min(efB, n.lf);
         if (efB <= n.ef) continue;
+        if (n.asg.length) {
+            // RD: the assignments finish by the bound on their own calendars
+            const [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
+            if (ne > n.es) {
+                n.es = ne;
+                n.ef = nf;
+                delete n.rem_dates;
+                n.rem = cal.between(ne, nf);
+            }
+            continue;
+        }
         let newEs;
         if (n.rem > 0) {
             efB = cal.prevWorkEnd(efB);
@@ -2731,9 +2913,15 @@ function computeCPMHours(activities, relationships, o) {
         const cal = n.cal;
         let tf = null;
         let ff = null;
+        let tfFin = null;
+        let tfSta = null;
+        let ffSigned = null;
+        const remD = n.rem_dates || [restartOf(n), n.ef];
+        const rEs = remD[0];
+        const rEf = remD[1];
         if (!n.complete) {
-            const tfFin = cal.between(n.ef, n.lf);
-            const tfSta = cal.between(restartOf(n), (n.rls !== undefined) ? n.rls : n.ls);
+            tfFin = cal.between(rEf, n.lf);
+            tfSta = cal.between(rEs, (n.rls !== undefined) ? n.rls : n.ls);
             tf = floatType === 'FT_Start' ? tfSta : (floatType === 'FT_Min' ? Math.min(tfFin, tfSta) : tfFin);
             const cands = [];
             for (const r of succs.get(c)) {
@@ -2753,9 +2941,9 @@ function computeCPMHours(activities, relationships, o) {
                 }
                 let pa;
                 if (t === 'FS' || t === 'FF') {
-                    pa = lagFwd(n.ef, r.lag, lc);
+                    pa = lagFwd(rEf, r.lag, lc);
                 } else {
-                    const st = t === 'SS' ? ssAnchor(n) : restartOf(n);
+                    const st = t === 'SS' ? ssAnchor(n) : rEs;
                     let lag = r.lag;
                     if (n.started && retained) lag = s.complete ? 0 : unexpired(n.as, lag, lc, n);
                     pa = lagFwd(st, lag, lc);
@@ -2765,15 +2953,20 @@ function computeCPMHours(activities, relationships, o) {
             }
             const pinned = !n.started && [n.c1, n.c2].some((cs) => cs && (cs.type === 'MS_Start' ||
                 cs.type === 'MS_Finish'));
-            if (n.xf !== null || pinned) ff = 0;
-            else if (cands.length) ff = Math.max(0, Math.min.apply(null, cands));
-            else ff = Math.max(0, cal.between(n.ef, projEf));
+            if (n.xf !== null || pinned) ffSigned = 0;
+            else if (cands.length) ffSigned = Math.min.apply(null, cands);
+            else ffSigned = cal.between(rEf, projEf);
+            ff = Math.max(0, ffSigned);
         }
+        const pDates = n.rem_dates || [n.es, n.ef];
         out[c] = {
-            es: n.es, ef: n.ef, ls: n.ls, lf: n.lf,
+            es: pDates[0], ef: pDates[1], ls: n.ls, lf: n.lf,
             restart: n.restart !== undefined ? n.restart : null,
             rls: n.rls !== undefined ? n.rls : null,
             tf_minutes: tf, ff_minutes: ff,
+            // the two total floats P6 picks between, and free float before the
+            // floor at zero (printed float, v2.10.1)
+            tf_start_minutes: tfSta, tf_finish_minutes: tfFin, ff_signed_minutes: ffSigned,
             status: n.complete ? 'complete' : (n.started ? 'started' : 'not started'),
         };
     }
@@ -2799,6 +2992,14 @@ function _hoursFloat(v) {
 
 // computeCPM's hours pass. Python paired site: cpm._hours_pass (the HR block
 // above compute_cpm says what it attaches and when it runs).
+// Working minutes as working days of `hpd` hours: whole, or to four places
+// (half-up). Python paired site: _hours_working_days.
+function _hrWorkingDays(minutes, hpd) {
+    const v = minutes / (hpd * 60);
+    const r = Math.floor(v + 0.5);
+    return Math.abs(v - r) < 1e-9 ? r : _roundHalfUpTo(v, 4);
+}
+
 function _hoursPass(activities, relationships, nodes, p) {
     const byCode = new Map();
     for (const a of activities || []) {
@@ -2863,6 +3064,16 @@ function _hoursPass(activities, relationships, nodes, p) {
             external_early_start: a.external_early_start || null,
             external_late_finish: a.external_late_finish || null,
             resource_assignments: a.resource_assignments || 0,
+            // resource dependent work: each assignment on its resource's
+            // calendar (RD), in minutes
+            assignments: (Array.isArray(a.assignments) ? a.assignments : [])
+                .filter((g) => g && typeof g === 'object')
+                .map((g) => ({
+                    clndr_id: g.clndr_id,
+                    remaining_minutes: _hrRound((_hoursFloat(g.remaining_hours) || 0) * 60),
+                    lag_minutes: _hrRound((_hoursFloat(g.lag_hours) || 0) * 60),
+                    driving: g.driving !== false,
+                })),
         });
     }
     const rawLagCal = String(p.relationshipLagCalendar || 'successor').trim();
@@ -2913,6 +3124,26 @@ function _hoursPass(activities, relationships, nodes, p) {
         n.late_finish_dt = _hrFormatInstant(r.lf);
         n.tf_hours = r.tf_minutes === null ? null : Math.round(r.tf_minutes / 60 * 1e4) / 1e4;
         n.ff_hours = r.ff_minutes === null ? null : Math.round(r.ff_minutes / 60 * 1e4) / 1e4;
+        // PF (v2.10.1) - the printed float is P6's: the hours pass's float in
+        // working days on the activity calendar's hours per day; any figure
+        // that moved keeps its day-pass value in day_pass_float. Python
+        // paired site: _hours_pass.
+        const hpd = calHpd(byCode.get(c).clndr_id || p.projectCalendar) || 8;
+        const movedF = {};
+        let anyMovedF = false;
+        for (const [k, m] of [['tf_working_days', 'tf_minutes'], ['tf_start_working_days', 'tf_start_minutes'],
+            ['tf_finish_working_days', 'tf_finish_minutes'], ['ff_working_days', 'ff_minutes'],
+            ['ff_signed_working_days', 'ff_signed_minutes']]) {
+            if (r[m] === null || r[m] === undefined) continue;
+            const v = _hrWorkingDays(r[m], hpd);
+            const was = (n[k] === undefined) ? null : n[k];
+            if (was !== v) {
+                movedF[k] = was;
+                anyMovedF = true;
+            }
+            n[k] = v;
+        }
+        if (anyMovedF) n.day_pass_float = movedF;
         // The printed dates are the dates P6 prints, so they follow the hours
         // pass; the day numbers stay the day pass's, and any printed date the
         // hours pass moved keeps its day-pass value in day_pass_dates.
@@ -6011,6 +6242,10 @@ function computeCPM(activities, relationships, opts) {
         if (n.is_complete) {
             n.ff = 0;
             n.ff_working_days = 0;
+            // and the signed pair, so all four compare on every activity
+            // (13-Oct-2026; Python paired site)
+            n.ff_signed = 0;
+            n.ff_signed_working_days = 0;
             continue;
         }
         const successors = succMap[c] || [];
@@ -6413,6 +6648,17 @@ function computeCPM(activities, relationships, opts) {
         floatType: _floatType, ssLagFrom: _ssLagFrom, projectFinish: _projectFinishOpt,
         useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates, alerts,
     });
+    if (_hours.applied) {
+        // PF (v2.10.1) - critical is P6's: total float at or below zero in
+        // hours. An activity the pass left without float keeps the day pass's
+        // test. Python paired site: after the _hours_pass call.
+        criticalCodes.clear();
+        for (const c in nodes) {
+            const n = nodes[c];
+            if (n.is_complete) continue;
+            if ((n.tf_hours === null || n.tf_hours === undefined) ? n.tf <= 0 : n.tf_hours <= 0) criticalCodes.add(c);
+        }
+    }
     // With the hours pass applied the printed dates and the float in hours are
     // exact, so a fractional lag or duration the day pass rounded no longer
     // reaches them: its SUB_DAY_LAG_ROUNDED ALERT becomes an INFO that says so
@@ -6750,10 +6996,30 @@ const _MC = {
     calMap: null,              // { clndr_id: calendarInfo } | null
 };
 
+// The data date P6 schedules a project from (v2.10.1): the filed
+// last_recalc_date, a blank one read as the planned start, one earlier than
+// the planned start lifted to it. Python paired site:
+// xer_parser._fill_blank_data_dates.
+function _p6DataDate(projectRow) {
+    const dd = projectRow ? String(projectRow.last_recalc_date || '').trim() : '';
+    const start = projectRow ? String(projectRow.plan_start_date || '').trim() : '';
+    if (!start) return { date: dd, source: dd ? 'PROJECT.last_recalc_date' : '' };
+    if (!dd) return { date: start, source: 'PROJECT.plan_start_date (blank last_recalc_date)' };
+    // only a planned start on a later DAY lifts it (the measured case)
+    if (start.slice(0, 10) > dd.slice(0, 10)) {
+        return { date: start, source: 'PROJECT.plan_start_date (later than the filed data date ' + dd + ')' };
+    }
+    return { date: dd, source: 'PROJECT.last_recalc_date' };
+}
+
 function parseXER(content) {
     _MC.tasks = {};
     // v2.9.53 — TASKRSRC rows per task_id (see resource_assignments below).
     const _assignCounts = {};
+    // v2.10.1 RD — each TASKRSRC row as the engine schedules it on a resource
+    // dependent activity, and each resource's calendar (RSRC.clndr_id).
+    const _assignRows = {};
+    const _rsrcCal = {};
     _MC.predecessors = [];
     _MC.hammocks = {};
     _MC.parseAlerts = [];
@@ -6850,7 +7116,22 @@ function parseXER(content) {
                     // (pre-D7 behaviour for minimal exports). A record that
                     // trips the corrupt-record predicate gets the P6
                     // Standard-calendar fallback plus a forensic ALERT.
-                    if (row.clndr_data) {
+                    const _hpdDecl = Number.isFinite(_hpd) && _hpd > 0 ? _hpd : 8;
+                    if (!String(row.clndr_data || '').trim()) {
+                        // An EMPTY record: P6 schedules on its internal
+                        // Standard, Mon-Fri 08:00-16:00 with no exceptions,
+                        // whatever hours a day the record declares (P6 probes
+                        // ZZ-CPP-EMPTYCAL, ZZ-CPP-EMPTYCAL2 at 10 / 6 / 24 h,
+                        // ZZ-CPP-RSRC A1; 4898). The working day is eight
+                        // hours; the declared figure is kept beside it. Python
+                        // paired site: xer_parser.get_calendar_map.
+                        _MC.calMap[clndr_id] = {
+                            work_days: [1, 2, 3, 4, 5], holidays: [], special_workdays: [],
+                            hours_per_day: 8, p6_fallback: true, empty_record: true,
+                            declared_hours_per_day: _hpdDecl,
+                        };
+                        _MC.calendarHoursPerDay[clndr_id] = 8;
+                    } else if (row.clndr_data) {
                         const _dec = decodeClndrData(row.clndr_data, row.clndr_type);
                         if (_dec.corrupt_fallback) {
                             _MC.calMap[clndr_id] = {
@@ -7205,6 +7486,27 @@ function parseXER(content) {
             }
             if (currentTable === 'TASKRSRC' && row.task_id) {
                 _assignCounts[row.task_id] = (_assignCounts[row.task_id] || 0) + 1;
+                // remaining units / remaining units per hour, the remaining
+                // lag (the planned lag when blank), Drive Activity Dates.
+                // Python paired site: xer_parser.resource_dependent_assignments.
+                const _num = (v) => {
+                    if (v === undefined || v === null || String(v).trim() === '') return null;
+                    const f = Number(v);
+                    return Number.isFinite(f) ? f : null;
+                };
+                const _qty = _num(row.remain_qty) || 0;
+                const _rate = _num(row.remain_qty_per_hr) || 0;
+                let _alag = _num(row.relag_drtn_hr_cnt);
+                if (_alag === null) _alag = _num(row.target_lag_drtn_hr_cnt) || 0;
+                (_assignRows[row.task_id] = _assignRows[row.task_id] || []).push({
+                    rsrc_id: String(row.rsrc_id || '').trim(),
+                    remaining_hours: _rate > 0 ? _qty / _rate : 0,
+                    lag_hours: _alag,
+                    driving: String(row.rollup_dates_flag || 'Y').trim().toUpperCase() !== 'N',
+                });
+            }
+            if (currentTable === 'RSRC' && row.rsrc_id) {
+                _rsrcCal[String(row.rsrc_id).trim()] = String(row.clndr_id || '').trim();
             }
             if (currentTable === 'TASKPRED') {
                 const predType = row.pred_type || 'PR_FS';
@@ -7284,6 +7586,20 @@ function parseXER(content) {
 
     for (const _aid of Object.keys(_assignCounts)) {
         if (_MC.tasks[_aid]) _MC.tasks[_aid].resource_assignments = _assignCounts[_aid];
+    }
+    // v2.10.1 RD — a resource dependent activity hands its assignments to the
+    // hours pass, each with its resource's calendar (null for a role or a
+    // resource the file does not carry: the activity's calendar).
+    for (const _aid of Object.keys(_assignRows)) {
+        const _t = _MC.tasks[_aid];
+        if (!_t || _t.task_type !== 'TT_Rsrc' || _t.is_complete) continue;
+        _t.assignments = _assignRows[_aid].map((g) => ({
+            rsrc_id: g.rsrc_id,
+            clndr_id: g.rsrc_id ? (_rsrcCal[g.rsrc_id] || null) : null,
+            remaining_hours: g.remaining_hours,
+            lag_hours: g.lag_hours,
+            driving: g.driving,
+        }));
     }
 
     // Build links — only valid (both sides exist). v2.9.7 — hammocks have
@@ -7462,6 +7778,12 @@ function parseXER(content) {
         // tia_builder._detect_project_finish.
         plan_end_date: _projectRow ? String(_projectRow.plan_end_date || '').trim() : '',
         project_finish: _projectRow ? String(_projectRow.plan_end_date || '').trim() : '',
+        // v2.10.1 — the data date P6 schedules from: PROJECT.last_recalc_date,
+        // a blank one read as the planned start, and one EARLIER than the
+        // planned start lifted to it, as P6 lifts it on open (probe
+        // ZZ-CPP-XZ). Python paired site: xer_parser._fill_blank_data_dates.
+        data_date: _p6DataDate(_projectRow).date,
+        data_date_source: _p6DataDate(_projectRow).source,
         hammock_count: Object.keys(_MC.hammocks).length,
         // v2.9.12 T1.5 — expose parse-time alerts so callers that don't go
         // through runCPM can still see what was dropped.
@@ -10571,20 +10893,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '127 cross-validation fixtures. The harness defines 5233 ' +
-                'comparisons; 100 of them are never executed because neither ' +
-                'implementation emits the field on the activity in question ' +
-                '(50 ff_signed, 50 ff_signed_working_days, all on completed ' +
-                'activities) and the harness guards skip rather than fail, so its ' +
-                'reported "Checks: 5133 / 5133" counts executed comparisons only and ' +
-                'is not a coverage figure. None of those 100 is a one-sided parity ' +
-                'gap: both implementations are silent in every one. The 58 one-sided ' +
-                'skips disclosed through v2.9.41 closed when the Python reference ' +
-                'began assigning ff_signed_working_days on the has-successors ' +
-                'branch. 37 of the 127 fixtures contain at least one skipped ' +
-                'comparison. The 5133 comparisons that did run are bit-identical ' +
-                '(including ' +
-                'severity-level alert parity, compared on 115 of the 127 fixtures). ' +
+                '136 cross-validation fixtures. The harness defines 6994 ' +
+                'comparisons and executes all of them: since v2.10.1 both ' +
+                'implementations emit every compared field on every activity, the ' +
+                'signed free-float pair on completed activities included, so the ' +
+                'reported "Checks: 6994 / 6994" is the whole comparison surface. ' +
+                'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
+                'Python reference began assigning ff_signed_working_days on the ' +
+                'has-successors branch; the 100 mutual skips on completed activities ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 6994 comparisons ' +
+                'are bit-identical (including ' +
+                'severity-level alert parity, compared on 134 of the 136 fixtures: ' +
+                'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
                 'independently reproducible from this repository). ' +
@@ -10621,38 +10941,23 @@ function buildDaubertDisclosure(result, opts) {
         },
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
-                'suite actually executes. Coverage limit: the cross-validation harness ' +
-                'compares ff_signed and ff_signed_working_days only when both engines ' +
-                'emit the field, so 100 checks are skipped rather than compared, counted, ' +
-                'or reported as failures (50 ff_signed, 50 ff_signed_working_days). The ' +
-                'printed 5133 / 5133 therefore sits on a nominal surface of 5233 checks, and ' +
-                'those two fields go uncompared somewhere in 37 of the 127 fixtures. In ' +
-                'all 100 cases NEITHER engine emits the field, so the skip is a ' +
-                'representation artifact on a completed activity rather than an ' +
-                'unverified one-sided value: 0 skips hide a value the JS engine did ' +
-                'emit, 100 are comparisons where neither engine emits one. Every ' +
-                'ES/EF/LS/LF/TF and date comparison is executed, on every activity ' +
-                'comparison group. Epistemic ' +
+                'suite defines. Coverage: the cross-validation harness executes all ' +
+                '6994 comparisons it defines over 136 fixtures and skips none; every ' +
+                'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
+                'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '127 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '136 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                '5133 comparisons with 0 mismatches, but it counts only executed ' +
-                'comparisons in its denominator, so its 5133 / 5133 tally cannot express ' +
-                'the following gaps. Not executed: 100 node comparisons on the signed ' +
-                'free-float variants (ff_signed and ff_signed_working_days on ' +
-                'completed activities), which neither engine emits; and node output ' +
-                'on the 2 fixtures where both engines are required to throw. Alert ' +
-                'parity runs on 115 of the 127 fixtures: not on those 2, which have no ' +
-                'output to compare, and not on F65, F67, F96, F99, F101 and F102, where ' +
-                'the JS engine also ' +
-                'emits its per-activity future-actual-finish ALERT, which the Python ' +
-                'reference has never carried (a pre-existing gap, disclosed rather ' +
-                'than hidden), nor on F126, F127, F129 and F131, where the JS engine also ' +
-                'emits its notice that the day pass rounds a fractional lag or duration, ' +
-                'which the Python reference has never carried either. The former F20/F21/F27 carve-out (out-of-sequence ' +
+                'all 6994 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'output on the 2 fixtures where both engines are required to throw. ' +
+                'Alert parity runs on 134 of the 136 fixtures. Through v2.10.0 it did not run on ' +
+                'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
+                'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
+                'notice that the day pass rounds a fractional lag or duration; the Python ' +
+                'reference carries both since v2.10.1. The former F20/F21/F27 carve-out (out-of-sequence ' +
                 'ALERT believed JS-only) was retired 2026-08-19, the Python reference ' +
                 'having emitted that alert since the v2.9.27 paired-fix wave. All ' +
                 'ES/EF/LS/LF/TF, calendar-date, total-float-working-day, free-float ' +

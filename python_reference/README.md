@@ -3,7 +3,7 @@
 This directory contains a frozen Python port of `compute_cpm` used exclusively by
 the cross-validation harness in [`cpm-engine.crossval.js`](../cpm-engine.crossval.js).
 
-**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **5133 of 5233 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, and the fixtures added since took it to **5133 of 5233** across 127 as measured 2026-10-12 (the harness writes the figures of its latest run to `validation/crossval-summary.json`). The 100 comparisons still skipped (50 `ff_signed`, 50 `ff_signed_working_days`) are completed activities where NEITHER engine emits the field, so they are absent on both sides rather than on one. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
+**It is NOT the production engine.** The production engine is [`cpm-engine.js`](../cpm-engine.js) at the repo root. This Python file exists so that external auditors can reproduce the **6994 of 6994 executed-comparison** cross-validation result reported in [`DAUBERT.md`](../DAUBERT.md) §2 (reproduction procedure in §3) without depending on a private CPP-internal codebase. The denominator is the number of comparisons the harness executes, not the whole comparison surface: the field guards skip a comparison whenever either engine omits the field. v2.9.42 closed the substantive half of that gap by assigning `ff_signed_working_days` on the has-successors branch of this reference's free-float pass, where it previously emitted nothing while the JS engine emitted a real number; that took the executed count from 931 of 995 to 989 of 995; the 2026-08-25 wave took it to 1009 of 1015 across 46 fixtures, the fixtures added since took it to 5133 of 5233 across 127 at v2.10.0, and v2.10.1 to **6994 of 6994** across 135 as measured 2026-10-13 (the harness writes the figures of its latest run to `validation/crossval-summary.json`): the 100 comparisons skipped through v2.10.0 (50 `ff_signed`, 50 `ff_signed_working_days`) were completed activities where NEITHER engine emitted the field, and both engines now emit 0 there, so nothing is skipped. This mattered beyond bookkeeping: the free-float working-day conversion carried a wrong anchor in BOTH ports, and `ff_signed_working_days` — the field that would have exposed it — was one of the fields being skipped.
 
 ## Provenance
 
@@ -114,13 +114,38 @@ have been applied:
    `cpm_minutes.py` and `cpm_hours.py`, byte-identical to the canonical
    engine's and loaded beside `cpm.py`; they are pinned below with it. See
    CHANGELOG.md v2.10.0.
+13. v2.10.1 (resource dependent work, the printed float from the hours pass)
+   is applied here by the same patch as the canonical engine: the hours pass
+   hands on each resource dependent activity's assignments (`assignments`,
+   on their resources' calendars, in `cpm_hours.py`); where the pass runs the
+   printed float (`tf_working_days` and its start / finish parts,
+   `ff_working_days`, `ff_signed_working_days`) is its float over the
+   calendar's hours per day, the day figure kept in `day_pass_float`, and
+   `critical_codes` is total float <= 0 in hours; float on work no calendar
+   reaches is counted on the 7-day days it was scheduled on
+   (`_count_float_days`); FUTURE_ACTUAL_FINISH and SUB_DAY_LAG_ROUNDED are
+   raised as the JS engine raises them; completed work carries
+   `ff_signed` / `ff_signed_working_days` 0; and a constraint handed back
+   already normalized (`date` plus `time_minutes`) keeps its time of day
+   (`_with_constraint_instant`). See CHANGELOG.md v2.10.1.
 
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  eb4442e5632318def0707bcba732b493bba114aeb2d41f437f312edc3b488042
+cpm.py          SHA-256:  19e89e8ce8376c14d333fcea5025924d3c7f04c4eb199c6e8a527bc9aa153345
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  12e529a467059f79cc9513257471ba0c814933cf23adfdd2ce8051db37e6d7f9
+cpm_hours.py    SHA-256:  b79513ba78d8d250b0204a4d11187ea577e10853c09d0f5aba34f29b66c642c8
+
+(v2.10.1 resource dependent work and the printed float 2026-10-13 - cpm.py
+bumped from eb4442e5..., cpm_hours.py from 12e529a4...: ENGINE_VERSION reads
+2.10.1, resource dependent work runs on its resources' calendars, the printed
+float and the critical set follow the hours pass, float on calendar-less work
+counts the days it was scheduled on, the two JS-only alerts are raised here
+too, and completed work carries the signed free-float pair; the comments that
+carry the cross-validation figures carry the measured ones (136 fixtures, 6994
+of 6994 executed). The harness gains 9 fixtures (F132-F140), compares every
+node's start and finish float and the hours fixtures' day_pass_float, and
+skips nothing.)
 
 (v2.10.0 the hours pass 2026-10-12 - cpm.py bumped from 80fcbd2b...:
 ENGINE_VERSION reads 2.10.0, compute_cpm runs the hours pass where the caller
@@ -491,15 +516,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 272589
-  sha-256:  eb4442e5632318def0707bcba732b493bba114aeb2d41f437f312edc3b488042
+  bytes: 280026
+  sha-256:  19e89e8ce8376c14d333fcea5025924d3c7f04c4eb199c6e8a527bc9aa153345
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 127 passed, 0 failed
-  Checks:   5133 / 5133 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 135 passed, 0 failed
+  Checks:   6994 / 6994 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

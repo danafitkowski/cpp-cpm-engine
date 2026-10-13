@@ -12,6 +12,90 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.1 - 2026-10-13 - Resource dependent work, and the float P6 prints, measured on P6's own output
+
+**Computed values move (Class A).** v2.10.0 scheduled in hours and minutes and printed P6's dates. On the 319
+projects P6 last scheduled in the measuring machine's database it still differed from P6 on 46 unfinished
+activities. 45 of them were resource dependent work, which P6 schedules on the assigned resources' calendars.
+And the float and critical flag it printed were still the whole-day pass's. This release closes both, and every
+rule it adds was read from P6 Professional 23.12.1's own F9 of synthetic probe projects:
+
+- **Resource dependent work.** A `TT_Rsrc` activity can carry `assignments`: `[{clndr_id, remaining_hours,
+  lag_hours, driving}]`, one per assignment, on its resource's calendar. `parseXER` builds them from TASKRSRC
+  and RSRC for unfinished resource dependent work. Each driving assignment is scheduled on its own calendar:
+  - The start takes the activity calendar's next opening first, then the resource's.
+  - An assignment lag delays only that assignment.
+  - The activity spans the earliest assignment start to the latest finish.
+  - The late side takes the activity calendar's close first.
+  - FF / SF requirements, start-no-later-than and finish-on-or-after constraints, ALAP and expected finishes
+    follow the rules the probes showed.
+  - An early start on the activity calendar's non-working time prints the remaining dates P6 prints.
+- **Work an expected finish zeroes.** Work an expected finish cuts to nothing in this F9 stays at its start; work
+  already at nothing is pulled, as before.
+- **Empty calendars.** An empty calendar record is P6's internal Standard, Mon-Fri 08:00-16:00 with no
+  holidays, whatever hours a day it declares. Probes at 8, 10, 6 and 24 h all ran those days. `parseXER` used
+  to leave such a record out, so its work ran on 7-day ordinal days.
+- **The printed float and the critical set.** Where the hours pass runs, the float a node prints is P6's float
+  over the activity calendar's hours per day: `tf_working_days` and its start / finish parts, `ff_working_days`
+  and `ff_signed_working_days`. A whole number stays an integer, and the day pass's figure is kept in
+  `day_pass_float` where it moved. `criticalCodes` is total float at or below zero in hours. `tf`, `ff` and the
+  day numbers stay the day pass's.
+- **Constraint times.** A constraint handed back already normalized keeps its time of day. That is `date` plus
+  `time_minutes`, the form `getTasks()` carries. `computeCPM` used to read it at the day's opening, so through
+  `parseXER` a finish-no-later-than P6 stored at 17:00 moved the late side a working day.
+- **Float on work no calendar reaches.** Such work is scheduled on 7-day ordinal days, and its float is now
+  counted on the same days. Crossval F93 now reads -7 in both engines.
+- **Alerts.** The Python reference now raises the per-activity future-actual-finish ALERT and the day pass's
+  sub-day notice, as the JS engine does. Completed work carries `ff_signed` / `ff_signed_working_days` 0 in
+  both. So the cross-validation harness skips nothing, and alert parity runs on every fixture with output.
+
+**Verified.**
+- **Against P6, through CPP's converters and this engine** (319 projects, 95,006 unfinished activities):
+  - Start, finish, late start, late finish and total float match P6 to the minute on 95,004; free float on 95,005.
+  - The critical flag matches on all 95,006.
+  - Before this release, the printed total float matched on 75,396, free float on 89,413 and the critical flag
+    on 94,703.
+  - The two activities left are P6 non-fixed points: P6's own next F9 gives the engine's answer.
+- **Every probe**, scored from the state P6 scheduled it from: 0 activities off.
+- **JS against Python.** The two engines agree on every field of all 163,773 activities of those projects,
+  through the minutes CPM and through `computeCPM`, critical sets included.
+- **JS unit suite:** 1,456 checks green, up from 1,435 (HR-20 to HR-39, RL-13).
+- **Cross-validation:** 136 fixtures, 6994 of 6994 executed, 0 skipped, 0 failures; alert parity on 134 of 136
+  (the other 2 must throw). F132-F140 hand both engines resource dependent work, the printed float and critical
+  set, calendar-less float, a future actual finish and normalized constraints. Every activity now also compares
+  its start and finish float, and the hours fixtures the day-pass float.
+- **P6 comparison matrix:** 13 / 13, with zero changed engine values. The Larchmere capture cases (19-21) read
+  256 of 256 at each data date, as before.
+- **Coverage,** re-measured on these bytes: 94.43% statements, 81.72% branches, 96.77% functions.
+
+**Who is affected.** Through `parseXER` and `computeCPM` with the hours handed on, on 597 distinct real exports
+on the measuring machine:
+- The printed float moves on 112,449 unfinished activities in 445 exports.
+- The critical flag moves on 7,829 activities in 214 exports.
+- The printed dates move on 67,733 activities in 228 exports.
+- Against the float and dates each export itself stores:
+  - The printed total float now equals the stored float on 100,267 activities of 199,750 (67,851 on v2.10.0).
+  - The critical flag equals stored float <= 0 on 167,634 (162,208).
+  - All four printed dates equal the stored dates on 75,983 of 185,667 (47,290).
+  - Where an export's figures moved away from what it stores (17 exports on float, 28 on the critical flag), the
+    export is not a fresh F9 of its own contents. Two largely fresh ones were examined. One carries calendar
+    exceptions added after its last F9; the other, progress recorded after it. P6 reads such an exception as the
+    engine does (probe ZZ-CPP-EXC00: an exception day written 00:00-00:00 is 24 hours worked).
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version
+is re-run under §12.2 where its schedule has any of these:
+- resource dependent work with assignments;
+- an empty calendar record;
+- a float or critical path figure on a schedule with part-day float, through a caller that hands on the hours;
+- through `parseXER` and `getTasks()`, a constraint with a time of day.
+
+**Not claimed.**
+- P6 non-fixed points: where P6's own stored state is not what its next F9 would produce, the engine gives the
+  next F9's answer.
+- The day numbers (`es`, `ef`, `ls`, `lf`), `tf` and `ff` are still the day pass's.
+
+---
+
 ## v2.10.0 - 2026-10-12 - The hours pass: the engine schedules in hours and minutes, measured on P6's own output
 
 **Computed values move (Class A).** Primavera P6 schedules in hours and minutes. Until this release the engine
