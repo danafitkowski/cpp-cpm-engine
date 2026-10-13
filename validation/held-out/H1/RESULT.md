@@ -78,3 +78,15 @@ It speaks for 12 random synthetic networks, on the features listed in the protoc
 On those networks the engine reproduced P6 on every field for 195 of 206 unfinished activities (94.7%). Every difference traces to one of the four situations above.
 
 The engine is not changed against this set. If a later release changes how the engine handles any of the four situations, that release is scored on a new held-out set seeded the same way. H1's result stays as published here.
+
+## After the score (13 October 2026)
+
+The score above stands as published. Afterwards the differences were diagnosed and tested in P6:
+
+- **Situations 1 and 3 are one rule.** On work already under way, P6 does not apply a Start On or Before or a Start On constraint on the late side. A Start On or Before or a Mandatory Start in either constraint slot takes the other constraint with it. Dropping the constraint reproduces P6 exactly on all seven activities of H1-02 and H1-12. The expected finish in H1-12 equalled the Start On date's preceding close only by coincidence.
+- **Situation 2:** As Late As Possible slides under way too, and P6 never caps the slide at the late finish.
+- **Situation 4:** free float runs to the successor's date less the lag walked back on the lag calendar.
+
+Seven synthetic P6 probes measured these rules beyond the H1 shapes: 293 rows, of which v2.10.1 matches 231. An engine 2.10.2 release candidate reproduces all 293, moves no row of the 95,017-activity P6 database comparison, and scores H1 at 206 of 206. That re-score is fitted, not held out, because the rules came from H1.
+
+The candidate was then scored once on a new held-out set, H2. The probes, the candidate and H2's result are on the public branch [`v2.10.2-candidate`](https://github.com/danafitkowski/cpp-cpm-engine/tree/v2.10.2-candidate/validation/held-out/H2/RESULT.md). H2's draw exercised only the free-float rule, which it confirmed on both rows it touched. The candidate is not released.
