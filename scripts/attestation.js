@@ -81,6 +81,15 @@ function runCapture(cmd, args) {
   };
 }
 
+// A gate that fails prints the tail of its own output, so a failing leg of the
+// CI matrix shows why without re-running it (13-Oct-2026: the macOS / Node 20
+// leg failed two gates whose output the witness step never showed).
+function showTail(label, result) {
+  const lines = result.combined.split(/\r?\n/).filter((l) => l.trim());
+  console.error('----- ' + label + ': last ' + Math.min(40, lines.length) + ' lines -----');
+  for (const l of lines.slice(-40)) console.error(l);
+}
+
 // ──────────────────────────── 1. Unit tests ───────────────────────────────
 log('[1/3] Running unit tests (node cpm-engine.test.js)...');
 const unitResult = runCapture('node', ['cpm-engine.test.js']);
@@ -89,6 +98,7 @@ const unitPassed = unitMatch ? parseInt(unitMatch[1], 10) : -1;
 const unitFailed = unitMatch ? parseInt(unitMatch[2], 10) : -1;
 const unitOk = unitResult.status === 0 && unitFailed === 0;
 log(`       → ${unitPassed} passed, ${unitFailed} failed (exit ${unitResult.status})`);
+if (!unitOk) showTail('unit tests', unitResult);
 
 // ──────────────────────────── 2. Crossval ─────────────────────────────────
 log('[2/3] Running JS-Python crossval (node cpm-engine.crossval.js)...');
@@ -101,12 +111,14 @@ const checksPassed = xvalChk ? parseInt(xvalChk[1], 10) : -1;
 const checksTotal = xvalChk ? parseInt(xvalChk[2], 10) : -1;
 const xvalOk = xvalResult.status === 0 && fixturesFailed === 0 && checksPassed === checksTotal;
 log(`       → ${fixturesPassed}/${fixturesPassed + fixturesFailed} fixtures, ${checksPassed}/${checksTotal} checks (exit ${xvalResult.status})`);
+if (!xvalOk) showTail('crossval', xvalResult);
 
 // ──────────────────────────── 3. Citation regression ──────────────────────
 log('[3/5] Running citation regression (node tests/no-fabricated-citations.test.js)...');
 const citeResult = runCapture('node', ['tests/no-fabricated-citations.test.js']);
 const citeOk = citeResult.status === 0 && /PASS/.test(citeResult.combined);
 log(`       → ${citeOk ? 'PASS' : 'FAIL'} (exit ${citeResult.status})`);
+if (!citeOk) showTail('citation regression', citeResult);
 
 // ──────────────────────────── 4. Truncation regression ────────────────────
 // v2.9.33 — closes ChatGPT audit finding #4 (npm run verify did not invoke
@@ -115,6 +127,7 @@ log('[4/5] Running truncation regression (node tests/no-truncation.test.js)...')
 const truncResult = runCapture('node', ['tests/no-truncation.test.js']);
 const truncOk = truncResult.status === 0 && /PASS/.test(truncResult.combined);
 log(`       → ${truncOk ? 'PASS' : 'FAIL'} (exit ${truncResult.status})`);
+if (!truncOk) showTail('truncation regression', truncResult);
 
 // ──────────────────────────── 5. Version-drift regression gate ────────────
 // v2.9.33 — closes ChatGPT audit finding #4 + #5 (the version-refs gate
@@ -125,6 +138,7 @@ log('[5/5] Running version-drift regression (node tests/no-stale-version-refs.te
 const verRefResult = runCapture('node', ['tests/no-stale-version-refs.test.js']);
 const verRefOk = verRefResult.status === 0 && /PASS/.test(verRefResult.combined);
 log(`       → ${verRefOk ? 'PASS' : 'FAIL'} (exit ${verRefResult.status})`);
+if (!verRefOk) showTail('version-drift regression', verRefResult);
 
 // ──────────────────────────── Witness assembly ────────────────────────────
 const pkg = readJSON('package.json');

@@ -13073,4 +13073,6 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
-process.exit(fail > 0 ? 1 : 0);
+// Set the exit code and let stdout drain (on macOS a pipe to stdout is
+// asynchronous, and process.exit() can drop the tally above).
+process.exitCode = fail > 0 ? 1 : 0;

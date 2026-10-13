@@ -3228,4 +3228,8 @@ if (EMIT_JSON) {
 // (audit LOW R21). Currently they're always in lockstep (any per-check
 // fail bumps fixturesFailed via the inner branches), but a future refactor
 // of the inner loops could break the linkage. Belt-and-suspenders.
-process.exit((fixturesFailed > 0 || totalFails > 0) ? 1 : 0);
+// Set the exit code and let the process end on its own: on macOS a pipe to
+// stdout is asynchronous, and process.exit() here dropped the tally lines
+// above when the output ran long (v2.10.1's 220 KB: `npm run verify` read the
+// run as -1 fixtures on the macOS / Node 20 leg).
+process.exitCode = (fixturesFailed > 0 || totalFails > 0) ? 1 : 0;
