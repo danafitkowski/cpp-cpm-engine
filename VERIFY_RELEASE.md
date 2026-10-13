@@ -31,8 +31,8 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 | Item | Value |
 |---|---|
 | Tag | `v2.10.1` |
-| Commit SHA | `<content commit>` (named here in the commit after the content commit; the `v2.10.1` tag names the content commit) |
-| Release date | 2026-10-12 |
+| Commit SHA | `6cebfdbd2127e978a361b111aa711d46151f888a` (the content commit the `v2.10.1` tag names) |
+| Release date | 2026-10-13 |
 | Engine source | `cpm-engine.js` |
 | Engine SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/cpm-engine.js.sha256` (the top-level `cpm-engine.js.sha256` is **gitignored** per `scripts/attestation.js` — it is a per-machine regenerated artifact, not a committed pin). |
 | Python reference | `python_reference/cpm.py`, with the hours pass's `python_reference/cpm_minutes.py` and `python_reference/cpm_hours.py` (SHA-256 pinned in `python_reference/README.md` and recorded in the witness) |

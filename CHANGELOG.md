@@ -67,6 +67,11 @@ rule it adds was read from P6 Professional 23.12.1's own F9 of synthetic probe p
 - **P6 comparison matrix:** 13 / 13, with zero changed engine values. The Larchmere capture cases (19-21) read
   256 of 256 at each data date, as before.
 - **Coverage,** re-measured on these bytes: 94.43% statements, 81.72% branches, 96.77% functions.
+- **Harness.** On macOS a pipe to stdout is asynchronous, and the crossval runner's closing `process.exit()` dropped
+  its tally lines once the output ran long (220 KB): `npm run verify` read the run as -1 fixtures on the macOS /
+  Node 20 leg of the first tag run. The crossval and unit runners now set `process.exitCode` and let the process
+  end on its own, and `scripts/attestation.js` prints the last 40 lines of any gate that fails. The tag names that
+  commit; the CI matrix then passed 9 / 9 and the witness was signed.
 
 **Who is affected.** Through `parseXER` and `computeCPM` with the hours handed on, on 597 distinct real exports
 on the measuring machine:
