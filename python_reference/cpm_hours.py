@@ -544,11 +544,22 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 ls_bound = b if ls_bound is None else min(ls_bound, b)
         if n['ext_lf'] is not None:
             lf = min(lf, cal.prev_work_end(n['ext_lf']))
+        # SC (H1, 13-Oct-2026): on work under way a Start On or Before or a
+        # Mandatory Start in either slot takes the other constraint with it:
+        # P6 applies neither on the late side (ZZ-CPP-H1S-P P7, P10, P14; a
+        # Finish On or Before beside Start On or After, Start On, ALAP or Finish
+        # On or After still caps it: P8, P9, P13, P17, H1-01 A1080)
+        drop_all = n['started'] and any((n[k] or {}).get('type') in ('SNLT', 'MS_Start') for k in ('c1', 'c2'))
         for k in ('c1', 'c2'):
             cs = n[k]
             if cs and cs['at'] is not None:
-                if n['started'] and cs['type'] in ('MS_Finish', 'MS_Start'):
-                    continue    # UW (v2.9.52): the mandatory pins drop on work under way
+                if n['started'] and (drop_all or cs['type'] in ('MS_Finish', 'MS_Start', 'SNLT', 'SO')):
+                    # UW (v2.9.52): the mandatory pins drop on work under way.
+                    # SC: so do Start On or Before and Start On, dated before
+                    # or after the data date; finish constraints still cap the
+                    # late finish (H1-02 A1130, H1-12 A1190; ZZ-CPP-H1S K1-K5,
+                    # K8, K9)
+                    continue
                 if cs['type'] in ('FNLT', 'FO', 'MS_Finish'):
                     lf = min(lf, cs['at'])
                 elif cs['type'] in ('SNLT', 'SO', 'MS_Start'):
@@ -600,12 +611,18 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
     # ---------------------------------------------------------------- ALAP
     # AL (v2.9.54): P6 slides As Late As Possible work by its FREE float: the
     # early dates move as late as they can without delaying any successor's
-    # early dates (an open end to the project's early finish), never past the
-    # late finish; the late dates stay the backward pass's. Reverse
+    # early dates (an open end to the project's early finish); the late dates
+    # stay the backward pass's. Reverse
     # topological order, so an ALAP successor has already slid.
+    # AS (H1, 13-Oct-2026): work under way slides too, its remaining work from
+    # the restart (H1-03 A1170; ZZ-CPP-H1S L3 L4 L5 L8), and nothing caps the
+    # slide at the late finish, started or not: with negative float the early
+    # dates go past the late ones (L2 L4, total float -24 h). Under progress
+    # override an SS / SF link out of work already started holds nothing back
+    # (its start is history: ZZ-CPP-H1S-O L8 slides to the project's finish).
     for c in reversed(order):
         n = nodes[c]
-        if n['complete'] or n['started'] or not any((n[k] or {}).get('type') == 'ALAP' for k in ('c1', 'c2')):
+        if n['complete'] or not any((n[k] or {}).get('type') == 'ALAP' for k in ('c1', 'c2')):
             continue
         cal = n['cal']
         ef_b = ls_b = None
@@ -613,6 +630,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         for r in succs[c]:
             s = nodes[r['to_code']]
             if s['complete']:
+                continue
+            if n['started'] and not retained and r['type'] in ('SS', 'SF'):
                 continue
             seen = True
             lc = lag_cal(n, s)
@@ -629,15 +648,15 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             ef_b = from_ls if ef_b is None else min(ef_b, from_ls)
         if ef_b is None:
             continue
-        ef_b = min(ef_b, n['lf'])
         if ef_b <= n['ef']:
             continue
+        cur = n['restart'] if n['started'] else n['es']
         if n['asg']:
             # RD: the assignments finish by the bound on their own calendars,
             # as on the backward pass (ZZ-CPP-RSRC H1)
             new_es, new_ef = _rsrc_backward(n['asg'], cal, ef_b, None)
-            if new_es > n['es']:
-                n['es'], n['ef'] = new_es, new_ef
+            if new_es > cur:
+                n['restart' if n['started'] else 'es'], n['ef'] = new_es, new_ef
                 n.pop('rem_dates', None)
                 n['rem'] = cal.between(new_es, new_ef)
             continue
@@ -650,9 +669,9 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if not ((n.get('task_type') or 'TT_Task') == 'TT_Mile' and cal.is_start(ef_b)):
                 ef_b = cal.prev_work_end(ef_b)
             new_es = ef_b
-        if new_es <= n['es']:
+        if new_es <= cur:
             continue
-        n['es'], n['ef'] = new_es, ef_b
+        n['restart' if n['started'] else 'es'], n['ef'] = new_es, ef_b
 
     # ---------------------------------------------------------------- float
     out = {}
@@ -688,16 +707,19 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     s_start = s_fin = cal.next_work(stamp(s))
                 else:
                     s_start, s_fin = s.get('restart', s['es']), s['ef']
+                sa = s_start if t in ('FS', 'SS') else s_fin
                 if t in ('FS', 'FF'):
-                    pa = lag_fwd(r_ef, r['lag'], lc)
+                    own, lag = r_ef, r['lag']
                 else:
-                    st = ss_anchor(n) if t == 'SS' else r_es
+                    own = ss_anchor(n) if t == 'SS' else r_es
                     lag = r['lag']
                     if n['started'] and retained:
                         lag = 0 if s['complete'] else unexpired(n['as'], lag, lc, n)
-                    pa = lag_fwd(st, lag, lc)
-                sa = s_start if t in ('FS', 'SS') else s_fin
-                cands.append(cal.between(pa, sa))
+                # FL (H1, 13-Oct-2026): the slack is measured from this
+                # activity's date to the successor's date less the lag, walked
+                # back on the lag calendar, and counted on this activity's
+                # calendar (H1-10 A1110 / A1120, H1-11 A1110)
+                cands.append(cal.between(own, lag_bwd(sa, lag, lc)))
             if n['xf'] is not None or (not n['started'] and any(
                     (n[k] or {}).get('type') in ('MS_Start', 'MS_Finish') for k in ('c1', 'c2'))):
                 # none on work carrying an expected finish in force, or pinned

@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.1",
-  "generated_utc": "2026-10-13T10:33:22.001Z",
+  "engine_version": "2.10.2",
+  "generated_utc": "2026-10-13T18:19:21.919Z",
   "fixtures": {
-    "total": 136,
-    "passed": 136,
+    "total": 143,
+    "passed": 143,
     "failed": 0
   },
   "checks": {
-    "executed": 6994,
+    "executed": 7634,
     "failed": 0,
-    "passed": 6994,
+    "passed": 7634,
     "skipped": 0,
-    "surface": 6994
+    "surface": 7634
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 134,
-    "project_finish": 134,
-    "critical_codes": 134,
-    "topo_order": 134,
-    "alert_count": 134,
-    "alert_severity_counts": 134,
-    "node <id>": 6175,
+    "project_finish_num": 141,
+    "project_finish": 141,
+    "critical_codes": 141,
+    "topo_order": 141,
+    "alert_count": 141,
+    "alert_severity_counts": 141,
+    "node <id>": 6768,
     "threw (both engines)": 2,
-    "hours": 13
+    "hours": 18
   },
   "rows": [
     {
@@ -1114,6 +1114,62 @@
       "id": "F140",
       "name": "F140 - a constraint handed back normalized (date + time_minutes, as getTasks() carries it) keeps its time",
       "checks": 57,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F141",
+      "name": "F141 - SC: start constraints on work under way, whole days (Start On or Before / Start On / Mandatory Start take the late side with them)",
+      "checks": 78,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F142",
+      "name": "F142 - SC: the same constraints in hours",
+      "checks": 87,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F143",
+      "name": "F143 - AS: As Late As Possible under way, past its late finish and as an open end, whole days",
+      "checks": 87,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F144",
+      "name": "F144 - AS: the same in hours",
+      "checks": 97,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F145",
+      "name": "F145 - AS: under progress override an SS link out of started ALAP work holds nothing back (hours)",
+      "checks": 97,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F146",
+      "name": "F146 - FL: free float across a lag on the successor's calendar, seven-day work into five-day work",
+      "checks": 97,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F147",
+      "name": "F147 - FL: free float across a lag on the 24-hour calendar",
+      "checks": 97,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

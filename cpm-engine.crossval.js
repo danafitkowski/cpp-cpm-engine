@@ -1086,13 +1086,15 @@ compareFixture('F27 — actual_start AFTER data_date pins ES (P6 forward-pass se
 // =====================================================================
 // FIXTURE 28 — ALAP primary + FNLT secondary compound
 // =====================================================================
-// B has primary ALAP (slide ES/EF to LS/LF) plus secondary FNLT
-// (clamp LF backward). FNLT is set EARLIER than the natural LF so it
-// tightens. ALAP then slides ES forward to the clamped LS.
+// B has primary ALAP plus secondary FNLT (clamp LF backward). FNLT is set
+// EARLIER than the natural LF so it tightens.
 //   - Project: A(5d) → {B(2d, ALAP+FNLT), C(10d)} → END(1d)
 //   - Without ALAP, B natural ES=01-12, EF=01-13, TF=8 (off CP, C drives)
 //   - With FNLT 2026-01-19 secondary: B.LF clamps to 01-19, B.LS=01-16
-//   - ALAP slides B.ES → 01-16, B.EF → 01-19
+//   - ALAP slides B by its free float to END's early start (v2.9.54); since
+//     v2.10.2 (AS) nothing caps the slide at B's own late finish, so B ends
+//     past its FNLT with negative total float, as P6 slid probe P13
+//     (validation/p6-probes/h1-situations-2026-10-13)
 //   - C/END unchanged; project finish unchanged
 compareFixture('F28 — ALAP primary + FNLT secondary compound', {
     activities: [
@@ -3184,6 +3186,71 @@ compareFixture('F140 - a constraint handed back normalized (date + time_minutes,
         { code: 'E', duration_days: 2, clndr_id: 'MF', constraint: { type: 'FNLT', date: '2026-10-09', time_minutes: 600 } }],
     relationships: [hR('A', 'B'), hR('B', 'D'), hR('C', 'D')],
     data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+
+// v2.10.2 — the four situations held-out set H1 found (P6 probes in
+// validation/p6-probes/h1-situations-2026-10-13): start constraints on work
+// under way (SC), As Late As Possible under way and past its late finish (AS),
+// free float across a lag on another calendar (FL, hours pass only).
+const scActs = (mk) => [
+    mk('D1', 80),
+    mk('K1', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2, constraint: { type: 'SNLT', date: '2026-09-30' } }),
+    mk('K2', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2, constraint: { type: 'SO', date: '2026-10-02' } }),
+    mk('K3', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2, constraint: { type: 'SNLT', date: '2026-09-30' },
+        constraint2: { type: 'FNLT', date: '2026-10-09' } }),
+    mk('K4', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2, constraint: { type: 'SNET', date: '2026-09-30' },
+        constraint2: { type: 'FNLT', date: '2026-10-09' } }),
+    mk('K5', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2, constraint: { type: 'MS_Start', date: '2026-10-08' },
+        constraint2: { type: 'FNLT', date: '2026-10-09' } }),
+    mk('K6', 16, { constraint: { type: 'SNLT', date: '2026-10-07' }, constraint2: { type: 'FNLT', date: '2026-10-06' } }),
+    mk('K7', 16),
+];
+const scRels = (mkR) => [mkR('K7', 'K1', 'SS')];
+const dA = (code, h, extra) => Object.assign({ code, duration_days: h / 8, clndr_id: 'MF' }, extra || {});
+const dR = (a, b, t, lagH) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: (lagH || 0) / 8 });
+compareFixture('F141 - SC: start constraints on work under way, whole days (Start On or Before / Start On / Mandatory Start take the late side with them)', {
+    activities: scActs(dA), relationships: scRels(dR),
+    data_date: '2026-10-05', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F142 - SC: the same constraints in hours', {
+    activities: scActs(hA), relationships: scRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+const asActs = (mk) => [
+    mk('D', 48), mk('B', 8), mk('Q', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2,
+        constraint: { type: 'ALAP' } }),
+    mk('D2', 48), mk('B2', 8, { constraint: { type: 'FNLT', date: '2026-10-09' } }), mk('Q2', 16, { constraint: { type: 'ALAP' } }),
+    mk('Q3', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2, constraint2: { type: 'ALAP' } }),
+    mk('Q4', 32, { actual_start: '2026-10-01 08:00', remaining_duration: 2, constraint: { type: 'ALAP' } }), mk('B4', 8),
+];
+const asRels = (mkR) => [mkR('D', 'B'), mkR('Q', 'B'), mkR('D2', 'B2'), mkR('Q2', 'B2'), mkR('D', 'B4'), mkR('Q4', 'B4', 'SS')];
+compareFixture('F143 - AS: As Late As Possible under way, past its late finish and as an open end, whole days', {
+    activities: asActs(dA), relationships: asRels(dR),
+    data_date: '2026-10-05', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F144 - AS: the same in hours', {
+    activities: asActs(hA), relationships: asRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F145 - AS: under progress override an SS link out of started ALAP work holds nothing back (hours)', {
+    activities: asActs(hA), relationships: asRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+const flActs = () => [
+    hA('A1', 12, { clndr_id: 'SD' }), hA('D1', 40), hA('B1', 8),
+    hA('A2', 12), hA('D2', 40, { clndr_id: 'SD' }), hA('B2', 8, { clndr_id: 'SD' }),
+    hA('A3', 12, { clndr_id: 'SD' }), hA('D3', 40), hA('B3', 8),
+];
+const flRels = () => [hR('D1', 'B1'), hR('A1', 'B1', 'FS', -4), hR('D2', 'B2'), hR('A2', 'B2', 'FF', 16),
+    hR('D3', 'B3'), hR('A3', 'B3', 'SS', 12)];
+compareFixture('F146 - FL: free float across a lag on the successor\'s calendar, seven-day work into five-day work', {
+    activities: flActs(), relationships: flRels(),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Successor',
+}, { hours: true });
+compareFixture('F147 - FL: free float across a lag on the 24-hour calendar', {
+    activities: flActs(), relationships: flRels(),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_24Hour',
 }, { hours: true });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

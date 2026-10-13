@@ -1,0 +1,116 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9202	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	ZZ-CPP-H1S-O					92020		1000	10	10	0	500		0	0	2026-03-11 08:00	2026-03-02 08:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	92020	N	ZZ-CPP-H1S-O Mon-Fri 08:00-12:00 and 13:00-17:00	9202			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	92021	N	ZZ-CPP-H1S-O Mon-Fri 07:00-17:00	9202			CA_Project	10	50	215	2600	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|17:00)())))(0||3()((0||0(s|07:00|f|17:00)())))(0||4()((0||0(s|07:00|f|17:00)())))(0||5()((0||0(s|07:00|f|17:00)())))(0||6()((0||0(s|07:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109202	9202	SD_Both	N	Y	N	N	FT_FF	rcal_Predecessor	N	Y	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	92020	9202		1	1	Y	N	WS_Open	ZZ-CPP-H1S-O	Constraints and ALAP on started work, progress override (synthetic, delete after)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9202000	9202	92020	92020	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	S0	project start (complete)				0	0	0	0	0	0	0	0		2026-03-02 08:00	2026-03-02 08:00								2026-03-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9202001	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	D1	driver: sets the project finish				200	0	0	0	200	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202002	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K1P	started predecessor of K1				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202003	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K1	Start On or Before dated before the actual start				16	0	0	0	32	0	0	0	2026-03-03 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9202004	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K2P	started predecessor of K2				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202005	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K2	Start On or Before after the actual start, before the data date				16	0	0	0	32	0	0	0	2026-03-06 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9202006	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K3P	started predecessor of K3				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202007	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K3	Start On or Before after the data date				16	0	0	0	32	0	0	0	2026-03-16 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9202008	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K4P	started predecessor of K4				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202009	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K4	Start On before the data date				16	0	0	0	32	0	0	0	2026-03-09 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MSO	PT_Normal										0	0					admin	admin		
+%R	9202010	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K5P	started predecessor of K5				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202011	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K5	Start On after the data date				16	0	0	0	32	0	0	0	2026-03-18 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MSO	PT_Normal										0	0					admin	admin		
+%R	9202012	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K6P	started predecessor of K6				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202013	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K6	Mandatory Start after the data date (control)				16	0	0	0	32	0	0	0	2026-03-18 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9202014	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K7P	started predecessor of K7				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202015	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K7	Start On or After after the data date (control)				16	0	0	0	32	0	0	0	2026-03-16 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9202016	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K8P	started predecessor of K8				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202017	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K8	Finish On or Before after the data date (control)				16	0	0	0	32	0	0	0	2026-03-13 17:00	2026-03-05 08:00									2026-03-05 08:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9202018	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K9P	started predecessor of K9				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202019	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K9	Finish On after the data date (control)				16	0	0	0	32	0	0	0	2026-03-20 17:00	2026-03-05 08:00									2026-03-05 08:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9202020	9202	92020	92020	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K10P	started predecessor of K10				8	0	0	0	24	0	0	0		2026-03-04 08:00									2026-03-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9202021	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K10	Start On or Before before the data date with a Finish On or Before				16	0	0	0	32	0	0	0	2026-03-04 08:00	2026-03-05 08:00									2026-03-05 08:00				CS_MSOB	PT_Normal							2026-03-24 17:00	CS_MEOB		0	0					admin	admin		
+%R	9202022	9202	92020	92021	67	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K11P	started predecessor of K11				8	0	0	0	24	0	0	0		2026-03-04 07:00									2026-03-04 07:00					PT_Normal										0	0					admin	admin		
+%R	9202023	9202	92020	92021	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	K11	Start On or Before before the data date, on a 10 h calendar				16	0	0	0	32	0	0	0	2026-03-03 08:00	2026-03-05 07:00									2026-03-05 07:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9202024	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	K12	Start On or Before, not started (control)				16	0	0	0	16	0	0	0	2026-03-16 08:00										2026-03-11 08:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9202025	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	K13	Start On, not started (control)				16	0	0	0	16	0	0	0	2026-03-18 08:00										2026-03-11 08:00				CS_MSO	PT_Normal										0	0					admin	admin		
+%R	9202026	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L1	ALAP not started, positive float				16	0	0	0	16	0	0	0											2026-03-11 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202027	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L1D	driver of L1S				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202028	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L1S	successor of L1				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202029	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L2	ALAP not started, negative float (successor Finish On or Before)				16	0	0	0	16	0	0	0											2026-03-11 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202030	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L2D	driver of L2S				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202031	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L2S	successor of L2				8	0	0	0	8	0	0	0	2026-03-13 17:00										2026-03-11 08:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9202032	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	L3	ALAP started, positive float				8	0	0	0	16	0	0	0		2026-03-05 08:00									2026-03-05 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202033	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L3D	driver of L3S				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202034	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L3S	successor of L3				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202035	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	L4	ALAP started, negative float				8	0	0	0	16	0	0	0		2026-03-05 08:00									2026-03-05 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202036	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L4D	driver of L4S				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202037	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L4S	successor of L4				8	0	0	0	8	0	0	0	2026-03-13 17:00										2026-03-11 08:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9202038	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	L8	ALAP started, SS successor				8	0	0	0	16	0	0	0		2026-03-05 08:00									2026-03-05 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202039	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L8D	driver of L8S				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202040	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L8S	successor of L8				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202041	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	L5	ALAP started, open end				8	0	0	0	16	0	0	0		2026-03-05 08:00									2026-03-05 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202042	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L6	ALAP not started, open end				16	0	0	0	16	0	0	0											2026-03-11 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202043	9202	92020	92020	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	L7	ALAP started, bound before the data date plus the remaining work				8	0	0	0	16	0	0	0		2026-03-05 08:00									2026-03-05 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9202044	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L7D	short driver of L7S				4	0	0	0	4	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9202045	9202	92020	92020	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L7S	successor of L7				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9202500	9202001	9202000	9202	9202	PR_FS	0				
+%R	9202501	9202002	9202000	9202	9202	PR_FS	0				
+%R	9202502	9202003	9202002	9202	9202	PR_SS	0				
+%R	9202503	9202004	9202000	9202	9202	PR_FS	0				
+%R	9202504	9202005	9202004	9202	9202	PR_SS	0				
+%R	9202505	9202006	9202000	9202	9202	PR_FS	0				
+%R	9202506	9202007	9202006	9202	9202	PR_SS	0				
+%R	9202507	9202008	9202000	9202	9202	PR_FS	0				
+%R	9202508	9202009	9202008	9202	9202	PR_SS	0				
+%R	9202509	9202010	9202000	9202	9202	PR_FS	0				
+%R	9202510	9202011	9202010	9202	9202	PR_SS	0				
+%R	9202511	9202012	9202000	9202	9202	PR_FS	0				
+%R	9202512	9202013	9202012	9202	9202	PR_SS	0				
+%R	9202513	9202014	9202000	9202	9202	PR_FS	0				
+%R	9202514	9202015	9202014	9202	9202	PR_SS	0				
+%R	9202515	9202016	9202000	9202	9202	PR_FS	0				
+%R	9202516	9202017	9202016	9202	9202	PR_SS	0				
+%R	9202517	9202018	9202000	9202	9202	PR_FS	0				
+%R	9202518	9202019	9202018	9202	9202	PR_SS	0				
+%R	9202519	9202020	9202000	9202	9202	PR_FS	0				
+%R	9202520	9202021	9202020	9202	9202	PR_SS	0				
+%R	9202521	9202022	9202000	9202	9202	PR_FS	0				
+%R	9202522	9202023	9202022	9202	9202	PR_SS	0				
+%R	9202523	9202024	9202000	9202	9202	PR_FS	0				
+%R	9202524	9202025	9202000	9202	9202	PR_FS	0				
+%R	9202525	9202026	9202000	9202	9202	PR_FS	0				
+%R	9202526	9202027	9202000	9202	9202	PR_FS	0				
+%R	9202527	9202028	9202027	9202	9202	PR_FS	0				
+%R	9202528	9202028	9202026	9202	9202	PR_FS	0				
+%R	9202529	9202029	9202000	9202	9202	PR_FS	0				
+%R	9202530	9202030	9202000	9202	9202	PR_FS	0				
+%R	9202531	9202031	9202030	9202	9202	PR_FS	0				
+%R	9202532	9202031	9202029	9202	9202	PR_FS	0				
+%R	9202533	9202032	9202000	9202	9202	PR_FS	0				
+%R	9202534	9202033	9202000	9202	9202	PR_FS	0				
+%R	9202535	9202034	9202033	9202	9202	PR_FS	0				
+%R	9202536	9202034	9202032	9202	9202	PR_FS	0				
+%R	9202537	9202035	9202000	9202	9202	PR_FS	0				
+%R	9202538	9202036	9202000	9202	9202	PR_FS	0				
+%R	9202539	9202037	9202036	9202	9202	PR_FS	0				
+%R	9202540	9202037	9202035	9202	9202	PR_FS	0				
+%R	9202541	9202038	9202000	9202	9202	PR_FS	0				
+%R	9202542	9202039	9202000	9202	9202	PR_FS	0				
+%R	9202543	9202040	9202039	9202	9202	PR_FS	0				
+%R	9202544	9202040	9202038	9202	9202	PR_SS	0				
+%R	9202545	9202041	9202000	9202	9202	PR_FS	0				
+%R	9202546	9202042	9202000	9202	9202	PR_FS	0				
+%R	9202547	9202043	9202000	9202	9202	PR_FS	0				
+%R	9202548	9202044	9202000	9202	9202	PR_FS	0				
+%R	9202549	9202045	9202044	9202	9202	PR_FS	0				
+%R	9202550	9202045	9202043	9202	9202	PR_FS	0				
+%E

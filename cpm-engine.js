@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.1';
+const ENGINE_VERSION = '2.10.2';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1792,7 +1792,12 @@ function _assignmentCount(value) {
 // finish = the project end). Python paired site:
 // _UNDERWAY_DROPPED_FINISH_TYPES.
 const _UNDERWAY_DROPPED_FINISH_TYPES = ['FNET', 'FO', 'MS_Finish', 'MFO'];
-const _UNDERWAY_DROPPED_LATE_TYPES = ['MS_Finish', 'MFO'];
+// SC (H1, 13-Oct-2026): on work under way P6 also drops Start On or Before,
+// Start On and Mandatory Start from the late side (ZZ-CPP-H1S K1-K6), and a
+// Start On or Before or Mandatory Start in either slot takes the other
+// constraint with it (_UNDERWAY_LATE_DROP_ALL; ZZ-CPP-H1S-P P7 P10 P14).
+const _UNDERWAY_DROPPED_LATE_TYPES = ['MS_Finish', 'MFO', 'MS_Start', 'SNLT', 'SO'];
+const _UNDERWAY_LATE_DROP_ALL = ['SNLT', 'MS_Start'];
 const _FINISH_TYPE_NAMES = { FNET: 'Finish On or After', FO: 'Finish On',
     MS_Finish: 'Mandatory Finish', MFO: 'Mandatory Finish' };
 
@@ -2807,9 +2812,18 @@ function computeCPMHours(activities, relationships, o) {
             }
         }
         if (n.ext_lf !== null) lf = Math.min(lf, cal.prevWorkEnd(n.ext_lf));
+        // SC (H1, 13-Oct-2026): on work under way a Start On or Before or a
+        // Mandatory Start in either slot takes the other constraint with it:
+        // P6 applies neither on the late side (ZZ-CPP-H1S-P P7, P10, P14)
+        const dropAll = n.started && [n.c1, n.c2].some((cs) => cs && (cs.type === 'SNLT' || cs.type === 'MS_Start'));
         for (const cs of [n.c1, n.c2]) {
             if (!cs || cs.at === null) continue;
-            if (n.started && (cs.type === 'MS_Finish' || cs.type === 'MS_Start')) continue;
+            // UW (v2.9.52): the mandatory pins drop on work under way. SC: so do
+            // Start On or Before and Start On, dated before or after the data
+            // date; finish constraints still cap the late finish (H1-02 A1130,
+            // H1-12 A1190; ZZ-CPP-H1S K1-K5, K8, K9)
+            if (n.started && (dropAll || cs.type === 'MS_Finish' || cs.type === 'MS_Start' ||
+                cs.type === 'SNLT' || cs.type === 'SO')) continue;
             if (cs.type === 'FNLT' || cs.type === 'FO' || cs.type === 'MS_Finish') {
                 lf = Math.min(lf, cs.at);
             } else if (cs.type === 'SNLT' || cs.type === 'SO' || cs.type === 'MS_Start') {
@@ -2856,11 +2870,16 @@ function computeCPMHours(activities, relationships, o) {
     }
 
     // ---------------------------------------------------------------- ALAP
+    // AS (H1, 13-Oct-2026): work under way slides too, its remaining work from
+    // the restart (H1-03 A1170; ZZ-CPP-H1S L3 L4 L5 L8), and nothing caps the
+    // slide at the late finish, started or not (L2 L4). Under progress
+    // override an SS / SF link out of work already started holds nothing back
+    // (ZZ-CPP-H1S-O L8).
     for (let oi = order.length - 1; oi >= 0; oi--) {
         const c = order[oi];
         const n = nodes.get(c);
         const alap = (n.c1 && n.c1.type === 'ALAP') || (n.c2 && n.c2.type === 'ALAP');
-        if (n.complete || n.started || !alap) continue;
+        if (n.complete || !alap) continue;
         const cal = n.cal;
         let efB = null;
         let lsB = null;
@@ -2868,6 +2887,7 @@ function computeCPMHours(activities, relationships, o) {
         for (const r of succs.get(c)) {
             const s = nodes.get(r.to_code);
             if (s.complete) continue;
+            if (n.started && !retained && (r.type === 'SS' || r.type === 'SF')) continue;
             seen = true;
             const lc = lagCal(n, s);
             const anchor = (r.type === 'FF' || r.type === 'SF') ? s.ef : restartOf(s);
@@ -2881,13 +2901,13 @@ function computeCPMHours(activities, relationships, o) {
             efB = (efB === null) ? fromLs : Math.min(efB, fromLs);
         }
         if (efB === null) continue;
-        efB = Math.min(efB, n.lf);
         if (efB <= n.ef) continue;
+        const cur = n.started ? n.restart : n.es;
         if (n.asg.length) {
             // RD: the assignments finish by the bound on their own calendars
             const [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
-            if (ne > n.es) {
-                n.es = ne;
+            if (ne > cur) {
+                if (n.started) n.restart = ne; else n.es = ne;
                 n.ef = nf;
                 delete n.rem_dates;
                 n.rem = cal.between(ne, nf);
@@ -2902,8 +2922,8 @@ function computeCPMHours(activities, relationships, o) {
             if (!((n.task_type || 'TT_Task') === 'TT_Mile' && cal.isStart(efB))) efB = cal.prevWorkEnd(efB);
             newEs = efB;
         }
-        if (newEs <= n.es) continue;
-        n.es = newEs;
+        if (newEs <= cur) continue;
+        if (n.started) n.restart = newEs; else n.es = newEs;
         n.ef = efB;
     }
 
@@ -2939,17 +2959,20 @@ function computeCPMHours(activities, relationships, o) {
                     sStart = restartOf(s);
                     sFin = s.ef;
                 }
-                let pa;
-                if (t === 'FS' || t === 'FF') {
-                    pa = lagFwd(rEf, r.lag, lc);
-                } else {
-                    const st = t === 'SS' ? ssAnchor(n) : rEs;
-                    let lag = r.lag;
-                    if (n.started && retained) lag = s.complete ? 0 : unexpired(n.as, lag, lc, n);
-                    pa = lagFwd(st, lag, lc);
-                }
                 const sa = (t === 'FS' || t === 'SS') ? sStart : sFin;
-                cands.push(cal.between(pa, sa));
+                let own;
+                let lag = r.lag;
+                if (t === 'FS' || t === 'FF') {
+                    own = rEf;
+                } else {
+                    own = t === 'SS' ? ssAnchor(n) : rEs;
+                    if (n.started && retained) lag = s.complete ? 0 : unexpired(n.as, lag, lc, n);
+                }
+                // FL (H1, 13-Oct-2026): the slack is measured from this
+                // activity's date to the successor's date less the lag, walked
+                // back on the lag calendar, and counted on this activity's
+                // calendar (H1-10 A1110 / A1120, H1-11 A1110)
+                cands.push(cal.between(own, lagBwd(sa, lag, lc)));
             }
             const pinned = !n.started && [n.c1, n.c2].some((cs) => cs && (cs.type === 'MS_Start' ||
                 cs.type === 'MS_Finish'));
@@ -5775,7 +5798,9 @@ function computeCPM(activities, relationships, opts) {
         // too once the activity is under way (late finish = the project end
         // on the measured case); Finish On / Finish On or Before still cap LF.
         const _uwBack = !!node.actual_start && !node.is_complete;
-        const _uwDrop = c => _uwBack && c && _UNDERWAY_DROPPED_LATE_TYPES.indexOf(c.type) !== -1;
+        const _uwAll = _uwBack && [node.constraint, node.constraint2].some(
+            c => c && _UNDERWAY_LATE_DROP_ALL.indexOf(c.type) !== -1);
+        const _uwDrop = c => _uwBack && c && (_uwAll || _UNDERWAY_DROPPED_LATE_TYPES.indexOf(c.type) !== -1);
         const cstr = _uwDrop(node.constraint) ? null : node.constraint;
         const cstr2 = _uwDrop(node.constraint2) ? null : node.constraint2;
         // v2.9.16 F5-C — soft secondary cannot tighten LF below a primary
@@ -6027,8 +6052,13 @@ function computeCPM(activities, relationships, opts) {
     // backward pass with the successors' EARLY anchors, walked in reverse
     // topological order so an ALAP successor has already slid; an open end
     // slides to the project's early finish (where P6 measures an open end's
-    // free float); nothing slides past its own late finish. Python paired
-    // site: the ALAP post-pass in compute_cpm.
+    // free float). AS (H1, 13-Oct-2026) — work under way slides too, its
+    // remaining work from the restart (H1-03 A1170; ZZ-CPP-H1S L3 L4 L5 L8),
+    // and nothing caps the slide at the late finish, started or not (L2 L4,
+    // total float -24 h; until now the engine stopped at the late finish).
+    // Under progress override an SS / SF link out of work already started
+    // holds nothing back (ZZ-CPP-H1S-O L8). Python paired site: the ALAP
+    // post-pass in compute_cpm.
     for (let __ai = sortRes.order.length - 1; __ai >= 0; __ai--) {
         const c = sortRes.order[__ai];
         const n = nodes[c];
@@ -6036,7 +6066,12 @@ function computeCPM(activities, relationships, opts) {
         const isALAP = (n.constraint && n.constraint.type === 'ALAP') ||
                        (n.constraint2 && n.constraint2.type === 'ALAP');
         if (!isALAP) continue;
-        if (n.is_complete || n.actual_start) continue;
+        if (n.is_complete) continue;
+        const _aStarted = !!n.actual_start;
+        const _aRd = n.remaining_duration;
+        if (_aStarted && (!Number.isFinite(n.restart) || !Number.isFinite(_aRd) || _aRd < 0)) continue;
+        const _aDur = _aStarted ? _aRd : n.duration_days;
+        const _aCur = _aStarted ? n.restart : n.es;
         const _aCal = calFor(n);
         const _aCtx = 'ALAP free float ' + c;
         let _efBound = null;
@@ -6045,6 +6080,7 @@ function computeCPM(activities, relationships, opts) {
         for (const s of (succMap[c] || [])) {
             const sn = nodes[s.to_code];
             if (!sn || sn.is_complete) continue;
+            if (_aStarted && _scheduleMode === 'progress_override' && (s.type === 'SS' || s.type === 'SF')) continue;
             _seen = true;
             const sCal = lagCalFor(n, sn);
             const lag = s.lag_days || 0;
@@ -6062,28 +6098,28 @@ function computeCPM(activities, relationships, opts) {
         }
         if (!_seen) _efBound = n._ff_terminal;
         if (_lsBound !== null) {
-            const _fromLs = _advanceWithAlerts(_lsBound, n.duration_days, _aCal, [], _aCtx);
+            const _fromLs = _advanceWithAlerts(_lsBound, _aDur, _aCal, [], _aCtx);
             if (_efBound === null || _fromLs < _efBound) _efBound = _fromLs;
         }
         if (_efBound === null || !Number.isFinite(_efBound)) continue;
-        if (_efBound > n.lf) _efBound = n.lf;
         if (_efBound <= n.ef) continue;
-        let _newEs = _retreatWithAlerts(_efBound, n.duration_days, _aCal, [], _aCtx);
+        let _newEs = _retreatWithAlerts(_efBound, _aDur, _aCal, [], _aCtx);
         if (_lsBound !== null && _newEs > _lsBound) {
             _newEs = _lsBound;
-            _efBound = _advanceWithAlerts(_newEs, n.duration_days, _aCal, [], _aCtx);
+            _efBound = _advanceWithAlerts(_newEs, _aDur, _aCal, [], _aCtx);
         }
-        if (_newEs <= n.es) continue;
+        if (_newEs <= _aCur) continue;
         alerts.push({
             severity: 'WARN',
             context: 'constraint-applied',
-            message: 'ALAP on ' + c + ' slides ES from ' + numToDate(n.es) + ' to ' +
+            message: 'ALAP on ' + c + ' slides ' + (_aStarted ? 'the restart' : 'ES') + ' from ' +
+                numToDate(_aCur) + ' to ' +
                 numToDate(_newEs) + ' (its free float; the late dates stand)',
         });
-        n.es = _newEs;
+        if (_aStarted) n.restart = _newEs; else n.es = _newEs;
         n.ef = _efBound;
         // v2.9.44 — the finish instant slides with the finish.
-        if (n.duration_days > 0 || n.task_type === 'TT_FinMile') {
+        if (_aDur > 0 || n.task_type === 'TT_FinMile') {
             n.ef_instant = _boundaryToInstant(n.ef, _aCal, alerts, 'finish instant ' + c);
         } else {
             n.ef_instant = n.ef;
@@ -6095,7 +6131,7 @@ function computeCPM(activities, relationships, opts) {
             n._ms_open = false;
         }
         n.tf_finish = _roundHalfUpTo(n.lf - n.ef, 3);
-        n.tf_start = _roundHalfUpTo(n.ls - n.es, 3);
+        n.tf_start = _roundHalfUpTo(n.ls - _startFloatFrom(n), 3);
         n.tf = (_floatType === 'FT_Start')
             ? n.tf_start
             : (_floatType === 'FT_Min')
@@ -10893,17 +10929,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '136 cross-validation fixtures. The harness defines 6994 ' +
+                '143 cross-validation fixtures. The harness defines 7634 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 6994 / 6994" is the whole comparison surface. ' +
+                'reported "Checks: 7634 / 7634" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 6994 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 7634 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 134 of the 136 fixtures: ' +
+                'severity-level alert parity, compared on 141 of the 143 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -10942,18 +10978,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '6994 comparisons it defines over 136 fixtures and skips none; every ' +
+                '7634 comparisons it defines over 143 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '136 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '143 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 6994 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 7634 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 134 of the 136 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 141 of the 143 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

@@ -13070,6 +13070,49 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify([ctNorm.nodes.B.late_finish_dt, ctNorm.nodes.B.tf_hours, ctS.nodes.B.early_start_dt]));
 }
 
+// ── v2.10.2 — the four situations held-out set H1 found, in the whole-day pass ─
+// The hours pass is pinned against P6's own answers by tests/p6-h1-situations.test.js
+// (validation/p6-probes/h1-situations-2026-10-13, 293 rows); these pin the same
+// rules where no hours are handed on. Python paired file:
+// _cpp_common/tests/test_h1_situations_2026_10_13.py.
+{
+    const cal = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] } };
+    const O = (x) => Object.assign({ dataDate: '2026-01-07', calMap: cal }, x || {});
+    const A = (code, d, x) => Object.assign({ code, duration_days: d, clndr_id: 'C5' }, x || {});
+    const L = (a, b, t) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: 0 });
+    const started = () => ({ actual_start: '2026-01-05', remaining_duration: 2 });
+    let r = E.computeCPM([A('D', 10), A('K', 4, Object.assign({ constraint: { type: 'SNLT', date: '2026-01-05' } },
+        started()))], [], O());
+    check('HR-40: a Start On or Before on work under way does not hold its late dates (SC; P6 probe K1)',
+        r.nodes.K.remaining_late_start_date === '2026-01-19' && r.nodes.K.lf_date === '2026-01-21' &&
+        r.nodes.K.tf_working_days === 8, JSON.stringify([r.nodes.K.remaining_late_start_date, r.nodes.K.tf_working_days]));
+    r = E.computeCPM([A('D', 10),
+        A('K', 4, Object.assign({ constraint: { type: 'SNLT', date: '2026-01-05' },
+            constraint2: { type: 'FNLT', date: '2026-01-12' } }, started())),
+        A('M', 4, Object.assign({ constraint: { type: 'SNET', date: '2026-01-05' },
+            constraint2: { type: 'FNLT', date: '2026-01-12' } }, started()))], [], O());
+    check('HR-41: under way, a Start On or Before takes the Finish On or Before beside it; a Start On or After does not (P6 P7, P8)',
+        r.nodes.K.lf_date === '2026-01-21' && r.nodes.K.tf_working_days === 8 &&
+        r.nodes.M.lf_date === '2026-01-12' && r.nodes.M.tf_working_days === 1,
+        JSON.stringify([r.nodes.K.lf_date, r.nodes.M.lf_date]));
+    r = E.computeCPM([A('D', 6), A('B', 1), A('Q', 4, Object.assign({ constraint: { type: 'ALAP' } }, started()))],
+        [L('D', 'B'), L('Q', 'B')], O());
+    check('HR-42: As Late As Possible work under way slides its remaining work by its free float (AS; P6 probe L3)',
+        r.nodes.Q.restart_date === '2026-01-13' && r.nodes.Q.ef_date === '2026-01-15' &&
+        r.nodes.Q.ff_working_days === 0 && r.nodes.Q.es_date === '2026-01-05',
+        JSON.stringify([r.nodes.Q.restart_date, r.nodes.Q.ef_date]));
+    r = E.computeCPM([A('D', 6), A('B', 1, { constraint: { type: 'FNLT', date: '2026-01-12' } }),
+        A('Q', 2, { constraint: { type: 'ALAP' } })], [L('D', 'B'), L('Q', 'B')], O());
+    check('HR-43: As Late As Possible slides past its own late finish when float is negative (P6 probe L2)',
+        r.nodes.Q.es_date === '2026-01-13' && r.nodes.Q.ef_date === '2026-01-15' && r.nodes.Q.lf_date === '2026-01-09' &&
+        r.nodes.Q.tf_working_days === -4, JSON.stringify([r.nodes.Q.es_date, r.nodes.Q.tf_working_days]));
+    r = E.computeCPM([A('D', 10), A('B', 1), A('Q', 4, Object.assign({ constraint: { type: 'ALAP' } }, started()))],
+        [L('D', 'B'), L('Q', 'B', 'SS')], O({ scheduleMode: 'progress_override' }));
+    check('HR-44: under progress override an SS link out of started As Late As Possible work holds nothing back (P6 probe O L8)',
+        r.nodes.Q.restart_date === '2026-01-20' && r.nodes.Q.ef_date === '2026-01-22' && r.nodes.Q.tf_working_days === 0,
+        JSON.stringify([r.nodes.Q.restart_date, r.nodes.Q.ef_date]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

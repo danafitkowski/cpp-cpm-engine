@@ -132,9 +132,21 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  19e89e8ce8376c14d333fcea5025924d3c7f04c4eb199c6e8a527bc9aa153345
+cpm.py          SHA-256:  ac0191cb7179bfee00a7d46f3bfa4f5f882a02d0cf2cf45ad7da6a1239942c96
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  b79513ba78d8d250b0204a4d11187ea577e10853c09d0f5aba34f29b66c642c8
+cpm_hours.py    SHA-256:  2065ce6bd6d30a8de5ec599ebd5f5b15d8f0e37c3713d2d7561fa9859043f549
+
+(v2.10.2 the four situations held-out set H1 found 2026-10-13 - cpm.py
+bumped from 19e89e8c..., cpm_hours.py from b79513ba...: ENGINE_VERSION reads
+2.10.2; on work under way Start On or Before, Start On and Mandatory Start
+drop from the late side, and a Start On or Before or Mandatory Start in either
+slot takes the other constraint with it (SC); As Late As Possible slides by
+free float under way too and past its own late finish, and under progress
+override an SS / SF link out of started work holds nothing back (AS); in the
+hours pass free float walks the lag back from the successor on the lag
+calendar (FL). Each rule was measured on P6 probes
+(validation/p6-probes/h1-situations-2026-10-13). The harness gains 7 fixtures
+(F141-F147): 143 fixtures, 7634 of 7634 executed.)
 
 (v2.10.1 resource dependent work and the printed float 2026-10-13 - cpm.py
 bumped from eb4442e5..., cpm_hours.py from 12e529a4...: ENGINE_VERSION reads
@@ -516,15 +528,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 280026
-  sha-256:  19e89e8ce8376c14d333fcea5025924d3c7f04c4eb199c6e8a527bc9aa153345
+  bytes: 281547
+  sha-256:  ac0191cb7179bfee00a7d46f3bfa4f5f882a02d0cf2cf45ad7da6a1239942c96
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 135 passed, 0 failed
-  Checks:   6994 / 6994 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 143 passed, 0 failed
+  Checks:   7634 / 7634 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

@@ -134,7 +134,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.1'
+ENGINE_VERSION = '2.10.2'
 
 
 # =============================================================================
@@ -1573,7 +1573,12 @@ def _assignment_count(value):
 # finish of started work out to every Finish On or After date: on one real
 # export F9'd in P6, 25 started activities carried one that P6 ignored.
 _UNDERWAY_DROPPED_FINISH_TYPES = ('FNET', 'FO', 'MS_Finish', 'MFO')
-_UNDERWAY_DROPPED_LATE_TYPES = ('MS_Finish', 'MFO')
+# SC (H1, 13-Oct-2026): on work under way P6 also drops Start On or Before,
+# Start On and Mandatory Start from the late side (ZZ-CPP-H1S K1-K6), and a
+# Start On or Before or Mandatory Start in either slot takes the other
+# constraint with it (_UNDERWAY_LATE_DROP_ALL; ZZ-CPP-H1S-P P7 P10 P14).
+_UNDERWAY_DROPPED_LATE_TYPES = ('MS_Finish', 'MFO', 'MS_Start', 'SNLT', 'SO')
+_UNDERWAY_LATE_DROP_ALL = ('SNLT', 'MS_Start')
 _FINISH_TYPE_NAMES = {'FNET': 'Finish On or After', 'FO': 'Finish On',
                       'MS_Finish': 'Mandatory Finish', 'MFO': 'Mandatory Finish'}
 
@@ -4216,9 +4221,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # too once the activity is under way (late finish = the project end
         # on the measured case); Finish On / Finish On or Before still cap LF.
         _uw_back = bool(node.get('actual_start')) and not node['is_complete']
+        _uw_all = _uw_back and any(_c and _c.get('type') in _UNDERWAY_LATE_DROP_ALL for _c in (cstr, cstr2))
         _ml_by = None
         for _c in (cstr, cstr2):
-            if _uw_back and _c and _c.get('type') in _UNDERWAY_DROPPED_LATE_TYPES:
+            if _uw_back and _c and (_uw_all or _c.get('type') in _UNDERWAY_DROPPED_LATE_TYPES):
                 continue
             _ml_prev = min_lf
             min_lf = _apply_backward_lf_constraint(
@@ -4342,8 +4348,14 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # pass with the successors' EARLY anchors in place of their late ones,
     # walked in reverse topological order so an ALAP successor has already
     # slid; an open end slides to the project's early finish (where P6
-    # measures an open end's free float), and nothing slides past its own
-    # late finish.
+    # measures an open end's free float).
+    # AS (H1, 13-Oct-2026) — work under way slides too, its remaining work
+    # from the restart (H1-03 A1170; ZZ-CPP-H1S L3 L4 L5 L8), and nothing caps
+    # the slide at the late finish, started or not: with negative float the
+    # early dates go past the late ones (L2 L4, total float -24 h; until now
+    # the engine stopped at the late finish). Under progress override an SS /
+    # SF link out of work already started holds nothing back (ZZ-CPP-H1S-O L8
+    # slides to the project's finish). JS paired site: the ALAP post-pass.
     for c in reversed(order):
         n = nodes.get(c)
         if n is None:
@@ -4354,8 +4366,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                    (cstr2 and cstr2.get('type') == 'ALAP'))
         if not is_alap:
             continue
-        if n['is_complete'] or n['actual_start']:
+        if n['is_complete']:
             continue
+        _a_started = bool(n['actual_start'])
+        _a_rd = n.get('remaining_duration')
+        if _a_started and (n.get('restart') is None or _a_rd is None
+                           or not math.isfinite(_a_rd) or _a_rd < 0):
+            continue    # no remaining work to place
+        _a_dur = _a_rd if _a_started else n['duration_days']
+        _a_cur = n['restart'] if _a_started else n['es']
         _a_cal = _cal_for(n)
         _a_ctx = f'ALAP free float {c}'
         _ef_bound = None
@@ -4364,6 +4383,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         for s in succ_map.get(c, []):
             sn = nodes.get(s['to_code'])
             if not sn or sn.get('is_complete'):
+                continue
+            if _a_started and schedule_mode == 'progress_override' and s['type'] in ('SS', 'SF'):
                 continue
             _seen = True
             s_cal = _lag_cal_for(n, sn)
@@ -4386,31 +4407,33 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if not _seen:
             _ef_bound = n['_ff_terminal']
         if _ls_bound is not None:
-            _from_ls = _advance_workdays(_ls_bound, n['duration_days'], _a_cal, alerts=[], ctx=_a_ctx)
+            _from_ls = _advance_workdays(_ls_bound, _a_dur, _a_cal, alerts=[], ctx=_a_ctx)
             if _ef_bound is None or _from_ls < _ef_bound:
                 _ef_bound = _from_ls
         if _ef_bound is None:
             continue
-        if _ef_bound > n['lf']:
-            _ef_bound = n['lf']
         if _ef_bound <= n['ef']:
             continue
-        _new_es = _retreat_workdays(_ef_bound, n['duration_days'], _a_cal, alerts=[], ctx=_a_ctx)
+        _new_es = _retreat_workdays(_ef_bound, _a_dur, _a_cal, alerts=[], ctx=_a_ctx)
         if _ls_bound is not None and _new_es > _ls_bound:
             _new_es = _ls_bound
-            _ef_bound = _advance_workdays(_new_es, n['duration_days'], _a_cal, alerts=[], ctx=_a_ctx)
-        if _new_es <= n['es']:
+            _ef_bound = _advance_workdays(_new_es, _a_dur, _a_cal, alerts=[], ctx=_a_ctx)
+        if _new_es <= _a_cur:
             continue
         alerts.append({
             'severity': 'WARN',
             'context': 'constraint-applied',
-            'message': (f'ALAP on {c} slides ES from {num_to_date(n["es"])} to '
+            'message': (f'ALAP on {c} slides {"the restart" if _a_started else "ES"} from '
+                        f'{num_to_date(_a_cur)} to '
                         f'{num_to_date(_new_es)} (its free float; the late dates stand)'),
         })
-        n['es'] = _new_es
+        if _a_started:
+            n['restart'] = _new_es
+        else:
+            n['es'] = _new_es
         n['ef'] = _ef_bound
         # v2.9.44 — the finish instant slides with the finish.
-        if n['duration_days'] > 0 or n.get('task_type') == 'TT_FinMile':
+        if _a_dur > 0 or n.get('task_type') == 'TT_FinMile':
             n['ef_instant'] = _boundary_to_instant(
                 n['ef'], _a_cal, alerts=alerts, ctx=f'finish instant {c}')
         else:
@@ -4420,7 +4443,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # (P6 23.12.1: A7, Wed 28-Oct 17:00).
             n['_ms_disp'], n['_ms_open'] = n['ef_instant'], False
         n['tf_finish'] = _round_half_up_to(n['lf'] - n['ef'], 3)
-        n['tf_start'] = _round_half_up_to(n['ls'] - n['es'], 3)
+        n['tf_start'] = _round_half_up_to(n['ls'] - _start_float_from(n), 3)
         if _float_type == 'FT_Start':
             n['tf'] = n['tf_start']
         elif _float_type == 'FT_Min':
