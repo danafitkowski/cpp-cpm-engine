@@ -138,13 +138,33 @@ have been applied:
    link out of started work holds nothing back; in `cpm_hours.py` free
    float runs to the successor's date less the lag walked back on the lag
    calendar. See CHANGELOG.md v2.10.2.
+15. v2.10.3 (a mandatory date before the data date; SS / SF links out of
+   work under way) is applied here by the same patch as the canonical engine:
+   a Mandatory Start or Finish dated before the data date starts work not
+   started at the data date (logic still ignored) and keeps the mandatory
+   date on the late side; free float to an SS successor out of work under
+   way runs from the restart plus the unexpired lag; under progress override
+   an SS / SF link out of work under way drives from the same anchor plus
+   the unexpired lag (`_start_drive_src_for`, `_ss_off_started`) and holds no
+   free float. See CHANGELOG.md v2.10.3.
 
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  ac0191cb7179bfee00a7d46f3bfa4f5f882a02d0cf2cf45ad7da6a1239942c96
+cpm.py          SHA-256:  e1b37501b81d61c41b21bb459fcb609f29b487ba1c64f984f5762756d622f189
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  2065ce6bd6d30a8de5ec599ebd5f5b15d8f0e37c3713d2d7561fa9859043f549
+cpm_hours.py    SHA-256:  b62193a46c401901a26510bd95b40276702dedf3c7a7bcd5c6626be2105c7a70
+
+(v2.10.3 candidate, the two differences held-out set H2 left 2026-10-13 - cpm.py
+bumped from ac0191cb..., cpm_hours.py from 2065ce6b...: ENGINE_VERSION reads
+2.10.3; a Mandatory Start or Finish dated before the data date on work not
+started starts at the data date and keeps the mandatory date on the late side
+(MD); free float to an SS successor out of work under way runs from the
+restart plus the unexpired lag (SR); under progress override an SS / SF link
+out of work under way drives from the same anchor plus the unexpired lag and
+holds no free float (SO). Each rule was measured on P6 probes
+(validation/p6-probes/h2-situations-2026-10-13). The harness gains 8 fixtures
+(F148-F155): 151 fixtures, 8745 of 8745 executed.)
 
 (v2.10.2 the four situations held-out set H1 found 2026-10-13 - cpm.py
 bumped from 19e89e8c..., cpm_hours.py from b79513ba...: ENGINE_VERSION reads
@@ -538,8 +558,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 281547
-  sha-256:  ac0191cb7179bfee00a7d46f3bfa4f5f882a02d0cf2cf45ad7da6a1239942c96
+  bytes: 285193
+  sha-256:  e1b37501b81d61c41b21bb459fcb609f29b487ba1c64f984f5762756d622f189
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

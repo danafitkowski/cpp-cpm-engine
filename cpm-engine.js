@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.2';
+const ENGINE_VERSION = '2.10.3';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2587,6 +2587,11 @@ function computeCPMHours(activities, relationships, o) {
     const lagFwd = (t, lag, lc) => (lag === 0 ? t : lc.add(t, lag));
     const lagBwd = (t, lag, lc) => (lag === 0 ? t : lc.sub(t, lag));
     const retained = scheduleMode === 'retained_logic';
+    // SO (H2, 13-Oct-2026): under progress override an SS / SF link out of work
+    // under way drives its successor from the same anchor plus the unexpired
+    // lag as under retained logic, and bounds it on the late side the same
+    // way, but holds no free float (ZZ-CPP-H2S-RO R1-R19)
+    const po = scheduleMode === 'progress_override';
     const restartOf = (p) => (p.restart !== undefined ? p.restart : p.es);
 
     // The part of a lag out of progressed work the data date has not used up;
@@ -2603,7 +2608,7 @@ function computeCPMHours(activities, relationships, o) {
         return Math.max(0, lag - used);
     };
     const stamp = (p) => Math.max(dd, p.pt || dd, p.resume_hold || dd);
-    const ssAnchor = (p) => ((ssLagFrom === 'actual_start' && p.started && retained) ? dd : restartOf(p));
+    const ssAnchor = (p) => ((ssLagFrom === 'actual_start' && p.started && (retained || po)) ? dd : restartOf(p));
     const drive = (p, r, n) => {
         const lc = lagCal(p, n);
         const t = r.type;
@@ -2614,7 +2619,7 @@ function computeCPMHours(activities, relationships, o) {
             return [kind, lagFwd(base, unexpired(actual, r.lag, lc), lc)];
         }
         if (t === 'FS' || t === 'FF') return [kind, lagFwd(p.ef, r.lag, lc)];
-        if (p.started && retained) {
+        if (p.started && (retained || po)) {
             const src = t === 'SS' ? ssAnchor(p) : restartOf(p);
             return [kind, lagFwd(src, unexpired(p.as, r.lag, lc, p), lc)];
         }
@@ -2678,7 +2683,12 @@ function computeCPMHours(activities, relationships, o) {
         for (const cs of [n.c1, n.c2]) {
             if (cs && cs.at !== null && (cs.type === 'SNET' || cs.type === 'SO' || cs.type === 'MS_Start') &&
                     !n.started) {
-                startReq = cs.type !== 'MS_Start' ? Math.max(startReq, cs.at) : cs.at;
+                // MD (H2, 13-Oct-2026): a Mandatory Start ignores logic but not
+                // the data date; dated before it, the work starts at the data
+                // date and the mandatory date stays on the late side
+                // (ZZ-CPP-H2S-M M1-M6, H2-06 A1130)
+                startReq = cs.type !== 'MS_Start' ? Math.max(startReq, cs.at)
+                    : (dd === null ? cs.at : Math.max(dd, cs.at));
             }
         }
         if (n.ext_es !== null) startReq = Math.max(startReq, n.ext_es);
@@ -2733,12 +2743,22 @@ function computeCPMHours(activities, relationships, o) {
                         // the constraint sets the start; the assignments run
                         // from there
                         const rin = n.rem_in;
-                        const st = rin > 0 ? cal.sub(cal.prevWorkEnd(fin), rin) : fin;
+                        let st = rin > 0 ? cal.sub(cal.prevWorkEnd(fin), rin) : fin;
+                        if (cs.type === 'MS_Finish' && dd !== null && st < dd) st = dd;   // MD
                         [n.es, n.ef] = _hrRsrcPlace(n, cal, st, null, null);
                         continue;
                     }
                     n.ef = n.rem > 0 ? cal.prevWorkEnd(fin) : fin;
                     n.es = n.rem > 0 ? cal.sub(n.ef, n.rem) : n.ef;
+                    if (cs.type === 'MS_Finish' && dd !== null && n.es < dd) {
+                        // MD (H2, 13-Oct-2026): a Mandatory Finish the work
+                        // cannot meet from the data date starts it at the data
+                        // date; the finish falls where the work takes it and
+                        // the mandatory date stays on the late side
+                        // (ZZ-CPP-H2S-M M7, M8, M15)
+                        n.es = cal.nextWork(dd);
+                        n.ef = n.rem > 0 ? cal.add(n.es, n.rem) : n.es;
+                    }
                 }
             }
         }
@@ -2799,7 +2819,7 @@ function computeCPMHours(activities, relationships, o) {
             }
             const lc = lagCal(n, s);
             let lag = r.lag;
-            if ((r.type === 'SS' || r.type === 'SF') && n.started && retained) lag = unexpired(n.as, lag, lc);
+            if ((r.type === 'SS' || r.type === 'SF') && n.started && (retained || po)) lag = unexpired(n.as, lag, lc);
             if (r.type === 'FS') {
                 lf = Math.min(lf, lagBwd(sLs, lag, lc));
             } else if (r.type === 'FF') {
@@ -2949,6 +2969,7 @@ function computeCPMHours(activities, relationships, o) {
                 const lc = lagCal(n, s);
                 const t = r.type;
                 if (s.started && !retained && (t === 'FS' || t === 'SS')) continue;
+                if (n.started && po && (t === 'SS' || t === 'SF')) continue;   // SO: no free float held
                 let sStart;
                 let sFin;
                 if (s.complete) {
@@ -2965,7 +2986,11 @@ function computeCPMHours(activities, relationships, o) {
                 if (t === 'FS' || t === 'FF') {
                     own = rEf;
                 } else {
-                    own = t === 'SS' ? ssAnchor(n) : rEs;
+                    // SR (H2, 13-Oct-2026): from the restart under either SS
+                    // lag setting, with the lag the data date has not used up;
+                    // "lag from Actual Start" moves only the forward drive
+                    // (ZZ-CPP-H2S-RN R2-R14, H2-03 A1160)
+                    own = t === 'SS' ? restartOf(n) : rEs;
                     if (n.started && retained) lag = s.complete ? 0 : unexpired(n.as, lag, lc, n);
                 }
                 // FL (H1, 13-Oct-2026): the slack is measured from this
@@ -3957,7 +3982,11 @@ function computeCPM(activities, relationships, opts) {
     // progress_override is deliberately untouched (unmeasured; design
     // contract) — it keeps the historical-es drive source.
     function startDriveSrcFor(pnode) {
-        if (_scheduleMode === 'retained_logic' && !pnode.is_complete &&
+        // SO (H2, 13-Oct-2026): under progress override too a started
+        // predecessor's SS / SF drive is laid from its restart, with the
+        // unexpired lag (ZZ-CPP-H2S-RO R16, R17); from its actual start the
+        // lag would land before the data date
+        if ((_scheduleMode === 'retained_logic' || _scheduleMode === 'progress_override') && !pnode.is_complete &&
             pnode.restart !== undefined) {
             return pnode.restart;
         }
@@ -4053,8 +4082,11 @@ function computeCPM(activities, relationships, opts) {
     // engine 12 Oct).
     // Python paired sites: _ss_off_started / _started_lag_left.
     function _ssOffStarted(pnode) {
-        return _scheduleMode === 'retained_logic' && !pnode.is_complete &&
-            !!pnode.actual_start && pnode.restart !== undefined && pnode.restart !== null;
+        // SO (H2, 13-Oct-2026): progress override lays an SS / SF link out of
+        // work under way from the same anchor plus the unexpired lag
+        // (ZZ-CPP-H2S-RO R4, R16, R17)
+        return (_scheduleMode === 'retained_logic' || _scheduleMode === 'progress_override') &&
+            !pnode.is_complete && !!pnode.actual_start && pnode.restart !== undefined && pnode.restart !== null;
     }
 
     function _startedLagLeft(pnode, lag, lagCal) {
@@ -4761,6 +4793,23 @@ function computeCPM(activities, relationships, opts) {
                     finishAnchorEF = null;
                 }
             }
+            // MD (H2, 13-Oct-2026): a Mandatory Start ignores logic but not the
+            // data date; dated before it, the work starts at the data date and
+            // the mandatory date stays on the late side (P6 probes
+            // ZZ-CPP-H2S-M M1-M6, H2-06 A1130). Python paired site: same block.
+            if (ddNum > 0 && [cstr, cstr2].some((_c) => _c && _c.type === 'MS_Start' && _c.date)) {
+                const _ddFloor = nodeCal ? _advanceWithAlerts(ddNum, 0, nodeCal, alerts, 'MD floor ' + code) : ddNum;
+                if (maxES < _ddFloor) {
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'Mandatory Start on ' + code + ' is dated before the data date: the work ' +
+                            'starts at the data date and the mandatory date holds the late side, ' +
+                            'as P6 schedules it',
+                    });
+                    maxES = _ddFloor;
+                }
+            }
         } else {
             if (cstr && (cstr.type === 'SNET' || cstr.type === 'MS_Start' || cstr.type === 'SO')) {
                 alerts.push({
@@ -4998,6 +5047,28 @@ function computeCPM(activities, relationships, opts) {
                 _underwayFinishNoop(code, node.ef, _c, _i === 0 ? 'primary' : 'secondary',
                     nodeCal, alerts);
                 return null;
+            }
+            if (!hasActualStart && ddNum > 0 && _c && _c.date && (_c.type === 'MS_Finish' || _c.type === 'MFO')) {
+                // MD (H2, 13-Oct-2026): a Mandatory Finish the work cannot meet
+                // from the data date starts it at the data date; the finish
+                // falls where the work takes it and the mandatory date stays on
+                // the late side (P6 probes ZZ-CPP-H2S-M M7, M8, M15)
+                const _mdNum = _constraintFinishNum(_c, nodeCal, [], code);
+                const _mdBes = _retreatWithAlerts(_mdNum, node.duration_days, nodeCal, [], 'MD back-compute ' + code);
+                const _ddFloor = nodeCal ? _advanceWithAlerts(ddNum, 0, nodeCal, alerts, 'MD floor ' + code) : ddNum;
+                if (_mdNum > 0 && _mdBes < _ddFloor) {
+                    node.es = _ddFloor;
+                    node.ef = _advanceWithAlerts(_ddFloor, node.duration_days, nodeCal, alerts,
+                        'MD forward ' + code + '.EF');
+                    alerts.push({
+                        severity: 'ALERT',
+                        context: 'constraint-violated',
+                        message: 'Mandatory Finish on ' + code + ' cannot be met from the data date: the ' +
+                            'work starts at the data date and the mandatory date holds the late side, ' +
+                            'as P6 schedules it',
+                    });
+                    return null;
+                }
             }
             return _c;
         });
@@ -6355,6 +6426,9 @@ function computeCPM(activities, relationships, opts) {
             // v2.9.42 — walk the slack's lag on the SAME calendar the forward
             // pass walked it on, or free float is measured against an anchor
             // the schedule never used.
+            // SO (H2, 13-Oct-2026): under progress override an SS / SF link out
+            // of work under way holds no free float (ZZ-CPP-H2S-RO)
+            if (_scheduleMode === 'progress_override' && n.actual_start && (s.type === 'SS' || s.type === 'SF')) continue;
             const succCal = lagCalFor(n, sn);
             const lag = s.lag_days || 0;
             // v2.9.18 A11-HIGH — alerts sink. Forward pass already fired
@@ -6380,9 +6454,11 @@ function computeCPM(activities, relationships, opts) {
             // schedule actually used, or a started SS-driving predecessor
             // reports phantom positive float against its own historical
             // actual start.
-            // SSL measured — an SS anchor is the data date under "Actual
-            // Start" (_ssAnchorOf), as in the forward pass.
-            const _nStartAnchor = (s.type === 'SS') ? _ssAnchorOf(n) : startDriveSrcFor(n);
+            // SR (H2, 13-Oct-2026): the slack runs from the restart under
+            // either SS lag setting, with the lag the data date has not used
+            // up; "lag from Actual Start" moves only the forward drive
+            // (_ssAnchorOf). P6 probes ZZ-CPP-H2S-RN R2-R14, H2-03 A1160.
+            const _nStartAnchor = startDriveSrcFor(n);
             // SSL — and off a started predecessor the SS/SF slack is measured
             // from the unused part of the lag, the drive the forward pass used:
             // none into a completed successor, which carries the anchor itself.
@@ -10929,17 +11005,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '143 cross-validation fixtures. The harness defines 7634 ' +
+                '151 cross-validation fixtures. The harness defines 8745 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 7634 / 7634" is the whole comparison surface. ' +
+                'reported "Checks: 8745 / 8745" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 7634 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 8745 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 141 of the 143 fixtures: ' +
+                'severity-level alert parity, compared on 149 of the 151 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -10978,18 +11054,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '7634 comparisons it defines over 143 fixtures and skips none; every ' +
+                '8745 comparisons it defines over 151 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '143 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '151 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 7634 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 8745 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 141 of the 143 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 149 of the 151 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

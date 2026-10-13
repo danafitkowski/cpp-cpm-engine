@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.2",
-  "generated_utc": "2026-10-13T18:19:21.919Z",
+  "engine_version": "2.10.3",
+  "generated_utc": "2026-10-13T21:22:39.326Z",
   "fixtures": {
-    "total": 143,
-    "passed": 143,
+    "total": 151,
+    "passed": 151,
     "failed": 0
   },
   "checks": {
-    "executed": 7634,
+    "executed": 8745,
     "failed": 0,
-    "passed": 7634,
+    "passed": 8745,
     "skipped": 0,
-    "surface": 7634
+    "surface": 8745
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 141,
-    "project_finish": 141,
-    "critical_codes": 141,
-    "topo_order": 141,
-    "alert_count": 141,
-    "alert_severity_counts": 141,
-    "node <id>": 6768,
+    "project_finish_num": 149,
+    "project_finish": 149,
+    "critical_codes": 149,
+    "topo_order": 149,
+    "alert_count": 149,
+    "alert_severity_counts": 149,
+    "node <id>": 7826,
     "threw (both engines)": 2,
-    "hours": 18
+    "hours": 23
   },
   "rows": [
     {
@@ -1170,6 +1170,70 @@
       "id": "F147",
       "name": "F147 - FL: free float across a lag on the 24-hour calendar",
       "checks": 97,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F148",
+      "name": "F148 - MD: a Mandatory Start / Finish before the data date on work not started, whole days",
+      "checks": 96,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F149",
+      "name": "F149 - MD: the same in hours",
+      "checks": 107,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F150",
+      "name": "F150 - MD: the same in hours, under progress override",
+      "checks": 107,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F151",
+      "name": "F151 - SR: SS free float out of work under way runs from the restart, lag from Actual Start, whole days",
+      "checks": 150,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F152",
+      "name": "F152 - SR: the same in hours",
+      "checks": 167,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F153",
+      "name": "F153 - SO: under progress override an SS / SF link out of work under way holds no free float, whole days",
+      "checks": 150,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F154",
+      "name": "F154 - SO: the same in hours, lag from Actual Start",
+      "checks": 167,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F155",
+      "name": "F155 - SO: the same in hours, lag from Early Start",
+      "checks": 167,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

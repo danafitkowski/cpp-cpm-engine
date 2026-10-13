@@ -310,6 +310,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
 
     # ---------------------------------------------------------------- forward
     retained = schedule_mode == 'retained_logic'
+    # SO (H2, 13-Oct-2026): under progress override an SS / SF link out of work
+    # under way drives its successor from the same anchor plus the unexpired
+    # lag as under retained logic, and bounds it on the late side the same
+    # way, but holds no free float (ZZ-CPP-H2S-RO R1-R19)
+    po = schedule_mode == 'progress_override'
 
     def unexpired(actual, lag, lc, p=None):
         """The part of a lag out of progressed work the data date has not used up (P6, 2026-09-23 probes).
@@ -330,7 +335,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         return max(dd, p.get('pt') or dd, p.get('resume_hold') or dd)
 
     def ss_anchor(p):
-        if ss_lag_from == 'actual_start' and p['started'] and retained:
+        if ss_lag_from == 'actual_start' and p['started'] and (retained or po):
             return dd
         return p.get('restart', p['es'])
 
@@ -351,7 +356,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             return kind, lag_fwd(base, unexpired(actual, r['lag'], lc), lc)
         if t in ('FS', 'FF'):
             return kind, lag_fwd(p['ef'], r['lag'], lc)
-        if p['started'] and retained:
+        if p['started'] and (retained or po):
             # SF ignores "SS lag from actual start": restart + unexpired lag under both
             src = ss_anchor(p) if t == 'SS' else p.get('restart', p['es'])
             return kind, lag_fwd(src, unexpired(p['as'], r['lag'], lc, p), lc)
@@ -409,7 +414,12 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         for k in ('c1', 'c2'):
             cs = n[k]
             if cs and cs['at'] is not None and cs['type'] in ('SNET', 'SO', 'MS_Start') and not n['started']:
-                start_req = max(start_req, cs['at']) if cs['type'] != 'MS_Start' else cs['at']
+                # MD (H2, 13-Oct-2026): a Mandatory Start ignores logic but not
+                # the data date; dated before it, the work starts at the data
+                # date and the mandatory date stays on the late side
+                # (ZZ-CPP-H2S-M M1-M6, H2-06 A1130)
+                start_req = max(start_req, cs['at']) if cs['type'] != 'MS_Start' else (
+                    cs['at'] if dd is None else max(dd, cs['at']))
         if n['ext_es'] is not None:
             start_req = max(start_req, n['ext_es'])
         if n['started'] and n['rf'] is not None:
@@ -472,10 +482,20 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         # assignment then finishes Monday 09:00)
                         rin = n['rem_in']
                         st = cal.sub(cal.prev_work_end(fin), rin) if rin > 0 else fin
+                        if cs['type'] == 'MS_Finish' and dd is not None and st < dd:
+                            st = dd     # MD: no work before the data date
                         n['es'], n['ef'] = _rsrc_place(n, cal, st, None)
                         continue
                     n['ef'] = cal.prev_work_end(fin) if n['rem'] > 0 else fin
                     n['es'] = cal.sub(n['ef'], n['rem']) if n['rem'] > 0 else n['ef']
+                    if cs['type'] == 'MS_Finish' and dd is not None and n['es'] < dd:
+                        # MD (H2, 13-Oct-2026): a Mandatory Finish the work
+                        # cannot meet from the data date starts it at the data
+                        # date; the finish falls where the work takes it and
+                        # the mandatory date stays on the late side
+                        # (ZZ-CPP-H2S-M M7, M8, M15)
+                        n['es'] = cal.next_work(dd)
+                        n['ef'] = cal.add(n['es'], n['rem']) if n['rem'] > 0 else n['es']
     proj_ef = max((n['ef'] for n in nodes.values() if n.get('ef') is not None), default=dd)
 
     # ---------------------------------------------------------------- backward
@@ -529,7 +549,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 s_lf = s['lf']
             lc = lag_cal(n, s)
             lag = r['lag']
-            if r['type'] in ('SS', 'SF') and n['started'] and retained:
+            if r['type'] in ('SS', 'SF') and n['started'] and (retained or po):
                 lag = unexpired(n['as'], lag, lc)
             if r['type'] == 'FS':
                 lf = min(lf, lag_bwd(s_ls, lag, lc))
@@ -701,6 +721,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 t = r['type']
                 if s['started'] and not retained and t in ('FS', 'SS'):
                     continue    # progress override: FS / SS do not reach work under way
+                if n['started'] and po and t in ('SS', 'SF'):
+                    continue    # SO: nor does an SS / SF link out of it hold free float
                 if s['complete']:
                     if not retained or dd is None:
                         continue
@@ -711,7 +733,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 if t in ('FS', 'FF'):
                     own, lag = r_ef, r['lag']
                 else:
-                    own = ss_anchor(n) if t == 'SS' else r_es
+                    # SR (H2, 13-Oct-2026): from the restart under either SS
+                    # lag setting, with the lag the data date has not used up;
+                    # "lag from Actual Start" moves only the forward drive
+                    # (ZZ-CPP-H2S-RN R2-R14, H2-03 A1160)
+                    own = n.get('restart', n['es']) if t == 'SS' else r_es
                     lag = r['lag']
                     if n['started'] and retained:
                         lag = 0 if s['complete'] else unexpired(n['as'], lag, lc, n)

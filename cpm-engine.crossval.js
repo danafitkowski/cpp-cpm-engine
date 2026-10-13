@@ -3253,6 +3253,71 @@ compareFixture('F147 - FL: free float across a lag on the 24-hour calendar', {
     data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_24Hour',
 }, { hours: true });
 
+// ── v2.10.3 — the two differences held-out set H2 left (P6 probes ZZ-CPP-H2S-*, 13-Oct-2026) ─
+// MD: a Mandatory Start / Finish dated before the data date on work not started starts at the data date (logic
+// still ignored); the mandatory date stays on the late side. SR: free float to an SS successor out of work under
+// way runs from the restart plus the unexpired lag. SO: under progress override an SS / SF link out of work under
+// way drives from the same anchor plus the unexpired lag but holds no free float.
+const h2mdActs = (mk) => [
+    mk('D', 160), mk('M1', 40, { constraint: { type: 'MS_Start', date: '2026-09-30' } }), mk('M1S', 8),
+    mk('M2P', 16, { actual_start: '2026-10-02 08:00', remaining_duration: 1 }),
+    mk('M2', 24, { constraint: { type: 'MS_Start', date: '2026-09-30' } }),
+    mk('M3', 16, { constraint: { type: 'MS_Finish', date: '2026-10-01' } }), mk('M3S', 8),
+    mk('M4', 16, { constraint: { type: 'MS_Finish', date: '2026-10-05' } }),
+    mk('M5', 40, { constraint: { type: 'MS_Start', date: '2026-10-07' } }),
+    mk('M6', 24, { constraint: { type: 'MS_Start', date: '2026-10-01' }, constraint2: { type: 'FNLT', date: '2026-10-16' } }),
+];
+const h2mdRels = (mkR) => [mkR('M1', 'M1S'), mkR('M2P', 'M2'), mkR('M3', 'M3S'), mkR('M5', 'M1S', 'SS', 8)];
+compareFixture('F148 - MD: a Mandatory Start / Finish before the data date on work not started, whole days', {
+    activities: h2mdActs(dA), relationships: h2mdRels(dR),
+    data_date: '2026-10-05', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F149 - MD: the same in hours', {
+    activities: h2mdActs(hA), relationships: h2mdRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F150 - MD: the same in hours, under progress override', {
+    activities: h2mdActs(hA), relationships: h2mdRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+const h2srActs = (mk) => [
+    mk('D', 160),
+    mk('A1', 32, { actual_start: '2026-09-29 08:00', remaining_duration: 2 }), mk('Q1', 8, { actual_start: '2026-10-02 08:00', remaining_duration: 0.5 }),
+    mk('BD1', 40), mk('B1', 8),
+    mk('A2', 32, { actual_start: '2026-09-29 08:00', remaining_duration: 2 }), mk('Q2', 8, { actual_start: '2026-10-02 08:00', remaining_duration: 0.5 }),
+    mk('BD2', 40), mk('B2', 8),
+    mk('A3', 32, { actual_start: '2026-09-29 08:00', remaining_duration: 2 }), mk('B3', 8),
+    mk('A4', 32, { actual_start: '2026-09-29 08:00', remaining_duration: 2 }), mk('Q4', 8, { actual_start: '2026-10-02 08:00', remaining_duration: 0.5 }),
+    mk('B4', 8), mk('A5', 32, { actual_start: '2026-09-29 08:00', remaining_duration: 2 }), mk('B5', 8),
+];
+const h2srRels = (mkR) => [mkR('Q1', 'A1'), mkR('BD1', 'B1'), mkR('A1', 'B1', 'SS'),
+    mkR('Q2', 'A2'), mkR('BD2', 'B2'), mkR('A2', 'B2', 'SS', 48),
+    mkR('A3', 'B3', 'SS', 8), mkR('Q4', 'A4'), mkR('A4', 'B4', 'SF'), mkR('A5', 'B5', 'SS', 40)];
+compareFixture('F151 - SR: SS free float out of work under way runs from the restart, lag from Actual Start, whole days', {
+    activities: h2srActs(dA), relationships: h2srRels(dR),
+    data_date: '2026-10-05', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor', ss_lag_from: 'actual_start',
+});
+compareFixture('F152 - SR: the same in hours', {
+    activities: h2srActs(hA), relationships: h2srRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor', ss_lag_from: 'actual_start',
+}, { hours: true });
+compareFixture('F153 - SO: under progress override an SS / SF link out of work under way holds no free float, whole days', {
+    activities: h2srActs(dA), relationships: h2srRels(dR),
+    data_date: '2026-10-05', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+});
+compareFixture('F154 - SO: the same in hours, lag from Actual Start', {
+    activities: h2srActs(hA), relationships: h2srRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override', ss_lag_from: 'actual_start',
+}, { hours: true });
+compareFixture('F155 - SO: the same in hours, lag from Early Start', {
+    activities: h2srActs(hA), relationships: h2srRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

@@ -134,7 +134,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.2'
+ENGINE_VERSION = '2.10.3'
 
 
 # =============================================================================
@@ -2605,7 +2605,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # progress_override is deliberately untouched (unmeasured; design
     # contract) — it keeps the historical-es drive source.
     def _start_drive_src_for(pnode):
-        if (schedule_mode == 'retained_logic' and not pnode['is_complete']
+        # SO (H2, 13-Oct-2026): under progress override too a started
+        # predecessor's SS / SF drive is laid from its restart, with the
+        # unexpired lag (ZZ-CPP-H2S-RO R16, R17); from its actual start the
+        # lag would land before the data date
+        if (schedule_mode in ('retained_logic', 'progress_override') and not pnode['is_complete']
                 and pnode.get('restart') is not None):
             return pnode['restart']
         return pnode['es']
@@ -2697,7 +2701,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # engine 12 Oct).
     # JS paired sites: _ssOffStarted / _startedLagLeft.
     def _ss_off_started(pnode):
-        return (schedule_mode == 'retained_logic' and not pnode['is_complete']
+        # SO (H2, 13-Oct-2026): progress override lays an SS / SF link out of
+        # work under way from the same anchor plus the unexpired lag
+        # (ZZ-CPP-H2S-RO R4, R16, R17)
+        return (schedule_mode in ('retained_logic', 'progress_override') and not pnode['is_complete']
                 and bool(pnode.get('actual_start'))
                 and pnode.get('restart') is not None)
 
@@ -3297,6 +3304,23 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     'date': cstr2.get('date'),
                 }
                 finish_anchor_ef = None
+            # MD (H2, 13-Oct-2026): a Mandatory Start ignores logic but not the
+            # data date; dated before it, the work starts at the data date and
+            # the mandatory date stays on the late side (P6 probes
+            # ZZ-CPP-H2S-M M1-M6, H2-06 A1130). JS paired site: same block.
+            if dd_num > 0 and any(_c and _c.get('type') == 'MS_Start' and _c.get('date')
+                                  for _c in (cstr, cstr2)):
+                _dd_floor = (_advance_workdays(dd_num, 0, node_cal, alerts=alerts, ctx=f'MD floor {code}')
+                             if node_cal else dd_num)
+                if max_es < _dd_floor:
+                    alerts.append({
+                        'severity': 'ALERT',
+                        'context': 'constraint-violated',
+                        'message': (f'Mandatory Start on {code} is dated before the data date: the work '
+                                    f'starts at the data date and the mandatory date holds the late side, '
+                                    f'as P6 schedules it'),
+                    })
+                    max_es = _dd_floor
         else:
             if cstr and cstr.get('type') in ('SNET', 'MS_Start', 'SO'):
                 alerts.append({
@@ -3546,6 +3570,29 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             if _underway and _c and _c.get('type') in _UNDERWAY_DROPPED_FINISH_TYPES:
                 _underway_finish_noop(code, node['ef'], _c, _lab, node_cal, alerts)
                 continue
+            if (not has_actual_start and dd_num > 0 and _c and _c.get('date')
+                    and _c.get('type') in ('MS_Finish', 'MFO')):
+                # MD (H2, 13-Oct-2026): a Mandatory Finish the work cannot meet
+                # from the data date starts it at the data date; the finish
+                # falls where the work takes it and the mandatory date stays on
+                # the late side (P6 probes ZZ-CPP-H2S-M M7, M8, M15)
+                _md_num = _constraint_finish_num(_c, node_cal, alerts=[], ctx=code)
+                _md_bes = _retreat_workdays(_md_num, node['duration_days'], node_cal,
+                                            alerts=[], ctx=f'MD back-compute {code}')
+                _dd_floor = (_advance_workdays(dd_num, 0, node_cal, alerts=alerts, ctx=f'MD floor {code}')
+                             if node_cal else dd_num)
+                if _md_num > 0 and _md_bes < _dd_floor:
+                    node['es'] = _dd_floor
+                    node['ef'] = _advance_workdays(_dd_floor, node['duration_days'], node_cal,
+                                                   alerts=alerts, ctx=f'MD forward {code}.EF')
+                    alerts.append({
+                        'severity': 'ALERT',
+                        'context': 'constraint-violated',
+                        'message': (f'Mandatory Finish on {code} cannot be met from the data date: the '
+                                    f'work starts at the data date and the mandatory date holds the '
+                                    f'late side, as P6 schedules it'),
+                    })
+                    continue
             node['ef'] = _apply_forward_ef_constraint(
                 code, node['ef'], _c, _lab, alerts, node['es'], node_cal)
 
@@ -4676,6 +4723,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # v2.9.42 PAIRED FIX - walk the slack's lag on the SAME calendar the
             # forward pass walked it on, or free float is measured against an
             # anchor the schedule never used.
+            if (schedule_mode == 'progress_override' and n.get('actual_start')
+                    and s['type'] in ('SS', 'SF')):
+                # SO (H2, 13-Oct-2026): under progress override an SS / SF link
+                # out of work under way holds no free float (ZZ-CPP-H2S-RO)
+                continue
             succ_cal = _lag_cal_for(n, sn)
             lag = s.get('lag_days', 0) or 0
             # Suppress duplicate alerts — forward pass already fired them.
@@ -4696,10 +4748,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # schedule actually used, or a started SS-driving predecessor
             # reports phantom positive float against its own historical
             # actual start.
-            # SSL measured — an SS anchor is the data date under "Actual
-            # Start" (_ss_anchor_for), as in the forward pass.
-            _n_start_anchor = (_ss_anchor_for(n) if stype == 'SS'
-                               else _start_drive_src_for(n))
+            # SR (H2, 13-Oct-2026): the slack runs from the restart under
+            # either SS lag setting, with the lag the data date has not used
+            # up; "lag from Actual Start" moves only the forward drive
+            # (_ss_anchor_for). P6 probes ZZ-CPP-H2S-RN R2-R14, H2-03 A1160.
+            _n_start_anchor = _start_drive_src_for(n)
             # SSL — and off a started predecessor the SS/SF slack is measured
             # from the unused part of the lag, the drive the forward pass used:
             # none into a completed successor, which carries the anchor itself.

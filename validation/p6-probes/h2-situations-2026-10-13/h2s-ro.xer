@@ -1,0 +1,179 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9305	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	ZZ-CPP-H2S-RO					93050		1000	10	10	0	500		0	0	2026-03-11 08:00	2026-03-02 08:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	93050	N	ZZ-CPP-H2S-RO Mon-Fri 08:00-12:00 and 13:00-17:00	9305			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	93051	N	ZZ-CPP-H2S-RO Mon-Fri 07:00-17:00	9305			CA_Project	10	50	215	2600	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|17:00)())))(0||3()((0||0(s|07:00|f|17:00)())))(0||4()((0||0(s|07:00|f|17:00)())))(0||5()((0||0(s|07:00|f|17:00)())))(0||6()((0||0(s|07:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	93052	N	ZZ-CPP-H2S-RO Mon-Thu 07:00-12:00 and 12:30-17:30	9305			CA_Project	10	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||6()())(0||7()())))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109305	9305	SD_Both	N	N	N	N	FT_FF	rcal_Predecessor	N	Y	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	93050	9305		1	1	Y	N	WS_Open	ZZ-CPP-H2S-RO	Free float out of work under way, progress override, lag from Actual Start (synthetic, delete after)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9305000	9305	93050	93050	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	S0	project start (complete)				0	0	0	0	0	0	0	0		2026-03-02 08:00	2026-03-02 08:00								2026-03-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9305001	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	D1	driver: sets the project finish				200	0	0	0	200	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305002	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R1A	R1 A: restart at the data date, SS				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305003	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R1D	driver of R1B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305004	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R1B	R1 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305005	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R2A	R2 A: restart pushed past the data date, SS (H2-03 A1160 shape)				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305006	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R2D	driver of R2B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305007	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R2B	R2 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305008	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R2Q	started predecessor of R2A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305009	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R3A	R3 A: restart pushed, SS 8 h				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305010	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R3D	driver of R3B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305011	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R3B	R3 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305012	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R3Q	started predecessor of R3A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305013	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R4A	R4 A: restart pushed, SS 48 h (unexpired from the actual start)				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305014	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R4D	driver of R4B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305015	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R4B	R4 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305016	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R4Q	started predecessor of R4A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305017	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R5A	R5 A: restart pushed, SF				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305018	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R5D	driver of R5B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305019	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R5B	R5 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305020	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R5Q	started predecessor of R5A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305021	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R6A	R6 A: restart pushed, SF 16 h				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305022	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R6D	driver of R6B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305023	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R6B	R6 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305024	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R6Q	started predecessor of R6A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305025	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R7A	R7 A: restart at the data date, SS 8 h				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305026	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R7D	driver of R7B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305027	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R7B	R7 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305028	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R8A	R8 A: restart pushed through a completed predecessor, SS				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305029	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R8D	driver of R8B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305030	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R8B	R8 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305031	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R8Q	started predecessor of R8C, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305032	9305	93050	93050	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	R8C	completed out of sequence, between R8Q and R8A				0	0	0	0	8	0	0	0		2026-03-03 08:00	2026-03-03 17:00								2026-03-03 08:00					PT_Normal										0	0					admin	admin		
+%R	9305033	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R9A	R9 A: restart pushed, SS to a started successor				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305034	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R9D	driver of R9B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305035	9305	93050	93050	33	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R9B	R9 B				16	0	0	0	24	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305036	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R9Q	started predecessor of R9A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305037	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R10A	R10 A: restart pushed, SS to a successor on a 10 h calendar				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305038	9305	93050	93051	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R10D	driver of R10B				40	0	0	0	40	0	0	0											2026-03-12 07:00					PT_Normal										0	0					admin	admin		
+%R	9305039	9305	93050	93051	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R10B	R10 B				8	0	0	0	8	0	0	0											2026-03-12 07:00					PT_Normal										0	0					admin	admin		
+%R	9305040	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R10Q	started predecessor of R10A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305041	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R11A	R11 A: restart pushed, FS (control)				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305042	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R11D	driver of R11B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305043	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R11B	R11 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305044	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R11Q	started predecessor of R11A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305045	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R12A	R12 A: restart pushed, FF (control)				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305046	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R12D	driver of R12B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305047	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R12B	R12 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305048	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R12Q	started predecessor of R12A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305049	9305	93050	93052	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R13A	R13 A: restart at the data date, SS, H2-03 calendar (07:00 opening)				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305050	9305	93050	93052	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R13D	driver of R13B				40	0	0	0	40	0	0	0											2026-03-11 12:30					PT_Normal										0	0					admin	admin		
+%R	9305051	9305	93050	93052	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R13B	R13 B				8	0	0	0	8	0	0	0											2026-03-11 12:30					PT_Normal										0	0					admin	admin		
+%R	9305052	9305	93050	93052	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R14A	R14 A: restart pushed, SS, H2-03 calendar				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305053	9305	93050	93052	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R14D	driver of R14B				40	0	0	0	40	0	0	0											2026-03-11 12:30					PT_Normal										0	0					admin	admin		
+%R	9305054	9305	93050	93052	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R14B	R14 B				8	0	0	0	8	0	0	0											2026-03-11 12:30					PT_Normal										0	0					admin	admin		
+%R	9305055	9305	93050	93052	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R14Q	started predecessor of R14A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305056	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R15A	R15 A: restart pushed, SS drives the successor				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305057	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R15B	R15 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305058	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R15Q	started predecessor of R15A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305059	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R16A	R16 A: restart pushed, SS 48 h (16 h unexpired) drives the successor				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305060	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R16B	R16 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305061	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R16Q	started predecessor of R16A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305062	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R17A	R17 A: restart pushed, SS 8 h (expired) drives the successor				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305063	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R17B	R17 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305064	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R17Q	started predecessor of R17A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305065	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R18A	R18 A: restart at the data date, SS 48 h drives the successor				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305066	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R18B	R18 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305067	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R19A	R19 A: restart pushed, SF drives the successor				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305068	9305	93050	93050	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	R19B	R19 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9305069	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R19Q	started predecessor of R19A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305070	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R20A	R20 A: restart pushed, SS drives a started successor				16	0	0	0	32	0	0	0		2026-03-05 08:00									2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9305071	9305	93050	93050	33	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R20B	R20 B				16	0	0	0	24	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%R	9305072	9305	93050	93050	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	R20Q	started predecessor of R20A, 4 h left				4	0	0	0	8	0	0	0		2026-03-10 08:00									2026-03-10 08:00					PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9305500	9305001	9305000	9305	9305	PR_FS	0				
+%R	9305501	9305003	9305000	9305	9305	PR_FS	0				
+%R	9305502	9305004	9305003	9305	9305	PR_FS	0				
+%R	9305503	9305004	9305002	9305	9305	PR_SS	0				
+%R	9305504	9305002	9305000	9305	9305	PR_FS	0				
+%R	9305505	9305006	9305000	9305	9305	PR_FS	0				
+%R	9305506	9305007	9305006	9305	9305	PR_FS	0				
+%R	9305507	9305007	9305005	9305	9305	PR_SS	0				
+%R	9305508	9305008	9305000	9305	9305	PR_FS	0				
+%R	9305509	9305005	9305008	9305	9305	PR_FS	0				
+%R	9305510	9305010	9305000	9305	9305	PR_FS	0				
+%R	9305511	9305011	9305010	9305	9305	PR_FS	0				
+%R	9305512	9305011	9305009	9305	9305	PR_SS	8				
+%R	9305513	9305012	9305000	9305	9305	PR_FS	0				
+%R	9305514	9305009	9305012	9305	9305	PR_FS	0				
+%R	9305515	9305014	9305000	9305	9305	PR_FS	0				
+%R	9305516	9305015	9305014	9305	9305	PR_FS	0				
+%R	9305517	9305015	9305013	9305	9305	PR_SS	48				
+%R	9305518	9305016	9305000	9305	9305	PR_FS	0				
+%R	9305519	9305013	9305016	9305	9305	PR_FS	0				
+%R	9305520	9305018	9305000	9305	9305	PR_FS	0				
+%R	9305521	9305019	9305018	9305	9305	PR_FS	0				
+%R	9305522	9305019	9305017	9305	9305	PR_SF	0				
+%R	9305523	9305020	9305000	9305	9305	PR_FS	0				
+%R	9305524	9305017	9305020	9305	9305	PR_FS	0				
+%R	9305525	9305022	9305000	9305	9305	PR_FS	0				
+%R	9305526	9305023	9305022	9305	9305	PR_FS	0				
+%R	9305527	9305023	9305021	9305	9305	PR_SF	16				
+%R	9305528	9305024	9305000	9305	9305	PR_FS	0				
+%R	9305529	9305021	9305024	9305	9305	PR_FS	0				
+%R	9305530	9305026	9305000	9305	9305	PR_FS	0				
+%R	9305531	9305027	9305026	9305	9305	PR_FS	0				
+%R	9305532	9305027	9305025	9305	9305	PR_SS	8				
+%R	9305533	9305025	9305000	9305	9305	PR_FS	0				
+%R	9305534	9305029	9305000	9305	9305	PR_FS	0				
+%R	9305535	9305030	9305029	9305	9305	PR_FS	0				
+%R	9305536	9305030	9305028	9305	9305	PR_SS	0				
+%R	9305537	9305031	9305000	9305	9305	PR_FS	0				
+%R	9305538	9305032	9305031	9305	9305	PR_FS	0				
+%R	9305539	9305028	9305032	9305	9305	PR_FS	0				
+%R	9305540	9305034	9305000	9305	9305	PR_FS	0				
+%R	9305541	9305035	9305034	9305	9305	PR_FS	0				
+%R	9305542	9305035	9305033	9305	9305	PR_SS	0				
+%R	9305543	9305036	9305000	9305	9305	PR_FS	0				
+%R	9305544	9305033	9305036	9305	9305	PR_FS	0				
+%R	9305545	9305038	9305000	9305	9305	PR_FS	0				
+%R	9305546	9305039	9305038	9305	9305	PR_FS	0				
+%R	9305547	9305039	9305037	9305	9305	PR_SS	0				
+%R	9305548	9305040	9305000	9305	9305	PR_FS	0				
+%R	9305549	9305037	9305040	9305	9305	PR_FS	0				
+%R	9305550	9305042	9305000	9305	9305	PR_FS	0				
+%R	9305551	9305043	9305042	9305	9305	PR_FS	0				
+%R	9305552	9305043	9305041	9305	9305	PR_FS	0				
+%R	9305553	9305044	9305000	9305	9305	PR_FS	0				
+%R	9305554	9305041	9305044	9305	9305	PR_FS	0				
+%R	9305555	9305046	9305000	9305	9305	PR_FS	0				
+%R	9305556	9305047	9305046	9305	9305	PR_FS	0				
+%R	9305557	9305047	9305045	9305	9305	PR_FF	0				
+%R	9305558	9305048	9305000	9305	9305	PR_FS	0				
+%R	9305559	9305045	9305048	9305	9305	PR_FS	0				
+%R	9305560	9305050	9305000	9305	9305	PR_FS	0				
+%R	9305561	9305051	9305050	9305	9305	PR_FS	0				
+%R	9305562	9305051	9305049	9305	9305	PR_SS	0				
+%R	9305563	9305049	9305000	9305	9305	PR_FS	0				
+%R	9305564	9305053	9305000	9305	9305	PR_FS	0				
+%R	9305565	9305054	9305053	9305	9305	PR_FS	0				
+%R	9305566	9305054	9305052	9305	9305	PR_SS	0				
+%R	9305567	9305055	9305000	9305	9305	PR_FS	0				
+%R	9305568	9305052	9305055	9305	9305	PR_FS	0				
+%R	9305569	9305057	9305056	9305	9305	PR_SS	0				
+%R	9305570	9305058	9305000	9305	9305	PR_FS	0				
+%R	9305571	9305056	9305058	9305	9305	PR_FS	0				
+%R	9305572	9305060	9305059	9305	9305	PR_SS	48				
+%R	9305573	9305061	9305000	9305	9305	PR_FS	0				
+%R	9305574	9305059	9305061	9305	9305	PR_FS	0				
+%R	9305575	9305063	9305062	9305	9305	PR_SS	8				
+%R	9305576	9305064	9305000	9305	9305	PR_FS	0				
+%R	9305577	9305062	9305064	9305	9305	PR_FS	0				
+%R	9305578	9305066	9305065	9305	9305	PR_SS	48				
+%R	9305579	9305065	9305000	9305	9305	PR_FS	0				
+%R	9305580	9305068	9305067	9305	9305	PR_SF	0				
+%R	9305581	9305069	9305000	9305	9305	PR_FS	0				
+%R	9305582	9305067	9305069	9305	9305	PR_FS	0				
+%R	9305583	9305071	9305070	9305	9305	PR_SS	0				
+%R	9305584	9305072	9305000	9305	9305	PR_FS	0				
+%R	9305585	9305070	9305072	9305	9305	PR_FS	0				
+%E

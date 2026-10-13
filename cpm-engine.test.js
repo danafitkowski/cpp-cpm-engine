@@ -13113,6 +13113,102 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify([r.nodes.Q.restart_date, r.nodes.Q.ef_date]));
 }
 
+// ── v2.10.3 — the two differences held-out set H2 left, in the hours pass ─
+// P6 Professional 23.12.1's own F9 of the probes ZZ-CPP-H2S-M / -RN (oracle
+// h2_situations_2026_10_13), data date Wed 11-Mar-2026 08:00. Python paired
+// file: _cpp_common/tests/test_h2_situations_2026_10_13.py.
+{
+    const FMT = E._hrFormatInstant;
+    const CALS = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8 } };
+    const T = (code, h, x) => Object.assign({ code, task_type: 'TT_Task', clndr_id: 'C5', remaining_minutes: Math.round(h * 60) }, x || {});
+    const MD = (code, h, type, date, tt) => T(code, h, { task_type: tt || 'TT_Task', constraint: { type, date } });
+    const L = (a, b, type, lag) => ({ from_code: a, to_code: b, type: type || 'FS', lag_minutes: Math.round((lag || 0) * 60) });
+    const run = (acts, rels, o) => E.computeCPMHours([T('D1', 200)].concat(acts), rels || [], Object.assign(
+        { data_date: '2026-03-11 08:00', cal_map: CALS, project_calendar: 'C5' }, o || {}));
+    const early = (x) => FMT(x.restart !== null && x.restart !== undefined ? x.restart : x.es) + ' / ' + FMT(x.ef);
+    const late = (x) => FMT(x.rls !== null && x.rls !== undefined ? x.rls : x.ls) + ' / ' + FMT(x.lf);
+    let o = run([MD('M1', 40, 'MS_Start', '2026-03-06 08:00'), T('M1S', 8),
+        T('M2P', 16, { actual_start: '2026-03-09 08:00' }), MD('M2', 40, 'MS_Start', '2026-03-06 08:00')],
+    [L('M1', 'M1S'), L('M2P', 'M2')]);
+    check('HR-45: a Mandatory Start before the data date starts at the data date, logic still ignored (MD; P6 probe M1, M2)',
+        early(o.M1) === '2026-03-11 08:00 / 2026-03-17 17:00' && late(o.M1) === '2026-03-06 08:00 / 2026-03-12 17:00' &&
+        o.M1.tf_minutes === -24 * 60 && o.M1.ff_minutes === 0 && early(o.M1S) === '2026-03-18 08:00 / 2026-03-18 17:00' &&
+        early(o.M2) === '2026-03-11 08:00 / 2026-03-17 17:00', early(o.M1) + ' | ' + early(o.M2) + ' | ' + o.M1.tf_minutes);
+    o = run([MD('M6', 16, 'MS_Start', '2026-03-06 10:30'), MD('M5', 0, 'MS_Start', '2026-03-06 08:00', 'TT_Mile'),
+        MD('M7', 16, 'MS_Finish', '2026-03-06 17:00'), MD('M8', 16, 'MS_Finish', '2026-03-11 17:00'),
+        MD('M15', 0, 'MS_Finish', '2026-03-06 17:00', 'TT_FinMile')]);
+    check('HR-46: mid-period, a milestone and a Mandatory Finish before or too close to the data date start at it (MD; M5-M8, M15)',
+        early(o.M6) === '2026-03-11 08:00 / 2026-03-12 17:00' && o.M6.tf_minutes === -21.5 * 60 &&
+        early(o.M5) === '2026-03-11 08:00 / 2026-03-11 08:00' && early(o.M7) === '2026-03-11 08:00 / 2026-03-12 17:00' &&
+        o.M7.tf_minutes === -32 * 60 && late(o.M7) === '2026-03-05 08:00 / 2026-03-06 17:00' &&
+        early(o.M8) === '2026-03-11 08:00 / 2026-03-12 17:00' && o.M8.tf_minutes === -8 * 60 &&
+        early(o.M15) === '2026-03-11 08:00 / 2026-03-11 08:00' && o.M15.tf_minutes === -16 * 60,
+        [early(o.M6), early(o.M7), early(o.M8), early(o.M15)].join(' | '));
+    o = run([MD('M1', 40, 'MS_Start', '2026-03-06 08:00'), T('M1S', 8)], [L('M1', 'M1S')], { schedule_mode: 'progress_override' });
+    check('HR-47: the same under progress override (MD; P6 probe MO M1)',
+        early(o.M1) === '2026-03-11 08:00 / 2026-03-17 17:00' && o.M1.tf_minutes === -24 * 60, early(o.M1));
+    const R = (code, type, lag, pushed) => {
+        const a = [T(code + 'A', 16, { actual_start: '2026-03-05 08:00' }), T(code + 'D', 40), T(code + 'B', 8)];
+        const l = [L(code + 'D', code + 'B'), L(code + 'A', code + 'B', type, lag)];
+        if (pushed) { a.push(T(code + 'Q', 4, { actual_start: '2026-03-10 08:00' })); l.push(L(code + 'Q', code + 'A')); }
+        return [a, l];
+    };
+    const ra = []; const rl = [];
+    for (const [c, t, g, p] of [['R1', 'SS', 0, false], ['R2', 'SS', 0, true], ['R4', 'SS', 48, true], ['R5', 'SF', 0, true]]) {
+        const [a, l] = R(c, t, g, p); ra.push(...a); rl.push(...l);
+    }
+    o = run(ra, rl, { ss_lag_from: 'actual_start' });
+    check('HR-48: SS free float out of started work runs from the restart plus the unexpired lag under lag from Actual Start (SR; RN R1, R2, R4, R5)',
+        early(o.R2A) === '2026-03-11 13:00 / 2026-03-13 12:00' && o.R1A.ff_minutes === 40 * 60 &&
+        o.R2A.ff_minutes === 36 * 60 && o.R4A.ff_minutes === 20 * 60 && o.R5A.ff_minutes === 44 * 60,
+        JSON.stringify([o.R1A.ff_minutes, o.R2A.ff_minutes, o.R4A.ff_minutes, o.R5A.ff_minutes]));
+    const pa = []; const pl = [];
+    for (const [c, t, g, p] of [['R1', 'SS', 0, false], ['R4', 'SS', 48, true], ['R19', 'SF', 0, true]]) {
+        const [a, l] = R(c, t, g, p); pa.push(...a); pl.push(...l);
+    }
+    for (const [c, g] of [['R16', 48], ['R17', 8]]) {
+        pa.push(T(c + 'A', 16, { actual_start: '2026-03-05 08:00' }), T(c + 'B', 8), T(c + 'Q', 4, { actual_start: '2026-03-10 08:00' }));
+        pl.push(L(c + 'A', c + 'B', 'SS', g), L(c + 'Q', c + 'A'));
+    }
+    o = run(pa, pl, { ss_lag_from: 'actual_start', schedule_mode: 'progress_override' });
+    check('HR-49: under progress override an SS / SF link out of started work drives from the data date plus the unexpired lag but holds no free float (SO; RO R1, R4, R16, R17, R19)',
+        ['R1A', 'R4A', 'R16A', 'R17A', 'R19A'].every((c) => o[c].ff_minutes === 184 * 60) &&
+        late(o.R4A) === '2026-04-10 08:00 / 2026-04-13 17:00' && o.R4A.tf_minutes === 176 * 60 &&
+        early(o.R4B) === '2026-03-18 08:00 / 2026-03-18 17:00' && early(o.R16B) === '2026-03-13 08:00 / 2026-03-13 17:00' &&
+        early(o.R17B) === '2026-03-11 08:00 / 2026-03-11 17:00',
+        JSON.stringify([o.R1A.ff_minutes, late(o.R4A), early(o.R16B), early(o.R17B)]));
+}
+
+// ── v2.10.3 — the same rules in the whole-day pass (data date Wed 7-Jan-2026) ─
+// Python paired file: _cpp_common/tests/test_h2_situations_2026_10_13.py.
+{
+    const cal = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] } };
+    const O = (x) => Object.assign({ dataDate: '2026-01-07', calMap: cal }, x || {});
+    const A = (code, d, x) => Object.assign({ code, duration_days: d, clndr_id: 'C5' }, x || {});
+    const L = (a, b, t, lag) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: lag || 0 });
+    let r = E.computeCPM([A('D', 20), A('M', 5, { constraint: { type: 'MS_Start', date: '2026-01-02' } }), A('MS', 1),
+        A('F', 2, { constraint: { type: 'MS_Finish', date: '2026-01-02' } }), A('FS', 1)],
+    [L('M', 'MS'), L('F', 'FS')], O());
+    const M = r.nodes.M; const F = r.nodes.F;
+    check('HR-50: whole days: a Mandatory Start / Finish before the data date starts the work at the data date (MD)',
+        M.es_date === '2026-01-07' && M.ef_last_worked_date === '2026-01-13' && M.ls_date === '2026-01-02' &&
+        M.tf_working_days === -3 && r.nodes.MS.es_date === '2026-01-14' && F.es_date === '2026-01-07' &&
+        F.ef_last_worked_date === '2026-01-08' && F.tf_working_days === -5 && r.nodes.FS.es_date === '2026-01-09' &&
+        r.alerts.some((x) => x.context === 'constraint-violated' && /Mandatory Start on M/.test(x.message)),
+        JSON.stringify([M.es_date, M.tf_working_days, F.es_date, F.ef_last_worked_date, F.tf_working_days]));
+    r = E.computeCPM([A('D', 20), A('A', 6, { actual_start: '2026-01-02', remaining_duration: 2 }),
+        A('Q', 4, { actual_start: '2026-01-06', remaining_duration: 2 }), A('BD', 8), A('B', 1)],
+    [L('Q', 'A'), L('BD', 'B'), L('A', 'B', 'SS')], O({ ssLagFrom: 'actual_start' }));
+    const r2 = E.computeCPM([A('D', 20), A('A', 6, { actual_start: '2026-01-02', remaining_duration: 2 }), A('B', 1),
+        A('A2', 6, { actual_start: '2026-01-02', remaining_duration: 2 })], [L('A', 'B', 'SS', 4)],
+    O({ scheduleMode: 'progress_override' }));
+    check('HR-51: whole days: SS free float runs from the restart (SR); under progress override the link holds none (SO)',
+        r.nodes.A.restart_date === '2026-01-09' && r.nodes.A.ff_working_days === 6 &&
+        r2.nodes.B.es_date === '2026-01-08' && r2.nodes.A.ff_working_days === r2.nodes.A2.ff_working_days &&
+        r2.nodes.A.ff_working_days > 0,
+        JSON.stringify([r.nodes.A.ff_working_days, r2.nodes.B.es_date, r2.nodes.A.ff_working_days, r2.nodes.A2.ff_working_days]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
