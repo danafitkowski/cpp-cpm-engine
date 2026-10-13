@@ -60,6 +60,15 @@ def main():
             capture['left_out'][name] = 'not scheduled by P6'
             continue
         stamp = str(p['last_schedule_date'])
+        # From H3 on (13-Oct-2026): P6 stamps the F9 to the millisecond
+        # (14:58:58.986) and writes the rows it changes with a whole-second
+        # update_date, which can be the next second (14:58:59). Rows written in
+        # the second the F9 ends are the F9's own, not edits after it (H2-09;
+        # see H2/RESULT.md). Through H2 this check compared the two as strings.
+        if '.' in stamp:
+            import datetime as _dt
+            stamp = (_dt.datetime.strptime(stamp[:19], '%Y-%m-%d %H:%M:%S') +
+                     _dt.timedelta(seconds=1)).strftime('%Y-%m-%d %H:%M:%S')
         edited = con.execute(
             "select (select count(*) from TASK where proj_id = ? and delete_session_id is null and update_date > ?) + "
             "(select count(*) from TASKPRED where proj_id = ? and delete_session_id is null and update_date > ?)",
