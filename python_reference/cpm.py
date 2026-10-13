@@ -1914,6 +1914,53 @@ _HOURS_LAG_CAL = {'predecessor': 'predecessor', 'successor': 'successor', 'rcal_
                   'rcal_Project': 'project', 'rcal_ProjDefault': 'project', 'project': 'project',
                   'pred': 'predecessor', 'succ': 'successor'}
 
+# LA (13-Oct-2026) - P6 walks every lag on the project calendar under
+# rcal_ProjDefault and on a 24-hour, seven-day calendar under rcal_24Hour
+# (P6 probes h1s-fj and h1s-f24, 46 of 46 rows each, validation/p6-probes/
+# h1-situations-2026-10-13 in the engine repository). The hours pass walks
+# them there (_HOURS_LAG_CAL); the whole-day pass implements predecessor and
+# successor only and walks any other setting on the successor's calendar.
+# The lag-calendar-mode-unsupported ALERT is raised with the day pass and
+# reworded once the hours pass has run, to say which figures walk the lag
+# as P6 does. It
+# used to call P6's behaviour uncaptured. Dana, 13-Oct-2026: correct the
+# ALERT and leave the day pass as it is (no real export on disk uses either
+# setting). One ALERT in every case, so alert parity does not move. JS
+# paired site: _lagCalendarAlertMessage.
+_LAG_CAL_P6_RULE = {'project': ('the project calendar', 'h1s-fj'),
+                    '24h': ('a 24-hour, seven-day calendar', 'h1s-f24')}
+
+
+def _lag_calendar_alert_message(token, hours, project_calendar, cal_map):
+    """The lag-calendar-mode-unsupported message (LA above). `hours` is the hours pass's result, None before it runs."""
+    tok = str(token).strip()
+    mode = _HOURS_LAG_CAL.get(tok)
+    head = "relationship_lag_calendar='%s'" % tok
+    tail = ' Disclosed, not substituted silently.'
+    if mode not in _LAG_CAL_P6_RULE:
+        return ('%s is not a value the engine reads (it reads the P6 tokens rcal_Predecessor, rcal_Successor, '
+                "rcal_ProjDefault and rcal_24Hour), so it walked each lag on the successor's calendar.%s"
+                % (head, tail))
+    where, probe = _LAG_CAL_P6_RULE[mode]
+    msg = ('%s: P6 walks every lag on %s (measured on P6 probe %s, validation/p6-probes/h1-situations-2026-10-13 '
+           'in the engine repository).' % (head, where, probe))
+    day = "the whole-day pass does not implement this setting and walked each lag on the successor's calendar"
+    if not (hours or {}).get('applied'):
+        return ('%s The hours pass was not applied (%s) and %s, so every date and float in this result can differ '
+                'from P6 where the two calendars differ.%s'
+                % (msg, (hours or {}).get('reason') or 'not run', day, tail))
+    if mode == '24h' or (project_calendar and (cal_map or {}).get(project_calendar) is not None):
+        hp = ('The hours pass walked each lag on %s, so the printed dates and float walk the lag as P6 does.'
+              % (where if mode == '24h' else 'the project calendar, %s' % (project_calendar,)))
+    else:
+        # cpm_hours.cal_of: no project calendar in the map is a default WorkCalendar
+        hp = ('No project calendar in the calendar map was handed in (project_calendar), so the hours pass walked '
+              'each lag on a default Monday-to-Friday week, 08:00-12:00 and 13:00-17:00, and the printed dates and '
+              "float can differ from P6 where that week and the project's calendar differ; hand in the project's "
+              'calendar id as project_calendar.')
+    return ('%s %s %s, so its day numbers (es, ef, ls, lf), its float in calendar days (tf, ff) and its project '
+            'finish can differ from P6 where the two calendars differ.%s' % (msg, hp, day[0].upper() + day[1:], tail))
+
 
 def _hours_float(v):
     try:
@@ -2148,6 +2195,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             tf 0.82625->0.74195; a 1,168-activity export fell
             tf 0.36216->0.15240), so the measured-better walk is the
             default and the setting is exposed rather than assumed.
+            rcal_ProjDefault / rcal_Project and rcal_24Hour: the hours pass
+            walks each lag on the project calendar (``project_calendar``) or
+            a 24-hour, seven-day calendar, as P6 does (P6 probes h1s-fj and
+            h1s-f24); the whole-day pass walks it on the successor's
+            calendar, and the lag-calendar-mode-unsupported ALERT says which
+            figures that leaves where (LA, 13-Oct-2026).
         data_date: YYYY-MM-DD string used as the floor for un-started activities.
         cal_map: dict ``{clndr_id: calendar_info}``.
         project_finish: P6 PROJECT.plan_end_date (Must Finish By) as written
@@ -2519,19 +2572,17 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         'succ': 'successor',
     }
     _lag_cal_mode = _LAG_CAL_ALIASES.get(_lag_cal_mode, _lag_cal_mode)
+    _lag_cal_alert = None
     if _lag_cal_mode not in ('predecessor', 'successor'):
-        alerts.append({
+        # LA (13-Oct-2026): reworded after the hours pass, which walks the
+        # project and 24-hour settings as P6 does; this pass walks the
+        # successor's calendar.
+        _lag_cal_alert = {
             'severity': 'ALERT',
             'context': 'lag-calendar-mode-unsupported',
-            'message': (
-                'relationship_lag_calendar=%r is not implemented (supported: '
-                'predecessor | successor; P6 tokens rcal_Predecessor | '
-                'rcal_Successor). P6 behaviour for rcal_Project / rcal_24Hour '
-                'is uncaptured, so the engine computed with its measured-best '
-                'default, the successor calendar, rather than guessing. '
-                'Disclosed, not substituted silently.' % (relationship_lag_calendar,)
-            ),
-        })
+            'message': _lag_calendar_alert_message(relationship_lag_calendar, None, project_calendar, cal_map),
+        }
+        alerts.append(_lag_cal_alert)
         _lag_cal_mode = 'successor'
 
     # v2.9.42 PAIRED FIX — SCHEDOPTIONS.sched_float_type. P6 lets a schedule
@@ -4913,6 +4964,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         relationship_lag_calendar=relationship_lag_calendar, float_type=_float_type,
         ss_lag_from=_ss_lag_from, project_finish=project_finish,
         use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts)
+    if _lag_cal_alert is not None:
+        # LA (13-Oct-2026): now that the hours pass has run, say which figures
+        # walk the lag as P6 does. JS paired site after the _hoursPass call.
+        _lag_cal_alert['message'] = _lag_calendar_alert_message(
+            relationship_lag_calendar, _hours, project_calendar, cal_map)
     if _hours.get('applied'):
         # With the hours pass applied the printed dates and the float in hours
         # are exact, so the day pass's SUB_DAY_LAG_ROUNDED ALERT becomes an

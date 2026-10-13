@@ -138,11 +138,19 @@ have been applied:
    link out of started work holds nothing back; in `cpm_hours.py` free
    float runs to the successor's date less the lag walked back on the lag
    calendar. See CHANGELOG.md v2.10.2.
+15. Unreleased, Class B (disclosure; no computed value moves): the
+   `lag-calendar-mode-unsupported` ALERT is applied here by the same patch
+   as the canonical engine. P6 walks each lag on the project calendar under
+   `rcal_ProjDefault` and on a 24-hour, seven-day calendar under
+   `rcal_24Hour` (P6 probes h1s-fj, h1s-f24); the hours pass walks them
+   there and the whole-day pass on the successor's calendar, and the ALERT,
+   reworded after the hours pass (`_lag_calendar_alert_message`), says which
+   figures that leaves where. It used to call P6's behaviour uncaptured.
 
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  ac0191cb7179bfee00a7d46f3bfa4f5f882a02d0cf2cf45ad7da6a1239942c96
+cpm.py          SHA-256:  bf7bc235a569263bc584ba15c0fc85768052bbdd2a48c2275019ef58d9cabb70
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  2065ce6bd6d30a8de5ec599ebd5f5b15d8f0e37c3713d2d7561fa9859043f549
 
@@ -157,6 +165,12 @@ hours pass free float walks the lag back from the successor on the lag
 calendar (FL). Each rule was measured on P6 probes
 (validation/p6-probes/h1-situations-2026-10-13). The harness gains 7 fixtures
 (F141-F147): 143 fixtures, 7634 of 7634 executed.)
+
+(Unreleased, the lag-calendar ALERT 2026-10-13 - cpm.py bumped from
+ac0191cb...: the lag-calendar-mode-unsupported ALERT no longer calls P6's
+project-default and 24-hour lag calendars uncaptured; it says the hours pass
+walks them as P6 does and which figures the whole-day pass leaves on the
+successor's calendar. Text only: the harness figures do not move.)
 
 (v2.10.1 resource dependent work and the printed float 2026-10-13 - cpm.py
 bumped from eb4442e5..., cpm_hours.py from 12e529a4...: ENGINE_VERSION reads
@@ -538,8 +552,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 281547
-  sha-256:  ac0191cb7179bfee00a7d46f3bfa4f5f882a02d0cf2cf45ad7da6a1239942c96
+  bytes: 285471
+  sha-256:  bf7bc235a569263bc584ba15c0fc85768052bbdd2a48c2275019ef58d9cabb70
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
