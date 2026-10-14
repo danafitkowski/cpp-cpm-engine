@@ -3029,6 +3029,58 @@ const _HOURS_LAG_CAL = {
     pred: 'predecessor', succ: 'successor',
 };
 
+// LA (13-Oct-2026) - P6 walks every lag on the project calendar under
+// rcal_ProjDefault and on a 24-hour, seven-day calendar under rcal_24Hour
+// (P6 probes h1s-fj and h1s-f24, 46 of 46 rows each, validation/p6-probes/
+// h1-situations-2026-10-13). The hours pass walks them there
+// (_HOURS_LAG_CAL); the whole-day pass implements predecessor and successor
+// only and walks any other setting on the successor's calendar. The
+// lag-calendar-mode-unsupported ALERT is raised with the day pass and
+// reworded once the hours pass has run, to say which figures walk the lag
+// as P6 does. It
+// used to call P6's behaviour uncaptured. Dana, 13-Oct-2026: correct the
+// ALERT and leave the day pass as it is (no real export on disk uses either
+// setting). One ALERT in every case, so alert parity does not move. Python
+// paired site: _lag_calendar_alert_message.
+const _LAG_CAL_P6_RULE = {
+    project: ['the project calendar', 'h1s-fj'],
+    '24h': ['a 24-hour, seven-day calendar', 'h1s-f24'],
+};
+
+function _lagCalendarAlertMessage(token, hours, projectCalendar, calMap) {
+    const tok = String(token).trim();
+    const mode = Object.prototype.hasOwnProperty.call(_HOURS_LAG_CAL, tok) ? _HOURS_LAG_CAL[tok] : null;
+    const head = "relationship_lag_calendar='" + tok + "'";
+    const tail = ' Disclosed, not substituted silently.';
+    if (mode !== 'project' && mode !== '24h') {
+        return head + ' is not a value the engine reads (it reads the P6 tokens rcal_Predecessor, rcal_Successor, ' +
+            "rcal_ProjDefault and rcal_24Hour), so it walked each lag on the successor's calendar." + tail;
+    }
+    const [where, probe] = _LAG_CAL_P6_RULE[mode];
+    const msg = head + ': P6 walks every lag on ' + where + ' (measured on P6 probe ' + probe +
+        ', validation/p6-probes/h1-situations-2026-10-13 in the engine repository).';
+    const day = "the whole-day pass does not implement this setting and walked each lag on the successor's calendar";
+    if (!(hours && hours.applied)) {
+        return msg + ' The hours pass was not applied (' + ((hours && hours.reason) || 'not run') + ') and ' + day +
+            ', so every date and float in this result can differ from P6 where the two calendars differ.' + tail;
+    }
+    let hp;
+    if (mode === '24h' || (projectCalendar && calMap && calMap[projectCalendar] !== undefined &&
+            calMap[projectCalendar] !== null)) {
+        hp = 'The hours pass walked each lag on ' + (mode === '24h' ? where : 'the project calendar, ' + projectCalendar) +
+            ', so the printed dates and float walk the lag as P6 does.';
+    } else {
+        // computeCPMHours: no project calendar in the map is a default WorkCalendar
+        hp = 'No project calendar in the calendar map was handed in (project_calendar), so the hours pass walked ' +
+            'each lag on a default Monday-to-Friday week, 08:00-12:00 and 13:00-17:00, and the printed dates and ' +
+            "float can differ from P6 where that week and the project's calendar differ; hand in the project's " +
+            'calendar id as project_calendar.';
+    }
+    return msg + ' ' + hp + ' ' + day[0].toUpperCase() + day.slice(1) + ', so its day numbers (es, ef, ls, lf), ' +
+        'its float in calendar days (tf, ff) and its project finish can differ from P6 where the two calendars ' +
+        'differ.' + tail;
+}
+
 // Python's float() on what a caller hands on: a number or numeric text, else null.
 function _hoursFloat(v) {
     if (v === null || v === undefined) return null;
@@ -3856,6 +3908,7 @@ function computeCPM(activities, relationships, opts) {
                       opts.relationship_lag_calendar ||
                       opts.sched_calendar_on_relationship_lag || 'successor';
     _lagCalMode = String(_lagCalMode).trim();
+    const _lagCalRaw = _lagCalMode;
     // Accept the raw P6 tokens as well as the short forms.
     const _LAG_CAL_ALIASES = {
         'rcal_Predecessor': 'predecessor',
@@ -3869,22 +3922,18 @@ function computeCPM(activities, relationships, opts) {
     if (Object.prototype.hasOwnProperty.call(_LAG_CAL_ALIASES, _lagCalMode)) {
         _lagCalMode = _LAG_CAL_ALIASES[_lagCalMode];
     }
+    let _lagCalAlert = null;
     if (_lagCalMode !== 'predecessor' && _lagCalMode !== 'successor') {
-        // P6's rcal_Project and rcal_24Hour were not captured against a P6
-        // reschedule, so the engine does not guess at them. Disclosed, not
-        // silently substituted — same posture as
-        // useProjectEndDateForFloat=false.
-        alerts.push({
+        // LA (13-Oct-2026): the whole-day pass walks any setting other than
+        // predecessor / successor on the successor's calendar; the hours pass
+        // walks the project and 24-hour settings as P6 does, and the ALERT is
+        // reworded after it runs to say which figures walk the lag as P6 does.
+        _lagCalAlert = {
             severity: 'ALERT',
             context: 'lag-calendar-mode-unsupported',
-            message: 'relationshipLagCalendar=' + JSON.stringify(_lagCalMode) +
-                ' is not implemented (supported: predecessor | successor; P6 ' +
-                'tokens rcal_Predecessor | rcal_Successor). P6 behaviour for ' +
-                'rcal_Project / rcal_24Hour is uncaptured, so the engine ' +
-                'computed with its measured-best default, the successor ' +
-                'calendar, rather than guessing. Disclosed, not substituted ' +
-                'silently.',
-        });
+            message: _lagCalendarAlertMessage(_lagCalRaw, null, _projectCalId, rawCalMap),
+        };
+        alerts.push(_lagCalAlert);
         _lagCalMode = 'successor';
     }
     // v2.9.42 — SCHEDOPTIONS.sched_float_type. P6 lets a schedule choose which
@@ -6760,6 +6809,11 @@ function computeCPM(activities, relationships, opts) {
         floatType: _floatType, ssLagFrom: _ssLagFrom, projectFinish: _projectFinishOpt,
         useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates, alerts,
     });
+    if (_lagCalAlert) {
+        // LA (13-Oct-2026): now that the hours pass has run, say which figures
+        // walk the lag as P6 does. Python paired site after the _hours_pass call.
+        _lagCalAlert.message = _lagCalendarAlertMessage(_lagCalRaw, _hours, _projectCalId, rawCalMap);
+    }
     if (_hours.applied) {
         // PF (v2.10.1) - critical is P6's: total float at or below zero in
         // hours. An activity the pass left without float keeps the day pass's

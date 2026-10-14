@@ -13209,6 +13209,74 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify([r.nodes.A.ff_working_days, r2.nodes.B.es_date, r2.nodes.A.ff_working_days, r2.nodes.A2.ff_working_days]));
 }
 
+// ── LA (13-Oct-2026) — the lag-calendar-mode-unsupported ALERT says which figures follow P6 ─
+// P6 walks every lag on the project calendar under rcal_ProjDefault and on a
+// 24-hour, seven-day calendar under rcal_24Hour (P6 probes h1s-fj, h1s-f24);
+// the hours pass walks them there, the whole-day pass on the successor's
+// calendar. The ALERT used to call P6's behaviour uncaptured. One ALERT in
+// every case. A works Mon 05-Oct to Fri 09-Oct 17:00, FS + 16 h to B, both
+// Mon-Fri: on a seven-day project calendar B starts Mon 12-Oct, on B's
+// calendar Wed 14-Oct; a 24 h lag on the 24-hour calendar gives Mon 12-Oct,
+// on B's calendar Thu 15-Oct. Python paired file:
+// _cpp_common/tests/test_lag_calendar_alert_2026_10_13.py.
+{
+    const cal = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8 }, C7: { work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 8 } };
+    const run = (token, x, lagH, hours) => {
+        const acts = [{ code: 'A', duration_days: 5, clndr_id: 'C5' }, { code: 'B', duration_days: 1, clndr_id: 'C5' }];
+        if (hours !== false) { acts[0].remaining_hours = 40; acts[1].remaining_hours = 8; }
+        const h = lagH === undefined ? 16 : lagH;
+        return E.computeCPM(acts, [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: h / 8, lag_hours: h }],
+            Object.assign({ dataDate: '2026-10-05 08:00', calMap: cal, relationshipLagCalendar: token }, x || {}));
+    };
+    const laOf = (r) => r.alerts.filter(a => a.context === 'lag-calendar-mode-unsupported');
+    const msgOf = (r) => { const f = laOf(r); return f.length === 1 && f[0].severity === 'ALERT' ? f[0].message : null; };
+    const dayPass = "The whole-day pass does not implement this setting and walked each lag on the successor's calendar, so " +
+        'its day numbers (es, ef, ls, lf), its float in calendar days (tf, ff) and its project finish can differ ' +
+        'from P6 where the two calendars differ. Disclosed, not substituted silently.';
+    let r = run('rcal_ProjDefault', { projectCalendar: 'C7' });
+    check('LA-1: rcal_ProjDefault with the hours pass: printed dates on the project calendar, the ALERT says so',
+        r.hours.applied && r.hours.lag_calendar === 'project' && r.nodes.B.es_date === '2026-10-12' &&
+        r.nodes.B.day_pass_dates.es_date === '2026-10-14' && msgOf(r) ===
+        "relationship_lag_calendar='rcal_ProjDefault': P6 walks every lag on the project calendar (measured on P6 " +
+        'probe h1s-fj, validation/p6-probes/h1-situations-2026-10-13 in the engine repository). The hours pass ' +
+        'walked each lag on the project calendar, C7, so the printed dates and float walk the lag as P6 does. ' + dayPass,
+        JSON.stringify([r.nodes.B.es_date, msgOf(r)]));
+    r = run('rcal_24Hour', { projectCalendar: 'C5' }, 24);
+    check('LA-2: rcal_24Hour with the hours pass: printed dates on the 24-hour calendar, the ALERT says so',
+        r.hours.applied && r.hours.lag_calendar === '24h' && r.nodes.B.es_date === '2026-10-12' &&
+        r.nodes.B.day_pass_dates.es_date === '2026-10-15' && msgOf(r) ===
+        "relationship_lag_calendar='rcal_24Hour': P6 walks every lag on a 24-hour, seven-day calendar (measured on " +
+        'P6 probe h1s-f24, validation/p6-probes/h1-situations-2026-10-13 in the engine repository). The hours pass ' +
+        'walked each lag on a 24-hour, seven-day calendar, so the printed dates and float walk the lag as P6 does. ' + dayPass,
+        JSON.stringify([r.nodes.B.es_date, msgOf(r)]));
+    const noPc = 'No project calendar in the calendar map was handed in (project_calendar), so the hours pass walked ' +
+        'each lag on a default Monday-to-Friday week, 08:00-12:00 and 13:00-17:00, and the printed dates and ' +
+        "float can differ from P6 where that week and the project's calendar differ; hand in the project's " +
+        'calendar id as project_calendar. ' + dayPass;
+    const m3a = msgOf(run('rcal_ProjDefault')), m3b = msgOf(run('rcal_ProjDefault', { projectCalendar: 'NOPE' }));
+    check('LA-3: rcal_ProjDefault without a project calendar in the map names the default week the hours pass used',
+        !!m3a && m3a.endsWith(noPc) && !!m3b && m3b.endsWith(noPc), JSON.stringify([m3a, m3b]));
+    r = run('rcal_ProjDefault', { projectCalendar: 'C7' }, 16, false);
+    check('LA-4: without the hours pass the ALERT says every date and float is the whole-day pass on the successor calendar',
+        !r.hours.applied && r.nodes.B.es_date === '2026-10-14' && msgOf(r) ===
+        "relationship_lag_calendar='rcal_ProjDefault': P6 walks every lag on the project calendar (measured on P6 " +
+        'probe h1s-fj, validation/p6-probes/h1-situations-2026-10-13 in the engine repository). The hours pass was ' +
+        'not applied (no remaining_hours handed on) and the whole-day pass does not implement this setting and ' +
+        "walked each lag on the successor's calendar, so every date and float in this result can differ from P6 " +
+        'where the two calendars differ. Disclosed, not substituted silently.', JSON.stringify(msgOf(r)));
+    const m5 = msgOf(run('rcal_Fortnight', { projectCalendar: 'C7' }));
+    const m6 = msgOf(run('rcal_Project', { projectCalendar: 'C7' }));
+    check('LA-5: a value the engine does not read is named as such; rcal_Project reads as the project calendar',
+        m5 === "relationship_lag_calendar='rcal_Fortnight' is not a value the engine reads (it reads the P6 tokens " +
+        "rcal_Predecessor, rcal_Successor, rcal_ProjDefault and rcal_24Hour), so it walked each lag on the " +
+        "successor's calendar. Disclosed, not substituted silently." && !!m6 &&
+        m6.indexOf("relationship_lag_calendar='rcal_Project': P6 walks every lag on the project calendar") === 0 &&
+        m6.indexOf('The hours pass walked each lag on the project calendar, C7') > 0, JSON.stringify([m5, m6]));
+    check('LA-6: predecessor and successor raise no lag-calendar ALERT, and no message calls P6 uncaptured',
+        ['rcal_Predecessor', 'rcal_Successor', 'predecessor', 'successor'].every(t => laOf(run(t)).length === 0) &&
+        [m3a, m3b, m5, m6].every(m => m && m.indexOf('uncaptured') < 0));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

@@ -147,13 +147,27 @@ have been applied:
    an SS / SF link out of work under way drives from the same anchor plus
    the unexpired lag (`_start_drive_src_for`, `_ss_off_started`) and holds no
    free float. See CHANGELOG.md v2.10.3.
+16. Unreleased, Class B (disclosure; no computed value moves): the
+   `lag-calendar-mode-unsupported` ALERT is applied here by the same patch
+   as the canonical engine. P6 walks each lag on the project calendar under
+   `rcal_ProjDefault` and on a 24-hour, seven-day calendar under
+   `rcal_24Hour` (P6 probes h1s-fj, h1s-f24); the hours pass walks them
+   there and the whole-day pass on the successor's calendar, and the ALERT,
+   reworded after the hours pass (`_lag_calendar_alert_message`), says which
+   figures that leaves where. It used to call P6's behaviour uncaptured.
 
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  e1b37501b81d61c41b21bb459fcb609f29b487ba1c64f984f5762756d622f189
+cpm.py          SHA-256:  c3b78951085dd4f47db0c6f6976aab386df7e75bdc96e7f9c20445754680eeae
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  b62193a46c401901a26510bd95b40276702dedf3c7a7bcd5c6626be2105c7a70
+
+(Unreleased, the lag-calendar ALERT 2026-10-13 - cpm.py bumped from
+e1b37501...: the lag-calendar-mode-unsupported ALERT no longer calls P6's
+project-default and 24-hour lag calendars uncaptured; it says the hours pass
+walks them as P6 does and which figures the whole-day pass leaves on the
+successor's calendar. Text only: the harness figures do not move.)
 
 (v2.10.3 the two differences held-out set H2 left 2026-10-13 - cpm.py
 bumped from ac0191cb..., cpm_hours.py from 2065ce6b...: ENGINE_VERSION reads
@@ -177,6 +191,7 @@ hours pass free float walks the lag back from the successor on the lag
 calendar (FL). Each rule was measured on P6 probes
 (validation/p6-probes/h1-situations-2026-10-13). The harness gains 7 fixtures
 (F141-F147): 143 fixtures, 7634 of 7634 executed.)
+
 
 (v2.10.1 resource dependent work and the printed float 2026-10-13 - cpm.py
 bumped from eb4442e5..., cpm_hours.py from 12e529a4...: ENGINE_VERSION reads
@@ -558,8 +573,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 285193
-  sha-256:  e1b37501b81d61c41b21bb459fcb609f29b487ba1c64f984f5762756d622f189
+  bytes: 289117
+  sha-256:  c3b78951085dd4f47db0c6f6976aab386df7e75bdc96e7f9c20445754680eeae
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
