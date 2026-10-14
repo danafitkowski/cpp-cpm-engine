@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.5';
+const ENGINE_VERSION = '2.10.6';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2932,6 +2932,38 @@ function computeCPMHours(activities, relationships, o) {
             if (!(tt === 'TT_Mile' && cal.isStart(lf))) lf = cal.prevWorkEnd(lf);
             ls = lf;
         }
+        // MP (H4, 14-Oct-2026): a Mandatory Start or a Mandatory Finish on
+        // work not started sets its own late date whatever its successors
+        // need, as the P6 help says. P6 prints the mandatory date where a link
+        // bound is earlier (ZZ-CPP-H4S-M M2, M3, M8) or the same working time
+        // at an earlier instant (M1, M7, M10, M11, M15; H4-07 A1120), and the
+        // predecessors take their late dates from it (M12; H4-07 A1050,
+        // A1040). A Start On or Before or a Start On keeps the earlier bound
+        // (M4, M5, M9). With both a Mandatory Start and a Mandatory Finish the
+        // earlier of the two sets it (P6's own F9 of a real export carrying
+        // both on 1,090 activities and no links, 14-Oct-2026). Resource
+        // dependent work is left as it was (not probed)
+        if (!n.started && !n.asg.length) {
+            const tt = n.task_type || 'TT_Task';
+            const zero = (at) => ((tt === 'TT_Mile' && cal.isStart(at)) ? at : cal.prevWorkEnd(at));
+            let pin = null;
+            for (const cs of [n.c1, n.c2]) {
+                if (!cs || cs.at === null || (cs.type !== 'MS_Start' && cs.type !== 'MS_Finish')) continue;
+                let p;
+                if (n.rem <= 0) {
+                    const z = zero(cs.at);
+                    p = [z, z];
+                } else if (cs.type === 'MS_Start') {
+                    const s0 = cal.nextWork(cs.at);
+                    p = [s0, cal.add(s0, n.rem)];
+                } else {
+                    const f0 = cal.prevWorkEnd(cs.at);
+                    p = [cal.sub(f0, n.rem), f0];
+                }
+                if (pin === null || p[1] < pin[1] || (p[1] === pin[1] && p[0] < pin[0])) pin = p;
+            }
+            if (pin !== null) [ls, lf] = pin;
+        }
         n.lf = lf;
         if (n.started) {
             n.rls = ls;
@@ -2946,7 +2978,11 @@ function computeCPMHours(activities, relationships, o) {
     // the restart (H1-03 A1170; ZZ-CPP-H1S L3 L4 L5 L8), and nothing caps the
     // slide at the late finish, started or not (L2 L4). Under progress
     // override an SS / SF link out of work already started holds nothing back
-    // (ZZ-CPP-H1S-O L8).
+    // (ZZ-CPP-H1S-O L8). AP (H4, 14-Oct-2026): under progress override an FS
+    // or SS link into a successor already under way holds nothing back
+    // either, out of work under way or not started, as on the backward pass;
+    // FF and SF still bind (ZZ-CPP-H4S-A A1, A2, A5, A6, A9, A10, A12;
+    // H4-08 A1060; controls A3, A7, A8, A11 and -AR).
     for (let oi = order.length - 1; oi >= 0; oi--) {
         const c = order[oi];
         const n = nodes.get(c);
@@ -2960,6 +2996,7 @@ function computeCPMHours(activities, relationships, o) {
             const s = nodes.get(r.to_code);
             if (s.complete) continue;
             if (n.started && !retained && (r.type === 'SS' || r.type === 'SF')) continue;
+            if (s.started && po && (r.type === 'FS' || r.type === 'SS')) continue;
             seen = true;
             const lc = lagCal(n, s);
             const anchor = (r.type === 'FF' || r.type === 'SF') ? s.ef : restartOf(s);
@@ -6014,8 +6051,13 @@ function computeCPM(activities, relationships, opts) {
         const _minLFBeforeSecondary = minLF;
         minLF = _applyBackwardLFConstraint(code, minLF, cstr2, nodeCal, node.duration_days, alerts);
         if (minLF !== _minLFBeforeSecondary) _mlBy = cstr2;
+        // MP (H4, 14-Oct-2026): a secondary that is itself mandatory is not
+        // soft: with a Mandatory Start and a Mandatory Finish the earlier pin
+        // holds the late date, as P6's own F9 of a real export carrying both
+        // on 1,090 activities did (the start pin governing 195 tasks, the
+        // finish pin 72) and as the Python reference and the hours pass do.
         if (_primaryMandatoryLF !== null && Number.isFinite(_primaryMandatoryLF) &&
-            minLF < _primaryMandatoryLF) {
+            minLF < _primaryMandatoryLF && !_isMandatoryConstraint(cstr2)) {
             alerts.push({
                 severity: 'WARN',
                 context: 'constraint-priority-override',
@@ -6248,8 +6290,11 @@ function computeCPM(activities, relationships, opts) {
     // and nothing caps the slide at the late finish, started or not (L2 L4,
     // total float -24 h; until now the engine stopped at the late finish).
     // Under progress override an SS / SF link out of work already started
-    // holds nothing back (ZZ-CPP-H1S-O L8). Python paired site: the ALAP
-    // post-pass in compute_cpm.
+    // holds nothing back (ZZ-CPP-H1S-O L8). AP (H4, 14-Oct-2026): so does an
+    // FS or SS link into a successor already under way, out of work under way
+    // or not started, as on the backward pass (WD); FF and SF still bind
+    // (ZZ-CPP-H4S-A, hours pass). Python paired site: the ALAP post-pass in
+    // compute_cpm.
     for (let __ai = sortRes.order.length - 1; __ai >= 0; __ai--) {
         const c = sortRes.order[__ai];
         const n = nodes[c];
@@ -6272,6 +6317,8 @@ function computeCPM(activities, relationships, opts) {
             const sn = nodes[s.to_code];
             if (!sn || sn.is_complete) continue;
             if (_aStarted && _scheduleMode === 'progress_override' && (s.type === 'SS' || s.type === 'SF')) continue;
+            if (_scheduleMode === 'progress_override' && (s.type === 'FS' || s.type === 'SS') &&
+                dateToNum(sn.actual_start || '') > 0) continue;
             _seen = true;
             const sCal = lagCalFor(n, sn);
             const lag = s.lag_days || 0;
@@ -6331,10 +6378,13 @@ function computeCPM(activities, relationships, opts) {
         // v2.9.23 — audit LOW R9, kept as an invariant: the slide is bounded by
         // the successors' early dates, so no successor may now start (or
         // finish) before this activity lets it. A breach would mean stale
-        // successor dates; strict mode treats it as fatal.
+        // successor dates; strict mode treats it as fatal. A link the slide
+        // does not read holds nothing back and is not checked either (AP).
         for (const s of (succMap[c] || [])) {
             const bn = nodes[s.to_code];
             if (!bn || bn.is_complete) continue;
+            if (_scheduleMode === 'progress_override' && ((_aStarted && (s.type === 'SS' || s.type === 'SF')) ||
+                ((s.type === 'FS' || s.type === 'SS') && dateToNum(bn.actual_start || '') > 0))) continue;
             let predRef, succRef, edgeDesc;
             if (s.type === 'FS') { predRef = n.ef; succRef = bn.es; edgeDesc = 'pred.EF > succ.ES'; }
             else if (s.type === 'SS') { predRef = n.es; succRef = bn.es; edgeDesc = 'pred.ES > succ.ES'; }
@@ -11130,17 +11180,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '159 cross-validation fixtures. The harness defines 9873 ' +
+                '162 cross-validation fixtures. The harness defines 10350 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 9873 / 9873" is the whole comparison surface. ' +
+                'reported "Checks: 10350 / 10350" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 9873 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 10350 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 157 of the 159 fixtures: ' +
+                'severity-level alert parity, compared on 160 of the 162 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11179,18 +11229,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '9873 comparisons it defines over 159 fixtures and skips none; every ' +
+                '10350 comparisons it defines over 162 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '159 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '162 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 9873 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 10350 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 157 of the 159 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 160 of the 162 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

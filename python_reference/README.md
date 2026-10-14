@@ -173,13 +173,31 @@ have been applied:
    stored as the predecessor's 10 h under `rcal_Successor` and
    `rcal_ProjDefault`). Under `rcal_Successor` the hours pass used to take
    the successor's hours per day.
+19. v2.10.6, the two differences held-out set H4 left, applied here by the
+   same patch as the canonical engine (P6 probes
+   validation/p6-probes/h4-situations-2026-10-14). Under progress override
+   an FS or SS link into a successor already under way holds As Late As
+   Possible work back no more than it binds the late dates, in both passes;
+   a Mandatory Start or Mandatory Finish on work not started sets its own
+   late date whatever its successors need (hours pass; the whole-day pass
+   already pinned it).
 
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  fcd0fa8909d507ea076cf0ef3c0d46e37dc0540f32194035dd7dd06ece594035
+cpm.py          SHA-256:  8189c519b827f0a5b062cf23a57fd353c25d6e486484d6a32bb524708124ff85
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  6b367aee02371e246bc2fe6465b7b05746046c284f04602d0d047e836209021b
+cpm_hours.py    SHA-256:  44051fdf927a597f4843b5e2b2c011492b886fcc1f2ce8fb652b791c99ea10e5
+
+(v2.10.6 the two differences held-out set H4 left 2026-10-14 - cpm.py bumped
+from fcd0fa89..., cpm_hours.py from 6b367aee...: ENGINE_VERSION reads 2.10.6;
+under progress override an FS or SS link into a successor already under way
+holds As Late As Possible work back no more than it binds the late dates (AP);
+a Mandatory Start or Mandatory Finish on work not started sets its own late
+date whatever its successors need (MP, hours pass; the whole-day pass already
+pinned it). Each rule was measured on P6 probes
+(validation/p6-probes/h4-situations-2026-10-14). The harness gains 3 fixtures
+(F164-F166): 162 fixtures, 10350 of 10350 executed.)
 
 (v2.10.5 a lag handed on in days 2026-10-14 - cpm.py bumped from
 3f90dad0...: ENGINE_VERSION reads 2.10.5; a relationship with lag_days and no lag_hours takes the
@@ -603,15 +621,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 291352
-  sha-256:  fcd0fa8909d507ea076cf0ef3c0d46e37dc0540f32194035dd7dd06ece594035
+  bytes: 291762
+  sha-256:  8189c519b827f0a5b062cf23a57fd353c25d6e486484d6a32bb524708124ff85
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 159 passed, 0 failed
-  Checks:   9873 / 9873 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 162 passed, 0 failed
+  Checks:   10350 / 10350 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

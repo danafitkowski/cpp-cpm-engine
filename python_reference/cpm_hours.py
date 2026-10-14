@@ -680,6 +680,37 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if not (tt == 'TT_Mile' and cal.is_start(lf)):
                 lf = cal.prev_work_end(lf)
             ls = lf
+        # MP (H4, 14-Oct-2026): a Mandatory Start or a Mandatory Finish on work
+        # not started sets its own late date whatever its successors need, as
+        # the P6 help says. P6 prints the mandatory date where a link bound is
+        # earlier (ZZ-CPP-H4S-M M2, M3, M8) or the same working time at an
+        # earlier instant (M1, M7, M10, M11, M15; H4-07 A1120), and the
+        # predecessors take their late dates from it (M12; H4-07 A1050,
+        # A1040). A Start On or Before or a Start On keeps the earlier bound
+        # (M4, M5, M9). With both a Mandatory Start and a Mandatory Finish the
+        # earlier of the two sets it (P6's own F9 of a real export carrying both
+        # on 1,090 activities and no links, 14-Oct-2026). Resource dependent
+        # work is left as it was (not probed).
+        if not n['started'] and not n['asg']:
+            tt = n.get('task_type') or 'TT_Task'
+            pin = None
+            for k in ('c1', 'c2'):
+                cs = n[k]
+                if not cs or cs['at'] is None or cs['type'] not in ('MS_Start', 'MS_Finish'):
+                    continue
+                if n['rem'] <= 0:
+                    z = cs['at'] if (tt == 'TT_Mile' and cal.is_start(cs['at'])) else cal.prev_work_end(cs['at'])
+                    p = (z, z)
+                elif cs['type'] == 'MS_Start':
+                    s0 = cal.next_work(cs['at'])
+                    p = (s0, cal.add(s0, n['rem']))
+                else:
+                    f0 = cal.prev_work_end(cs['at'])
+                    p = (cal.sub(f0, n['rem']), f0)
+                if pin is None or p[1] < pin[1] or (p[1] == pin[1] and p[0] < pin[0]):
+                    pin = p
+            if pin is not None:
+                ls, lf = pin
         n['lf'] = lf
         if n['started']:
             n['rls'] = ls
@@ -699,6 +730,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
     # dates go past the late ones (L2 L4, total float -24 h). Under progress
     # override an SS / SF link out of work already started holds nothing back
     # (its start is history: ZZ-CPP-H1S-O L8 slides to the project's finish).
+    # AP (H4, 14-Oct-2026): under progress override an FS or SS link into a
+    # successor already under way holds nothing back either, out of work under
+    # way or not started, as on the backward pass; FF and SF still bind
+    # (ZZ-CPP-H4S-A A1, A2, A5, A6, A9, A10, A12; H4-08 A1060; controls A3, A7,
+    # A8, A11 and -AR).
     for c in reversed(order):
         n = nodes[c]
         if n['complete'] or not any((n[k] or {}).get('type') == 'ALAP' for k in ('c1', 'c2')):
@@ -711,6 +747,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if s['complete']:
                 continue
             if n['started'] and not retained and r['type'] in ('SS', 'SF'):
+                continue
+            if s['started'] and po and r['type'] in ('FS', 'SS'):
                 continue
             seen = True
             lc = lag_cal(n, s)

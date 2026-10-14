@@ -3432,6 +3432,56 @@ compareFixture('F163 - FL: a lag handed on in days, the successor lag calendar, 
     data_date: '2026-03-11 08:00', cal_map: FLCAL, relationship_lag_calendar: 'rcal_Successor',
 }, { hours: true });
 
+// ── v2.10.6 candidate — the two differences held-out set H4 left (P6 probes ZZ-CPP-H4S-A / -AR / -M / -MO) ─
+// AP: under progress override an FS or SS link into a successor already under way holds As Late As Possible work
+// back no more than it binds the late dates (FF still binds; X9 is held by W9, not started). MP: a Mandatory Start
+// or Mandatory Finish sets its own late date whatever its successors need; a Start On or Before keeps the earlier
+// bound. Data date Mon 5-Oct-2026 08:00.
+const ALAP = { type: 'ALAP', date: '' };
+const apActs = (A) => [A('D', 160),
+    A('X1', 4, { actual_start: '2026-10-01 08:00', remaining_duration: 0.5, constraint: ALAP }),
+    A('Y1', 24, { actual_start: '2026-10-02 08:00', remaining_duration: 3 }),
+    A('X5', 8, { constraint: ALAP }), A('Y5', 24, { actual_start: '2026-10-02 08:00', remaining_duration: 3 }),
+    A('X6', 8, { constraint: ALAP }), A('Y6', 24, { actual_start: '2026-10-02 08:00', remaining_duration: 3 }),
+    A('X7', 8, { constraint: ALAP }), A('Y7', 24, { actual_start: '2026-10-02 08:00', remaining_duration: 3 }),
+    A('X9', 4, { actual_start: '2026-10-01 08:00', remaining_duration: 0.5, constraint: ALAP }),
+    A('Y9', 24, { actual_start: '2026-10-02 08:00', remaining_duration: 3 }), A('V9', 40), A('W9', 8)];
+const apRels = (R) => [R('X1', 'Y1'), R('X5', 'Y5'), R('X6', 'Y6', 'SS'), R('X7', 'Y7', 'FF'), R('X9', 'Y9'),
+    R('X9', 'W9'), R('V9', 'W9')];
+compareFixture('F164 - AP: ALAP work and an FS / SS link into a successor under way, under progress override, in hours', {
+    activities: apActs(hA), relationships: apRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+compareFixture('F165 - AP: the same, whole days', {
+    activities: apActs(dA), relationships: apRels(dR),
+    data_date: '2026-10-05', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+});
+const mpCs = (type, date) => ({ type, date });
+compareFixture('F166 - MP: a Mandatory Start or Finish against an earlier link bound, a weekend tie, both pins, Start On or Before controls, in hours', {
+    activities: [hA('D', 160),
+        hA('M1P', 24, { clndr_id: 'D24' }), hA('M1X', 12, { constraint: mpCs('MS_Start', '2026-10-12 08:00') }),
+        hA('M1Y', 24, { clndr_id: 'D24', constraint: mpCs('SNLT', '2026-10-10 06:00') }),
+        hA('M2P', 24, { clndr_id: 'D24' }), hA('M2X', 12, { constraint: mpCs('MS_Start', '2026-10-12 08:00') }),
+        hA('M2Y', 24, { clndr_id: 'D24', constraint: mpCs('SNLT', '2026-10-08 10:00') }),
+        hA('M3P', 24, { clndr_id: 'D24' }), hA('M3X', 12, { constraint: mpCs('MS_Start', '2026-10-12 08:00') }),
+        hA('M3Y', 24, { clndr_id: 'D24', constraint: mpCs('SNLT', '2026-10-08 10:00') }),
+        hA('M8P', 24, { clndr_id: 'D24' }), hA('M8X', 12, { constraint: mpCs('MS_Finish', '2026-10-12 17:00') }),
+        hA('M8Y', 24, { clndr_id: 'D24', constraint: mpCs('SNLT', '2026-10-12 10:00') }),
+        hA('M10P', 24, { clndr_id: 'D24' }),
+        hA('M10X', 0, { task_type: 'TT_Mile', constraint: mpCs('MS_Start', '2026-10-12 08:00') }),
+        hA('M10Y', 24, { clndr_id: 'D24', constraint: mpCs('SNLT', '2026-10-10 06:00') }),
+        hA('M4P', 24, { clndr_id: 'D24' }), hA('M4X', 12, { constraint: mpCs('SNLT', '2026-10-12 08:00') }),
+        hA('M4Y', 24, { clndr_id: 'D24', constraint: mpCs('SNLT', '2026-10-10 06:00') }),
+        hA('Z1', 12, { constraint: mpCs('MS_Start', '2026-10-12 08:00'), constraint2: mpCs('MS_Finish', '2026-10-12 16:00') }),
+        hA('Z2', 12, { constraint: mpCs('MS_Start', '2026-10-12 08:00'), constraint2: mpCs('MS_Finish', '2026-10-15 16:00') })],
+    relationships: [hR('M1P', 'M1X'), hR('M1X', 'M1Y', 'SS'), hR('M2P', 'M2X'), hR('M2X', 'M2Y', 'SS'),
+        hR('M3P', 'M3X'), hR('M3X', 'M3Y'), hR('M8P', 'M8X'), hR('M8X', 'M8Y'), hR('M10P', 'M10X'),
+        hR('M10X', 'M10Y', 'SS'), hR('M4P', 'M4X'), hR('M4X', 'M4Y', 'SS')],
+    data_date: '2026-10-05 08:00', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

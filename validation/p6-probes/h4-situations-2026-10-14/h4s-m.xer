@@ -1,0 +1,120 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9403	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	ZZ-CPP-H4S-M					94031		1000	10	10	0	500		0	0	2026-03-11 08:00	2026-03-02 08:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	94030	N	ZZ-CPP-H4S-M Every day 06:00-18:00	9403			CA_Project	12	84	361	4368	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|06:00|f|18:00)())))(0||2()((0||0(s|06:00|f|18:00)())))(0||3()((0||0(s|06:00|f|18:00)())))(0||4()((0||0(s|06:00|f|18:00)())))(0||5()((0||0(s|06:00|f|18:00)())))(0||6()((0||0(s|06:00|f|18:00)())))(0||7()((0||0(s|06:00|f|18:00)())))))(0||Exceptions()())))
+%R	94031	N	ZZ-CPP-H4S-M Mon-Fri 08:00-12:00 and 13:00-17:00	9403			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	94032	N	ZZ-CPP-H4S-M Mon-Thu 07:00-12:00 and 12:30-17:30	9403			CA_Project	10	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||6()())(0||7()())))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109403	9403	SD_Both	N	N	Y	N	FT_FF	rcal_Predecessor	N	N	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	94030	9403		1	1	Y	N	WS_Open	ZZ-CPP-H4S-M	H4-07: Mandatory Start against a link bound, retained logic (synthetic, delete after)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9403000	9403	94030	94031	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	S0	project start (complete)				0	0	0	0	0	0	0	0		2026-03-02 08:00	2026-03-02 08:00								2026-03-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9403001	9403	94030	94031	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	D1	driver: sets the project finish				400	0	0	0	400	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9403002	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M1P	M1 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403003	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M1X	M1 X: Mandatory Start tied with an SS bound on a Saturday (H4-07)				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403004	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M1Y	M1 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-14 06:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403005	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M2P	M2 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403006	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M2X	M2 X: Mandatory Start, SS bound strictly earlier				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403007	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M2Y	M2 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-12 10:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403008	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M3P	M3 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403009	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M3X	M3 X: Mandatory Start, FS bound strictly earlier				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403010	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M3Y	M3 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-12 10:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403011	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M4P	M4 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403012	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M4X	M4 X: Start On or Before tied with an SS bound on a Saturday				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403013	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M4Y	M4 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-14 06:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403014	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M5P	M5 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403015	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M5X	M5 X: Start On tied with an SS bound on a Saturday				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MSO	PT_Normal										0	0					admin	admin		
+%R	9403016	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M5Y	M5 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-14 06:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403017	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M7P	M7 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403018	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M7X	M7 X: Mandatory Start after lunch tied with an SS bound in the lunch break				12	0	0	0	12	0	0	0	2026-03-16 12:30										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403019	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M7Y	M7 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-16 12:15										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403020	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M8P	M8 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403021	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M8X	M8 X: Mandatory Finish, FS bound strictly earlier				12	0	0	0	12	0	0	0	2026-03-16 17:30										2026-03-11 12:30				CS_MANDFIN	PT_Normal										0	0					admin	admin		
+%R	9403022	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M8Y	M8 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-16 10:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403023	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M9P	M9 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403024	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M9X	M9 X: Start On or Before, SS bound strictly earlier (control)				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403025	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M9Y	M9 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-12 10:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403026	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M10P	M10 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403027	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	M10X	M10 X: start milestone, Mandatory Start tied with an SS bound on a Saturday				0	0	0	0	0	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403028	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M10Y	M10 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-14 06:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403029	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M11P	M11 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403030	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M11X	M11 X: Mandatory Start tied with an SF bound on a Saturday				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403031	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M11Y	M11 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-14 06:00										2026-03-12 06:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9403032	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M15P	M15 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403033	9403	94030	94031	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M15X	M15 X: Mandatory Start tied with an SS bound on a Saturday, Mon-Fri calendar				12	0	0	0	12	0	0	0	2026-03-16 08:00										2026-03-11 08:00				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403034	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M15Y	M15 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-14 06:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403035	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M16P	M16 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403036	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M16X	M16 X: Mandatory Start, SS bound later (control)				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403037	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M16Y	M16 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-17 10:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%R	9403038	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M6P	M6 P: 7-day predecessor of X				24	0	0	0	24	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403039	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M6X	M6 X: Mandatory Start, no successor (control)				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403040	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M12Q	M12 Q: 7-day predecessor of P (A1040)				32	0	0	0	32	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403041	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M12P	M12 P: 7-day predecessor of X (A1050)				120	0	0	0	120	0	0	0											2026-03-12 06:00					PT_Normal										0	0					admin	admin		
+%R	9403042	9403	94030	94032	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M12X	M12 X: Mandatory Start tied with an SS bound, H4-07 chain				12	0	0	0	12	0	0	0	2026-03-16 07:00										2026-03-11 12:30				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9403043	9403	94030	94030	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	M12Y	M12 Y: pinned successor				24	0	0	0	24	0	0	0	2026-03-14 06:00										2026-03-12 06:00				CS_MSOB	PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9403500	9403001	9403000	9403	9403	PR_FS	0				
+%R	9403501	9403002	9403000	9403	9403	PR_FS	0				
+%R	9403502	9403003	9403002	9403	9403	PR_FS	0				
+%R	9403503	9403004	9403000	9403	9403	PR_FS	0				
+%R	9403504	9403004	9403003	9403	9403	PR_SS	0				
+%R	9403505	9403005	9403000	9403	9403	PR_FS	0				
+%R	9403506	9403006	9403005	9403	9403	PR_FS	0				
+%R	9403507	9403007	9403000	9403	9403	PR_FS	0				
+%R	9403508	9403007	9403006	9403	9403	PR_SS	0				
+%R	9403509	9403008	9403000	9403	9403	PR_FS	0				
+%R	9403510	9403009	9403008	9403	9403	PR_FS	0				
+%R	9403511	9403010	9403000	9403	9403	PR_FS	0				
+%R	9403512	9403010	9403009	9403	9403	PR_FS	0				
+%R	9403513	9403011	9403000	9403	9403	PR_FS	0				
+%R	9403514	9403012	9403011	9403	9403	PR_FS	0				
+%R	9403515	9403013	9403000	9403	9403	PR_FS	0				
+%R	9403516	9403013	9403012	9403	9403	PR_SS	0				
+%R	9403517	9403014	9403000	9403	9403	PR_FS	0				
+%R	9403518	9403015	9403014	9403	9403	PR_FS	0				
+%R	9403519	9403016	9403000	9403	9403	PR_FS	0				
+%R	9403520	9403016	9403015	9403	9403	PR_SS	0				
+%R	9403521	9403017	9403000	9403	9403	PR_FS	0				
+%R	9403522	9403018	9403017	9403	9403	PR_FS	0				
+%R	9403523	9403019	9403000	9403	9403	PR_FS	0				
+%R	9403524	9403019	9403018	9403	9403	PR_SS	0				
+%R	9403525	9403020	9403000	9403	9403	PR_FS	0				
+%R	9403526	9403021	9403020	9403	9403	PR_FS	0				
+%R	9403527	9403022	9403000	9403	9403	PR_FS	0				
+%R	9403528	9403022	9403021	9403	9403	PR_FS	0				
+%R	9403529	9403023	9403000	9403	9403	PR_FS	0				
+%R	9403530	9403024	9403023	9403	9403	PR_FS	0				
+%R	9403531	9403025	9403000	9403	9403	PR_FS	0				
+%R	9403532	9403025	9403024	9403	9403	PR_SS	0				
+%R	9403533	9403026	9403000	9403	9403	PR_FS	0				
+%R	9403534	9403027	9403026	9403	9403	PR_FS	0				
+%R	9403535	9403028	9403000	9403	9403	PR_FS	0				
+%R	9403536	9403028	9403027	9403	9403	PR_SS	0				
+%R	9403537	9403029	9403000	9403	9403	PR_FS	0				
+%R	9403538	9403030	9403029	9403	9403	PR_FS	0				
+%R	9403539	9403031	9403000	9403	9403	PR_FS	0				
+%R	9403540	9403031	9403030	9403	9403	PR_SF	0				
+%R	9403541	9403032	9403000	9403	9403	PR_FS	0				
+%R	9403542	9403033	9403032	9403	9403	PR_FS	0				
+%R	9403543	9403034	9403000	9403	9403	PR_FS	0				
+%R	9403544	9403034	9403033	9403	9403	PR_SS	0				
+%R	9403545	9403035	9403000	9403	9403	PR_FS	0				
+%R	9403546	9403036	9403035	9403	9403	PR_FS	0				
+%R	9403547	9403037	9403000	9403	9403	PR_FS	0				
+%R	9403548	9403037	9403036	9403	9403	PR_SS	0				
+%R	9403549	9403038	9403000	9403	9403	PR_FS	0				
+%R	9403550	9403039	9403038	9403	9403	PR_FS	0				
+%R	9403551	9403040	9403000	9403	9403	PR_FS	0				
+%R	9403552	9403041	9403040	9403	9403	PR_FS	0				
+%R	9403553	9403042	9403041	9403	9403	PR_FS	0				
+%R	9403554	9403043	9403000	9403	9403	PR_FS	0				
+%R	9403555	9403043	9403042	9403	9403	PR_SS	0				
+%E

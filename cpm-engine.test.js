@@ -13441,6 +13441,110 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
     check('LD-4: a tie with P6\'s own lag_hours is walked as handed', !!h6 && h6 !== s && h6 === h99, JSON.stringify([h6, h99]));
 }
 
+// ── v2.10.6 candidate — the two differences held-out set H4 left ─
+// P6 Professional 23.12.1's own F9 of the probes ZZ-CPP-H4S-A / -AR / -M / -MO
+// (14-Oct-2026), the whole set replayed by tests/p6-h4-situations.test.js.
+// AP: under progress override an FS or SS link into a successor already under
+// way holds an As Late As Possible activity back no more than it binds its
+// late dates (H4-08 A1060). MP: a Mandatory Start or Mandatory Finish sets its
+// own late date whatever its successors need (H4-07 A1120). Data date Wed
+// 11-Mar-2026 08:00. Python paired file:
+// _cpp_common/tests/test_h4_situations_2026_10_14.py.
+{
+    const FMT = E._hrFormatInstant;
+    const day = (periods) => '(0||' + periods.map(([s, f], i) => '(0||' + i + '(s|' + s + '|f|' + f + ')())').join('') + ')';
+    const week = (periods, days) => '(0||CalendarData()((0||DaysOfWeek()(' + [1, 2, 3, 4, 5, 6, 7].map(d =>
+        days.indexOf(d) >= 0 ? '(0||' + d + '()' + day(periods) + ')' : '(0||' + d + '()())').join('') +
+        '))(0||Exceptions()())))';
+    const CALS = {
+        C5: { raw: week([['08:00', '12:00'], ['13:00', '17:00']], [2, 3, 4, 5, 6]), work_days: [1, 2, 3, 4, 5], hours_per_day: 8 },
+        MT10: { raw: week([['07:00', '12:00'], ['12:30', '17:30']], [2, 3, 4, 5]), work_days: [1, 2, 3, 4], hours_per_day: 10 },
+        D12: { raw: week([['06:00', '18:00']], [1, 2, 3, 4, 5, 6, 7]), work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 12 },
+    };
+    const T = (code, h, x) => Object.assign({ code, task_type: 'TT_Task', clndr_id: 'C5', remaining_minutes: Math.round(h * 60) }, x || {});
+    const L = (a, b, type) => ({ from_code: a, to_code: b, type: type || 'FS', lag_minutes: 0 });
+    const run = (acts, rels, o) => E.computeCPMHours([T('D1', 400)].concat(acts), rels || [], Object.assign(
+        { data_date: '2026-03-11 08:00', cal_map: CALS, project_calendar: 'C5' }, o || {}));
+    const early = (x) => FMT(x.restart !== null && x.restart !== undefined ? x.restart : x.es) + ' / ' + FMT(x.ef);
+    const late = (x) => FMT(x.rls !== null && x.rls !== undefined ? x.rls : x.ls) + ' / ' + FMT(x.lf);
+    const ALAP = { type: 'CS_ALAP' };
+    // AP: X is ALAP, Y under way (started Tue 10-Mar, 24 h left); A9 also has W, held back by V
+    const aa = [], al = [];
+    for (const [c, started, link] of [['A1', true, 'FS'], ['A5', false, 'FS'], ['A6', false, 'SS'], ['A7', false, 'FF'], ['A9', true, 'FS']]) {
+        aa.push(started ? T(c + 'X', 4, { actual_start: '2026-03-09 08:00', constraint: ALAP }) : T(c + 'X', 8, { constraint: ALAP }),
+            T(c + 'Y', 24, { actual_start: '2026-03-10 08:00' }));
+        al.push(L(c + 'X', c + 'Y', link));
+    }
+    aa.push(T('A9V', 40), T('A9W', 8));
+    al.push(L('A9X', 'A9W'), L('A9V', 'A9W'));
+    const po = run(aa, al, { schedule_mode: 'progress_override' });
+    const rl = run(aa, al, { schedule_mode: 'retained_logic' });
+    check('HR-59: under progress override ALAP work slides past an FS or SS link into a successor under way, out of work under way or not started; FF still binds; retained logic holds it (AP; P6 probe A, AR A1 A5 A6 A7 A9)',
+        early(po.A1X) === '2026-05-19 13:00 / 2026-05-19 17:00' && early(po.A5X) === '2026-05-19 08:00 / 2026-05-19 17:00' &&
+        early(po.A6X) === '2026-05-19 08:00 / 2026-05-19 17:00' && early(po.A7X) === '2026-03-13 08:00 / 2026-03-13 17:00' &&
+        early(po.A9X) === '2026-03-17 13:00 / 2026-03-17 17:00' && early(rl.A1X) === '2026-03-11 08:00 / 2026-03-11 12:00' &&
+        early(rl.A5X) === '2026-03-11 08:00 / 2026-03-11 17:00',
+        [early(po.A1X), early(po.A5X), early(po.A6X), early(po.A7X), early(po.A9X), early(rl.A1X), early(rl.A5X)].join(' | '));
+    // MP: P (every day 06:00-18:00) -> X (Mon-Thu, 12 h) -> Y (every day), Y pinned by a Start On or Before
+    const ma = [], ml = [];
+    for (const [c, xh, xt, xc, link, yd] of [
+        ['M1', 12, 'TT_Task', { type: 'CS_MANDSTART', date: '2026-03-16 07:00' }, 'SS', '2026-03-14 06:00'],
+        ['M2', 12, 'TT_Task', { type: 'CS_MANDSTART', date: '2026-03-16 07:00' }, 'SS', '2026-03-12 10:00'],
+        ['M3', 12, 'TT_Task', { type: 'CS_MANDSTART', date: '2026-03-16 07:00' }, 'FS', '2026-03-12 10:00'],
+        ['M8', 12, 'TT_Task', { type: 'CS_MANDFIN', date: '2026-03-16 17:30' }, 'FS', '2026-03-16 10:00'],
+        ['M10', 0, 'TT_Mile', { type: 'CS_MANDSTART', date: '2026-03-16 07:00' }, 'SS', '2026-03-14 06:00'],
+        ['M4', 12, 'TT_Task', { type: 'CS_MSOB', date: '2026-03-16 07:00' }, 'SS', '2026-03-14 06:00'],
+        ['M9', 12, 'TT_Task', { type: 'CS_MSOB', date: '2026-03-16 07:00' }, 'SS', '2026-03-12 10:00']]) {
+        ma.push(T(c + 'P', 24, { clndr_id: 'D12' }), T(c + 'X', xh, { clndr_id: 'MT10', task_type: xt, constraint: xc }),
+            T(c + 'Y', 24, { clndr_id: 'D12', constraint: { type: 'CS_MSOB', date: yd } }));
+        ml.push(L(c + 'P', c + 'X'), L(c + 'X', c + 'Y', link));
+    }
+    ma.push(T('M12Q', 32, { clndr_id: 'D12' }), T('M12P', 120, { clndr_id: 'D12' }),
+        T('M12X', 12, { clndr_id: 'MT10', constraint: { type: 'CS_MANDSTART', date: '2026-03-16 07:00' } }),
+        T('M12Y', 24, { clndr_id: 'D12', constraint: { type: 'CS_MSOB', date: '2026-03-14 06:00' } }));
+    ml.push(L('M12Q', 'M12P'), L('M12P', 'M12X'), L('M12X', 'M12Y', 'SS'));
+    const m = run(ma, ml, { schedule_mode: 'retained_logic' });
+    const X = '2026-03-16 07:00 / 2026-03-17 09:00';
+    check('HR-60: a Mandatory Start or Mandatory Finish sets its own late date whatever its successors need, and its predecessors take theirs from it; a Start On or Before keeps the earlier bound (MP; P6 probe M M1 M2 M3 M4 M8 M9 M10 M12)',
+        late(m.M1X) === X && late(m.M2X) === X && late(m.M3X) === X && late(m.M12X) === X &&
+        late(m.M1P) === '2026-03-14 07:00 / 2026-03-16 07:00' && late(m.M8X) === '2026-03-12 15:30 / 2026-03-16 17:30' &&
+        late(m.M10X) === '2026-03-16 07:00 / 2026-03-16 07:00' && late(m.M12P) === '2026-03-06 07:00 / 2026-03-16 07:00' &&
+        late(m.M12Q) === '2026-03-03 11:00 / 2026-03-06 07:00' && late(m.M4X) === '2026-03-12 17:30 / 2026-03-17 09:00' &&
+        late(m.M9X) === '2026-03-12 10:00 / 2026-03-16 12:00',
+        [late(m.M1X), late(m.M2X), late(m.M3X), late(m.M1P), late(m.M8X), late(m.M10X), late(m.M12P), late(m.M12Q),
+            late(m.M4X), late(m.M9X)].join(' | '));
+    // both pins: the earlier of the two sets the late dates, either way round (P6's own F9 of a real export
+    // carrying a Mandatory Start and a Mandatory Finish on 1,090 activities: the start pin governed 195 tasks,
+    // the finish pin 72)
+    const two = run([T('Z1', 12, { clndr_id: 'MT10', constraint: { type: 'CS_MANDSTART', date: '2026-03-16 07:00' },
+        constraint2: { type: 'CS_MANDFIN', date: '2026-03-16 17:30' } }),
+    T('Z2', 12, { clndr_id: 'MT10', constraint: { type: 'CS_MANDSTART', date: '2026-03-16 07:00' },
+        constraint2: { type: 'CS_MANDFIN', date: '2026-03-19 17:30' } })], [], { schedule_mode: 'retained_logic' });
+    check('HR-62: with a Mandatory Start and a Mandatory Finish the earlier pin sets the late dates, either way round (MP)',
+        late(two.Z1) === '2026-03-12 15:30 / 2026-03-16 17:30' && late(two.Z2) === '2026-03-16 07:00 / 2026-03-17 09:00',
+        late(two.Z1) + ' | ' + late(two.Z2));
+}
+
+// ── v2.10.6 candidate — AP in the whole-day pass (data date Wed 7-Jan-2026) ─
+// The whole-day pass already pinned a mandatory date on the late side (v2.9.12).
+// Python paired file: _cpp_common/tests/test_h4_situations_2026_10_14.py.
+{
+    const cal = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] } };
+    const A = (code, d, x) => Object.assign({ code, duration_days: d, clndr_id: 'C5' }, x || {});
+    const L = (a, b, t) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: 0 });
+    const ap = (mode) => E.computeCPM([A('D', 20), A('X', 1, { constraint: { type: 'ALAP', date: '' } }),
+        A('Y', 6, { actual_start: '2026-01-05', remaining_duration: 4 }),
+        A('X2', 1, { constraint: { type: 'ALAP', date: '' } }), A('Y2', 6, { actual_start: '2026-01-05', remaining_duration: 4 })],
+    [L('X', 'Y'), L('X2', 'Y2', 'FF')], { dataDate: '2026-01-07', calMap: cal, scheduleMode: mode });
+    const po = ap('progress_override').nodes;
+    const rl = ap('retained_logic').nodes;
+    check('HR-61: whole days: under progress override ALAP work slides past an FS link into a successor under way to the project finish; FF still binds; retained logic holds it (AP)',
+        po.X.es_date === po.D.ef_last_worked_date && po.X.ef_last_worked_date === po.D.ef_last_worked_date &&
+        po.X2.ef_last_worked_date === po.Y2.ef_last_worked_date && rl.X.es_date === '2026-01-07',
+        JSON.stringify([po.X.es_date, po.D.ef_last_worked_date, po.X.ef_last_worked_date, po.X2.ef_last_worked_date,
+            po.Y2.ef_last_worked_date, rl.X.es_date]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

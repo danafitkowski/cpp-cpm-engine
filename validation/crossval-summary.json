@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.5",
-  "generated_utc": "2026-10-14T16:26:03.356Z",
+  "engine_version": "2.10.6",
+  "generated_utc": "2026-10-14T19:19:54.987Z",
   "fixtures": {
-    "total": 159,
-    "passed": 159,
+    "total": 162,
+    "passed": 162,
     "failed": 0
   },
   "checks": {
-    "executed": 9873,
+    "executed": 10350,
     "failed": 0,
-    "passed": 9873,
+    "passed": 10350,
     "skipped": 0,
-    "surface": 9873
+    "surface": 10350
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 157,
-    "project_finish": 157,
-    "critical_codes": 157,
-    "topo_order": 157,
-    "alert_count": 157,
-    "alert_severity_counts": 157,
-    "node <id>": 8900,
+    "project_finish_num": 160,
+    "project_finish": 160,
+    "critical_codes": 160,
+    "topo_order": 160,
+    "alert_count": 160,
+    "alert_severity_counts": 160,
+    "node <id>": 9357,
     "threw (both engines)": 2,
-    "hours": 29
+    "hours": 31
   },
   "rows": [
     {
@@ -1298,6 +1298,30 @@
       "id": "F163",
       "name": "F163 - FL: a lag handed on in days, the successor lag calendar, predecessor 10 h and successor 6 h a day, in hours",
       "checks": 37,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F164",
+      "name": "F164 - AP: ALAP work and an FS / SS link into a successor under way, under progress override, in hours",
+      "checks": 137,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F165",
+      "name": "F165 - AP: the same, whole days",
+      "checks": 123,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F166",
+      "name": "F166 - MP: a Mandatory Start or Finish against an earlier link bound, a weekend tie, both pins, Start On or Before controls, in hours",
+      "checks": 217,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

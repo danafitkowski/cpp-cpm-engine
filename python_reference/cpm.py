@@ -134,7 +134,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.5'
+ENGINE_VERSION = '2.10.6'
 
 
 # =============================================================================
@@ -4525,6 +4525,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             if not sn or sn.get('is_complete'):
                 continue
             if _a_started and schedule_mode == 'progress_override' and s['type'] in ('SS', 'SF'):
+                continue
+            # AP (H4, 14-Oct-2026): so does an FS or SS link into a successor
+            # already under way, out of work under way or not started, as on
+            # the backward pass (WD); FF and SF still bind (ZZ-CPP-H4S-A).
+            if (schedule_mode == 'progress_override' and s['type'] in ('FS', 'SS')
+                    and date_to_num(sn.get('actual_start') or '') > 0):
                 continue
             _seen = True
             s_cal = _lag_cal_for(n, sn)
