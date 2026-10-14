@@ -3415,6 +3415,23 @@ compareFixture('F162 - XM / LC: an expected finish on milestones; a lead tied wi
     use_expected_finish: true,
 }, { hours: true });
 
+// ── v2.10.5 — a lag handed on in days becomes hours on the predecessor's calendar (P6 probes flag-s / flag-j) ─
+// A tie a pipeline adds (a TIA fragnet's) carries lag_days and no lag_hours. P6 converts a lag entered in days on
+// the PREDECESSOR's calendar whatever the lag calendar; under rcal_Successor v2.10.4 took the successor's hours per
+// day. A 20 h on a 10 h/day calendar -> B 12 h on a 6 h/day one, FS + 1 day: the lag is 10 h on B's calendar.
+const FLCAL = Object.assign({}, HCAL, {
+    P10: { work_days: [1, 2, 3, 4, 5], hours_per_day: 10, holidays: [] },
+    S6: { work_days: [1, 2, 3, 4, 5], hours_per_day: 6, holidays: [] },
+});
+compareFixture('F163 - FL: a lag handed on in days, the successor lag calendar, predecessor 10 h and successor 6 h a day, in hours', {
+    activities: [hA('A', 20, { clndr_id: 'P10', duration_days: 2, remaining_hours_days: 2 }),
+        hA('B', 12, { clndr_id: 'S6', duration_days: 2, remaining_hours_days: 2 }),
+        hA('C', 12, { clndr_id: 'S6', duration_days: 2, remaining_hours_days: 2 })],
+    relationships: [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 1 },
+        { from_code: 'A', to_code: 'C', type: 'SS', lag_days: 0.5 }],
+    data_date: '2026-03-11 08:00', cal_map: FLCAL, relationship_lag_calendar: 'rcal_Successor',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

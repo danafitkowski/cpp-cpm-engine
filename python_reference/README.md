@@ -165,7 +165,7 @@ have been applied:
    there and the whole-day pass on the successor's calendar, and the ALERT,
    reworded after the hours pass (`_lag_calendar_alert_message`), says which
    figures that leaves where. It used to call P6's behaviour uncaptured.
-18. Next release (unreleased, 14-Oct-2026): a lag handed on in days (a
+18. v2.10.5 (14-Oct-2026): a lag handed on in days (a
    relationship with `lag_days` and no `lag_hours`, such as a TIA
    fragnet's) is converted to hours on the predecessor's calendar under
    every lag calendar, applied here by the same patch as the canonical
@@ -177,12 +177,12 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  b68b09cbe27b80e8eebae2034eee339caf8fe7106df86e15a348201819adf0c8
+cpm.py          SHA-256:  fcd0fa8909d507ea076cf0ef3c0d46e37dc0540f32194035dd7dd06ece594035
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  6b367aee02371e246bc2fe6465b7b05746046c284f04602d0d047e836209021b
 
-(Next release, a lag handed on in days 2026-10-14 - cpm.py bumped from
-3f90dad0...: a relationship with lag_days and no lag_hours takes the
+(v2.10.5 a lag handed on in days 2026-10-14 - cpm.py bumped from
+3f90dad0...: ENGINE_VERSION reads 2.10.5; a relationship with lag_days and no lag_hours takes the
 predecessor's hours per day under every lag calendar; under rcal_Successor
 it took the successor's. Relationships read from an XER carry lag_hours
 and do not move.)
@@ -604,7 +604,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 291352
-  sha-256:  b68b09cbe27b80e8eebae2034eee339caf8fe7106df86e15a348201819adf0c8
+  sha-256:  fcd0fa8909d507ea076cf0ef3c0d46e37dc0540f32194035dd7dd06ece594035
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
