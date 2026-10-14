@@ -155,7 +155,7 @@ cpm.py          SHA-256:  e1b37501b81d61c41b21bb459fcb609f29b487ba1c64f984f57627
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  b62193a46c401901a26510bd95b40276702dedf3c7a7bcd5c6626be2105c7a70
 
-(v2.10.3 candidate, the two differences held-out set H2 left 2026-10-13 - cpm.py
+(v2.10.3 the two differences held-out set H2 left 2026-10-13 - cpm.py
 bumped from ac0191cb..., cpm_hours.py from 2065ce6b...: ENGINE_VERSION reads
 2.10.3; a Mandatory Start or Finish dated before the data date on work not
 started starts at the data date and keeps the mandatory date on the late side

@@ -12,6 +12,95 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.3 - 2026-10-13 - Mandatory dates before the data date and start-to-start links out of work under way, measured on P6's own output and scored on a held-out set
+
+**Computed values move (Class A): engine math changed.** Held-out set H2 scored v2.10.2 once against P6
+Professional 23.12.1 and found two unfinished activities of 176 that differ
+([`validation/held-out/H2/RESULT.md`](validation/held-out/H2/RESULT.md)). Six synthetic probe projects then measured
+both situations in P6 beyond the H2 examples
+([`validation/p6-probes/h2-situations-2026-10-13/`](validation/p6-probes/h2-situations-2026-10-13/)), and showed a
+third rule. This release reproduces all three:
+
+- **A mandatory date before the data date.** On work not started, a Mandatory Start dated before the data date
+  starts the work at the data date, and so does a Mandatory Finish the work cannot meet from the data date; the
+  finish falls where the work takes it. v2.10.2 pinned the work to the mandatory date, before the data date.
+  - The mandatory date still overrides logic: a predecessor finishing after the data date does not hold the work.
+  - The mandatory date stays on the late side, so total float goes negative. A constraint-violated ALERT names each
+    case.
+  - Dated on or after the data date, a mandatory date pins as before. The same holds under progress override.
+- **Free float out of work under way into a start-to-start successor.** It runs from the activity's restart plus
+  the part of the lag the data date has not used up, under either "lag from" setting. v2.10.2 measured it from the
+  data date under "lag from Actual Start". The setting moves only the forward drive: under "lag from Actual Start"
+  the successor is still laid from the data date plus the unexpired lag.
+- **Start-to-start and start-to-finish links out of work under way, under progress override.** Such a link drives
+  its successor from the same anchor plus the unexpired lag, and bounds the activity's late dates the same way, but
+  holds no free float: the activity's free float runs to the project's finish, as an open end's does. v2.10.2 laid
+  the whole lag from the restart and held free float across the link.
+
+The rules apply in the whole-day pass and in the hours pass. JS and the Python reference change together.
+
+**Verified.**
+- **The probes** (345 unfinished activities, six projects, each scheduled once by P6's own F9): 345 of 345 match
+  on the four dates and both floats (268 under v2.10.2). The rules were written to these answers, so the probes
+  are fitted, not held out. `npm run test:p6-comparison` replays them (`tests/p6-h2-situations.test.js`); the seven
+  H1 probes still read 293 of 293.
+- **Against P6, through CPP's converters and this engine** (321 projects, 95,017 unfinished activities in the
+  measuring machine's P6 database): no row moved. 95,015 match on all seven fields, as under v2.10.2; the two left
+  are the P6 non-fixed points documented with v2.10.1.
+- **JS against Python** on the same database (321 projects, 163,784 activities): every field equal.
+- **Held-out set H3** ([`validation/held-out/H3/RESULT.md`](validation/held-out/H3/RESULT.md)) scored these exact
+  bytes once, frozen before its seed was published: 244 of 253 unfinished activities on all seven fields, 9 of 12
+  cases on every field. v2.10.2 gives 226 of 253 on the same cases (a diagnosis run after the score).
+  - Against v2.10.2 this release moved 71 values on 18 activities, every one onto P6's, none away. H3 confirms the
+    mandatory-date rule on one activity and the progress-override rule on two cases, blind. Its draw gave the
+    free-float rule no value to move, so that rule rests on the fitted probes.
+  - Its three differences predate this release and are open. (1) Under progress override with lag counted from
+    Early Start, a start-to-start link out of work under way where the data date falls at the end of the
+    predecessor's working day: P6 lays the successor at the data date, the engine at the predecessor's restart. It
+    falls inside the progress-override rule and counts against it. (2) A Start On or Before on a finish milestone:
+    P6 keeps the constraint on the activity but does not apply it. (3) A late start set by a start-to-start
+    successor with a negative lag that lands exactly at a lunch break: P6 prints the end of the morning, the engine
+    the start of the afternoon, the same working time on the activity's own calendar but half an hour on a
+    predecessor on a 24-hour calendar.
+  - Re-run on H1 and H2, which are now fitted, the engine matches all 206 and all 176 activities.
+- **JS unit suite:** 1,468 checks green, up from 1,461 (HR-45 to HR-51).
+- **Cross-validation:** 151 fixtures, 8745 of 8745 executed, 0 skipped, 0 failures; alert parity on 149 of 151
+  (the other 2 must throw). F148-F155 hand both engines the probe shapes: a Mandatory Start or Finish before the
+  data date on work not started (whole days, hours, and under progress override), start-to-start free float out of
+  work under way under "lag from Actual Start" (whole days and hours), and start-to-start and start-to-finish links
+  out of work under way under progress override (whole days, and in hours under each "lag from" setting).
+- **P6 comparison matrix:** 13 / 13. The Larchmere capture cases (19-21) read 256 of 256 at each data date, as
+  before.
+- **Coverage,** re-measured on these bytes: 94.47% statements, 82.14% branches, 96.77% functions.
+- **Version-drift gate.** `tests/no-stale-version-refs.test.js` matched only versions of the form 2.9.X, so from
+  v2.10.0 it read no current-version reference at all and passed documents that still named the release before.
+  It reads any 2.N.X now. The three older references it then found are corrected: two were history that a line
+  wrap or the word "currently" hid from its exemptions, and one, the SOP's "v2.10.0 verification chain", was
+  stale.
+- **Held-out read-back.** From H3's protocol commit, `readback_p6_sqlite.py` counts rows P6 writes in the second
+  its F9 is stamped as the F9's own, the false alarm that left one H2 case out of H2's primary result.
+
+**Who is affected.** Through `parseXER` and `computeCPM` with the hours handed on, on 611 distinct real exports on
+the measuring machine (4 unreadable by both versions):
+- The printed dates move on 12 unfinished activities in 4 exports, and the printed float on 12 in 4.
+- The critical flag moves on none.
+- Against the float and dates each export itself stores, no export moved either way (printed total float equal
+  to the stored float on 100,000 of 198,576 unfinished activities under both versions).
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version
+is re-run under §12.2 where its schedule has any of these:
+- an activity not started carrying a Mandatory Start, or a Mandatory Finish, dated before the data date or too
+  close to it for the work;
+- free float on work under way into a start-to-start successor;
+- under progress override, a start-to-start or start-to-finish link out of work under way.
+
+**Not claimed.**
+- H3's three differences above.
+- The free-float rule has no held-out confirmation yet. The progress-override rule was not probed with lag counted
+  from Early Start, and H3-04 is a case of that setting it does not reproduce.
+
+---
+
 ## v2.10.2 - 2026-10-13 - Start constraints on work under way, As Late As Possible and free float across a lag, measured on P6's own output and scored on a held-out set
 
 **Computed values move (Class A): engine math changed.** Held-out set H1 scored v2.10.1 once against P6
