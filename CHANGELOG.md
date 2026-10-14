@@ -12,6 +12,110 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.4 - 2026-10-14 - Start-to-start links under progress override, constraints on milestones, leads onto a close and expected finishes on milestones, measured on P6's own output and scored on a held-out set
+
+**Computed values move (Class A): engine math changed.** Held-out set H3 scored v2.10.3 once against P6
+Professional 23.12.1 and found nine unfinished activities of 253 that differ, from three situations
+([`validation/held-out/H3/RESULT.md`](validation/held-out/H3/RESULT.md)). Eighteen synthetic probe projects then
+measured them in P6 beyond the H3 examples
+([`validation/p6-probes/h3-situations-2026-10-14/`](validation/p6-probes/h3-situations-2026-10-14/)). Checking the
+changed engine against every project P6 had scheduled in the local database showed two more rules, which the probes
+measured too. This release reproduces all of them:
+
+- **Start-to-start and start-to-finish links out of work under way, under progress override.** P6 lays the
+  successor from the data date, the unexpired lag on from there, under either "lag from" setting. v2.10.3 laid it
+  from the predecessor's restart under "lag from Early Start" when the data date fell at the end of the
+  predecessor's working day (H3-04). Retained logic is unchanged.
+- **A constraint of a milestone's other end.** P6 keeps a Start On, Start On or Before or Start On or After on a
+  finish milestone, and a Finish On, Finish On or Before or Finish On or After on a start milestone, but applies
+  none of them, on either side or in either slot. v2.10.3 applied them (H3-11). A milestone still applies a
+  constraint of its own end, and a zero-length task applies both.
+- **A lead that lands on a close.** On timed work, a late start that a start-to-start or start-to-finish lead sets
+  exactly at the end of a working period (a lunch break, the end of a day, a week or a short Friday) stays there.
+  v2.10.3 moved it to the next opening (H3-11, H3-12).
+  - Tied in working time with the late finish, P6 prints the opening when a finish-to-start or finish-to-finish
+    successor, or a Mandatory Finish, sets the late finish at the same instant the lead ends the activity.
+  - It keeps the close when the project finish, a Finish On or Before or a Finish On sets the late finish, or
+    when the successor's bound is the same working time at a later instant.
+  - Of two late-start bounds at the same working time, the earlier instant is kept.
+- **An expected finish on a milestone.** Under "Use Expected Finish Dates", a milestone with an expected finish sits
+  no earlier than it: a start milestone at the next opening, a finish milestone at the instant itself when it is
+  working time. Logic later than it wins, the data date floors it, and the late side keeps its own dates.
+
+The rules apply in the hours pass, and the first three in the whole-day pass. JS and the Python reference change
+together.
+
+**Also in this release (Class B, text only).** The `lag-calendar-mode-unsupported` ALERT no longer calls P6's
+project-default and 24-hour lag calendars uncaptured. P6 walks each lag on the project calendar under
+`rcal_ProjDefault` and on a 24-hour, seven-day calendar under `rcal_24Hour` (probes `h1s-fj` and `h1s-f24`, 46 of 46
+rows each), and the hours pass already walked them there. The ALERT now says which figures that leaves on the
+successor's calendar: the whole-day pass's. There is still one ALERT, at the same severity, and no computed value
+moves (LA-1 to LA-6).
+
+**Verified.**
+- **The probes** (537 unfinished activities, eighteen projects, each scheduled once by P6's own F9): 537 of 537 match
+  on the four dates and both floats (372 under v2.10.3). The rules were written to these answers, so the probes
+  are fitted, not held out. `npm run test:p6-comparison` replays them (`tests/p6-h3-situations.test.js`); the H2
+  probes still read 345 of 345 and the H1 probes 293 of 293.
+- **Against P6, through CPP's converters and this engine** (321 projects, 95,017 unfinished
+  activities in the measuring machine's P6 database): no row moved. 95,015 match on all seven
+  fields, as under v2.10.3; the two left are the P6 non-fixed points documented with v2.10.1.
+- **JS against Python** on the same database (321 projects, 163,784 activities): every field equal.
+- **Held-out set H4** ([`validation/held-out/H4/RESULT.md`](validation/held-out/H4/RESULT.md)) scored these exact
+  bytes once, frozen before its seed was published: 233 of 237 unfinished activities on all seven fields, 10 of 12
+  cases on every field.
+  - v2.10.3 gives the same 233 on the same cases (a diagnosis run after the score), and none of the 1,659 compared
+    values moved. H4 drew three of the progress-override links and four leads, but none where the old and new
+    rules disagree, and no milestone with a constraint of its other end or an expected finish. So H4 neither
+    confirms nor contradicts the four rules; they rest on the fitted probes and the database check above.
+  - Its two differences predate this release and fall outside the changed situations. (1) As Late As Possible
+    work under way under progress override whose finish-to-start successor has started: P6 slides its remaining
+    work to its late dates, the engine holds it at the data date. (2) A Mandatory Start tied in working time with
+    a start-to-start bound that falls on a weekend: P6 prints the mandatory date as the late start, the engine the
+    close before the weekend, which its seven-day predecessors carry as more negative float.
+- **JS unit suite:** 1,481 checks green, up from 1,468 (LA-1 to LA-6, HR-52 to HR-58).
+- **Cross-validation:** 158 fixtures, 9836 of 9836 executed, 0 skipped, 0 failures; alert parity on 156 of 158
+  (the other 2 must throw). F156-F162 hand both engines the probe shapes: a lead landing on a close and its tie with
+  the late finish (hours), a milestone with a constraint of its other end (whole days and hours), start-to-start
+  links out of work under way under progress override (whole days, hours, and on a 24-hour lag calendar), and an
+  expected finish on milestones (hours).
+- **P6 comparison matrix:** 13 / 13. Regenerated under this release and under v2.10.3, its 16 engine outputs
+  (the 13 cases and the Larchmere capture cases 19-21) give the same 16,691 values; the capture cases read 256 of
+  256 at each data date, as before.
+- **Coverage,** re-measured on these bytes: 94.62% statements, 82.71% branches, 96.84% functions.
+
+**Who is affected.** Through `parseXER` and `computeCPM` with the hours handed on, on 611 distinct real exports on
+the measuring machine (4 unreadable by both versions):
+- The printed dates move on 2,156 unfinished activities in 8 exports, the printed float on 2,181 in 8, and the
+  critical flag on 60 in 4. Most of them sit in three schedules: finish milestones carrying start constraints, and
+  a start milestone with an expected finish that holds the project's finish.
+- Against the float and dates each export itself stores, the release matches slightly fewer: printed total float
+  equal to the stored float on 99,972 of 198,576 unfinished activities (v2.10.3 100,000), the critical flag on
+  166,632 (166,650), the dates on 75,717 of 184,515 (75,719).
+- So three of those exports, one from each of the three schedules, were imported into P6 Professional 23.12.1 as
+  renamed copies and scheduled once with its own F9. On their 1,749 unfinished activities this release matches P6
+  on all seven fields on 1,747, and v2.10.3 on 657. The stored values are not what P6 23.12.1 computes for those
+  schedules today; the files do not say whether they predate a later edit or come from another P6 version (one of
+  the three was exported from P6 24.12). The two activities left are level-of-effort activities that neither
+  version prints.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version
+is re-run under §12.2 where its schedule has any of these:
+- under progress override, a start-to-start or start-to-finish link out of work under way;
+- a milestone carrying a constraint of its other end;
+- on timed work, a start-to-start or start-to-finish lead whose late bound lands at the end of a working period;
+- under "Use Expected Finish Dates", a milestone with an expected finish.
+
+**Not claimed.**
+- H4's two differences above.
+- No held-out case has decided a value under any of the four rules yet.
+- A Mandatory Start on a finish milestone and a Mandatory Finish on a start milestone are not measured: P6's XER
+  import stores such an activity as completed with no dates.
+- Without the hours pass, a milestone with an expected finish is still stretched to it as a multi-day activity in
+  the whole-day figures, as in v2.10.3.
+
+---
+
 ## v2.10.3 - 2026-10-13 - Mandatory dates before the data date and start-to-start links out of work under way, measured on P6's own output and scored on a held-out set
 
 **Computed values move (Class A): engine math changed.** Held-out set H2 scored v2.10.2 once against P6

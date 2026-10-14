@@ -147,7 +147,7 @@ have been applied:
    an SS / SF link out of work under way drives from the same anchor plus
    the unexpired lag (`_start_drive_src_for`, `_ss_off_started`) and holds no
    free float. See CHANGELOG.md v2.10.3.
-16. Unreleased, the three differences held-out set H3 left, applied here by
+16. v2.10.4, the three differences held-out set H3 left, applied here by
    the same patch as the canonical engine (P6 probes
    validation/p6-probes/h3-situations-2026-10-14). Under progress override an
    SS or SF link out of work under way is laid from the data date under
@@ -157,7 +157,7 @@ have been applied:
    Finish sets at the same instant prints the opening instead; under "Use
    Expected Finish Dates" a milestone sits no earlier than its expected
    finish (hours pass).
-17. Unreleased, Class B (disclosure; no computed value moves): the
+17. v2.10.4, Class B (disclosure; no computed value moves): the
    `lag-calendar-mode-unsupported` ALERT is applied here by the same patch
    as the canonical engine. P6 walks each lag on the project calendar under
    `rcal_ProjDefault` and on a 24-hour, seven-day calendar under
@@ -173,13 +173,13 @@ cpm.py          SHA-256:  3f90dad0797d4b1fe32a0d60f3c139b0fd4fa67772b5104c425e8f
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  6b367aee02371e246bc2fe6465b7b05746046c284f04602d0d047e836209021b
 
-(Unreleased, the three differences H3 left 2026-10-14 - cpm.py bumped from
+(v2.10.4 the three differences H3 left 2026-10-14 - cpm.py bumped from
 c3b78951..., cpm_hours.py from b62193a4...: ENGINE_VERSION reads 2.10.4;
 progress override lays SS / SF out of work under way from the data date; a
 milestone applies no constraint of its other end; a lead landing on a close
 keeps it as the late start; an expected finish holds a milestone.)
 
-(Unreleased, the lag-calendar ALERT 2026-10-13 - cpm.py bumped from
+(v2.10.4 the lag-calendar ALERT 2026-10-13 - cpm.py bumped from
 e1b37501...: the lag-calendar-mode-unsupported ALERT no longer calls P6's
 project-default and 24-hour lag calendars uncaptured; it says the hours pass
 walks them as P6 does and which figures the whole-day pass leaves on the

@@ -152,6 +152,30 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.4 (reviewed 2026-10-14)
+
+No audit item changed status. v2.10.4 moves computed values (change class A under the operator procedure): under progress override a start-to-start or start-to-finish link out of work under way is laid from the data date; a milestone applies no constraint of its other end; on timed work a lead that lands on a close stays there as the late start; and under "Use Expected Finish Dates" a milestone sits no earlier than its expected finish (see CHANGELOG.md). The rules came from held-out set H3 and the local P6 database and were measured on P6 probes, so the probes are fitted; held-out set H4 then scored these bytes once. The lag-calendar ALERT was reworded (class B, text only).
+- The unit suite grew from 1,468 to 1,481.
+- The cross-validation surface grew from 151 to 158 fixtures and from 8,745 of 8,745 to 9,836 of 9,836 comparisons, 0 skipped, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.62% statements / 82.71% branches / 96.84% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+
+## Held-out set H4 (2026-10-14)
+
+The held-out comparison of the v2.10.4 candidate ran in the order H1 to H3 set:
+
+- The candidate engine and H4's protocol were pushed first (`e453720`), naming drand round 6551257.
+- The 12 cases were generated from that round's randomness once it was published, and pushed before P6 saw any of them (`6cf70e3`).
+- Each case was scheduled by Primavera P6 Professional 23.12.1 on its own.
+- `cpm-engine.js` 2.10.4 (SHA-256 `c7301582…`, the bytes this release ships) was scored against P6 once (`f80ee71`).
+
+The result is 233 of 237 unfinished activities matching P6 on all seven fields ([`H4/RESULT.md`](validation/held-out/H4/RESULT.md)). v2.10.3 gives the same 233: H4's draw gave none of the new rules a value to decide, so it neither confirms nor contradicts them. Two differences remain, both present in v2.10.3:
+
+- **OPEN**: As Late As Possible work under way under progress override whose finish-to-start successor has started (P6 slides it to its late dates);
+- **OPEN**: a Mandatory Start tied in working time with a start-to-start bound that falls on a weekend (P6 prints the mandatory date).
+
+A release that changes either of them is scored on a new held-out set.
+
 ## Status at v2.10.3 (reviewed 2026-10-13)
 
 No audit item changed status. v2.10.3 moves computed values (change class A under the operator procedure): on work not started, a Mandatory Start or Finish dated before the data date starts the work at the data date; free float out of work under way into a start-to-start successor runs from the restart; and under progress override a start-to-start or start-to-finish link out of work under way drives from the unexpired lag and holds no free float (see CHANGELOG.md). The rules came from held-out set H2 and were measured on P6 probes, so the probes are fitted; held-out set H3 then scored these bytes once.
@@ -172,9 +196,9 @@ The held-out comparison of the v2.10.3 candidate ran in the order H1 and H2 set:
 
 The result is 244 of 253 unfinished activities matching P6 on all seven fields ([`H3/RESULT.md`](validation/held-out/H3/RESULT.md)). Against v2.10.2 (226 of 253) the release moved 71 values onto P6's and none away; H3 confirmed the mandatory-date rule on one activity and the progress-override rule on two cases, and drew no value for the free-float rule. Three differences remain, all present in v2.10.2:
 
-- **OPEN**: under progress override with lag counted from Early Start, a start-to-start link out of work under way where the data date falls at the end of the predecessor's working day (counts against the progress-override rule);
-- **OPEN**: a Start On or Before on a finish milestone, which P6 keeps but does not apply;
-- **OPEN**: a late start set by a start-to-start successor with a negative lag, landing exactly at a lunch break.
+- **CLOSED in v2.10.4**: under progress override with lag counted from Early Start, a start-to-start link out of work under way where the data date falls at the end of the predecessor's working day (measured on P6 probes; no held-out case has decided it yet);
+- **CLOSED in v2.10.4**: a Start On or Before on a finish milestone, which P6 keeps but does not apply (measured on P6 probes; no held-out case has decided it yet);
+- **CLOSED in v2.10.4**: a late start set by a start-to-start successor with a negative lag, landing exactly at a lunch break (measured on P6 probes; no held-out case has decided it yet).
 
 A release that changes any of them is scored on a new held-out set.
 
@@ -301,4 +325,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.3. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.4. Update on every release that closes or opens an audit item.
