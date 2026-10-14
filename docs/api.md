@@ -225,8 +225,8 @@ below, which schedules those lags to the minute; the alert is then an INFO.
 > | `day_pass_float` | the day pass's printed float the hours pass replaced, where any moved (since v2.10.1) |
 >
 > The printed dates (`es_date`, `ls_date`, `restart_date`, `remaining_late_start_date`,
-> `ef_last_worked_date`, `lf_last_worked_date`) take the dates of those instants. Since
-> v2.10.1 the printed float does too: `tf_working_days`, `tf_start_working_days`,
+> `ef_last_worked_date`, `lf_last_worked_date`) take the dates of those instants.
+> Since v2.10.1 the printed float does too: `tf_working_days`, `tf_start_working_days`,
 > `tf_finish_working_days`, `ff_working_days` and `ff_signed_working_days` are the hours
 > pass's float over the activity calendar's hours per day (a whole number of days stays
 > an integer), and `criticalCodes` is total float at or below zero in hours. `es`, `ef`,

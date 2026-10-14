@@ -445,7 +445,8 @@ In strict mode, if any alert whose `context` is in `FATAL_STRICT_CONTEXTS` (or w
 | Hammocks | `hammock-cycle`, `hammock-orphan`, `hammock-negative-span` |
 | Degenerate | `empty-schedule`, `section-d-ordinal-only` |
 
-In addition, the message-pattern set catches alerts whose `context` field is dynamic but whose message identifies the type — currently `SUB_DAY_LAG_ROUNDED:` (sub-day-precision rounding, forensically material on schedules with hour-based lags). Since v2.10.0 that alert is an INFO, and not fatal, on a run the hours pass applies to: the printed dates and the float in hours are then computed to the minute, and the alert says so.
+In addition, the message-pattern set catches alerts whose `context` field is dynamic but whose message identifies the type — currently `SUB_DAY_LAG_ROUNDED:` (sub-day-precision rounding, forensically material on schedules with hour-based lags).
+Since v2.10.0 that alert is an INFO, and not fatal, on a run the hours pass applies to: the printed dates and the float in hours are then computed to the minute, and the alert says so.
 
 ### Section D / runCPM is blocked
 

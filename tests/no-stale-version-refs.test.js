@@ -73,7 +73,7 @@ const HISTORIC_OK_PATTERNS = [
     // `\**` tolerates markdown emphasis: the real line reads
     // "Engine math is **unchanged** from v2.9.39", so the closing asterisks sit
     // between the keyword and "from".
-    /\b(?:unchanged|identical|byte-identical)\**\s+(?:from|to)\s+\**v?2\.9\.\d+/i,
+    /\b(?:unchanged|identical|byte-identical)\**\s+(?:from|to)\s+\**v?2\.\d+\.\d+/i,
     // The MIRROR of the line above, for a release where engine math DID move.
     // A supersession disclosure has to name the version a reader may already
     // have issued from: "a result computed on v2.9.41 or earlier can differ".
@@ -83,8 +83,8 @@ const HISTORIC_OK_PATTERNS = [
     // gate was written whose math actually moved, so the opposite phrasing had
     // never been needed. Narrow: requires the whole comparative phrase, so a
     // bare stale reference still fails.
-    /computed on v?2\.9\.\d+ or earlier can differ/i,
-    /\bthe\s+v2\.9\.\d+\s+packet\b/i,
+    /computed on v?2\.\d+\.\d+ or earlier can differ/i,
+    /\bthe\s+v2\.\d+\.\d+\s+packet\b/i,
     /\bsince\s+(?:the\s+)?(?:prior|previous)\s+(?:pinned\s+)?release\b/i,
     // Dated-measurement narration: coverage figures and citation-withdrawal
     // records name the version the measurement or defect BELONGS to. "the
@@ -92,94 +92,94 @@ const HISTORIC_OK_PATTERNS = [
     // v2.9.40 this entry rested..." are history, not current-state claims.
     // Added 2026-08-19 with the v2.9.41 release. Narrow: each requires its
     // surrounding phrase, so a bare stale reference still fails.
-    /\b(?:shipped|measured\s+on\s+the)\s+v2\.9\.\d+\s+bytes\b/i,
-    /\bThrough\s+v2\.9\.\d+\s+this\s+entry\b/i,
+    /\b(?:shipped|measured\s+on\s+the)\s+v2\.\d+\.\d+\s+bytes\b/i,
+    /\bThrough\s+v2\.\d+\.\d+\s+this\s+entry\b/i,
     // CHANGELOG-style release headers: "## v2.9.X — date — title"
-    /^##\s+v2\.9\.\d+\s+—\s/,
-    /^##\s+v2\.9\.\d+\s+-\s/,
+    /^##\s+v2\.\d+\.\d+\s+—\s/,
+    /^##\s+v2\.\d+\.\d+\s+-\s/,
     // README "## Release history" bullets and DAUBERT inline release-note
     // paragraphs that lead with a bolded version anchor:
     //   "**v2.9.X (2026-MM-DD) — ..."
     //   "**v2.9.X — Title.** ..."
-    /^\*\*v2\.9\.\d+\b/,
+    /^\*\*v2\.\d+\.\d+\b/,
     // "Tags for `v2.9.X` through `v2.9.Y`" backfill note
     /tag-history note|tag history note/i,
-    /Tags for `v2\.9\.\d+` (through|to|->)/,
+    /Tags for `v2\.\d+\.\d+` (through|to|->)/,
     // SHA delta tables in rekor-entry / validation-summary that compare
     // current vs prior release SHAs by design
-    /Engine SHA-256 v2\.9\.\d+:/,
-    /Python ref SHA-256 \(both v2\.9\.\d+ and v2\.9\.\d+\)/,
+    /Engine SHA-256 v2\.\d+\.\d+:/,
+    /Python ref SHA-256 \(both v2\.\d+\.\d+ and v2\.\d+\.\d+\)/,
     // "Released in v2.9.X (DATE)" historic credit lines
-    /[Rr]eleased in v2\.9\.\d+ \(/,
+    /[Rr]eleased in v2\.\d+\.\d+ \(/,
     // "(introduced in v2.9.X)" historic-context inline notes
-    /\bintroduced in v2\.9\.\d+\b/,
+    /\bintroduced in v2\.\d+\.\d+\b/,
     // Engine-version provenance call-outs that explicitly enumerate
     // multiple versions to convey "carried forward across versions"
-    /carried forward through (the )?v2\.9\.\d+/,
+    /carried forward through (the )?v2\.\d+\.\d+/,
     // VERIFY_RELEASE / validation-summary "v2.9.X -> v2.9.Y" narration
-    /v2\.9\.\d+\s*(->|→|to)\s*v2\.9\.\d+/i,
+    /v2\.\d+\.\d+\s*(->|→|to)\s*v2\.\d+\.\d+/i,
     // Roadmap / pre-v3.0 notes: "the v2.9.X audit" / "v2.9.X paired-fix wave"
-    /\bv2\.9\.\d+ (audit|wave|round|fix wave|paired-fix)/i,
+    /\bv2\.\d+\.\d+ (audit|wave|round|fix wave|paired-fix)/i,
     // Release-asset URL examples that intentionally show prior-version
     // paths to demonstrate the per-tag layout
-    /releases\/tag\/v2\.9\.\d+/,
-    /\/releases\/download\/v2\.9\.\d+/,
+    /releases\/tag\/v2\.\d+\.\d+/,
+    /\/releases\/download\/v2\.\d+\.\d+/,
     // "Engine math byte-identical to v2.9.X" parity narration
-    /byte-identical to v2\.9\.\d+/,
+    /byte-identical to v2\.\d+\.\d+/,
     // "shipped in v2.9.X" / "shipped with ... in v2.9.X" historic narration
-    /\bshipped (with .* )?in v2\.9\.\d+\b/i,
+    /\bshipped (with .* )?in v2\.\d+\.\d+\b/i,
     // "audit on v2.9.X" / "review on v2.9.X" / "audit against v2.9.X" — historic narration
     // naming a prior release that was audited / reviewed
-    /\b(audit|review)\b.*\bon\s+v2\.9\.\d+\b/i,
-    /\b(audit|review)\b.*\bagainst\s+v2\.9\.\d+\b/i,
-    /\b(audit|review)\b.*\bof\s+v2\.9\.\d+\b/i,
+    /\b(audit|review)\b.*\bon\s+v2\.\d+\.\d+\b/i,
+    /\b(audit|review)\b.*\bagainst\s+v2\.\d+\.\d+\b/i,
+    /\b(audit|review)\b.*\bof\s+v2\.\d+\.\d+\b/i,
     // "ChatGPT third-pass / fourth-pass audit on v2.9.X" narration
-    /\b(audit|adversarial-audit|review)\s+on\s+v2\.9\.\d+\b/i,
+    /\b(audit|adversarial-audit|review)\s+on\s+v2\.\d+\.\d+\b/i,
     // SECTION header anchors in test files (e.g. "SECTION R-v2.9.31")
     // referenced from prose: "see SECTION R-v2.9.31"
-    /SECTION [A-Z]-?v?2\.9\.\d+/,
-    /Engine math.*v2\.9\.\d+.*by design/,
+    /SECTION [A-Z]-?v?2\.\d+\.\d+/,
+    /Engine math.*v2\.\d+\.\d+.*by design/,
     // Test fixture rationale narration (changelog-style inline)
-    /v2\.9\.\d+ (T\d|R\d|F\d|A\d|MED|HIGH|LOW)/,
+    /v2\.\d+\.\d+ (T\d|R\d|F\d|A\d|MED|HIGH|LOW)/,
     // Crossval fixture / audit-round annotations
     /audit (LOW|MED|HIGH) [RF]\d+/,
     // Per-prior-release narration like "v2.9.X (2026-MM-DD) — title"
-    /\bv2\.9\.\d+ \(2026-/,
+    /\bv2\.\d+\.\d+ \(2026-/,
     // "Released since v2.9.X" or "since v2.9.X" historic anchor
-    /\bsince v2\.9\.\d+\b/i,
+    /\bsince v2\.\d+\.\d+\b/i,
     // CHANGELOG cross-references that point at specific prior versions
-    /^## (v2\.9\.\d+|Tag history note)/,
+    /^## (v2\.\d+\.\d+|Tag history note)/,
     // Section headers that name the version a section was added in:
     //   "## §7 Disclosed Heuristic Thresholds (v2.9.4)"
     //   "## §8 Constraint Handling (v2.9.12)"
     //   "## §9 Forensic Strict Mode (shipped v2.9.31)"
-    /^## §\d.*\(.*v2\.9\.\d+\)/,
+    /^## §\d.*\(.*v2\.\d+\.\d+\)/,
     // Inline parenthesized historic-introduced markers:
     //   "Secondary P6 constraint (v2.9.7+). Applied after primary"
     //   "Day granularity (v2.9.11+)."
     //   "Get the parsed... (v2.9.7+)."
-    /\(v2\.9\.\d+\+\)/,
+    /\(v2\.\d+\.\d+\+\)/,
     // Inline historic markers without parens:
     //   "v2.9.15: an ES-side"
     //   "v2.9.9+ always 0"
     //   "v2.9.8-era list"
-    /\bv2\.9\.\d+(\+|:|-era|\.x)/,
+    /\bv2\.\d+\.\d+(\+|:|-era|\.x)/,
     // "(legacy v2.9.X, ...)" / "(legacy v2.9.X)" historic context
-    /\(legacy v2\.9\.\d+/,
+    /\(legacy v2\.\d+\.\d+/,
     // "v2.9.X — title" inside a paragraph (release-note narration)
-    /\bv2\.9\.\d+\s+—\s+(XER|Full|Round|Section|Bayesian|Wave|Multi-jurisdiction|MIP|Day-granular|Performance)/i,
+    /\bv2\.\d+\.\d+\s+—\s+(XER|Full|Round|Section|Bayesian|Wave|Multi-jurisdiction|MIP|Day-granular|Performance)/i,
     // Test-fixture / audit-round inline annotations
-    /\bv2\.9\.\d+ (T\d|R\d|F\d|A\d|MED|HIGH|LOW|audit|fix wave|paired|round|wave)\b/i,
+    /\bv2\.\d+\.\d+ (T\d|R\d|F\d|A\d|MED|HIGH|LOW|audit|fix wave|paired|round|wave)\b/i,
     // "v2.9.X <release-history-verb>" narration (catches inline historic
     // bullets like "v2.9.27 expanded crossval coverage" or "v2.9.30
     // shipped the coverage baseline")
-    /\bv2\.9\.\d+ (expanded|introduced|added|fixed|closed|opened|landed|carried|enabled|backported|extended|brought|removed|deprecated|reworked|hardened|wired|published|generated|emitted|surfaced|tracked|baseline|baselined)\b/i,
+    /\bv2\.\d+\.\d+ (expanded|introduced|added|fixed|closed|opened|landed|carried|enabled|backported|extended|brought|removed|deprecated|reworked|hardened|wired|published|generated|emitted|surfaced|tracked|baseline|baselined)\b/i,
     // "(line numbers as of v2.9.X)" or "as of v2.9.X" historic-anchor narration
-    /\b(line numbers? as of|as of) v2\.9\.\d+\b/i,
+    /\b(line numbers? as of|as of) v2\.\d+\.\d+\b/i,
     // "see S2.1 for the v2.9.X baseline" reference narration
-    /for the v2\.9\.\d+ baseline\b/i,
+    /for the v2\.\d+\.\d+ baseline\b/i,
     // "fully computed as of v2.9.X" / "as of v2.9.X via" narration
-    /\bas of v2\.9\.\d+\b/i,
+    /\bas of v2\.\d+\.\d+\b/i,
     // npm-lag disclosure. Publishing to npm stopped at 2.9.19 (2026-05-17)
     // while this repository kept tagging releases, so README's quick start has
     // to NAME the version npm serves in order to warn a reader off it. A line
@@ -196,10 +196,14 @@ const HISTORIC_OK_PATTERNS = [
     // cases v2.9.49 shipped (16-18) were withdrawn in v2.9.50". Added
     // 2026-10-03 for v2.9.50. Deliberately narrow: it requires "withdrawn"
     // and a version naming what was shipped or added on the same line.
-    /\bv2\.9\.\d+ (only|shipped|added)\b[^\n]*\bwithdrawn\b/i,
+    /\bv2\.\d+\.\d+ (only|shipped|added)\b[^\n]*\bwithdrawn\b/i,
 ];
 
-const VERSION_RE = /\bv?2\.9\.(\d+)\b/g;
+// Any 2.N.X. Until v2.10.3 this read /\bv?2\.9\.(\d+)\b/g, so from v2.10.0 on it
+// matched no current-version reference at all and the gate passed on docs that
+// still named v2.10.2 (README's `git checkout`, the DAUBERT header). Found while
+// releasing v2.10.3.
+const VERSION_RE = /\bv?2\.(\d+)\.(\d+)\b/g;
 const failures = [];
 
 function isHistoric(line) {
@@ -245,6 +249,25 @@ function isHistoric(line) {
     if (isHistoric(npmStale)) {
         console.error('FAIL: isHistoric() exempts a bare stale npm version reference — '
             + 'the npm-lag pattern is too broad.');
+        process.exit(1);
+    }
+}
+
+// Fires-proof for the 2.N.X pattern (v2.10.3): a v2.10 reference must be seen,
+// and a bare stale one must not be exempt as history.
+{
+    const seen = [...'git checkout v2.10.2'.matchAll(VERSION_RE)].map((m) => `2.${m[1]}.${m[2]}`);
+    if (seen.join() !== '2.10.2') {
+        console.error('FAIL: VERSION_RE does not see a v2.10 reference — the gate would '
+            + 'pass every v2.10 document unchecked, as it did from v2.10.0 to v2.10.2.');
+        process.exit(1);
+    }
+    if (isHistoric('git checkout v2.10.2')) {
+        console.error('FAIL: isHistoric() exempts a bare v2.10 reference.');
+        process.exit(1);
+    }
+    if (!isHistoric('- **Hours and minutes (since v2.10.0).** Where the caller')) {
+        console.error('FAIL: isHistoric() no longer exempts a "since v2.10.0" history line.');
         process.exit(1);
     }
 }
@@ -497,20 +520,20 @@ for (const rel of FILES) {
         const historic = isHistoric(line);
         for (const m of matches) {
             _totalRefs++;
-            const version = m[1];
+            const version = `2.${m[1]}.${m[2]}`;
             // Reset regex .lastIndex so the next match works on the next
             // iteration (matchAll handles this, but be defensive).
-            if (`2.9.${version}` === CURRENT) continue;
+            if (version === CURRENT) continue;
             if (historic) continue;
             // Mid-release: the current version has no evidence packet yet, and
             // this reference names the newest version that does. See
             // inReleaseWindow above — self-limiting, expires the moment the
             // packet lands.
-            if (inReleaseWindow(`2.9.${version}`)) continue;
+            if (inReleaseWindow(version)) continue;
             failures.push({
                 file: rel,
                 line: idx + 1,
-                version: `2.9.${version}`,
+                version,
                 excerpt: line.trim().slice(0, 200),
             });
         }
