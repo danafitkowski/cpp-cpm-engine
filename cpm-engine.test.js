@@ -12621,6 +12621,9 @@ console.log('\n=== MD — the dates a milestone prints (P6 parity 12-Oct) ===');
     const e2 = em([N('S', 0, 'MF', { task_type: 'TT_Mile' }), N('M', 0, 'MF', FM), N('Z', 5)], [R('S', 'M')]);
     const e3 = em([N('A', 1), N('B', 3), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'B'), R('B', 'M', 'SS')]);
     const e4 = em([N('A', 1), N('B', 2), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'B'), R('A', 'M'), R('B', 'M', 'SS')]);
+    // MC (v2.10.4): P6 applies no Start On or After on a finish milestone, so
+    // A's close binds it (ZZ-CPP-H3S-M F4; this case read 10-21 until then,
+    // written to the engine, not measured)
     const e5 = em([N('A', 2), N('M', 0, 'MF', { task_type: 'TT_FinMile', constraint: { type: 'CS_MSOA', date: '2026-10-21 08:00' } }),
         N('Z', 5)], [R('A', 'M')]);
     const e6 = em([N('A', 3), N('M', 0, 'MF', FM), N('Z', 5)], [R('A', 'M', 'FF', -1)]);
@@ -12629,7 +12632,7 @@ console.log('\n=== MD — the dates a milestone prints (P6 parity 12-Oct) ===');
         [R('A', 'M1'), R('M1', 'M', 'SS')]).M; return n.es_date + ' ' + n.ef_last_worked_date; })();
     check('MD-4: a finish milestone sits at the instant that binds it: a task\'s close, a start milestone\'s opening, an SS start, the opening of a tie, a negative lag\'s opening, a positive lag\'s close, a chain\'s close',
         e1 === '2026-10-20 2026-10-20' && e2 === '2026-10-19 2026-10-19' && e3 === '2026-10-20 2026-10-20' &&
-        e4 === '2026-10-20 2026-10-20' && e5 === '2026-10-21 2026-10-21' && e6 === '2026-10-21 2026-10-21' &&
+        e4 === '2026-10-20 2026-10-20' && e5 === '2026-10-20 2026-10-20' && e6 === '2026-10-21 2026-10-21' &&
         e7 === '2026-10-20 2026-10-20' && e8 === '2026-10-20 2026-10-20',
         [e1, e2, e3, e4, e5, e6, e7, e8].join(' | '));
     const d1 = em([N('M', 0, 'MF', FM), N('Z', 5)], []);
@@ -13207,6 +13210,128 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         r2.nodes.B.es_date === '2026-01-08' && r2.nodes.A.ff_working_days === r2.nodes.A2.ff_working_days &&
         r2.nodes.A.ff_working_days > 0,
         JSON.stringify([r.nodes.A.ff_working_days, r2.nodes.B.es_date, r2.nodes.A.ff_working_days, r2.nodes.A2.ff_working_days]));
+}
+
+// ── v2.10.4 — the three differences held-out set H3 left, in the hours pass ─
+// P6 Professional 23.12.1's own F9 of the probes ZZ-CPP-H3S-L / -M / -PE /
+// -PE24 / -PA / -RE (oracle h3_situations_2026_10_14), the whole set replayed
+// by tests/p6-h3-situations.test.js. Python paired file:
+// _cpp_common/tests/test_h3_situations_2026_10_14.py.
+{
+    const FMT = E._hrFormatInstant;
+    const CALS = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8 }, C10: { work_days: [1, 2, 3, 4, 5], hours_per_day: 10 },
+        D24: { work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 24 } };
+    const T = (code, h, x) => Object.assign({ code, task_type: 'TT_Task', clndr_id: 'C5', remaining_minutes: Math.round(h * 60) }, x || {});
+    const L = (a, b, type, lag) => ({ from_code: a, to_code: b, type: type || 'FS', lag_minutes: Math.round((lag || 0) * 60) });
+    const run = (acts, rels, o) => E.computeCPMHours([T('D1', 400)].concat(acts), rels || [], Object.assign(
+        { data_date: '2026-03-11 08:00', cal_map: CALS, project_calendar: 'C5' }, o || {}));
+    const early = (x) => FMT(x.restart !== null && x.restart !== undefined ? x.restart : x.es) + ' / ' + FMT(x.ef);
+    const late = (x) => FMT(x.rls !== null && x.rls !== undefined ? x.rls : x.ls) + ' / ' + FMT(x.lf);
+    // LC: X's late start bound by a lead to Y, pinned by a Finish On or Before;
+    // P works around the clock, so the close and the next opening differ for it
+    const la = []; const ll = [];
+    for (const [c, xc, yf, lag, link] of [['L1', 'C5', '2026-03-24 12:00', -4, 'SS'], ['L2', 'C5', '2026-03-24 17:00', -4, 'SS'],
+        ['L3', 'C5', '2026-03-27 17:00', -4, 'SS'], ['L12', 'C10', '2026-03-24 18:00', -4, 'SS'],
+        ['L7', 'C5', '2026-03-24 10:00', -2, 'SF'], ['L6', 'C5', '2026-03-24 15:00', -1, 'SS']]) {
+        la.push(T(c + 'P', 8, { clndr_id: 'D24' }), T(c + 'X', 8, { clndr_id: xc }),
+            T(c + 'Y', 4, { clndr_id: xc, constraint: { type: 'CS_MEOB', date: yf } }));
+        ll.push(L(c + 'P', c + 'X'), L(c + 'X', c + 'Y', link, lag));
+    }
+    let o = run(la, ll);
+    check('HR-52: a lead landing on a close keeps it as the late start: lunch, end of day, end of week (LC; P6 probe L L1-L3, L7, L12)',
+        late(o.L1X) === '2026-03-24 12:00 / 2026-03-25 12:00' && late(o.L1P) === '2026-03-24 04:00 / 2026-03-24 12:00' &&
+        o.L1P.tf_minutes === 308 * 60 && late(o.L2X) === '2026-03-24 17:00 / 2026-03-25 17:00' &&
+        late(o.L3X) === '2026-03-27 17:00 / 2026-03-30 17:00' && late(o.L3P) === '2026-03-27 09:00 / 2026-03-27 17:00' &&
+        late(o.L12X) === '2026-03-24 18:00 / 2026-03-25 16:00' && late(o.L7X) === '2026-03-24 12:00 / 2026-03-25 12:00' &&
+        late(o.L6X) === '2026-03-24 11:00 / 2026-03-25 11:00',
+        [late(o.L1X), late(o.L2X), late(o.L3X), late(o.L12X), late(o.L7X), o.L1P.tf_minutes].join(' | '));
+    // X (16 h): the lead to Y lands on Tue 12:00 and ends X at Thu 12:00; a
+    // late finish of Thu 12:00 gives the late start Tue 13:00, the same
+    // working time
+    const Y = () => T('Y', 4, { constraint: { type: 'CS_MEO', date: '2026-03-24 12:00' } });
+    const tie = (ssFirst, zFinish) => {
+        const ss = L('X', 'Y', 'SS', -4);
+        const ff = L('X', 'Z', 'FF');
+        // zFinish: Z on a calendar with no lunch break, its late finish Thu
+        // 13:00 mid-work for Z, the next opening for X (the 4899 P21170 shape)
+        return run([T('X', 16), Y(), T('Z', 4, Object.assign({ constraint: { type: 'CS_MEOB', date: zFinish || '2026-03-26 12:00' } },
+            zFinish ? { clndr_id: 'C10' } : {}))],
+            ssFirst ? [ss, ff] : [ff, ss]).X;
+    };
+    const own = (type) => run([T('X', 16, { constraint: { type, date: '2026-03-26 12:00' } }), Y()], [L('X', 'Y', 'SS', -4)]).X;
+    check('HR-53: a lead tied with the late finish: an FF successor at the same instant or a Mandatory Finish prints the opening, either order; at the next opening, or by a Finish On or Before, the close stays (LC; P6 probe T, TF, TC C1 C3; 4899 P21170)',
+        late(tie(true)) === '2026-03-24 13:00 / 2026-03-26 12:00' && late(tie(false)) === '2026-03-24 13:00 / 2026-03-26 12:00' &&
+        late(tie(true, '2026-03-26 13:00')) === '2026-03-24 12:00 / 2026-03-26 12:00' &&
+        late(own('CS_MEOB')) === '2026-03-24 12:00 / 2026-03-26 12:00' && late(own('CS_MANDFIN')) === '2026-03-24 13:00 / 2026-03-26 12:00',
+        [late(tie(true)), late(tie(false)), late(tie(true, '2026-03-26 13:00')), late(own('CS_MEOB')), late(own('CS_MANDFIN'))].join(' | '));
+    const MS = (code, tt, c1, c2) => T(code, 0, Object.assign({ task_type: tt, constraint: c1 }, c2 ? { constraint2: c2 } : {}));
+    o = run([T('F1P', 16), MS('F1', 'TT_FinMile', { type: 'CS_MSOB', date: '2026-03-20 08:00' }),
+        T('F2P', 16), MS('F2', 'TT_FinMile', { type: 'CS_MSO', date: '2026-03-18 08:00' }),
+        T('S1P', 16), MS('S1', 'TT_Mile', { type: 'CS_MEOB', date: '2026-03-20 17:00' }),
+        T('F5P', 16), MS('F5', 'TT_FinMile', { type: 'CS_MEOB', date: '2026-03-20 17:00' }),
+        T('F10P', 16), MS('F10', 'TT_FinMile', { type: 'CS_MSOB', date: '2026-03-20 08:00' }, { type: 'CS_MEOB', date: '2026-03-25 17:00' }),
+        T('T2P', 16), T('T2', 0, { constraint: { type: 'CS_MSOB', date: '2026-03-20 08:00' } })],
+    [L('F1P', 'F1'), L('F2P', 'F2'), L('S1P', 'S1'), L('F5P', 'F5'), L('F10P', 'F10'), L('T2P', 'T2')]);
+    check('HR-54: a milestone applies no constraint of its other end, either side or slot; its own end and zero-length tasks still do (MC; P6 probe M F1, F2, F5, F10, S1, T2)',
+        late(o.F1) === '2026-05-19 17:00 / 2026-05-19 17:00' && early(o.F2) === '2026-03-12 17:00 / 2026-03-12 17:00' &&
+        late(o.F2) === '2026-05-19 17:00 / 2026-05-19 17:00' && late(o.S1) === '2026-05-19 17:00 / 2026-05-19 17:00' &&
+        late(o.F5) === '2026-03-20 17:00 / 2026-03-20 17:00' && late(o.F10) === '2026-03-25 17:00 / 2026-03-25 17:00' &&
+        late(o.T2) === '2026-03-19 17:00 / 2026-03-19 17:00',
+        [late(o.F1), early(o.F2), late(o.S1), late(o.F5), late(o.F10), late(o.T2)].join(' | '));
+    const pd = (mode, from, lagCal) => run([T('A', 32, { actual_start: '2026-03-11 08:00' }), T('B', 8, { clndr_id: 'D24' }),
+        T('A2', 32, { actual_start: '2026-03-11 08:00' }), T('B2', 8, { clndr_id: 'D24' }),
+        T('A3', 32, { actual_start: '2026-03-11 08:00' }), T('B3', 8, { clndr_id: 'D24' })],
+    [L('A', 'B', 'SS', 0), L('A2', 'B2', 'SF', 0), L('A3', 'B3', 'SS', 72)],
+    { data_date: '2026-03-13 17:00', schedule_mode: mode, ss_lag_from: from, lag_calendar: lagCal });
+    const pe = pd('progress_override', 'early_start', 'predecessor');
+    const pe24 = pd('progress_override', 'early_start', '24h');
+    const pa = pd('progress_override', 'actual_start', 'predecessor');
+    const re = pd('retained_logic', 'early_start', 'predecessor');
+    const xm = run([T('M2', 0, { task_type: 'TT_Mile', expected_finish: '2026-03-15 17:00' }),
+        T('M3', 0, { task_type: 'TT_Mile', expected_finish: '2026-03-18 17:00' }),
+        T('F9', 0, { task_type: 'TT_FinMile', expected_finish: '2026-03-15 17:00' }),
+        T('F10', 0, { task_type: 'TT_FinMile', expected_finish: '2026-03-18 17:00' }),
+        T('X15', 0, { task_type: 'TT_Mile', expected_finish: '2026-03-18 17:00', constraint: { type: 'CS_MEOA', date: '2026-03-20 17:00' } })],
+    [], { use_expected_finish: true });
+    check('HR-58: under Use Expected Finish Dates a milestone sits no earlier than its expected finish, at the next opening off working time (XM; P6 probe X X2 X3 X9 X10 X15)',
+        early(xm.M2) === '2026-03-16 08:00 / 2026-03-16 08:00' && early(xm.M3) === '2026-03-19 08:00 / 2026-03-19 08:00' &&
+        early(xm.F9) === '2026-03-16 08:00 / 2026-03-16 08:00' && early(xm.F10) === '2026-03-18 17:00 / 2026-03-18 17:00' &&
+        early(xm.X15) === '2026-03-19 08:00 / 2026-03-19 08:00',
+        [early(xm.M2), early(xm.M3), early(xm.F9), early(xm.F10), early(xm.X15)].join(' | '));
+    check('HR-55: under progress override SS and SF out of started work are laid from the data date under either lag option (PD; P6 probe PE, PE24, PA P1, P5, P12; RE)',
+        early(pe.B) === '2026-03-13 17:00 / 2026-03-14 01:00' && early(pe.B2) === '2026-03-13 17:00 / 2026-03-14 01:00' &&
+        early(pe24.B3) === '2026-03-14 08:00 / 2026-03-14 16:00' && early(pe.B3) === '2026-03-23 17:00 / 2026-03-24 01:00' &&
+        early(pa.B2) === '2026-03-13 17:00 / 2026-03-14 01:00' && early(re.B) === '2026-03-16 08:00 / 2026-03-16 16:00' &&
+        early(re.B2) === '2026-03-16 00:00 / 2026-03-16 08:00',
+        [early(pe.B), early(pe.B2), early(pe24.B3), early(pa.B2), early(re.B)].join(' | '));
+}
+
+// ── v2.10.4 — the same rules in the whole-day pass (data date Wed 7-Jan-2026) ─
+// Python paired file: _cpp_common/tests/test_h3_situations_2026_10_14.py.
+{
+    const cal = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] },
+        C4: { work_days: [1, 2, 4, 5], hours_per_day: 8, holidays: [] }, C7: { work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 8, holidays: [] } };
+    const O = (x) => Object.assign({ dataDate: '2026-01-07', calMap: cal }, x || {});
+    const A = (code, d, x) => Object.assign({ code, duration_days: d, clndr_id: 'C5' }, x || {});
+    const L = (a, b, t, lag) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: lag || 0 });
+    // A works Mon, Tue, Thu, Fri: started, its remaining work restarts Thursday
+    const pd = (mode) => E.computeCPM([A('D', 20), A('A', 6, { clndr_id: 'C4', actual_start: '2026-01-02', remaining_duration: 2 }),
+        A('B', 1, { clndr_id: 'C7' })], [L('A', 'B', 'SS')], O({ scheduleMode: mode }));
+    const po = pd('progress_override');
+    const rl = pd('retained_logic');
+    check('HR-56: whole days: under progress override an SS link out of started work drives from the data date, retained logic from the restart (PD)',
+        po.nodes.A.restart_date === '2026-01-08' && po.nodes.B.es_date === '2026-01-07' && rl.nodes.B.es_date === '2026-01-08',
+        JSON.stringify([po.nodes.A.restart_date, po.nodes.B.es_date, rl.nodes.B.es_date]));
+    const r = E.computeCPM([A('D', 20), A('FP', 2), A('F', 0, { task_type: 'TT_FinMile', constraint: { type: 'SNLT', date: '2026-01-12' } }),
+        A('GP', 2), A('G', 0, { task_type: 'TT_FinMile', constraint: { type: 'SNET', date: '2026-01-14' } }),
+        A('SP', 2), A('S', 0, { task_type: 'TT_Mile', constraint: { type: 'FNLT', date: '2026-01-12' } }),
+        A('HP', 2), A('H', 0, { task_type: 'TT_FinMile', constraint: { type: 'FNLT', date: '2026-01-12' } })],
+    [L('FP', 'F'), L('GP', 'G'), L('SP', 'S'), L('HP', 'H')], O());
+    const n = r.nodes;
+    check('HR-57: whole days: a milestone applies no constraint of its other end; a finish milestone keeps its Finish On or Before (MC)',
+        n.F.lf_date === n.D.lf_date && n.G.es_date === '2026-01-08' && n.S.lf_date === n.D.lf_date &&
+        n.H.lf_date === '2026-01-12' && n.H.tf_working_days === 1,
+        JSON.stringify([n.F.lf_date, n.G.es_date, n.S.lf_date, n.H.lf_date, n.D.lf_date]));
 }
 
 // ── LA (13-Oct-2026) — the lag-calendar-mode-unsupported ALERT says which figures follow P6 ─

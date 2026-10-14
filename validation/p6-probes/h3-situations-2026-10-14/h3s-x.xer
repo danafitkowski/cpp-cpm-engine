@@ -1,0 +1,105 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9413	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	ZZ-CPP-H3S-X					94130		1000	10	10	0	500		0	0	2026-03-11 08:00	2026-03-02 08:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	94130	N	ZZ-CPP-H3S-X Mon-Fri 08:00-12:00 and 13:00-17:00	9413			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109413	9413	SD_Both	N	Y	Y	N	FT_FF	rcal_Predecessor	Y	N	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	94130	9413		1	1	Y	N	WS_Open	ZZ-CPP-H3S-X	Expected finish on milestones (synthetic, delete after)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9413000	9413	94130	94130	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	S0	project start (complete)				0	0	0	0	0	0	0	0		2026-03-02 08:00	2026-03-02 08:00								2026-03-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9413001	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	D1	driver: sets the project finish				400	0	0	0	400	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413002	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X1	start milestone, expected finish = Finish On or After, Sun 17:00 (4910 A1030 shape)				0	0	0	0	0	0	0	0	2026-03-15 17:00					2026-03-15 17:00					2026-03-11 08:00				CS_MEOA	PT_Normal										0	0					admin	admin		
+%R	9413003	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X1S	successor of X1				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413004	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X2	start milestone, expected finish Sun 17:00				0	0	0	0	0	0	0	0						2026-03-15 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413005	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X2S	successor of X2				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413006	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X3	start milestone, expected finish Wed 17:00				0	0	0	0	0	0	0	0						2026-03-18 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413007	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X3S	successor of X3				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413008	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X4	start milestone, expected finish Wed 08:00				0	0	0	0	0	0	0	0						2026-03-18 08:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413009	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X4S	successor of X4				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413010	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X5	start milestone, expected finish after logic				0	0	0	0	0	0	0	0						2026-03-18 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413011	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X5S	successor of X5				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413012	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X5P	predecessor of X5				16	0	0	0	16	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413013	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X6	start milestone, expected finish before logic				0	0	0	0	0	0	0	0						2026-03-16 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413014	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X6S	successor of X6				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413015	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X6P	predecessor of X6				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413016	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X7	start milestone, expected finish before the data date				0	0	0	0	0	0	0	0						2026-03-09 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413017	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X7S	successor of X7				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413018	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	X8	finish milestone, expected finish = Finish On or After, Sun 17:00				0	0	0	0	0	0	0	0	2026-03-15 17:00					2026-03-15 17:00					2026-03-11 08:00				CS_MEOA	PT_Normal										0	0					admin	admin		
+%R	9413019	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X8S	successor of X8				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413020	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	X9	finish milestone, expected finish Sun 17:00				0	0	0	0	0	0	0	0						2026-03-15 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413021	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X9S	successor of X9				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413022	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	X10	finish milestone, expected finish Wed 17:00				0	0	0	0	0	0	0	0						2026-03-18 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413023	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X10S	successor of X10				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413024	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	X11	finish milestone, expected finish Wed 08:00				0	0	0	0	0	0	0	0						2026-03-18 08:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413025	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X11S	successor of X11				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413026	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	X12	finish milestone, expected finish after logic				0	0	0	0	0	0	0	0						2026-03-18 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413027	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X12S	successor of X12				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413028	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X12P	predecessor of X12				16	0	0	0	16	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413029	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	X13	finish milestone, expected finish before logic				0	0	0	0	0	0	0	0						2026-03-16 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413030	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X13S	successor of X13				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413031	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X13P	predecessor of X13				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413032	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	X14	finish milestone, expected finish before the data date				0	0	0	0	0	0	0	0						2026-03-09 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413033	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X14S	successor of X14				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413034	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X15	start milestone, expected finish Wed, Finish On or After Fri				0	0	0	0	0	0	0	0	2026-03-20 17:00					2026-03-18 17:00					2026-03-11 08:00				CS_MEOA	PT_Normal										0	0					admin	admin		
+%R	9413035	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X15S	successor of X15				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413036	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X16	start milestone, Finish On or After only (MC control)				0	0	0	0	0	0	0	0	2026-03-18 17:00										2026-03-11 08:00				CS_MEOA	PT_Normal										0	0					admin	admin		
+%R	9413037	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X16S	successor of X16				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413038	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X17	zero-length task, expected finish Wed 17:00				0	0	0	0	0	0	0	0						2026-03-18 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413039	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X17S	successor of X17				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413040	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X18	task 8 h, expected finish Wed 17:00 (control)				8	0	0	0	8	0	0	0						2026-03-18 17:00					2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413041	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X18S	successor of X18				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9413042	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	X19	start milestone, expected finish Wed, Start On or After Fri				0	0	0	0	0	0	0	0	2026-03-13 08:00					2026-03-18 17:00					2026-03-11 08:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9413043	9413	94130	94130	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X19S	successor of X19				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9413500	9413001	9413000	9413	9413	PR_FS	0				
+%R	9413501	9413003	9413002	9413	9413	PR_FS	0				
+%R	9413502	9413002	9413000	9413	9413	PR_FS	0				
+%R	9413503	9413005	9413004	9413	9413	PR_FS	0				
+%R	9413504	9413004	9413000	9413	9413	PR_FS	0				
+%R	9413505	9413007	9413006	9413	9413	PR_FS	0				
+%R	9413506	9413006	9413000	9413	9413	PR_FS	0				
+%R	9413507	9413009	9413008	9413	9413	PR_FS	0				
+%R	9413508	9413008	9413000	9413	9413	PR_FS	0				
+%R	9413509	9413011	9413010	9413	9413	PR_FS	0				
+%R	9413510	9413012	9413000	9413	9413	PR_FS	0				
+%R	9413511	9413010	9413012	9413	9413	PR_FS	0				
+%R	9413512	9413014	9413013	9413	9413	PR_FS	0				
+%R	9413513	9413015	9413000	9413	9413	PR_FS	0				
+%R	9413514	9413013	9413015	9413	9413	PR_FS	0				
+%R	9413515	9413017	9413016	9413	9413	PR_FS	0				
+%R	9413516	9413016	9413000	9413	9413	PR_FS	0				
+%R	9413517	9413019	9413018	9413	9413	PR_FS	0				
+%R	9413518	9413018	9413000	9413	9413	PR_FS	0				
+%R	9413519	9413021	9413020	9413	9413	PR_FS	0				
+%R	9413520	9413020	9413000	9413	9413	PR_FS	0				
+%R	9413521	9413023	9413022	9413	9413	PR_FS	0				
+%R	9413522	9413022	9413000	9413	9413	PR_FS	0				
+%R	9413523	9413025	9413024	9413	9413	PR_FS	0				
+%R	9413524	9413024	9413000	9413	9413	PR_FS	0				
+%R	9413525	9413027	9413026	9413	9413	PR_FS	0				
+%R	9413526	9413028	9413000	9413	9413	PR_FS	0				
+%R	9413527	9413026	9413028	9413	9413	PR_FS	0				
+%R	9413528	9413030	9413029	9413	9413	PR_FS	0				
+%R	9413529	9413031	9413000	9413	9413	PR_FS	0				
+%R	9413530	9413029	9413031	9413	9413	PR_FS	0				
+%R	9413531	9413033	9413032	9413	9413	PR_FS	0				
+%R	9413532	9413032	9413000	9413	9413	PR_FS	0				
+%R	9413533	9413035	9413034	9413	9413	PR_FS	0				
+%R	9413534	9413034	9413000	9413	9413	PR_FS	0				
+%R	9413535	9413037	9413036	9413	9413	PR_FS	0				
+%R	9413536	9413036	9413000	9413	9413	PR_FS	0				
+%R	9413537	9413039	9413038	9413	9413	PR_FS	0				
+%R	9413538	9413038	9413000	9413	9413	PR_FS	0				
+%R	9413539	9413041	9413040	9413	9413	PR_FS	0				
+%R	9413540	9413040	9413000	9413	9413	PR_FS	0				
+%R	9413541	9413043	9413042	9413	9413	PR_FS	0				
+%R	9413542	9413042	9413000	9413	9413	PR_FS	0				
+%E

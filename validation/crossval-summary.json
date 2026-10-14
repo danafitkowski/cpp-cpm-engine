@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.3",
-  "generated_utc": "2026-10-13T21:22:39.326Z",
+  "engine_version": "2.10.4",
+  "generated_utc": "2026-10-14T08:49:37.561Z",
   "fixtures": {
-    "total": 151,
-    "passed": 151,
+    "total": 158,
+    "passed": 158,
     "failed": 0
   },
   "checks": {
-    "executed": 8745,
+    "executed": 9836,
     "failed": 0,
-    "passed": 8745,
+    "passed": 9836,
     "skipped": 0,
-    "surface": 8745
+    "surface": 9836
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 149,
-    "project_finish": 149,
-    "critical_codes": 149,
-    "topo_order": 149,
-    "alert_count": 149,
-    "alert_severity_counts": 149,
-    "node <id>": 7826,
+    "project_finish_num": 156,
+    "project_finish": 156,
+    "critical_codes": 156,
+    "topo_order": 156,
+    "alert_count": 156,
+    "alert_severity_counts": 156,
+    "node <id>": 8870,
     "threw (both engines)": 2,
-    "hours": 23
+    "hours": 28
   },
   "rows": [
     {
@@ -1233,6 +1233,62 @@
     {
       "id": "F155",
       "name": "F155 - SO: the same in hours, lag from Early Start",
+      "checks": 167,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F156",
+      "name": "F156 - LC: a lead landing on a close keeps it as the late start; a tie with the late finish goes to the link met last, in hours",
+      "checks": 227,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F157",
+      "name": "F157 - MC: a milestone applies no constraint of its other end, whole days",
+      "checks": 195,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F158",
+      "name": "F158 - MC: the same in hours",
+      "checks": 217,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F159",
+      "name": "F159 - PD: under progress override an SS link out of work under way is laid from the data date, whole days",
+      "checks": 51,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F160",
+      "name": "F160 - PD: the same in hours, lag from Early Start, the data date at the end of the day",
+      "checks": 117,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F161",
+      "name": "F161 - PD: the same on the 24-hour lag calendar",
+      "checks": 117,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F162",
+      "name": "F162 - XM / LC: an expected finish on milestones; a lead tied with an FF successor at the same instant and at the next opening, in hours",
       "checks": 167,
       "fails": 0,
       "skips": 0,

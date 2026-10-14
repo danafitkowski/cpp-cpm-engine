@@ -3318,6 +3318,103 @@ compareFixture('F155 - SO: the same in hours, lag from Early Start', {
     schedule_mode: 'progress_override',
 }, { hours: true });
 
+// ── v2.10.4 — the three differences held-out set H3 left (P6 probes ZZ-CPP-H3S-*, 14-Oct-2026) ─
+// LC: a lead landing on a close stays there as the late start; a working-time tie with the late finish goes to
+// the link met last. MC: a milestone applies no constraint of its other end. PD: under progress override an
+// SS / SF link out of work under way is laid from the data date under either "lag from" option.
+const H3CAL = Object.assign({}, HCAL, {
+    D24: { work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 24, holidays: [] },
+    C4: { work_days: [1, 2, 4, 5], hours_per_day: 8, holidays: [] },
+});
+const lcActs = () => [hA('D', 160),
+    hA('L1P', 8, { clndr_id: 'D24' }), hA('L1X', 8), hA('L1Y', 4, { constraint: { type: 'FNLT', date: '2026-10-13 12:00' } }),
+    hA('L2P', 8, { clndr_id: 'D24' }), hA('L2X', 8), hA('L2Y', 4, { constraint: { type: 'FNLT', date: '2026-10-13 17:00' } }),
+    hA('L3P', 8, { clndr_id: 'D24' }), hA('L3X', 8), hA('L3Y', 4, { constraint: { type: 'FNLT', date: '2026-10-16 17:00' } }),
+    hA('L7P', 8, { clndr_id: 'D24' }), hA('L7X', 8), hA('L7Y', 4, { constraint: { type: 'FNLT', date: '2026-10-13 10:00' } }),
+    hA('L6P', 8, { clndr_id: 'D24' }), hA('L6X', 8), hA('L6Y', 4, { constraint: { type: 'FNLT', date: '2026-10-13 15:00' } }),
+    hA('T1X', 16), hA('T1Y', 4, { constraint: { type: 'FO', date: '2026-10-13 12:00' } }),
+    hA('T1Z', 4, { constraint: { type: 'FNLT', date: '2026-10-15 17:00' } }),
+    hA('T2X', 16), hA('T2Y', 4, { constraint: { type: 'FO', date: '2026-10-13 12:00' } }),
+    hA('T2Z', 4, { constraint: { type: 'FNLT', date: '2026-10-15 17:00' } }),
+];
+const lcRels = () => [hR('L1P', 'L1X'), hR('L1X', 'L1Y', 'SS', -4), hR('L2P', 'L2X'), hR('L2X', 'L2Y', 'SS', -4),
+    hR('L3P', 'L3X'), hR('L3X', 'L3Y', 'SS', -4), hR('L7P', 'L7X'), hR('L7X', 'L7Y', 'SF', -2),
+    hR('L6P', 'L6X'), hR('L6X', 'L6Y', 'SS', -1),
+    hR('T1X', 'T1Y', 'SS', -4), hR('T1X', 'T1Z'), hR('T2X', 'T2Z'), hR('T2X', 'T2Y', 'SS', -4)];
+compareFixture('F156 - LC: a lead landing on a close keeps it as the late start; a tie with the late finish goes to the link met last, in hours', {
+    activities: lcActs(), relationships: lcRels(),
+    data_date: '2026-10-05 08:00', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+const mcActs = (mk) => [mk('D', 160),
+    mk('F1P', 16), mk('F1', 0, { task_type: 'TT_FinMile', constraint: { type: 'SNLT', date: '2026-10-14' } }),
+    mk('F2P', 16), mk('F2', 0, { task_type: 'TT_FinMile', constraint: { type: 'SO', date: '2026-10-12' } }),
+    mk('F4P', 16), mk('F4', 0, { task_type: 'TT_FinMile', constraint: { type: 'SNET', date: '2026-10-12' } }),
+    mk('F5P', 16), mk('F5', 0, { task_type: 'TT_FinMile', constraint: { type: 'FNLT', date: '2026-10-14' } }),
+    mk('F10P', 16), mk('F10', 0, { task_type: 'TT_FinMile', constraint: { type: 'SNLT', date: '2026-10-14' },
+        constraint2: { type: 'FNLT', date: '2026-10-19' } }),
+    mk('S1P', 16), mk('S1', 0, { task_type: 'TT_Mile', constraint: { type: 'FNLT', date: '2026-10-14' } }),
+    mk('S2P', 16), mk('S2', 0, { task_type: 'TT_Mile', constraint: { type: 'FO', date: '2026-10-12' } }),
+    mk('S4P', 16), mk('S4', 0, { task_type: 'TT_Mile', constraint: { type: 'FNET', date: '2026-10-12' } }),
+    mk('S5P', 16), mk('S5', 0, { task_type: 'TT_Mile', constraint: { type: 'SNLT', date: '2026-10-14' } }),
+    mk('T2P', 16), mk('T2', 0, { constraint: { type: 'SNLT', date: '2026-10-14' } }),
+];
+const mcRels = (mkR) => ['F1', 'F2', 'F4', 'F5', 'F10', 'S1', 'S2', 'S4', 'S5', 'T2'].map((c) => mkR(c + 'P', c));
+compareFixture('F157 - MC: a milestone applies no constraint of its other end, whole days', {
+    activities: mcActs(dA), relationships: mcRels(dR),
+    data_date: '2026-10-05', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F158 - MC: the same in hours', {
+    activities: mcActs(hA), relationships: mcRels(hR),
+    data_date: '2026-10-05 08:00', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F159 - PD: under progress override an SS link out of work under way is laid from the data date, whole days', {
+    activities: [dA('D', 160), dA('A1', 48, { clndr_id: 'C4', actual_start: '2026-09-28', remaining_duration: 2 }),
+        dA('B1', 8, { clndr_id: 'SD' }), dA('A2', 48, { clndr_id: 'C4', actual_start: '2026-09-28', remaining_duration: 2 }),
+        dA('B2', 8, { clndr_id: 'SD' })],
+    relationships: [dR('A1', 'B1', 'SS'), dR('A2', 'B2', 'SS', 8)],
+    data_date: '2026-10-07', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+});
+const pdActs = () => [hA('D', 160),
+    hA('P1A', 32, { actual_start: '2026-10-07 08:00', remaining_duration: 2 }), hA('P1B', 8, { clndr_id: 'D24' }),
+    hA('P3A', 32, { actual_start: '2026-10-07 08:00', remaining_duration: 2 }), hA('P3B', 8, { clndr_id: 'D24' }),
+    hA('P4A', 32, { actual_start: '2026-10-07 08:00', remaining_duration: 2 }), hA('P4B', 8, { clndr_id: 'D24' }),
+    hA('P5A', 32, { actual_start: '2026-10-07 08:00', remaining_duration: 2 }), hA('P5B', 8, { clndr_id: 'D24' }),
+    hA('P12A', 32, { actual_start: '2026-10-07 08:00', remaining_duration: 2 }), hA('P12B', 8, { clndr_id: 'D24' }),
+];
+const pdRels = () => [hR('P1A', 'P1B', 'SS'), hR('P3A', 'P3B', 'SS', 8), hR('P4A', 'P4B', 'SS', 40),
+    hR('P5A', 'P5B', 'SF'), hR('P12A', 'P12B', 'SS', 72)];
+compareFixture('F160 - PD: the same in hours, lag from Early Start, the data date at the end of the day', {
+    activities: pdActs(), relationships: pdRels(),
+    data_date: '2026-10-09 17:00', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+compareFixture('F161 - PD: the same on the 24-hour lag calendar', {
+    activities: pdActs(), relationships: pdRels(),
+    data_date: '2026-10-09 17:00', cal_map: H3CAL, relationship_lag_calendar: 'rcal_24Hour',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+// XM: under "Use Expected Finish Dates" a milestone sits no earlier than its expected finish (the late side keeps
+// its own dates); LC: a lead tied with an FF successor's late finish at the same instant, and at the next opening
+const xmActs = () => [hA('D', 160),
+    hA('M1', 0, { task_type: 'TT_Mile', expected_finish: '2026-10-11 17:00' }), hA('M1S', 8),
+    hA('M2', 0, { task_type: 'TT_Mile', expected_finish: '2026-10-07 17:00' }), hA('M2S', 8),
+    hA('M3', 0, { task_type: 'TT_FinMile', expected_finish: '2026-10-07 17:00' }), hA('M3S', 8),
+    hA('M4P', 40), hA('M4', 0, { task_type: 'TT_FinMile', expected_finish: '2026-10-06 17:00' }),
+    hA('M5', 0, { task_type: 'TT_Mile', expected_finish: '2026-10-07 17:00', constraint: { type: 'FNET', date: '2026-10-09 17:00' } }),
+    hA('Q1X', 16), hA('Q1Y', 4, { constraint: { type: 'FO', date: '2026-10-13 12:00' } }),
+    hA('Q1Z', 4, { constraint: { type: 'FNLT', date: '2026-10-15 12:00' } }),
+    hA('Q2X', 16), hA('Q2Y', 4, { constraint: { type: 'FO', date: '2026-10-13 12:00' } }),
+    hA('Q2Z', 4, { clndr_id: 'SD', constraint: { type: 'FNLT', date: '2026-10-15 13:00' } }),
+];
+const xmRels = () => [hR('M1', 'M1S'), hR('M2', 'M2S'), hR('M3', 'M3S'), hR('M4P', 'M4'),
+    hR('Q1X', 'Q1Y', 'SS', -4), hR('Q1X', 'Q1Z', 'FF'), hR('Q2X', 'Q2Y', 'SS', -4), hR('Q2X', 'Q2Z', 'FF')];
+compareFixture('F162 - XM / LC: an expected finish on milestones; a lead tied with an FF successor at the same instant and at the next opening, in hours', {
+    activities: xmActs(), relationships: xmRels(),
+    data_date: '2026-10-05 08:00', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
+    use_expected_finish: true,
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

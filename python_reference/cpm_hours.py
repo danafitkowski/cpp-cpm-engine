@@ -39,11 +39,22 @@ def _inst(v):
     return cm.parse_instant(v)
 
 
-def _cstr(c):
+def _cstr(c, task_type=None):
     if not c or not c.get('type'):
         return None
     t = _P6_CSTR.get(c['type'], c['type'])
+    if _ms_other_end(task_type, t):
+        return None
     return {'type': t, 'at': _inst(c.get('date'))}
+
+
+def _ms_other_end(task_type, ctype):
+    """MC (H3, 14-Oct-2026): a milestone applies no constraint of its other end (cpm._ms_other_end)."""
+    if task_type == 'TT_FinMile':
+        return ctype in ('SO', 'SNLT', 'SNET')
+    if task_type == 'TT_Mile':
+        return ctype in ('FO', 'FNLT', 'FNET')
+    return False
 
 
 def _expected_finish(n, cal, start, floor, start_pred):
@@ -242,8 +253,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         n['af'] = _inst(a.get('actual_finish'))
         n['complete'] = n['af'] is not None
         n['started'] = n['as'] is not None and not n['complete']
-        n['c1'] = _cstr(a.get('constraint'))
-        n['c2'] = _cstr(a.get('constraint2'))
+        n['c1'] = _cstr(a.get('constraint'), a.get('task_type'))
+        n['c2'] = _cstr(a.get('constraint2'), a.get('task_type'))
         # RES (v2.9.49): P6 resumes no work before the resume date of a
         # SUSPENDED activity (retained logic, resume after the data date).
         rd = _inst(a.get('resume_date'))
@@ -334,8 +345,18 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
     def stamp(p):
         return max(dd, p.get('pt') or dd, p.get('resume_hold') or dd)
 
+    # PD (H3, 14-Oct-2026): under progress override an SS or SF link out of
+    # work under way is laid from the data date, whichever "lag from" the
+    # project names; under retained logic "Actual Start" moves the SS anchor
+    # there and SF stays on the restart (ZZ-CPP-H3S-PE, -PE24, -PA P1-P12;
+    # -RE; H3-04 A1230)
     def ss_anchor(p):
-        if ss_lag_from == 'actual_start' and p['started'] and (retained or po):
+        if p['started'] and (po or (ss_lag_from == 'actual_start' and retained)):
+            return dd
+        return p.get('restart', p['es'])
+
+    def sf_anchor(p):
+        if p['started'] and po:
             return dd
         return p.get('restart', p['es'])
 
@@ -357,8 +378,9 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         if t in ('FS', 'FF'):
             return kind, lag_fwd(p['ef'], r['lag'], lc)
         if p['started'] and (retained or po):
-            # SF ignores "SS lag from actual start": restart + unexpired lag under both
-            src = ss_anchor(p) if t == 'SS' else p.get('restart', p['es'])
+            # under retained logic SF ignores "SS lag from actual start":
+            # restart + unexpired lag under both (PD above)
+            src = ss_anchor(p) if t == 'SS' else sf_anchor(p)
             return kind, lag_fwd(src, unexpired(p['as'], r['lag'], lc, p), lc)
         return kind, lag_fwd(p.get('restart', p['es']), r['lag'], lc)
 
@@ -378,7 +400,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     if p['complete']:
                         d = stamp(p)
                     elif r['type'] in ('SS', 'SF'):
-                        src = ss_anchor(p) if r['type'] == 'SS' else p.get('restart', p['es'])
+                        src = ss_anchor(p) if r['type'] == 'SS' else sf_anchor(p)
                         lag = 0 if p['started'] else r['lag']
                         d = lag_fwd(src, lag, lag_cal(p, n))
                     else:
@@ -424,6 +446,12 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             start_req = max(start_req, n['ext_es'])
         if n['started'] and n['rf'] is not None:
             start_req = max(start_req, n['rf'])
+        # XM (H3, 14-Oct-2026): under "Use Expected Finish Dates" a milestone
+        # with an expected finish sits no earlier than it, at the next opening
+        # off working time; the late side keeps its own dates
+        # (ZZ-CPP-H3S-X X1-X19; 4910 A1030)
+        if n['xf'] is not None and not n['started'] and tt in ('TT_Mile', 'TT_FinMile'):
+            start_req = max(start_req, n['xf'])
         if tt == 'TT_FinMile':
             t = start_req if finish_req is None else max(start_req, finish_req)
             day, m = divmod(t, cm.DAY)
@@ -534,6 +562,24 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # resource dependent work snaps on each assignment's calendar (RD)
         lf = seed if n['asg'] else (cal.prev_work_end(seed) if n['rem'] > 0 else seed)
         ls_bound = None
+        # LC (H3, 14-Oct-2026): on timed work a lead that lands on a close - a
+        # lunch break, the end of a day, a week or a short Friday - stays there
+        # as the late start when it binds (ZZ-CPP-H3S-L and -LO L1-L12; H3-11
+        # A1270, H3-12 A1220). When the late finish gives the same working
+        # time, P6 prints the opening out of the late finish if an FS or FF
+        # successor or a Mandatory Finish sets it, whatever the order of the
+        # links (-T T1-T20, L10; 4911 / 4912 P9720), and keeps the close if the
+        # project finish, a Finish On or Before or a Finish On does (-TP, -TN
+        # C6, -TC C1-C3; 4577 C04-1920)
+        timed = n['rem'] > 0 and not n['asg']
+        lead = None
+        link_lf = []
+
+        def to_lead(k):
+            # of two bounds, the earlier instant (H3-02 A1240: Fri 17:00 before Mon 07:00)
+            nonlocal lead
+            lead = k if lead is None else min(lead, k)
+
         for r in succs[c]:
             s = nodes[r['to_code']]
             if 'lf' not in s:
@@ -551,17 +597,20 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             lag = r['lag']
             if r['type'] in ('SS', 'SF') and n['started'] and (retained or po):
                 lag = unexpired(n['as'], lag, lc)
-            if r['type'] == 'FS':
-                lf = min(lf, lag_bwd(s_ls, lag, lc))
-            elif r['type'] == 'FF':
-                lf = min(lf, lag_bwd(s_lf, lag, lc))
+            if r['type'] in ('FS', 'FF'):
+                v = lag_bwd(s_ls if r['type'] == 'FS' else s_lf, lag, lc)
+                if timed:
+                    link_lf.append(v)
+                lf = min(lf, v)
             elif r['type'] in ('SS', 'SF'):
                 b = lag_bwd(s_ls if r['type'] == 'SS' else s_lf, lag, lc)
-                if lag < 0:
-                    # a lead walked forward to a close is a start: the next
-                    # opening (4911 P9720, SF - 40 h)
-                    b = lc.next_work(b)
-                ls_bound = b if ls_bound is None else min(ls_bound, b)
+                if timed:
+                    # off working time it falls back to the close before
+                    to_lead(b if (cal.is_finish(b) or cal.is_start(b)) else cal.prev_work_end(b))
+                # zero-length and resource dependent work: a lead walked
+                # forward to a close is a start, the next opening
+                bo = lc.next_work(b) if lag < 0 else b
+                ls_bound = bo if ls_bound is None else min(ls_bound, bo)
         if n['ext_lf'] is not None:
             lf = min(lf, cal.prev_work_end(n['ext_lf']))
         # SC (H1, 13-Oct-2026): on work under way a Start On or Before or a
@@ -581,6 +630,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     # K8, K9)
                     continue
                 if cs['type'] in ('FNLT', 'FO', 'MS_Finish'):
+                    if timed and cs['type'] == 'MS_Finish':
+                        link_lf.append(cs['at'])
                     lf = min(lf, cs['at'])
                 elif cs['type'] in ('SNLT', 'SO', 'MS_Start'):
                     # a start constraint off working time resolves to the
@@ -596,20 +647,28 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         # calendar, 8 h from the next opening is 17:00)
                         lf = min(lf, cal.add(at, n['rem']))
                         continue
+                    if timed:
+                        to_lead(at)
                     ls_bound = at if ls_bound is None else min(ls_bound, at)
         if n['asg']:
             ls, lf = _rsrc_backward(n['asg'], cal, lf, ls_bound)
         elif n['rem'] > 0:
             lf = cal.prev_work_end(lf)
             ls = cal.sub(lf, n['rem'])
-            if ls_bound is not None and ls_bound <= ls:
-                # an SS / SF bound that drives the late start is kept as P6
-                # prints it (a close stays a close: 4577 C04-1920, 17:00);
-                # off working time it falls back to the close before it, as
-                # an upper limit does (4895 1224, over a shutdown)
-                on_work = cal.is_finish(ls_bound) or cal.is_start(ls_bound)
-                ls = ls_bound if on_work else cal.prev_work_end(ls_bound)
-                lf = cal.add(ls, n['rem'])
+            if lead is not None:
+                # an SS / SF bound or a start constraint that drives the late
+                # start is kept as P6 prints it (a close stays a close: 4577
+                # C04-1920, 17:00); off working time it falls back to the
+                # close before it, as an upper limit does (4895 1224, over a
+                # shutdown); LC above
+                lead_lf = cal.add(lead, n['rem'])
+                # the same instant, not merely the same working time (4899
+                # P21170: an FF bound at Fri 08:00 does not tie a lead ending Thu
+                # 17:00)
+                by_link = any(v == lead_lf for v in link_lf)
+                if lead_lf < lf or (lead_lf == lf and not by_link):
+                    ls = lead
+                    lf = lead_lf
         else:
             if ls_bound is not None:
                 lf = min(lf, ls_bound)

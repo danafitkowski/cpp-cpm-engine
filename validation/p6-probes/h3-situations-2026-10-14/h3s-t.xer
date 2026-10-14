@@ -1,0 +1,182 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9410	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	ZZ-CPP-H3S-T					94100		1000	10	10	0	500		0	0	2026-03-11 08:00	2026-03-02 08:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	94100	N	ZZ-CPP-H3S-T Mon-Fri 08:00-12:00 and 13:00-17:00	9410			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	94101	N	ZZ-CPP-H3S-T Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00	9410			CA_Project	8	42	181	2184	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||6()((0||0(s|07:00|f|11:00)())))(0||7()())))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109410	9410	SD_Both	N	N	Y	N	FT_FF	rcal_Predecessor	N	N	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	94100	9410		1	1	Y	N	WS_Open	ZZ-CPP-H3S-T	Late-start ties, retained logic (synthetic, delete after)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9410000	9410	94100	94100	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	S0	project start (complete)				0	0	0	0	0	0	0	0		2026-03-02 08:00	2026-03-02 08:00								2026-03-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9410001	9410	94100	94100	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	D1	driver: sets the project finish				400	0	0	0	400	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9410002	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T1X	T1 X: lf FS, lead SS, lead link first, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410003	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T1Y	T1 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410004	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T1Z	T1 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410005	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T2X	T2 X: lf FS, lead SS, lead link first, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410006	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T2Z	T2 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410007	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T2Y	T2 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410008	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T3X	T3 X: lf FS, lead SS, lead link second, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410009	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T3Y	T3 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410010	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T3Z	T3 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410011	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T4X	T4 X: lf FS, lead SS, lead link second, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410012	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T4Z	T4 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410013	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T4Y	T4 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410014	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T5X	T5 X: lf FS, lead SF, lead link first, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410015	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T5Y	T5 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410016	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T5Z	T5 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410017	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T6X	T6 X: lf FS, lead SF, lead link first, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410018	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T6Z	T6 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410019	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T6Y	T6 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410020	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T7X	T7 X: lf FS, lead SF, lead link second, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410021	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T7Y	T7 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410022	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T7Z	T7 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410023	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T8X	T8 X: lf FS, lead SF, lead link second, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410024	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T8Z	T8 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410025	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T8Y	T8 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410026	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T9X	T9 X: lf FF, lead SS, lead link first, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410027	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T9Y	T9 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410028	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T9Z	T9 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410029	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T10X	T10 X: lf FF, lead SS, lead link first, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410030	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T10Z	T10 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410031	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T10Y	T10 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410032	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T11X	T11 X: lf FF, lead SS, lead link second, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410033	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T11Y	T11 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410034	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T11Z	T11 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410035	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T12X	T12 X: lf FF, lead SS, lead link second, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410036	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T12Z	T12 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410037	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T12Y	T12 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410038	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T13X	T13 X: lf FF, lead SF, lead link first, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410039	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T13Y	T13 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410040	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T13Z	T13 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410041	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T14X	T14 X: lf FF, lead SF, lead link first, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410042	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T14Z	T14 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410043	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T14Y	T14 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410044	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T15X	T15 X: lf FF, lead SF, lead link second, lead successor first				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410045	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T15Y	T15 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410046	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T15Z	T15 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410047	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T16X	T16 X: lf FF, lead SF, lead link second, lead successor second				16	0	0	0	16	0	0	0											2026-03-11 13:00					PT_Normal										0	0					admin	admin		
+%R	9410048	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T16Z	T16 Z: the late-finish successor				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410049	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T16Y	T16 Y: the lead successor				4	0	0	0	4	0	0	0	2026-03-24 08:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410050	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T17X	T17 X: negative float, lf FS, lead link first				16	0	0	0	16	0	0	0	2026-03-24 14:00										2026-03-11 13:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9410051	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T17Y	T17 Y				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410052	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T17Z	T17 Z				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410053	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T18X	T18 X: negative float, lf FS, lead link second				16	0	0	0	16	0	0	0	2026-03-24 14:00										2026-03-11 13:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9410054	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T18Y	T18 Y				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410055	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T18Z	T18 Z				4	0	0	0	4	0	0	0	2026-03-26 14:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410056	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T19X	T19 X: negative float, lf FF, lead link first				16	0	0	0	16	0	0	0	2026-03-24 14:00										2026-03-11 13:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9410057	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T19Y	T19 Y				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410058	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T19Z	T19 Z				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9410059	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T20X	T20 X: negative float, lf FF, lead link second				16	0	0	0	16	0	0	0	2026-03-24 14:00										2026-03-11 13:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9410060	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T20Y	T20 Y				4	0	0	0	4	0	0	0	2026-03-24 12:00										2026-03-11 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9410061	9410	94100	94101	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	T20Z	T20 Z				4	0	0	0	4	0	0	0	2026-03-26 09:00										2026-03-11 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9410500	9410001	9410000	9410	9410	PR_FS	0				
+%R	9410501	9410002	9410000	9410	9410	PR_FS	0				
+%R	9410502	9410003	9410000	9410	9410	PR_FS	0				
+%R	9410503	9410004	9410000	9410	9410	PR_FS	0				
+%R	9410504	9410003	9410002	9410	9410	PR_SS	-4				
+%R	9410505	9410004	9410002	9410	9410	PR_FS	0				
+%R	9410506	9410005	9410000	9410	9410	PR_FS	0				
+%R	9410507	9410007	9410000	9410	9410	PR_FS	0				
+%R	9410508	9410006	9410000	9410	9410	PR_FS	0				
+%R	9410509	9410007	9410005	9410	9410	PR_SS	-4				
+%R	9410510	9410006	9410005	9410	9410	PR_FS	0				
+%R	9410511	9410008	9410000	9410	9410	PR_FS	0				
+%R	9410512	9410009	9410000	9410	9410	PR_FS	0				
+%R	9410513	9410010	9410000	9410	9410	PR_FS	0				
+%R	9410514	9410010	9410008	9410	9410	PR_FS	0				
+%R	9410515	9410009	9410008	9410	9410	PR_SS	-4				
+%R	9410516	9410011	9410000	9410	9410	PR_FS	0				
+%R	9410517	9410013	9410000	9410	9410	PR_FS	0				
+%R	9410518	9410012	9410000	9410	9410	PR_FS	0				
+%R	9410519	9410012	9410011	9410	9410	PR_FS	0				
+%R	9410520	9410013	9410011	9410	9410	PR_SS	-4				
+%R	9410521	9410014	9410000	9410	9410	PR_FS	0				
+%R	9410522	9410015	9410000	9410	9410	PR_FS	0				
+%R	9410523	9410016	9410000	9410	9410	PR_FS	0				
+%R	9410524	9410015	9410014	9410	9410	PR_SF	-4				
+%R	9410525	9410016	9410014	9410	9410	PR_FS	0				
+%R	9410526	9410017	9410000	9410	9410	PR_FS	0				
+%R	9410527	9410019	9410000	9410	9410	PR_FS	0				
+%R	9410528	9410018	9410000	9410	9410	PR_FS	0				
+%R	9410529	9410019	9410017	9410	9410	PR_SF	-4				
+%R	9410530	9410018	9410017	9410	9410	PR_FS	0				
+%R	9410531	9410020	9410000	9410	9410	PR_FS	0				
+%R	9410532	9410021	9410000	9410	9410	PR_FS	0				
+%R	9410533	9410022	9410000	9410	9410	PR_FS	0				
+%R	9410534	9410022	9410020	9410	9410	PR_FS	0				
+%R	9410535	9410021	9410020	9410	9410	PR_SF	-4				
+%R	9410536	9410023	9410000	9410	9410	PR_FS	0				
+%R	9410537	9410025	9410000	9410	9410	PR_FS	0				
+%R	9410538	9410024	9410000	9410	9410	PR_FS	0				
+%R	9410539	9410024	9410023	9410	9410	PR_FS	0				
+%R	9410540	9410025	9410023	9410	9410	PR_SF	-4				
+%R	9410541	9410026	9410000	9410	9410	PR_FS	0				
+%R	9410542	9410027	9410000	9410	9410	PR_FS	0				
+%R	9410543	9410028	9410000	9410	9410	PR_FS	0				
+%R	9410544	9410027	9410026	9410	9410	PR_SS	-4				
+%R	9410545	9410028	9410026	9410	9410	PR_FF	0				
+%R	9410546	9410029	9410000	9410	9410	PR_FS	0				
+%R	9410547	9410031	9410000	9410	9410	PR_FS	0				
+%R	9410548	9410030	9410000	9410	9410	PR_FS	0				
+%R	9410549	9410031	9410029	9410	9410	PR_SS	-4				
+%R	9410550	9410030	9410029	9410	9410	PR_FF	0				
+%R	9410551	9410032	9410000	9410	9410	PR_FS	0				
+%R	9410552	9410033	9410000	9410	9410	PR_FS	0				
+%R	9410553	9410034	9410000	9410	9410	PR_FS	0				
+%R	9410554	9410034	9410032	9410	9410	PR_FF	0				
+%R	9410555	9410033	9410032	9410	9410	PR_SS	-4				
+%R	9410556	9410035	9410000	9410	9410	PR_FS	0				
+%R	9410557	9410037	9410000	9410	9410	PR_FS	0				
+%R	9410558	9410036	9410000	9410	9410	PR_FS	0				
+%R	9410559	9410036	9410035	9410	9410	PR_FF	0				
+%R	9410560	9410037	9410035	9410	9410	PR_SS	-4				
+%R	9410561	9410038	9410000	9410	9410	PR_FS	0				
+%R	9410562	9410039	9410000	9410	9410	PR_FS	0				
+%R	9410563	9410040	9410000	9410	9410	PR_FS	0				
+%R	9410564	9410039	9410038	9410	9410	PR_SF	-4				
+%R	9410565	9410040	9410038	9410	9410	PR_FF	0				
+%R	9410566	9410041	9410000	9410	9410	PR_FS	0				
+%R	9410567	9410043	9410000	9410	9410	PR_FS	0				
+%R	9410568	9410042	9410000	9410	9410	PR_FS	0				
+%R	9410569	9410043	9410041	9410	9410	PR_SF	-4				
+%R	9410570	9410042	9410041	9410	9410	PR_FF	0				
+%R	9410571	9410044	9410000	9410	9410	PR_FS	0				
+%R	9410572	9410045	9410000	9410	9410	PR_FS	0				
+%R	9410573	9410046	9410000	9410	9410	PR_FS	0				
+%R	9410574	9410046	9410044	9410	9410	PR_FF	0				
+%R	9410575	9410045	9410044	9410	9410	PR_SF	-4				
+%R	9410576	9410047	9410000	9410	9410	PR_FS	0				
+%R	9410577	9410049	9410000	9410	9410	PR_FS	0				
+%R	9410578	9410048	9410000	9410	9410	PR_FS	0				
+%R	9410579	9410048	9410047	9410	9410	PR_FF	0				
+%R	9410580	9410049	9410047	9410	9410	PR_SF	-4				
+%R	9410581	9410050	9410000	9410	9410	PR_FS	0				
+%R	9410582	9410051	9410000	9410	9410	PR_FS	0				
+%R	9410583	9410052	9410000	9410	9410	PR_FS	0				
+%R	9410584	9410051	9410050	9410	9410	PR_SS	-4				
+%R	9410585	9410052	9410050	9410	9410	PR_FS	0				
+%R	9410586	9410053	9410000	9410	9410	PR_FS	0				
+%R	9410587	9410054	9410000	9410	9410	PR_FS	0				
+%R	9410588	9410055	9410000	9410	9410	PR_FS	0				
+%R	9410589	9410055	9410053	9410	9410	PR_FS	0				
+%R	9410590	9410054	9410053	9410	9410	PR_SS	-4				
+%R	9410591	9410056	9410000	9410	9410	PR_FS	0				
+%R	9410592	9410057	9410000	9410	9410	PR_FS	0				
+%R	9410593	9410058	9410000	9410	9410	PR_FS	0				
+%R	9410594	9410057	9410056	9410	9410	PR_SS	-4				
+%R	9410595	9410058	9410056	9410	9410	PR_FF	0				
+%R	9410596	9410059	9410000	9410	9410	PR_FS	0				
+%R	9410597	9410060	9410000	9410	9410	PR_FS	0				
+%R	9410598	9410061	9410000	9410	9410	PR_FS	0				
+%R	9410599	9410061	9410059	9410	9410	PR_FF	0				
+%R	9410600	9410060	9410059	9410	9410	PR_SS	-4				
+%E

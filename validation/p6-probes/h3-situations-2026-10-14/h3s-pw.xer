@@ -1,0 +1,70 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9407	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	ZZ-CPP-H3S-PW					94070		1000	10	10	0	500		0	0	2026-03-11 08:00	2026-03-02 08:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	94070	N	ZZ-CPP-H3S-PW Mon-Fri 08:00-12:00 and 13:00-17:00	9407			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	94071	N	ZZ-CPP-H3S-PW Mon-Thu 07:00-12:00 and 12:30-17:30	9407			CA_Project	10	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||6()())(0||7()())))(0||Exceptions()())))
+%R	94072	N	ZZ-CPP-H3S-PW Every day 00:00-24:00	9407			CA_Project	24	168	722	8736	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|00:00|f|00:00)())))(0||2()((0||0(s|00:00|f|00:00)())))(0||3()((0||0(s|00:00|f|00:00)())))(0||4()((0||0(s|00:00|f|00:00)())))(0||5()((0||0(s|00:00|f|00:00)())))(0||6()((0||0(s|00:00|f|00:00)())))(0||7()((0||0(s|00:00|f|00:00)())))))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109407	9407	SD_Both	N	Y	N	N	FT_FF	rcal_Predecessor	N	Y	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	94070	9407		1	1	Y	N	WS_Open	ZZ-CPP-H3S-PW	SS / SF out of work under way, progress override, lag from Early Start, data date Wed 08:00 (synthetic, delete after)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9407000	9407	94070	94070	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	S0	project start (complete)				0	0	0	0	0	0	0	0		2026-03-02 08:00	2026-03-02 08:00								2026-03-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9407001	9407	94070	94070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	D1	driver: sets the project finish				400	0	0	0	400	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9407002	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P1A	P1 A: SS, the successor on 24 h (H3-04 A1230 shape)				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407003	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P1B	P1 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407004	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P2A	P2 A: SS, the successor on the same calendar				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407005	9407	94070	94070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P2B	P2 B				8	0	0	0	8	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9407006	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P3A	P3 A: SS 8 h, expired from the actual start				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407007	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P3B	P3 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407008	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P4A	P4 A: SS 40 h, part unexpired from the actual start				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407009	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P4B	P4 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407010	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P12A	P12 A: SS 72 h, part unexpired on any lag calendar				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407011	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P12B	P12 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407012	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P5A	P5 A: SF, the successor on 24 h				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407013	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P5B	P5 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407014	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P6A	P6 A: SS lead 8 h				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407015	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P6B	P6 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407016	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P7A	P7 A: SS, the successor driven later (free float)				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407017	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P7B	P7 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407018	9407	94070	94070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P7D	driver of P7B				40	0	0	0	40	0	0	0											2026-03-11 08:00					PT_Normal										0	0					admin	admin		
+%R	9407019	9407	94070	94071	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P8A	P8 A: SS, the predecessor on Mon-Thu (Fri off)				16	0	0	0	32	0	0	0		2026-03-09 07:00									2026-03-09 07:00					PT_Normal										0	0					admin	admin		
+%R	9407020	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P8B	P8 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%R	9407021	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P9A	P9 A: SS, the successor pinned (late side)				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407022	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P9B	P9 B				8	0	0	0	8	0	0	0	2026-03-20 08:00										2026-03-12 00:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9407023	9407	94070	94070	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	P11A	P11 A: FS (control)				16	0	0	0	32	0	0	0		2026-03-09 08:00									2026-03-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9407024	9407	94070	94072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P11B	P11 B				8	0	0	0	8	0	0	0											2026-03-12 00:00					PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9407500	9407001	9407000	9407	9407	PR_FS	0				
+%R	9407501	9407002	9407000	9407	9407	PR_FS	0				
+%R	9407502	9407003	9407002	9407	9407	PR_SS	0				
+%R	9407503	9407004	9407000	9407	9407	PR_FS	0				
+%R	9407504	9407005	9407004	9407	9407	PR_SS	0				
+%R	9407505	9407006	9407000	9407	9407	PR_FS	0				
+%R	9407506	9407007	9407006	9407	9407	PR_SS	8				
+%R	9407507	9407008	9407000	9407	9407	PR_FS	0				
+%R	9407508	9407009	9407008	9407	9407	PR_SS	40				
+%R	9407509	9407010	9407000	9407	9407	PR_FS	0				
+%R	9407510	9407011	9407010	9407	9407	PR_SS	72				
+%R	9407511	9407012	9407000	9407	9407	PR_FS	0				
+%R	9407512	9407013	9407012	9407	9407	PR_SF	0				
+%R	9407513	9407014	9407000	9407	9407	PR_FS	0				
+%R	9407514	9407015	9407014	9407	9407	PR_SS	-8				
+%R	9407515	9407016	9407000	9407	9407	PR_FS	0				
+%R	9407516	9407017	9407016	9407	9407	PR_SS	0				
+%R	9407517	9407018	9407000	9407	9407	PR_FS	0				
+%R	9407518	9407017	9407018	9407	9407	PR_FS	0				
+%R	9407519	9407019	9407000	9407	9407	PR_FS	0				
+%R	9407520	9407020	9407019	9407	9407	PR_SS	0				
+%R	9407521	9407021	9407000	9407	9407	PR_FS	0				
+%R	9407522	9407022	9407021	9407	9407	PR_SS	0				
+%R	9407523	9407023	9407000	9407	9407	PR_FS	0				
+%R	9407524	9407024	9407023	9407	9407	PR_FS	0				
+%E

@@ -134,7 +134,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.3'
+ENGINE_VERSION = '2.10.4'
 
 
 # =============================================================================
@@ -1550,6 +1550,30 @@ def _open_end_ff_held(node):
                for c in (node.get('constraint'), node.get('constraint2')))
 
 
+# MC (H3, 14-Oct-2026) - a milestone keeps a constraint on its other end, but
+# P6 applies none: a Start On, Start On or Before or Start On or After on a
+# finish milestone, a Finish On, Finish On or Before or Finish On or After on a
+# start milestone, early or late side, primary or secondary slot
+# (ZZ-CPP-H3S-M and -MO F1-F4, F9, F10, S1, S2, S4; H3-11 A1150). A milestone
+# with the constraint of its own end, and zero-length tasks, apply it (F5-F8,
+# S5-S8, T2, T3). Not covered: a Mandatory Start on a finish milestone or a
+# Mandatory Finish on a start milestone; P6's XER import turned both into
+# completed activities with no dates (F3, S3). Takes the canonical type.
+# JS paired site: _msOtherEnd.
+def _ms_other_end(task_type, ctype):
+    if task_type == 'TT_FinMile':
+        return ctype in ('SO', 'SNLT', 'SNET')
+    if task_type == 'TT_Mile':
+        return ctype in ('FO', 'FNLT', 'FNET')
+    return False
+
+
+def _ms_applied(node, key):
+    """The constraint in slot `key` unless it is one a milestone does not apply (MC)."""
+    c = node.get(key)
+    return None if (c and _ms_other_end(node.get('task_type'), c.get('type'))) else c
+
+
 def _assignment_count(value):
     """A whole, non-negative count of resource assignments; 0 for anything
     that is not a number."""
@@ -2777,8 +2801,18 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # does the backward pass: the late restart is the successor's late start
     # less the unexpired lag under both.
     # JS paired site: _ssAnchorOf.
+    # PD (H3, 14-Oct-2026): under progress override P6 lays an SS or an SF
+    # link out of work under way from the data date under either "lag from"
+    # option, the unexpired lag on from there (ZZ-CPP-H3S-PE, -PE24, -PA
+    # P1-P12; H3-04 A1230); retained logic keeps the rule above (-RE).
     def _ss_anchor_for(pnode):
-        if _ss_lag_from == 'actual_start' and dd_num > 0 and _ss_off_started(pnode):
+        if ((_ss_lag_from == 'actual_start' or schedule_mode == 'progress_override') and dd_num > 0
+                and _ss_off_started(pnode)):
+            return dd_num
+        return _start_drive_src_for(pnode)
+
+    def _sf_anchor_for(pnode):
+        if schedule_mode == 'progress_override' and dd_num > 0 and _ss_off_started(pnode):
             return dd_num
         return _start_drive_src_for(pnode)
 
@@ -2877,7 +2911,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         if pnode['is_complete']:
             _i = pnode.get('as_instant') or pnode['es']
             return _i, not _i > pnode['es']
-        _a = _ss_anchor_for(pnode) if rtype == 'SS' else _start_drive_src_for(pnode)
+        _a = _ss_anchor_for(pnode) if rtype == 'SS' else _sf_anchor_for(pnode)
         if _a == dd_num and dd_num > 0 and pnode.get('actual_start'):
             return _a, _opening_from(date_to_num(data_date or ''), _constraint_time_minutes(data_date or ''),
                                      _cal_for(pnode))
@@ -2949,7 +2983,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         _pt_lag_cal = _lag_cal_for(pnode, node)
                         if p['type'] in ('SS', 'SF'):
                             _src = (_ss_anchor_for(pnode) if p['type'] == 'SS'
-                                    else _start_drive_src_for(pnode))
+                                    else _sf_anchor_for(pnode))
                             # SSL measured (P6 probe 2026-09-23) — off a
                             # STARTED predecessor P6 lays NO lag into a
                             # completed activity; it carries the anchor
@@ -3175,7 +3209,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 _lag_here = (_started_lag_left(pnode, lag, lag_cal)
                              if _ss_off_started(pnode) else lag)
                 anchor_instant = _lag_from_instant(
-                    _start_drive_src_for(pnode), _lag_here, lag_cal, alerts=alerts, ctx=_ctx)
+                    _sf_anchor_for(pnode), _lag_here, lag_cal, alerts=alerts, ctx=_ctx)
                 if _pt_inst > anchor_instant:
                     anchor_instant, _via_pt = _pt_inst, True
                 succ_ef_anchor = _snap_fwd(anchor_instant, node_cal, alerts=alerts, ctx=_ctx)
@@ -3329,9 +3363,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             finish_anchor_ef = None
 
         # v2.9.7 — P6 constraint application (forward pass). Primary then
-        # secondary; secondary tightens further per P6 spec.
-        cstr = node.get('constraint')
-        cstr2 = node.get('constraint2')
+        # secondary; secondary tightens further per P6 spec. MC (H3): a
+        # milestone applies no constraint of its other end.
+        cstr = _ms_applied(node, 'constraint')
+        cstr2 = _ms_applied(node, 'constraint2')
         # P6 forward-pass semantics: constraints also cannot override actual_start.
         # v2.9.12 T1.2 — emit constraint-noop WARN when ES-side constraints
         # are suppressed by actual_start. Mirrors JS Section C.
@@ -3835,6 +3870,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         date_to_num(data_date or ''), _constraint_time_minutes(data_date or ''), node_cal)))
                 for _sc in (node.get('constraint'), node.get('constraint2')):
                     if (_sc and _sc.get('type') in ('SNET', 'SO', 'MS_Start') and _sc.get('date')
+                            and not _ms_other_end(node.get('task_type'), _sc.get('type'))
                             and _constraint_start_num(_sc, node_cal, alerts=[], ctx=code) == node['es']):
                         _mdc.append((node['es'], True))
                 if (node.get('external_early_start') and _external_early_start_num(
@@ -4312,9 +4348,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 })
 
         # v2.9.7 — P6 constraint application (backward pass). Primary then
-        # secondary; secondary tightens further.
-        cstr = node.get('constraint')
-        cstr2 = node.get('constraint2')
+        # secondary; secondary tightens further. MC (H3): not, on a
+        # milestone, a constraint of its other end.
+        cstr = _ms_applied(node, 'constraint')
+        cstr2 = _ms_applied(node, 'constraint2')
         # UW (v2.9.52) — Mandatory Finish is dropped from the backward pass
         # too once the activity is under way (late finish = the project end
         # on the measured case); Finish On / Finish On or Before still cap LF.
