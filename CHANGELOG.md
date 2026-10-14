@@ -12,6 +12,65 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.5 - 2026-10-14 - A lag handed on in days becomes hours on the predecessor's calendar, as P6 converts a lag entered in days
+
+**Computed values move (Class A): engine math changed, for relationships an integration adds.** The hours pass
+gives its own hours to a relationship that reaches it with `lag_days` and no `lag_hours`; CPP's time impact
+analysis hands its fragnet ties on that way. Under the successor lag calendar (`rcal_Successor`, and a blank
+setting, which P6 reads the same way) v2.10.4 multiplied the days by the successor's hours per day, and under every
+other setting by the predecessor's.
+
+P6 converts a lag entered in days on the predecessor's calendar whatever the lag calendar. The P6 23.12 help says
+so ("Choose a calendar for relationship lag"), and two synthetic probe projects measured it in P6 Professional
+23.12.1 ([`validation/p6-probes/fragnet-lag-2026-10-14/`](validation/p6-probes/fragnet-lag-2026-10-14/)). With the
+predecessor on a 10-hour-day calendar, the successor on 6 hours, the project calendar on 12 and the admin default 8,
+a lag typed as `1d` was stored as 10 hours under the successor and the project-default lag calendars alike.
+
+This release takes the predecessor's hours per day under every setting. The lag calendar still decides which
+calendar those hours are walked on. JS and the Python reference change together.
+
+**Verified.**
+- **The probes:** P6 stored 10.0 hours in both. LD-1 to LD-4 pin the conversion on those calendars, and F163 hands
+  both engines the shape: a 1-day lag and a half-day start-to-start lag out of a 10-hour-day predecessor onto a
+  6-hour-day successor under the successor lag calendar. The probes are fitted, not held out.
+- **Nothing read from an XER moves.** Every relationship in an XER carries P6's own lag hours, so the change cannot
+  reach it:
+  - **Against P6, through CPP's converters and this engine** (321 projects, 95,017 unfinished
+    activities in the measuring machine's P6 database): no row moved against v2.10.4. 95,015 match on all seven
+    fields, as under v2.10.4; the two left are the P6 non-fixed points documented with v2.10.1.
+  - **JS against Python** on the same database (321 projects, 163,784 activities): every field equal.
+  - **On 678 distinct XER files on the measuring machine** (real exports and synthetic test files, among them every
+    case of the held-out sets H1 to H4; 4 unreadable by both versions), through `parseXER` and `computeCPM` with the
+    hours handed on: no date, float, critical flag or other field moved on any unfinished activity.
+  - **P6 comparison matrix:** regenerated under this release and under v2.10.4, the 16 engine outputs (the 13 cases
+    and the Larchmere capture cases 19-21) give the same 16,691 values; the capture cases read 256 of 256 at each
+    data date. The H1, H2 and H3 probe replays read 293, 345 and 537 rows, as before.
+- **No held-out set was drawn for this release.** A held-out case is a P6 XER, and every relationship in an XER
+  carries its lag in hours, so no case could exercise the change. The census above includes every H1 to H4 case and
+  moved none of them, so H4's result (233 of 237) stands for these bytes on its cases.
+- **JS unit suite:** 1,485 checks green, up from 1,481 (LD-1 to LD-4).
+- **Cross-validation:** 159 fixtures, 9873 of 9873 executed, 0 skipped, 0 failures; alert parity on 157 of 159
+  (the other 2 must throw).
+- **Coverage,** re-measured on these bytes: 94.62% statements, 82.73% branches, 96.84% functions.
+
+**Who is affected.** Output of an integration that adds relationships carrying `lag_days` without `lag_hours` (in
+CPP's suite, time impact analysis fragnet ties with a lag), and only:
+- under the successor lag calendar or a blank setting (47 of the 678 files above);
+- where the tie's predecessor and successor calendars have different hours per day;
+- where the hours pass runs (the schedule's P6 hours are handed on). The whole-day pass is unchanged.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version is
+re-run under §12.2 where its analysis inserted a relationship with a lag in days on a schedule whose lag calendar is
+the successor's or blank, between activities whose calendars have different hours per day.
+
+**Not claimed.**
+- No held-out case exercises this change: it rests on the P6 help, the two probes and the unit and cross-validation
+  pins.
+- H4's two differences remain open: As Late As Possible work under way under progress override whose successor has
+  started, and a Mandatory Start tied with a start-to-start bound on a weekend.
+
+---
+
 ## v2.10.4 - 2026-10-14 - Start-to-start links under progress override, constraints on milestones, leads onto a close and expected finishes on milestones, measured on P6's own output and scored on a held-out set
 
 **Computed values move (Class A): engine math changed.** Held-out set H3 scored v2.10.3 once against P6

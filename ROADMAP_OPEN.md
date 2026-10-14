@@ -152,6 +152,15 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.5 (reviewed 2026-10-14)
+
+No audit item changed status. v2.10.5 moves computed values (change class A under the operator procedure), only for relationships an integration adds with a lag in days: under the successor lag calendar such a lag now becomes hours on the predecessor's calendar, as P6 converts a lag entered in days (see CHANGELOG.md). The rule is in the P6 help and was measured on two P6 probes, so it is fitted; no held-out set was drawn, because no XER case can carry such a relationship, and no value read from an XER moved.
+- The unit suite grew from 1,481 to 1,485.
+- The cross-validation surface grew from 158 to 159 fixtures and from 9,836 of 9,836 to 9,873 of 9,873 comparisons, 0 skipped, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.62% statements / 82.73% branches / 96.84% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+- H4's two differences remain **OPEN**.
+
 ## Status at v2.10.4 (reviewed 2026-10-14)
 
 No audit item changed status. v2.10.4 moves computed values (change class A under the operator procedure): under progress override a start-to-start or start-to-finish link out of work under way is laid from the data date; a milestone applies no constraint of its other end; on timed work a lead that lands on a close stays there as the late start; and under "Use Expected Finish Dates" a milestone sits no earlier than its expected finish (see CHANGELOG.md). The rules came from held-out set H3 and the local P6 database and were measured on P6 probes, so the probes are fitted; held-out set H4 then scored these bytes once. The lag-calendar ALERT was reworded (class B, text only).
@@ -325,4 +334,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.4. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.5. Update on every release that closes or opens an audit item.

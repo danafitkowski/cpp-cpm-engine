@@ -610,8 +610,8 @@ Python reference: <repo>/python_reference/cpm.py
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 158 passed, 0 failed
-  Checks:   9836 / 9836 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 159 passed, 0 failed
+  Checks:   9873 / 9873 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

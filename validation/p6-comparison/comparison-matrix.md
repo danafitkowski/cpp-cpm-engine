@@ -7,7 +7,7 @@ Re-run the applier against the capture sheet to refresh it.
 
 | Metric | Value |
 |---|---|
-| Engine version | `2.10.4` |
+| Engine version | `2.10.5` |
 | Cases fully passing | **13 / 13** |
 | Field-level checks | 27 |
 | Compared against | Primavera P6 23.12, scheduled by a human operator |
