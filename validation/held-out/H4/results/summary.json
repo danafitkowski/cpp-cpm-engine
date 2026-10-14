@@ -1,0 +1,199 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "c730158210afcef9969140659c0fdcf3c642a2fd0f13d96c47b20de4c4c93881"
+ },
+ "cases": {
+  "H4-01": {
+   "unfinished": 15,
+   "all_fields_match": 15,
+   "engine_unfinished": 15,
+   "hours_pass": true
+  },
+  "H4-02": {
+   "unfinished": 30,
+   "all_fields_match": 30,
+   "engine_unfinished": 30,
+   "hours_pass": true
+  },
+  "H4-03": {
+   "unfinished": 25,
+   "all_fields_match": 25,
+   "engine_unfinished": 25,
+   "hours_pass": true
+  },
+  "H4-04": {
+   "unfinished": 17,
+   "all_fields_match": 17,
+   "engine_unfinished": 17,
+   "hours_pass": true
+  },
+  "H4-05": {
+   "unfinished": 20,
+   "all_fields_match": 20,
+   "engine_unfinished": 20,
+   "hours_pass": true
+  },
+  "H4-06": {
+   "unfinished": 22,
+   "all_fields_match": 22,
+   "engine_unfinished": 22,
+   "hours_pass": true
+  },
+  "H4-07": {
+   "unfinished": 13,
+   "all_fields_match": 10,
+   "engine_unfinished": 13,
+   "hours_pass": true
+  },
+  "H4-08": {
+   "unfinished": 21,
+   "all_fields_match": 20,
+   "engine_unfinished": 21,
+   "hours_pass": true
+  },
+  "H4-09": {
+   "unfinished": 11,
+   "all_fields_match": 11,
+   "engine_unfinished": 11,
+   "hours_pass": true
+  },
+  "H4-10": {
+   "unfinished": 22,
+   "all_fields_match": 22,
+   "engine_unfinished": 22,
+   "hours_pass": true
+  },
+  "H4-11": {
+   "unfinished": 21,
+   "all_fields_match": 21,
+   "engine_unfinished": 21,
+   "hours_pass": true
+  },
+  "H4-12": {
+   "unfinished": 20,
+   "all_fields_match": 20,
+   "engine_unfinished": 20,
+   "hours_pass": true
+  }
+ },
+ "fields": {
+  "early_start": {
+   "match": 236,
+   "differ": 1
+  },
+  "early_finish": {
+   "match": 236,
+   "differ": 1
+  },
+  "late_start": {
+   "match": 234,
+   "differ": 3
+  },
+  "late_finish": {
+   "match": 235,
+   "differ": 2
+  },
+  "total_float_hr": {
+   "match": 234,
+   "differ": 3
+  },
+  "free_float_hr": {
+   "match": 236,
+   "differ": 1
+  },
+  "critical": {
+   "match": 236,
+   "differ": 1
+  }
+ },
+ "rows": 237,
+ "rows_all_match": 233,
+ "left_out": {},
+ "differences": [
+  {
+   "case": "H4-07",
+   "task_code": "A1040",
+   "field": "late_start",
+   "engine": "2026-08-29 09:30",
+   "p6": "2026-08-30 14:00"
+  },
+  {
+   "case": "H4-07",
+   "task_code": "A1040",
+   "field": "late_finish",
+   "engine": "2026-08-31 17:30",
+   "p6": "2026-09-02 10:00"
+  },
+  {
+   "case": "H4-07",
+   "task_code": "A1040",
+   "field": "total_float_hr",
+   "engine": -58.5,
+   "p6": -42
+  },
+  {
+   "case": "H4-07",
+   "task_code": "A1050",
+   "field": "late_start",
+   "engine": "2026-08-31 17:30",
+   "p6": "2026-09-04 07:00"
+  },
+  {
+   "case": "H4-07",
+   "task_code": "A1050",
+   "field": "late_finish",
+   "engine": "2026-09-10 17:30",
+   "p6": "2026-09-14 07:00"
+  },
+  {
+   "case": "H4-07",
+   "task_code": "A1050",
+   "field": "total_float_hr",
+   "engine": -58.5,
+   "p6": -21
+  },
+  {
+   "case": "H4-07",
+   "task_code": "A1120",
+   "field": "late_start",
+   "engine": "2026-09-10 17:30",
+   "p6": "2026-09-14 07:00"
+  },
+  {
+   "case": "H4-08",
+   "task_code": "A1060",
+   "field": "early_start",
+   "engine": "2026-08-06 08:00",
+   "p6": "2026-09-09 07:00"
+  },
+  {
+   "case": "H4-08",
+   "task_code": "A1060",
+   "field": "early_finish",
+   "engine": "2026-08-06 12:00",
+   "p6": "2026-09-09 11:00"
+  },
+  {
+   "case": "H4-08",
+   "task_code": "A1060",
+   "field": "total_float_hr",
+   "engine": 189,
+   "p6": 0
+  },
+  {
+   "case": "H4-08",
+   "task_code": "A1060",
+   "field": "free_float_hr",
+   "engine": 189,
+   "p6": 0
+  },
+  {
+   "case": "H4-08",
+   "task_code": "A1060",
+   "field": "critical",
+   "engine": false,
+   "p6": true
+  }
+ ]
+}

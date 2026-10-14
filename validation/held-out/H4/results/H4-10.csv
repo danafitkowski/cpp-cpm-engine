@@ -1,0 +1,155 @@
+case,task_code,field,engine,p6,match
+H4-10,A1040,early_start,2026-06-01 17:00,2026-06-01 17:00,Y
+H4-10,A1040,early_finish,2026-06-05 11:00,2026-06-05 11:00,Y
+H4-10,A1040,late_start,2026-06-01 17:00,2026-06-01 17:00,Y
+H4-10,A1040,late_finish,2026-06-05 11:00,2026-06-05 11:00,Y
+H4-10,A1040,total_float_hr,0,0,Y
+H4-10,A1040,free_float_hr,0,0,Y
+H4-10,A1040,critical,true,true,Y
+H4-10,A1060,early_start,2026-06-12 09:00,2026-06-12 09:00,Y
+H4-10,A1060,early_finish,2026-06-12 09:00,2026-06-12 09:00,Y
+H4-10,A1060,late_start,2026-06-12 09:00,2026-06-12 09:00,Y
+H4-10,A1060,late_finish,2026-06-12 09:00,2026-06-12 09:00,Y
+H4-10,A1060,total_float_hr,0,0,Y
+H4-10,A1060,free_float_hr,0,0,Y
+H4-10,A1060,critical,true,true,Y
+H4-10,A1070,early_start,2026-06-12 09:00,2026-06-12 09:00,Y
+H4-10,A1070,early_finish,2026-06-18 08:30,2026-06-18 08:30,Y
+H4-10,A1070,late_start,2026-06-12 09:00,2026-06-12 09:00,Y
+H4-10,A1070,late_finish,2026-06-18 08:30,2026-06-18 08:30,Y
+H4-10,A1070,total_float_hr,0,0,Y
+H4-10,A1070,free_float_hr,0,0,Y
+H4-10,A1070,critical,true,true,Y
+H4-10,A1080,early_start,2026-06-18 13:30,2026-06-18 13:30,Y
+H4-10,A1080,early_finish,2026-06-22 16:00,2026-06-22 16:00,Y
+H4-10,A1080,late_start,2026-06-18 13:30,2026-06-18 13:30,Y
+H4-10,A1080,late_finish,2026-06-22 16:00,2026-06-22 16:00,Y
+H4-10,A1080,total_float_hr,0,0,Y
+H4-10,A1080,free_float_hr,0,0,Y
+H4-10,A1080,critical,true,true,Y
+H4-10,A1090,early_start,2026-06-22 07:00,2026-06-22 07:00,Y
+H4-10,A1090,early_finish,2026-06-22 16:00,2026-06-22 16:00,Y
+H4-10,A1090,late_start,2026-06-22 07:00,2026-06-22 07:00,Y
+H4-10,A1090,late_finish,2026-06-22 16:00,2026-06-22 16:00,Y
+H4-10,A1090,total_float_hr,0,0,Y
+H4-10,A1090,free_float_hr,0,0,Y
+H4-10,A1090,critical,true,true,Y
+H4-10,A1100,early_start,2026-06-22 07:00,2026-06-22 07:00,Y
+H4-10,A1100,early_finish,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1100,late_start,2026-06-22 07:00,2026-06-22 07:00,Y
+H4-10,A1100,late_finish,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1100,total_float_hr,0,0,Y
+H4-10,A1100,free_float_hr,0,0,Y
+H4-10,A1100,critical,true,true,Y
+H4-10,A1110,early_start,2026-06-12 09:00,2026-06-12 09:00,Y
+H4-10,A1110,early_finish,2026-06-18 17:30,2026-06-18 17:30,Y
+H4-10,A1110,late_start,2026-06-30 10:00,2026-06-30 10:00,Y
+H4-10,A1110,late_finish,2026-07-07 08:00,2026-07-07 08:00,Y
+H4-10,A1110,total_float_hr,98.5,98.5,Y
+H4-10,A1110,free_float_hr,0,0,Y
+H4-10,A1110,critical,false,false,Y
+H4-10,A1120,early_start,2026-06-14 01:00,2026-06-14 01:00,Y
+H4-10,A1120,early_finish,2026-06-15 17:00,2026-06-15 17:00,Y
+H4-10,A1120,late_start,2026-07-05 16:00,2026-07-05 16:00,Y
+H4-10,A1120,late_finish,2026-07-07 08:00,2026-07-07 08:00,Y
+H4-10,A1120,total_float_hr,519,519,Y
+H4-10,A1120,free_float_hr,86,86,Y
+H4-10,A1120,critical,false,false,Y
+H4-10,A1130,early_start,2026-06-18 09:00,2026-06-18 09:00,Y
+H4-10,A1130,early_finish,2026-06-18 09:00,2026-06-18 09:00,Y
+H4-10,A1130,late_start,2026-06-30 15:00,2026-06-30 15:00,Y
+H4-10,A1130,late_finish,2026-06-30 15:00,2026-06-30 15:00,Y
+H4-10,A1130,total_float_hr,86,86,Y
+H4-10,A1130,free_float_hr,0,0,Y
+H4-10,A1130,critical,false,false,Y
+H4-10,A1140,early_start,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1140,early_finish,2026-07-14 15:00,2026-07-14 15:00,Y
+H4-10,A1140,late_start,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1140,late_finish,2026-07-14 15:00,2026-07-14 15:00,Y
+H4-10,A1140,total_float_hr,0,0,Y
+H4-10,A1140,free_float_hr,0,0,Y
+H4-10,A1140,critical,true,true,Y
+H4-10,A1150,early_start,2026-07-06 11:00,2026-07-06 11:00,Y
+H4-10,A1150,early_finish,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1150,late_start,2026-07-06 11:00,2026-07-06 11:00,Y
+H4-10,A1150,late_finish,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1150,total_float_hr,0,0,Y
+H4-10,A1150,free_float_hr,0,0,Y
+H4-10,A1150,critical,true,true,Y
+H4-10,A1160,early_start,2026-06-25 07:00,2026-06-25 07:00,Y
+H4-10,A1160,early_finish,2026-06-25 16:00,2026-06-25 16:00,Y
+H4-10,A1160,late_start,2026-07-07 13:00,2026-07-07 13:00,Y
+H4-10,A1160,late_finish,2026-07-08 10:30,2026-07-08 10:30,Y
+H4-10,A1160,total_float_hr,70,70,Y
+H4-10,A1160,free_float_hr,0,0,Y
+H4-10,A1160,critical,false,false,Y
+H4-10,A1170,early_start,2026-06-19 07:00,2026-06-19 07:00,Y
+H4-10,A1170,early_finish,2026-06-19 07:00,2026-06-19 07:00,Y
+H4-10,A1170,late_start,2026-07-07 08:00,2026-07-07 08:00,Y
+H4-10,A1170,late_finish,2026-07-07 08:00,2026-07-07 08:00,Y
+H4-10,A1170,total_float_hr,98.5,98.5,Y
+H4-10,A1170,free_float_hr,0,0,Y
+H4-10,A1170,critical,false,false,Y
+H4-10,A1180,early_start,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1180,early_finish,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1180,late_start,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1180,late_finish,2026-07-07 17:00,2026-07-07 17:00,Y
+H4-10,A1180,total_float_hr,0,0,Y
+H4-10,A1180,free_float_hr,0,0,Y
+H4-10,A1180,critical,true,true,Y
+H4-10,A1190,early_start,2026-06-25 16:00,2026-06-25 16:00,Y
+H4-10,A1190,early_finish,2026-06-27 00:00,2026-06-27 00:00,Y
+H4-10,A1190,late_start,2026-07-20 05:00,2026-07-20 05:00,Y
+H4-10,A1190,late_finish,2026-07-21 13:00,2026-07-21 13:00,Y
+H4-10,A1190,total_float_hr,565,565,Y
+H4-10,A1190,free_float_hr,565,565,Y
+H4-10,A1190,critical,false,false,Y
+H4-10,A1200,early_start,2026-07-10 07:30,2026-07-10 07:30,Y
+H4-10,A1200,early_finish,2026-07-13 07:30,2026-07-13 07:30,Y
+H4-10,A1200,late_start,2026-07-21 13:00,2026-07-21 13:00,Y
+H4-10,A1200,late_finish,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1200,total_float_hr,60,60,Y
+H4-10,A1200,free_float_hr,60,60,Y
+H4-10,A1200,critical,false,false,Y
+H4-10,A1210,early_start,2026-06-30 17:00,2026-06-30 17:00,Y
+H4-10,A1210,early_finish,2026-07-09 11:00,2026-07-09 11:00,Y
+H4-10,A1210,late_start,2026-07-13 11:30,2026-07-13 11:30,Y
+H4-10,A1210,late_finish,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1210,total_float_hr,70,70,Y
+H4-10,A1210,free_float_hr,70,70,Y
+H4-10,A1210,critical,false,false,Y
+H4-10,A1220,early_start,2026-07-13 07:30,2026-07-13 07:30,Y
+H4-10,A1220,early_finish,2026-07-21 12:00,2026-07-21 12:00,Y
+H4-10,A1220,late_start,2026-07-13 07:30,2026-07-13 07:30,Y
+H4-10,A1220,late_finish,2026-07-21 12:00,2026-07-21 12:00,Y
+H4-10,A1220,total_float_hr,0,0,Y
+H4-10,A1220,free_float_hr,0,0,Y
+H4-10,A1220,critical,true,true,Y
+H4-10,A1230,early_start,2026-07-21 13:00,2026-07-21 13:00,Y
+H4-10,A1230,early_finish,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1230,late_start,2026-07-21 13:00,2026-07-21 13:00,Y
+H4-10,A1230,late_finish,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1230,total_float_hr,0,0,Y
+H4-10,A1230,free_float_hr,0,0,Y
+H4-10,A1230,critical,true,true,Y
+H4-10,A1240,early_start,2026-06-24 08:00,2026-06-24 08:00,Y
+H4-10,A1240,early_finish,2026-07-02 13:30,2026-07-02 13:30,Y
+H4-10,A1240,late_start,2026-07-09 14:00,2026-07-09 14:00,Y
+H4-10,A1240,late_finish,2026-07-20 14:30,2026-07-20 14:30,Y
+H4-10,A1240,total_float_hr,98.5,98.5,Y
+H4-10,A1240,free_float_hr,0,0,Y
+H4-10,A1240,critical,false,false,Y
+H4-10,A1250,early_start,2026-07-06 07:00,2026-07-06 07:00,Y
+H4-10,A1250,early_finish,2026-07-06 11:00,2026-07-06 11:00,Y
+H4-10,A1250,late_start,2026-07-21 13:00,2026-07-21 13:00,Y
+H4-10,A1250,late_finish,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1250,total_float_hr,98.5,98.5,Y
+H4-10,A1250,free_float_hr,98.5,98.5,Y
+H4-10,A1250,critical,false,false,Y
+H4-10,A1260,early_start,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1260,early_finish,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1260,late_start,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1260,late_finish,2026-07-21 17:00,2026-07-21 17:00,Y
+H4-10,A1260,total_float_hr,0,0,Y
+H4-10,A1260,free_float_hr,0,0,Y
+H4-10,A1260,critical,true,true,Y
