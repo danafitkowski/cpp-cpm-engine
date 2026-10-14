@@ -187,7 +187,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  8189c519b827f0a5b062cf23a57fd353c25d6e486484d6a32bb524708124ff85
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  44051fdf927a597f4843b5e2b2c011492b886fcc1f2ce8fb652b791c99ea10e5
+cpm_hours.py    SHA-256:  75a9842161df5de1b1f558bb4ac45ac74385e05cf46b56b31816165916fb5736
 
 (v2.10.6 the two differences held-out set H4 left 2026-10-14 - cpm.py bumped
 from fcd0fa89..., cpm_hours.py from 6b367aee...: ENGINE_VERSION reads 2.10.6;

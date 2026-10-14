@@ -4,7 +4,7 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![tests: 1489 passing](https://img.shields.io/badge/tests-1489%20passing-brightgreen.svg)](cpm-engine.test.js)
 [![crossval: JS↔Python 10350/10350](https://img.shields.io/badge/JS%E2%86%94Python-10350%2F10350-brightgreen.svg)](DAUBERT.md#31-independent-verification)
-[![coverage: 94%](https://img.shields.io/badge/coverage-94%25%20stmts%20%2F%2082%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2106-baseline)
+[![coverage: 94%](https://img.shields.io/badge/coverage-94%25%20stmts%20%2F%2083%25%20branches-brightgreen.svg)](DAUBERT.md#21-test-coverage-v2106-baseline)
 [![verify](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml/badge.svg)](https://github.com/danafitkowski/cpp-cpm-engine/actions/workflows/verify.yml)
 [![Daubert: disclosed](https://img.shields.io/badge/Daubert-disclosed-blueviolet.svg)](DAUBERT.md)
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
