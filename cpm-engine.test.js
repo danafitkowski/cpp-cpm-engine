@@ -13402,6 +13402,45 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         [m3a, m3b, m5, m6].every(m => m && m.indexOf('uncaptured') < 0));
 }
 
+// ── LD (14-Oct-2026) — a lag handed on in days is hours on the predecessor's calendar ─
+// P6 converts a lag entered in days to hours on the PREDECESSOR's calendar,
+// whatever the lag calendar (23.12 help; P6 probes flag-s / flag-j,
+// validation/p6-probes/fragnet-lag-2026-10-14 in the engine repository:
+// "1d" stored as 10 h with a 10 h predecessor, 6 h
+// successor, 12 h project calendar, 8 h admin default, under rcal_Successor and
+// rcal_ProjDefault). The hours pass took the successor's hours per day under
+// rcal_Successor for a tie carrying only lag_days (a TIA fragnet's). A 20 h on
+// Mon-Fri 07-17 -> B 12 h on Mon-Fri 08-14, FS + 1 day, project calendar every
+// day 06-18, data date Wed 11-Mar-2026 07:00; A finishes Thu 12-Mar 17:00.
+// Python paired file: _cpp_common/tests/test_fragnet_lag_predecessor_hours_2026_10_14.py.
+{
+    const week = (s, f, days) => '(0||CalendarData()((0||DaysOfWeek()(' + [1, 2, 3, 4, 5, 6, 7].map(d =>
+        days.indexOf(d) >= 0 ? '(0||' + d + '()((0||0(s|' + s + '|f|' + f + ')())))' : '(0||' + d + '()())').join('') +
+        '))(0||Exceptions()())))';
+    const cal = {
+        P10: { raw: week('07:00', '17:00', [2, 3, 4, 5, 6]), work_days: [1, 2, 3, 4, 5], hours_per_day: 10 },
+        S6: { raw: week('08:00', '14:00', [2, 3, 4, 5, 6]), work_days: [1, 2, 3, 4, 5], hours_per_day: 6 },
+        J12: { raw: week('06:00', '18:00', [1, 2, 3, 4, 5, 6, 7]), work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 12 },
+    };
+    const bStart = (token, tie) => {
+        const acts = [{ code: 'A', duration_days: 2, remaining_hours: 20, clndr_id: 'P10' },
+            { code: 'B', duration_days: 2, remaining_hours: 12, clndr_id: 'S6' }];
+        const r = E.computeCPM(acts, [Object.assign({ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 1 }, tie || {})],
+            { dataDate: '2026-03-11 07:00', calMap: cal, projectCalendar: 'J12', relationshipLagCalendar: token });
+        return r.hours.applied && r.nodes.A.early_finish_dt === '2026-03-12 17:00' ? r.nodes.B.early_start_dt : null;
+    };
+    const s = bStart('rcal_Successor');
+    check('LD-1: under rcal_Successor a day of lag is the predecessor\'s 10 h, walked on B\'s calendar (Mon 12:00)',
+        s === '2026-03-16 12:00', s);
+    const b = bStart('successor');
+    check('LD-2: a blank lag calendar reads as the successor\'s and converts the same way', b === '2026-03-16 12:00', b);
+    const o = ['rcal_ProjDefault', 'rcal_Predecessor', 'rcal_24Hour'].map(t => bStart(t));
+    check('LD-3: the other lag calendars already converted on the predecessor',
+        JSON.stringify(o) === JSON.stringify(['2026-03-16 08:00', '2026-03-16 08:00', '2026-03-13 08:00']), JSON.stringify(o));
+    const h6 = bStart('rcal_Successor', { lag_hours: 6 }), h99 = bStart('rcal_Successor', { lag_hours: 6, lag_days: 99 });
+    check('LD-4: a tie with P6\'s own lag_hours is walked as handed', !!h6 && h6 !== s && h6 === h99, JSON.stringify([h6, h99]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
