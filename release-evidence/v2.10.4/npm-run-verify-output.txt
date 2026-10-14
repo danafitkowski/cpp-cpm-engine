@@ -1,0 +1,96 @@
+
+> cpp-cpm-engine@2.10.4 verify
+> node scripts/attestation.js
+
+[1/3] Running unit tests (node cpm-engine.test.js)...
+       → 1481 passed, 0 failed (exit 0)
+[2/3] Running JS-Python crossval (node cpm-engine.crossval.js)...
+       → 158/158 fixtures, 9836/9836 checks (exit 0)
+[3/5] Running citation regression (node tests/no-fabricated-citations.test.js)...
+       → PASS (exit 0)
+[4/5] Running truncation regression (node tests/no-truncation.test.js)...
+       → PASS (exit 0)
+[5/5] Running version-drift regression (node tests/no-stale-version-refs.test.js)...
+       → PASS (exit 0)
+{
+  "$schema": "cpp-cpm-engine-attestation/v1",
+  "generated_by": "scripts/attestation.js",
+  "generated_at_utc": "2026-10-14T10:24:53.269Z",
+  "package": {
+    "name": "cpp-cpm-engine",
+    "version": "2.10.4"
+  },
+  "engine": {
+    "version": "2.10.4",
+    "file": "cpm-engine.js",
+    "sha256": "c730158210afcef9969140659c0fdcf3c642a2fd0f13d96c47b20de4c4c93881",
+    "bytes": 724679
+  },
+  "python_reference": {
+    "file": "python_reference/cpm.py",
+    "sha256": "3f90dad0797d4b1fe32a0d60f3c139b0fd4fa67772b5104c425e8f14300e7702",
+    "bytes": 291065
+  },
+  "python_reference_modules": [
+    {
+      "file": "python_reference/cpm_minutes.py",
+      "sha256": "d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c",
+      "bytes": 9736
+    },
+    {
+      "file": "python_reference/cpm_hours.py",
+      "sha256": "6b367aee02371e246bc2fe6465b7b05746046c284f04602d0d047e836209021b",
+      "bytes": 42226
+    }
+  ],
+  "git": {
+    "commit_sha": "32127a715130b7d3d41561ade2fc54d5b56b606a",
+    "ref": "refs/heads/main",
+    "workflow_run_url": null
+  },
+  "environment": {
+    "node_version": "v22.23.2",
+    "platform": "win32",
+    "arch": "x64",
+    "runner": null
+  },
+  "results": {
+    "unit_tests": {
+      "command": "node cpm-engine.test.js",
+      "passed": 1481,
+      "failed": 0,
+      "ok": true
+    },
+    "crossval": {
+      "command": "node cpm-engine.crossval.js",
+      "fixtures_passed": 158,
+      "fixtures_failed": 0,
+      "checks_passed": 9836,
+      "checks_total": 9836,
+      "ok": true
+    },
+    "citation_regression": {
+      "command": "node tests/no-fabricated-citations.test.js",
+      "ok": true
+    },
+    "truncation_regression": {
+      "command": "node tests/no-truncation.test.js",
+      "ok": true
+    },
+    "version_drift_regression": {
+      "command": "node tests/no-stale-version-refs.test.js",
+      "ok": true
+    }
+  },
+  "verdict": "PASS",
+  "reproducibility_notes": [
+    "To reproduce: (1) clone github.com/danafitkowski/cpp-cpm-engine at the cited commit_sha,",
+    "(2) `npm install` is NOT required — engine has zero dependencies, (3) install Python 3.10+,",
+    "(4) run `npm run verify` on your own machine,",
+    "(5) compare your engine.sha256, python_reference.sha256, and results to the values above.",
+    "Bit-identical SHA-256s + matching pass counts = reproduced; any drift documents the delta."
+  ]
+}
+
+Witness written to: attestations\latest.json
+Verdict: PASS
