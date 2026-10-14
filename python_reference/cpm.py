@@ -2117,11 +2117,16 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             continue
         lag_h = _hours_float(r.get('lag_hours'))
         if lag_h is None:
-            # a tie a pipeline added works in days: its lag on the hours per
-            # day of the calendar it is walked on
+            # a tie a pipeline added works in days: P6 converts a lag entered
+            # in days to hours on the PREDECESSOR's calendar, whatever the lag
+            # calendar (23.12 help; P6 probes flag-s / flag-j, 14-Oct-2026,
+            # validation/p6-probes/fragnet-lag-2026-10-14 in the engine
+            # repository: "1d" stored as the predecessor's 10 h under
+            # rcal_Successor and rcal_ProjDefault). Walked on the lag
+            # calendar below. Until 14-Oct-2026 rcal_Successor took the
+            # successor's hours per day.
             lag_d = _hours_float(r.get('lag_days')) or 0.0
-            on = by_code[r['to_code']] if str(relationship_lag_calendar or 'successor').strip() in (
-                'successor', 'rcal_Successor', 'succ') else by_code[r['from_code']]
+            on = by_code[r['from_code']]
             lag_h = lag_d * (_cal_hpd(on.get('clndr_id') or project_calendar) or 8.0)
         rels.append({'from_code': r['from_code'], 'to_code': r['to_code'],
                      'type': str(r.get('type') or 'FS').upper().replace('PR_', ''),

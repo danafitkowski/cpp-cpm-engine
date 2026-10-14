@@ -1,0 +1,58 @@
+{
+ "p6": "Primavera P6 Professional 23.12.1",
+ "date": "2026-10-14",
+ "admin_preferences": {
+  "hours_per_time_period_day": 8,
+  "use_assigned_calendar_for_work_hours_per_time_period": true
+ },
+ "file": {
+  "name": "flag.xer",
+  "sha256": "a7151a02735193d381c7d037a29b1310ac5f0db9fbd8b52a4e737bd801714532"
+ },
+ "method": "Both projects imported from flag.xer (Create New Project). In each, the Lag of A -> B (FS, 0 in the file) was typed as \"1d\" in activity A's Successors tab and committed (F10); TASKPRED.lag_hr_cnt was then read read-only from the P6 database. Both projects were deleted afterwards.",
+ "projects": [
+  {
+   "project": "ZZ-CPP-FLAG-S",
+   "lag_calendar": "rcal_Successor",
+   "calendars": {
+    "predecessor A": {
+     "week": "Mon-Fri 07:00-17:00",
+     "day_hr_cnt": 10
+    },
+    "successor B": {
+     "week": "Mon-Fri 08:00-14:00",
+     "day_hr_cnt": 6
+    },
+    "project calendar": {
+     "week": "Every day 06:00-18:00",
+     "day_hr_cnt": 12
+    }
+   },
+   "typed": "1d",
+   "displayed_after": "1.0d",
+   "lag_hr_cnt_stored": 10.0
+  },
+  {
+   "project": "ZZ-CPP-FLAG-J",
+   "lag_calendar": "rcal_ProjDefault",
+   "calendars": {
+    "predecessor A": {
+     "week": "Mon-Fri 07:00-17:00",
+     "day_hr_cnt": 10
+    },
+    "successor B": {
+     "week": "Mon-Fri 08:00-14:00",
+     "day_hr_cnt": 6
+    },
+    "project calendar": {
+     "week": "Every day 06:00-18:00",
+     "day_hr_cnt": 12
+    }
+   },
+   "typed": "1d",
+   "displayed_after": "1.0d",
+   "lag_hr_cnt_stored": 10.0
+  }
+ ],
+ "reading": "10 h is the predecessor's calendar. The successor's would give 6, the project calendar's 12 and the admin default 8."
+}

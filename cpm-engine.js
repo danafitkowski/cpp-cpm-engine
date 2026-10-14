@@ -3234,11 +3234,16 @@ function _hoursPass(activities, relationships, nodes, p) {
         if (!r || !byCode.has(r.from_code) || !byCode.has(r.to_code)) continue;
         let lagH = _hoursFloat(r.lag_hours);
         if (lagH === null) {
-            // a tie a pipeline added works in days: its lag on the hours per
-            // day of the calendar it is walked on
+            // a tie a pipeline added works in days: P6 converts a lag entered
+            // in days to hours on the PREDECESSOR's calendar, whatever the lag
+            // calendar (23.12 help; P6 probes flag-s / flag-j, 14-Oct-2026,
+            // validation/p6-probes/fragnet-lag-2026-10-14 in the engine
+            // repository: "1d" stored as the predecessor's 10 h under
+            // rcal_Successor and rcal_ProjDefault). Walked on the lag
+            // calendar below. Until 14-Oct-2026 rcal_Successor took the
+            // successor's hours per day.
             const lagD = _hoursFloat(r.lag_days) || 0;
-            const on = (rawLagCal === 'successor' || rawLagCal === 'rcal_Successor' || rawLagCal === 'succ')
-                ? byCode.get(r.to_code) : byCode.get(r.from_code);
+            const on = byCode.get(r.from_code);
             lagH = lagD * (calHpd(on.clndr_id || p.projectCalendar) || 8);
         }
         rels.push({
