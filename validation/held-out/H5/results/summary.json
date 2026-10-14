@@ -1,0 +1,114 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "cf33847c5338573ec562d28a0ac6aca6e428e344fbd1d1d837b54f979f23bca8"
+ },
+ "cases": {
+  "H5-01": {
+   "unfinished": 9,
+   "all_fields_match": 9,
+   "engine_unfinished": 9,
+   "hours_pass": true
+  },
+  "H5-02": {
+   "unfinished": 12,
+   "all_fields_match": 12,
+   "engine_unfinished": 12,
+   "hours_pass": true
+  },
+  "H5-03": {
+   "unfinished": 16,
+   "all_fields_match": 16,
+   "engine_unfinished": 16,
+   "hours_pass": true
+  },
+  "H5-04": {
+   "unfinished": 14,
+   "all_fields_match": 14,
+   "engine_unfinished": 14,
+   "hours_pass": true
+  },
+  "H5-05": {
+   "unfinished": 21,
+   "all_fields_match": 21,
+   "engine_unfinished": 21,
+   "hours_pass": true
+  },
+  "H5-06": {
+   "unfinished": 25,
+   "all_fields_match": 25,
+   "engine_unfinished": 25,
+   "hours_pass": true
+  },
+  "H5-07": {
+   "unfinished": 26,
+   "all_fields_match": 26,
+   "engine_unfinished": 26,
+   "hours_pass": true
+  },
+  "H5-08": {
+   "unfinished": 21,
+   "all_fields_match": 21,
+   "engine_unfinished": 21,
+   "hours_pass": true
+  },
+  "H5-09": {
+   "unfinished": 19,
+   "all_fields_match": 19,
+   "engine_unfinished": 19,
+   "hours_pass": true
+  },
+  "H5-10": {
+   "unfinished": 17,
+   "all_fields_match": 17,
+   "engine_unfinished": 17,
+   "hours_pass": true
+  },
+  "H5-11": {
+   "unfinished": 10,
+   "all_fields_match": 10,
+   "engine_unfinished": 10,
+   "hours_pass": true
+  },
+  "H5-12": {
+   "unfinished": 15,
+   "all_fields_match": 15,
+   "engine_unfinished": 15,
+   "hours_pass": true
+  }
+ },
+ "fields": {
+  "early_start": {
+   "match": 205,
+   "differ": 0
+  },
+  "early_finish": {
+   "match": 205,
+   "differ": 0
+  },
+  "late_start": {
+   "match": 205,
+   "differ": 0
+  },
+  "late_finish": {
+   "match": 205,
+   "differ": 0
+  },
+  "total_float_hr": {
+   "match": 205,
+   "differ": 0
+  },
+  "free_float_hr": {
+   "match": 205,
+   "differ": 0
+  },
+  "critical": {
+   "match": 205,
+   "differ": 0
+  }
+ },
+ "rows": 205,
+ "rows_all_match": 205,
+ "left_out": {},
+ "differences": []
+}
