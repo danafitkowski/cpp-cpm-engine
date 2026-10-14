@@ -12,6 +12,79 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.6 - 2026-10-14 - The two differences held-out set H4 left: As Late As Possible work past a successor under way, and a mandatory date on the late side
+
+**Computed values move (Class A): engine math changed.** Held-out set H4 scored v2.10.4 at 233 of 237. Its four
+differing activities came from two situations, both already present in v2.10.3. Four synthetic probe projects
+measured them in P6 Professional 23.12.1
+([`validation/p6-probes/h4-situations-2026-10-14/`](validation/p6-probes/h4-situations-2026-10-14/)), and this
+release reproduces what P6 does:
+
+- **As Late As Possible work and a successor already under way.** Under progress override, an FS or SS link into a
+  successor that has already started holds As Late As Possible work back no more than it binds the late dates. P6
+  slides the work past it, whether the work itself is under way or not started (H4-08 A1060). FF and SF links still
+  bind, and a successor not started still stops the slide at its early start. Under retained logic the started
+  successor holds the work, as before. Both passes change; the whole-day pass's `alap-slide-violates-succ` WARN no
+  longer reports the links the slide does not read.
+- **A mandatory date on the late side.** A Mandatory Start or Mandatory Finish on work not started sets its own late
+  date whatever its successors need, as the P6 23.12 help says. P6 prints the mandatory date where a link bound is
+  strictly earlier, or the same working time at an earlier instant (H4-07 A1120: a start-to-start bound on a
+  Saturday), and the predecessors take their late dates from it (H4-07 A1050, A1040). A Start On or Before or a
+  Start On keeps the earlier bound, as before. With both a Mandatory Start and a Mandatory Finish on one activity,
+  the earlier of the two pins sets the late dates. The hours pass changes; the whole-day pass already pinned a single
+  mandatory date (v2.9.12), and its primary-pin override no longer lets a primary Mandatory Start suppress an earlier
+  secondary Mandatory Finish (JS only: the Python reference already took the earlier pin).
+
+JS and the Python reference change together.
+
+**Verified.**
+- **The probes:** 144 of 144 rows match P6 on the four dates and both floats (v2.10.5: 99 of 144). HR-59 to HR-62 pin
+  the rules, and F164 to F166 hand both engines the shapes. The probes are fitted, not held out.
+- **Held-out set H5,** drawn after the engine was frozen and scored once on these bytes: **205 of 205** unfinished
+  activities match P6 on all seven fields, all 12 cases clean
+  ([`validation/held-out/H5/RESULT.md`](validation/held-out/H5/RESULT.md)). v2.10.5, diagnosed after the score, gives
+  the same 205: H5 drew no case where either rule decides a value.
+- **Against P6, through CPP's converters and this engine** (the measuring machine's P6 database): outside the probes
+  (321 projects, 95,017 unfinished activities) no row moved against v2.10.5, and 95,015 match on all seven fields, as
+  before; the two left are the P6 non-fixed points documented with v2.10.1. In the probes 45 rows moved, all onto P6.
+- **JS against Python** on the same database (325 projects, the probes included, 163,934 activities): every field
+  equal.
+- **On 711 distinct XER files on the measuring machine** (707 readable by both versions), through `parseXER` and
+  `computeCPM` with the hours handed on, 10 move:
+  - the three changed probe files, and H4-07 and H4-08 onto P6's recorded values (a diagnosis only: H4's published
+    233 of 237 stands);
+  - three copies of one real export that carries a Mandatory Start and a Mandatory Finish on every activity and no
+    relationships. There only the whole-day pass's own figures move, on 104 activities (its day numbers,
+    `day_pass_dates` and `day_pass_float`), where it now takes the earlier pin, as the hours pass, the Python
+    reference and P6 do. The printed dates and floats do not move. For v2.10.4, P6's own F9 of a copy of that export
+    matched the engine on all seven fields for all 1,040 activities compared, and this release keeps those values;
+  - a synthetic constraint-heavy fixture pair in CPP's schedule-health-review tests (66 activities), whose mandatory
+    constraints now pin as P6's do.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.5, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values; the capture cases read 256 of 256 at each data date.
+  The H1, H2 and H3 probe replays read 293, 345 and 537 rows, as before.
+- **JS unit suite:** 1,489 checks green, up from 1,485 (HR-59 to HR-62).
+- **Cross-validation:** 162 fixtures, 10350 of 10350 executed, 0 skipped, 0 failures; alert parity on 160 of 162
+  (the other 2 must throw).
+- **Coverage,** re-measured on these bytes: 94.67% statements, 83.22% branches, 96.86% functions.
+
+**Who is affected.**
+- Schedules under progress override with As Late As Possible work whose successor has started, linked FS or SS.
+- Schedules with a Mandatory Start or Mandatory Finish on work not started whose successors need it earlier: the late
+  dates and float of the activity and of its predecessors, in the hours pass.
+- In the whole-day pass only (its day numbers, and any output where the hours pass does not run): activities with a
+  primary Mandatory Start and an earlier secondary Mandatory Finish.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version is
+re-run under §12.2 where its schedule carries either situation.
+
+**Not claimed.**
+- H5 drew no case where either rule decides a value: the rules rest on the probes and the database check.
+- The rule for both mandatory pins on one activity rests on one real export P6 scheduled for v2.10.4, not on a probe.
+- Resource dependent work with a mandatory date is left as it was (not probed).
+
+---
+
 ## v2.10.5 - 2026-10-14 - A lag handed on in days becomes hours on the predecessor's calendar, as P6 converts a lag entered in days
 
 **Computed values move (Class A): engine math changed, for relationships an integration adds.** The hours pass

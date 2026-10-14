@@ -152,6 +152,15 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.6 (reviewed 2026-10-14)
+
+H4's two differences are **CLOSED**. v2.10.6 moves computed values (change class A under the operator procedure): under progress override, As Late As Possible work slides past an FS or SS link into a successor already under way, and a Mandatory Start or Mandatory Finish on work not started sets its own late date whatever its successors need, the earlier pin governing where an activity carries both (see CHANGELOG.md). The rules were measured on four P6 probes, so they are fitted; held-out set H5 then scored these bytes once at 205 of 205, all 12 cases clean, though its draw gave neither rule a value to decide.
+- The unit suite grew from 1,485 to 1,489.
+- The cross-validation surface grew from 159 to 162 fixtures and from 9,873 of 9,873 to 10,350 of 10,350 comparisons, 0 skipped, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.67% statements / 83.22% branches / 96.86% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+- No held-out difference is open.
+
 ## Status at v2.10.5 (reviewed 2026-10-14)
 
 No audit item changed status. v2.10.5 moves computed values (change class A under the operator procedure), only for relationships an integration adds with a lag in days: under the successor lag calendar such a lag now becomes hours on the predecessor's calendar, as P6 converts a lag entered in days (see CHANGELOG.md). The rule is in the P6 help and was measured on two P6 probes, so it is fitted; no held-out set was drawn, because no XER case can carry such a relationship, and no value read from an XER moved.
@@ -334,4 +343,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.5. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.6. Update on every release that closes or opens an audit item.
