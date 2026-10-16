@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.6';
+const ENGINE_VERSION = '2.10.7';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -440,12 +440,18 @@ function _normalizeConstraint2(c, alerts, _ctx) {
 // SECTION A — Date helpers + calendar arithmetic
 // ============================================================================
 
-const EPOCH_YEAR = 2020;
+// Day numbers count from 1-Jan-1900 (EP, v2.10.7). The whole-day pass reads a
+// day number of 0 or less as no date, and with the epoch at 1-Jan-2020 every
+// earlier date counted at or below zero: a schedule dated before 2020 lost its
+// data date and every date in the whole-day pass. Day numbers are relative, so
+// no date or float moves for a schedule dated 2020 or later. Python paired
+// site: EPOCH_YEAR in python_reference/cpm.py.
+const EPOCH_YEAR = 1900;
 const EPOCH_MONTH = 1;  // 1-based
 const EPOCH_DAY = 1;
 const VALID_REL_TYPES = ['FS', 'SS', 'FF', 'SF'];
 
-// Internally we track integer day offsets from EPOCH (2020-01-01). All public
+// Internally we track integer day offsets from EPOCH (1900-01-01). All public
 // num↔date conversions go through this anchor. We avoid Date.UTC(1,...)
 // because JS's 2-digit-year quirk silently rewrites year 1 → 1901.
 const _EPOCH_MS = Date.UTC(EPOCH_YEAR, EPOCH_MONTH - 1, EPOCH_DAY);
@@ -11180,17 +11186,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '162 cross-validation fixtures. The harness defines 10350 ' +
+                '164 cross-validation fixtures. The harness defines 10496 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 10350 / 10350" is the whole comparison surface. ' +
+                'reported "Checks: 10496 / 10496" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 10350 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 10496 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 160 of the 162 fixtures: ' +
+                'severity-level alert parity, compared on 162 of the 164 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11229,18 +11235,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '10350 comparisons it defines over 162 fixtures and skips none; every ' +
+                '10496 comparisons it defines over 164 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '162 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '164 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 10350 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 10496 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 160 of the 162 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 162 of the 164 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.6",
-  "generated_utc": "2026-10-14T19:19:54.987Z",
+  "engine_version": "2.10.7",
+  "generated_utc": "2026-10-16T15:07:52.362Z",
   "fixtures": {
-    "total": 162,
-    "passed": 162,
+    "total": 164,
+    "passed": 164,
     "failed": 0
   },
   "checks": {
-    "executed": 10350,
+    "executed": 10496,
     "failed": 0,
-    "passed": 10350,
+    "passed": 10496,
     "skipped": 0,
-    "surface": 10350
+    "surface": 10496
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 160,
-    "project_finish": 160,
-    "critical_codes": 160,
-    "topo_order": 160,
-    "alert_count": 160,
-    "alert_severity_counts": 160,
-    "node <id>": 9357,
+    "project_finish_num": 162,
+    "project_finish": 162,
+    "critical_codes": 162,
+    "topo_order": 162,
+    "alert_count": 162,
+    "alert_severity_counts": 162,
+    "node <id>": 9490,
     "threw (both engines)": 2,
-    "hours": 31
+    "hours": 32
   },
   "rows": [
     {
@@ -1322,6 +1322,22 @@
       "id": "F166",
       "name": "F166 - MP: a Mandatory Start or Finish against an earlier link bound, a weekend tie, both pins, Start On or Before controls, in hours",
       "checks": 217,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F167",
+      "name": "F167 - EP: a schedule dated 2013, work under way, completed work and a constraint, whole days",
+      "checks": 69,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F168",
+      "name": "F168 - EP: the same, in hours",
+      "checks": 77,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

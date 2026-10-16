@@ -1013,7 +1013,9 @@ console.log('\n=== v2.1 Wave A6 — numToDate NaN guard ===');
     check('numToDate(-Infinity) returns empty string', E.numToDate(-Infinity) === '');
     check('numToDate(0) still empty (existing behavior)', E.numToDate(0) === '');
     check('numToDate(-1) still empty (existing behavior)', E.numToDate(-1) === '');
-    check('numToDate(2196) still works (regression)', E.numToDate(2196) === '2026-01-05');
+    // 2196 days after 1-Jan-2020 (the epoch until v2.10.7, EP)
+    check('numToDate(2196 days after 2020-01-01) still works (regression)',
+        E.numToDate(E.dateToNum('2020-01-01') + 2196) === '2026-01-05');
 }
 
 console.log('\n=== v2.1 Wave A5 — calendar validation hardening ===');
@@ -1499,7 +1501,8 @@ console.log('\n=== v2.1 Wave C1 — addWorkDays/subtractWorkDays MonFri fast pat
     // for ALL (start_offset, n) and (end_offset, n) combos in the grid.
     // The walk-based reference replicates the engine's fallback exactly.
     const isWd = (off) => {
-        const p6 = new Date(Date.UTC(2020, 0, 1) + off * 86400000).getUTCDay();
+        // the engine's own epoch (1-Jan-1900 since v2.10.7, EP)
+        const p6 = new Date(Date.UTC(E.EPOCH_YEAR, E.EPOCH_MONTH - 1, E.EPOCH_DAY) + off * 86400000).getUTCDay();
         return [1, 2, 3, 4, 5].indexOf(p6) !== -1;
     };
     function walkAdd(start, n) {
@@ -5888,9 +5891,10 @@ console.log('\n=== Section R-v298 — Round 6 fix wave ===');
     check('R-v298-B6: 3-digit year rejected (returns 0)',
         E.dateToNum('999-01-01') === 0,
         'got ' + E.dateToNum('999-01-01'));
-    // 4-digit Gregorian still works (1999 < EPOCH 2020 → negative offset, valid).
-    check('R-v298-B6: 4-digit year still works (1999-01-01 non-zero, pre-EPOCH negative)',
-        E.dateToNum('1999-01-01') === -7670,
+    // 4-digit Gregorian still works: 7,670 days before 1-Jan-2020, above zero
+    // since the epoch moved to 1-Jan-1900 (v2.10.7, EP).
+    check('R-v298-B6: 4-digit year still works (1999-01-01 above zero, 7,670 days before 2020-01-01)',
+        E.dateToNum('1999-01-01') > 0 && E.dateToNum('2020-01-01') - E.dateToNum('1999-01-01') === 7670,
         'got ' + E.dateToNum('1999-01-01'));
     // Anchor that 1999 != year 99 (regression for the silent-rewrite bug).
     check('R-v298-B6: 1999-01-01 and bug-induced 99 do NOT collide silently',
@@ -13543,6 +13547,62 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         po.X2.ef_last_worked_date === po.Y2.ef_last_worked_date && rl.X.es_date === '2026-01-07',
         JSON.stringify([po.X.es_date, po.D.ef_last_worked_date, po.X.ef_last_worked_date, po.X2.ef_last_worked_date,
             po.Y2.ef_last_worked_date, rl.X.es_date]));
+}
+
+// ── v2.10.7 candidate — schedules dated before 2020 (EP) ────────────────────
+// Day numbers count from the epoch, and the whole-day pass reads 0 or less as
+// no date. With the epoch at 1-Jan-2020 every earlier date counted at or below
+// zero: on P6 probe projects dated 2013 the whole-day pass left early starts
+// blank. The epoch is 1-Jan-1900; day numbers stay relative, so nothing moves
+// for a schedule dated 2020 or later. Python paired file:
+// _cpp_common/tests/test_epoch_before_2020_2026_10_16.py.
+{
+    const cal = { C1: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] } };
+    const A = (code, d, x) => Object.assign({ code, duration_days: d, clndr_id: 'C1' }, x || {});
+    const L = (a, b, t, lag) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: lag || 0 });
+    const acts = () => [A('A', 5), A('B', 3), A('C', 2), A('D', 4), A('E', 0, { task_type: 'TT_FinMile' })];
+    const rels = () => [L('A', 'B'), L('A', 'C', 'SS', 1), L('C', 'D', 'FS', 2), L('B', 'E'), L('D', 'E', 'FF')];
+    // Both Mondays, 678 weeks apart.
+    const SHIFT = Math.round((Date.UTC(2026, 7, 24) - Date.UTC(2013, 7, 26)) / 86400000);
+    const run = (dd) => E.computeCPM(acts(), rels(), { dataDate: dd, calMap: cal }).nodes;
+    const shift = (s, days) => {
+        if (!s) return s;
+        const d = new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) + days * 86400000);
+        return d.toISOString().slice(0, 10);
+    };
+    const whole = (n) => ({ es: E.numToDate(n.es), ef: E.numToDate(n.ef), ls: E.numToDate(n.ls), lf: E.numToDate(n.lf),
+        tf: n.tf, drv: (n.driving_predecessor || {}).code || null });
+    const early = run('2013-08-26');
+    const late = run('2026-08-24');
+    const same = ['A', 'B', 'C', 'D', 'E'].every((c) => {
+        const e = whole(early[c]);
+        const l = whole(late[c]);
+        return shift(e.es, SHIFT) === l.es && shift(e.ef, SHIFT) === l.ef && shift(e.ls, SHIFT) === l.ls &&
+            shift(e.lf, SHIFT) === l.lf && e.tf === l.tf && e.drv === l.drv;
+    });
+    check('EP-1: a 2013 schedule is the same whole-day schedule as in 2026, shifted by the weeks between',
+        SHIFT % 7 === 0 && same, JSON.stringify([whole(early.A), whole(late.A), whole(early.E), whole(late.E)]));
+    check('EP-2: the 2013 schedule starts at its own data date, and B is driven by A',
+        E.numToDate(early.A.es) === '2013-08-26' && early.A.es > 0 && (early.B.driving_predecessor || {}).code === 'A',
+        JSON.stringify([early.A.es, E.numToDate(early.A.es), early.B.driving_predecessor]));
+    const days = ['1990-06-15', '2013-08-26', '2019-12-31', '2020-01-01', '2020-01-02', '2031-03-03'];
+    check('EP-3: dates either side of 2020, 1-Jan-2020 included, count above zero and round-trip',
+        days.every((s) => E.dateToNum(s) > 0 && E.numToDate(E.dateToNum(s)) === s),
+        JSON.stringify(days.map((s) => [s, E.dateToNum(s), E.numToDate(E.dateToNum(s))])));
+    check('EP-4: a blank date is still no date, and day numbers stay relative',
+        E.dateToNum('') === 0 && E.dateToNum(null) === 0 && E.numToDate(0) === '' &&
+        E.dateToNum('2026-08-24') - E.dateToNum('2013-08-26') === SHIFT,
+        JSON.stringify([E.dateToNum(''), E.numToDate(0), E.dateToNum('2026-08-24') - E.dateToNum('2013-08-26')]));
+    // Day 0 under the old epoch: the actual-start gate read 1-Jan-2020 as no
+    // actual start (DAUBERT's audit HIGH R12 limitation), so A scheduled all 5
+    // days from the data date and B started Mon 13-Jan. Started Wed 1-Jan with
+    // 3 days to go, A works Mon 6 to Wed 8 and B starts Thu 9-Jan.
+    const r12 = E.computeCPM([A('A', 5, { actual_start: '2020-01-01', remaining_duration: 3 }), A('B', 2)],
+        [L('A', 'B')], { dataDate: '2020-01-06', calMap: cal }).nodes;
+    check('EP-5: an actual start on 1-Jan-2020 is work under way',
+        E.numToDate(r12.A.es) === '2020-01-01' && r12.A.es_date === '2020-01-01' &&
+        E.numToDate(r12.B.es) === '2020-01-09' && r12.B.es_date === '2020-01-09',
+        JSON.stringify([E.numToDate(r12.A.es), r12.A.es_date, E.numToDate(r12.B.es), r12.B.es_date]));
 }
 
 console.log('\n========================================');

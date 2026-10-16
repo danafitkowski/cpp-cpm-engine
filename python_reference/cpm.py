@@ -75,7 +75,13 @@ import re
 from collections import defaultdict, deque
 from datetime import date, datetime, timedelta
 
-EPOCH_YEAR = 2020
+# Day numbers count from 1-Jan-1900 (EP, v2.10.7). The whole-day pass reads a
+# day number of 0 or less as no date, and with the epoch at 1-Jan-2020 every
+# earlier date counted at or below zero: a schedule dated before 2020 lost its
+# data date and every date in the whole-day pass. Day numbers are relative, so
+# no date or float moves for a schedule dated 2020 or later. JS paired site:
+# EPOCH_YEAR in cpm-engine.js.
+EPOCH_YEAR = 1900
 EPOCH_MONTH = 1
 EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
@@ -134,7 +140,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.6'
+ENGINE_VERSION = '2.10.7'
 
 
 # =============================================================================

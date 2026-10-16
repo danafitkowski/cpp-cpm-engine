@@ -3482,6 +3482,23 @@ compareFixture('F166 - MP: a Mandatory Start or Finish against an earlier link b
     data_date: '2026-10-05 08:00', cal_map: H3CAL, relationship_lag_calendar: 'rcal_Predecessor',
 }, { hours: true });
 
+// EP (v2.10.7): a schedule dated before 2020, whole days and in hours. Day numbers count from 1-Jan-1900 since
+// v2.10.7; before it every date before 2020 read as no date in the whole-day pass.
+const epActs = (A) => [A('A', 40), A('B', 24), A('C', 16, { actual_start: '2013-08-19 08:00', remaining_duration: 1 }),
+    A('D', 32), A('K', 8, { actual_start: '2013-08-12 08:00', actual_finish: '2013-08-16 17:00', is_complete: true }),
+    A('M', 0, { task_type: 'TT_Mile', constraint: { type: 'SNET', date: '2013-09-02' } }),
+    A('E', 0, { task_type: 'TT_FinMile' })];
+const epRels = (R) => [R('A', 'B'), R('A', 'D', 'SS', 8), R('C', 'D'), R('K', 'A'), R('M', 'D'), R('B', 'E'),
+    R('D', 'E', 'FF')];
+compareFixture('F167 - EP: a schedule dated 2013, work under way, completed work and a constraint, whole days', {
+    activities: epActs(dA), relationships: epRels(dR),
+    data_date: '2013-08-26', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+});
+compareFixture('F168 - EP: the same, in hours', {
+    activities: epActs(hA), relationships: epRels(hR),
+    data_date: '2013-08-26 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

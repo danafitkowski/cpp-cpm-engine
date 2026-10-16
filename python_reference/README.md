@@ -181,13 +181,28 @@ have been applied:
    a Mandatory Start or Mandatory Finish on work not started sets its own
    late date whatever its successors need (hours pass; the whole-day pass
    already pinned it).
+20. v2.10.7 (16-Oct-2026): day numbers count from 1-Jan-1900, applied
+   here by the same patch as the canonical engine. The whole-day pass
+   reads a day number of 0 or less as no date, and with the epoch at
+   1-Jan-2020 every earlier date counted at or below zero: a schedule
+   dated before 2020 lost its data date and its dates in the whole-day
+   pass, and an actual start on 1-Jan-2020 itself read as none. Day
+   numbers are relative, so nothing moves for a schedule dated 2020 or
+   later.
 
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  8189c519b827f0a5b062cf23a57fd353c25d6e486484d6a32bb524708124ff85
+cpm.py          SHA-256:  04a59a1b0ec5d36d6536d836fdc0397746abf0854909c9eff3bb00fa164b8bc1
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  75a9842161df5de1b1f558bb4ac45ac74385e05cf46b56b31816165916fb5736
+
+(v2.10.7 schedules dated before 2020 2026-10-16 - cpm.py bumped from
+8189c519...: ENGINE_VERSION reads 2.10.7; day numbers count from 1-Jan-1900
+(EPOCH_YEAR 1900), so the whole-day pass keeps the dates of a schedule dated
+before 2020 and an actual start on 1-Jan-2020; day numbers are relative, so
+no date or float moves for a schedule dated 2020 or later. The harness gains
+2 fixtures (F167-F168): 164 fixtures, 10496 of 10496 executed.)
 
 (v2.10.6 the two differences held-out set H4 left 2026-10-14 - cpm.py bumped
 from fcd0fa89..., cpm_hours.py from 6b367aee...: ENGINE_VERSION reads 2.10.6;
@@ -621,15 +636,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 291762
-  sha-256:  8189c519b827f0a5b062cf23a57fd353c25d6e486484d6a32bb524708124ff85
+  bytes: 292183
+  sha-256:  04a59a1b0ec5d36d6536d836fdc0397746abf0854909c9eff3bb00fa164b8bc1
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 162 passed, 0 failed
-  Checks:   10350 / 10350 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 164 passed, 0 failed
+  Checks:   10496 / 10496 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

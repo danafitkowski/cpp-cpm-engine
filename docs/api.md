@@ -13,7 +13,7 @@ const E = require('@critical-path-partners/cpm-engine');
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
 | `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.6'` at the current tag.|
-| `E.EPOCH_YEAR`         | number  | `2020` — the epoch anchor for internal day-offset arithmetic.            |
+| `E.EPOCH_YEAR`         | number  | `1900` — the epoch anchor for internal day-offset arithmetic (2020 through v2.10.6). |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
 | `E.VALID_REL_TYPES`    | string[]| `['FS', 'SS', 'FF', 'SF']`.                                              |
@@ -25,7 +25,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 ### `E.dateToNum(s)`
 
-Convert a `'YYYY-MM-DD'` string (or `'YYYY-MM-DD HH:MM'`) to an integer day offset from epoch (2020-01-01).
+Convert a `'YYYY-MM-DD'` string (or `'YYYY-MM-DD HH:MM'`) to an integer day offset from epoch (1900-01-01).
 
 ```js
 E.dateToNum('2026-01-05'); // 2196
