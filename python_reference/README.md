@@ -189,20 +189,32 @@ have been applied:
    pass, and an actual start on 1-Jan-2020 itself read as none. Day
    numbers are relative, so nothing moves for a schedule dated 2020 or
    later.
+   With them, the two situations held-out set H6 left, applied by the same
+   patch (P6 probes validation/p6-probes/h6-situations-2026-10-16):
+   As Late As Possible work under way slides over an SS or SF link out of
+   it by only the unexpired part of the lag (AU), and under retained logic
+   with SS lag from the Actual Start an SS link out of completed work
+   carries no date that work carries from unfinished predecessors (PS),
+   in both passes.
 
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  04a59a1b0ec5d36d6536d836fdc0397746abf0854909c9eff3bb00fa164b8bc1
+cpm.py          SHA-256:  d7c7f4a53a0cc54af32e190ac1eac9b5f68e83e55e2daa086e6f85f3bc357180
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  75a9842161df5de1b1f558bb4ac45ac74385e05cf46b56b31816165916fb5736
+cpm_hours.py    SHA-256:  bcb198bc83bb002e1850ee59ad8b1d7c169d4787fc91f930a4ceb1f1e73ca69b
 
-(v2.10.7 schedules dated before 2020 2026-10-16 - cpm.py bumped from
-8189c519...: ENGINE_VERSION reads 2.10.7; day numbers count from 1-Jan-1900
+(v2.10.7 schedules dated before 2020 and the two situations H6 left
+2026-10-16 - cpm.py bumped from 8189c519..., cpm_hours.py from 75a98421...:
+ENGINE_VERSION reads 2.10.7; day numbers count from 1-Jan-1900
 (EPOCH_YEAR 1900), so the whole-day pass keeps the dates of a schedule dated
 before 2020 and an actual start on 1-Jan-2020; day numbers are relative, so
-no date or float moves for a schedule dated 2020 or later. The harness gains
-2 fixtures (F167-F168): 164 fixtures, 10496 of 10496 executed.)
+no date or float moves for a schedule dated 2020 or later. As Late As
+Possible work under way slides over an SS or SF lag by only its unexpired
+part (AU), and with SS lag from the Actual Start an SS link out of completed
+work carries no date through it (PS), in both passes; each measured on P6
+probes (validation/p6-probes/h6-situations-2026-10-16). The harness gains 6
+fixtures (F167-F172): 168 fixtures, 11149 of 11149 executed.)
 
 (v2.10.6 the two differences held-out set H4 left 2026-10-14 - cpm.py bumped
 from fcd0fa89..., cpm_hours.py from 6b367aee...: ENGINE_VERSION reads 2.10.6;
@@ -636,15 +648,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 292183
-  sha-256:  04a59a1b0ec5d36d6536d836fdc0397746abf0854909c9eff3bb00fa164b8bc1
+  bytes: 293596
+  sha-256:  d7c7f4a53a0cc54af32e190ac1eac9b5f68e83e55e2daa086e6f85f3bc357180
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 164 passed, 0 failed
-  Checks:   10496 / 10496 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 168 passed, 0 failed
+  Checks:   11149 / 11149 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

@@ -2630,7 +2630,15 @@ function computeCPMHours(activities, relationships, o) {
         }
         return Math.max(0, lag - used);
     };
-    const stamp = (p) => Math.max(dd, p.pt || dd, p.resume_hold || dd);
+    const stamp = (p, carried) => Math.max(dd, (carried === false ? dd : (p.pt || dd)), p.resume_hold || dd);
+    // PS (H6, 16-Oct-2026): under retained logic with "SS lag from Actual
+    // Start" an SS link out of completed work starts from that work's actual
+    // start (the unexpired lag on from the data date): it carries no date the
+    // work carries from unfinished predecessors. FS, FF and SF links still
+    // carry it; under "Early Start" SS does too; the backward mirror is the
+    // same under both (ZZ-CPP-H6S-PN / -PS P2 P4 P5 P9 P10 P11, -PY; H6-07
+    // A1190, A1030). Python paired site: carries.
+    const carries = (linkType) => !(linkType === 'SS' && retained && ssLagFrom === 'actual_start');
     // PD (H3, 14-Oct-2026): under progress override an SS or SF link out of
     // work under way is laid from the data date, whichever "lag from" the
     // project names; under retained logic "Actual Start" moves the SS anchor
@@ -2644,7 +2652,7 @@ function computeCPMHours(activities, relationships, o) {
         const kind = (t === 'FS' || t === 'SS') ? 'start' : 'finish';
         if (p.complete) {
             const actual = (t === 'FS' || t === 'FF') ? p.af : (p.as !== null ? p.as : p.af);
-            const base = retained ? stamp(p) : dd;
+            const base = retained ? stamp(p, carries(t)) : dd;
             return [kind, lagFwd(base, unexpired(actual, r.lag, lc), lc)];
         }
         if (t === 'FS' || t === 'FF') return [kind, lagFwd(p.ef, r.lag, lc)];
@@ -2675,7 +2683,7 @@ function computeCPMHours(activities, relationships, o) {
                     if (p.ef === undefined) continue;
                     let d;
                     if (p.complete) {
-                        d = stamp(p);
+                        d = stamp(p, carries(r.type));
                     } else if (r.type === 'SS' || r.type === 'SF') {
                         const src = r.type === 'SS' ? ssAnchor(p) : sfAnchor(p);
                         d = lagFwd(src, p.started ? 0 : r.lag, lagCal(p, n));
@@ -3006,7 +3014,12 @@ function computeCPMHours(activities, relationships, o) {
             seen = true;
             const lc = lagCal(n, s);
             const anchor = (r.type === 'FF' || r.type === 'SF') ? s.ef : restartOf(s);
-            const t = lagBwd(anchor, r.lag, lc);
+            // AU (H6, 16-Oct-2026): an SS or SF lag out of work under way
+            // bounds the slide with only its unexpired part, as the forward
+            // pass and the free float count it; FS / FF lags in full
+            // (ZZ-CPP-H6S-AN / -AY / -AS A1-A10, -BN / -BY B1-B6; H6-07 A1010)
+            const lagU = (n.started && (r.type === 'SS' || r.type === 'SF')) ? unexpired(n.as, r.lag, lc, n) : r.lag;
+            const t = lagBwd(anchor, lagU, lc);
             if (r.type === 'SS' || r.type === 'SF') lsB = (lsB === null) ? t : Math.min(lsB, t);
             else efB = (efB === null) ? t : Math.min(efB, t);
         }
@@ -4300,8 +4313,21 @@ function computeCPM(activities, relationships, opts) {
     // before the data date starts ON the carried date). Without a data date
     // nothing is "after" it and the actual dates drive as before. Python
     // paired sites: _stamp_of / _done_drive.
-    function _stampOf(pnode) {
-        return Math.max(ddNum, _rlPassthroughOf(pnode), pnode.resume_hold || 0);
+    function _stampOf(pnode, rtype) {
+        const _carried = (rtype === undefined || _carriesThrough(rtype)) ? _rlPassthroughOf(pnode) : 0;
+        return Math.max(ddNum, _carried, pnode.resume_hold || 0);
+    }
+
+    // PS (H6, 16-Oct-2026) - under retained logic with "SS lag from Actual
+    // Start" an SS link out of completed work starts from that work's actual
+    // start (the unexpired lag on from the data date): it carries no date the
+    // work carries from unfinished predecessors. FS, FF and SF links still
+    // carry it; under "Early Start" SS does too; the backward mirror is the
+    // same under both. Measured on P6 Professional 23.12.1's own F9 of the
+    // probes ZZ-CPP-H6S-PN / -PY / -PS (P1-P11, F1-F4; H6-07 A1190, A1030).
+    // Python paired site: _carries_through.
+    function _carriesThrough(rtype) {
+        return !(rtype === 'SS' && _scheduleMode === 'retained_logic' && _ssLagFrom === 'actual_start');
     }
 
     // RES (P6 parity 2026-09-27) — P6 resumes no work before an activity's
@@ -4342,7 +4368,7 @@ function computeCPM(activities, relationships, opts) {
 
     function _doneDrive(pnode, p, lagCal, ctx, sink) {
         const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum);
-        return _lagFromInstant(_stampOf(pnode), _rem, lagCal, sink, ctx);
+        return _lagFromInstant(_stampOf(pnode, p.type), _rem, lagCal, sink, ctx);
     }
 
     // MD (P6 parity 2026-10-12) — the instant a predecessor hands a finish
@@ -4396,11 +4422,11 @@ function computeCPM(activities, relationships, opts) {
 
     function _mdDone(pnode, p, lagCal, inst, want, nCal) {
         if (!want) return [null, null];
-        const _st = _stampOf(pnode);
+        const _st = _stampOf(pnode, p.type);
         let _o;
         if (_st === ddNum) {
             _o = _openingFrom(dateToNum(dataDate || ''), _constraintTimeMinutes(dataDate || ''), nCal);
-        } else if (_st === _rlPassthroughOf(pnode)) {
+        } else if (_carriesThrough(p.type) && _st === _rlPassthroughOf(pnode)) {
             _o = false;
         } else {
             const _rd = pnode.resume_date || '';
@@ -4437,9 +4463,9 @@ function computeCPM(activities, relationships, opts) {
                         // and eleven FF links in P6 exports of another job.
                         // A lag out of completed work into unfinished work
                         // keeps the FA rule (_doneDrive).
-                        _d = _stampOf(pnode);
+                        _d = _stampOf(pnode, p.type);
                     } else if (pnode.is_complete) {
-                        _d = _rlPassthroughOf(pnode);
+                        _d = _carriesThrough(p.type) ? _rlPassthroughOf(pnode) : 0;
                     } else {
                         const _ptLagCal = lagCalFor(pnode, node);
                         let _src, _ptLag;
@@ -4595,7 +4621,7 @@ function computeCPM(activities, relationships, opts) {
             // PT — the date a completed predecessor carries from unfinished
             // work (0 when none, and always 0 under progress override). It
             // floors the drive below without the lag; see _rlPassthroughOf.
-            const _ptInst = _rlPassthroughOf(pnode);
+            const _ptInst = _carriesThrough(p.type) ? _rlPassthroughOf(pnode) : 0;
             let _viaPt = false;
             // FA — a COMPLETED predecessor drives with its stamp plus the
             // unexpired part of the lag (_doneDrive), for every link type;
@@ -6327,7 +6353,13 @@ function computeCPM(activities, relationships, opts) {
                 dateToNum(sn.actual_start || '') > 0) continue;
             _seen = true;
             const sCal = lagCalFor(n, sn);
-            const lag = s.lag_days || 0;
+            // AU (H6, 16-Oct-2026) - an SS or SF lag out of work under way
+            // bounds the slide with only its unexpired part, as the forward
+            // pass and the free float count it; FS / FF lags in full
+            // (ZZ-CPP-H6S-AN / -AY / -AS A1-A10, -BN / -BY B1-B6; H6-07
+            // A1010). Python paired site: the ALAP post-pass.
+            const lag = (_aStarted && (s.type === 'SS' || s.type === 'SF'))
+                ? _startedLagLeft(n, s.lag_days || 0, sCal) : (s.lag_days || 0);
             const _sStart = (sn.actual_start && Number.isFinite(sn.restart)) ? sn.restart : sn.es;
             const _inst = (s.type === 'FF' || s.type === 'SF')
                 ? _lagBackFromInstant(_finishInstant(sn), lag, sCal, [], _aCtx)
@@ -11186,17 +11218,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '164 cross-validation fixtures. The harness defines 10496 ' +
+                '168 cross-validation fixtures. The harness defines 11149 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 10496 / 10496" is the whole comparison surface. ' +
+                'reported "Checks: 11149 / 11149" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 10496 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 11149 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 162 of the 164 fixtures: ' +
+                'severity-level alert parity, compared on 166 of the 168 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11235,18 +11267,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '10496 comparisons it defines over 164 fixtures and skips none; every ' +
+                '11149 comparisons it defines over 168 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '164 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '168 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 10496 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 11149 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 162 of the 164 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 166 of the 168 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

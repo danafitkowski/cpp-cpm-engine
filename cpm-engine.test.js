@@ -13605,6 +13605,124 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify([E.numToDate(r12.A.es), r12.A.es_date, E.numToDate(r12.B.es), r12.B.es_date]));
 }
 
+// ── v2.10.7 candidate — the two situations held-out set H6 left ─────────────
+// P6 Professional 23.12.1's own F9 of the probes ZZ-CPP-H6S-* (16-Oct-2026),
+// the whole set replayed by tests/p6-h6-situations.test.js. AU: P6 slides As
+// Late As Possible work already under way over an SS or SF link out of it
+// with only the unexpired part of the lag (H6-07 A1010). PS: under retained
+// logic with SS lag from the Actual Start, an SS link out of completed work
+// carries no date that work carries from unfinished predecessors (H6-07
+// A1190). Data date Wed 11-Mar-2026 08:00. Python paired file:
+// _cpp_common/tests/test_h6_situations_2026_10_16.py.
+{
+    const FMT = E._hrFormatInstant;
+    const day = (periods) => '(0||' + periods.map(([s, f], i) => '(0||' + i + '(s|' + s + '|f|' + f + ')())').join('') + ')';
+    const week = (periods, days) => '(0||CalendarData()((0||DaysOfWeek()(' + [1, 2, 3, 4, 5, 6, 7].map(d =>
+        days.indexOf(d) >= 0 ? '(0||' + d + '()' + day(periods) + ')' : '(0||' + d + '()())').join('') +
+        '))(0||Exceptions()())))';
+    const CALS = { C5: { raw: week([['08:00', '12:00'], ['13:00', '17:00']], [2, 3, 4, 5, 6]), work_days: [1, 2, 3, 4, 5], hours_per_day: 8 } };
+    const T = (code, h, x) => Object.assign({ code, task_type: 'TT_Task', clndr_id: 'C5', remaining_minutes: Math.round(h * 60) }, x || {});
+    const D = (code, s, f, tt) => T(code, 0, { task_type: tt || 'TT_Task', actual_start: s, actual_finish: f });
+    const L = (a, b, type, lagH) => ({ from_code: a, to_code: b, type: type || 'FS', lag_minutes: Math.round((lagH || 0) * 60) });
+    const run = (acts, rels, flag) => E.computeCPMHours([T('D1', 400)].concat(acts), rels, {
+        data_date: '2026-03-11 08:00', cal_map: CALS, project_calendar: 'C5', schedule_mode: 'retained_logic', ss_lag_from: flag });
+    const start = (x) => FMT(x.restart !== null && x.restart !== undefined ? x.restart : x.es);
+    const ALAP = { type: 'CS_ALAP' };
+    const SINCE = '2026-03-02 08:00';
+    // AU: X ALAP under way since Mon 2-Mar (8 h left); Y under way to Fri 20-Mar (A) or waiting for V (B)
+    const ua = [], ul = [];
+    for (const [c, t, lag] of [['A1', 'SF', 0], ['A2', 'SF', 16], ['A3', 'SF', 56], ['A4', 'SF', 64], ['A5', 'SF', 80], ['A6', 'FF', 8]]) {
+        ua.push(T(c + 'X', 8, { actual_start: SINCE, constraint: ALAP }), T(c + 'Y', 64, { actual_start: SINCE }));
+        ul.push(L(c + 'X', c + 'Y', t, lag));
+    }
+    for (const [c, t, lag] of [['B1', 'SS', 16], ['B2', 'SF', 16], ['B3', 'SS', 64], ['B4', 'SF', 64], ['B6', 'FF', 8]]) {
+        ua.push(T(c + 'X', 8, { actual_start: SINCE, constraint: ALAP }), T(c + 'V', 40), T(c + 'Y', 8));
+        ul.push(L(c + 'V', c + 'Y'), L(c + 'X', c + 'Y', t, lag));
+    }
+    const P6AU = { A1X: '2026-03-23 08:00', A2X: '2026-03-23 08:00', A3X: '2026-03-23 08:00', A4X: '2026-03-20 08:00',
+        A5X: '2026-03-18 08:00', A6X: '2026-03-19 08:00', B1X: '2026-03-18 08:00', B2X: '2026-03-19 08:00',
+        B3X: '2026-03-17 08:00', B4X: '2026-03-18 08:00', B6X: '2026-03-17 08:00' };
+    const au = ['actual_start', 'early_start'].map((f) => run(ua, ul, f));
+    const auGot = au.map((o) => Object.keys(P6AU).map((c) => start(o[c]) + (o[c].ff_minutes === 0 ? '' : ' FF' + o[c].ff_minutes)));
+    check('HR-63: ALAP work under way slides over an SS or SF link out of it with only the unexpired part of the lag, under either "SS lag from"; FS / FF lags in full (AU; P6 probe AN AY AS BN BY A1-A6 B1-B6)',
+        au.every((o, i) => Object.keys(P6AU).every((c, k) => auGot[i][k] === P6AU[c])), JSON.stringify(auGot));
+    // PS: U under way to Thu 12-Mar 17:00; each C completed Wed 4-Mar after U -> FS -> C; S's only predecessor is C
+    const pa = [T('U', 16, { actual_start: SINCE })], pl = [];
+    for (const [c, t, lag, st, tt] of [['P1', 'FS', 0, null, 'TT_Task'], ['P2', 'SS', 0, null, 'TT_Task'],
+        ['P3', 'FS', 0, '2026-03-05 08:00', 'TT_Task'], ['P4', 'SS', 0, '2026-03-05 08:00', 'TT_Task'],
+        ['P5', 'SS', 0, '2026-03-03 08:00', 'TT_Task'], ['P6', 'FS', 0, '2026-03-03 08:00', 'TT_Task'],
+        ['P7', 'FF', 0, '2026-03-05 08:00', 'TT_Task'], ['P8', 'SF', 0, '2026-03-05 08:00', 'TT_Task'],
+        ['P9', 'SS', 8, '2026-03-03 08:00', 'TT_Task'], ['P10', 'SS', 0, '2026-03-03 08:00', 'TT_Mile']]) {
+        pa.push(D(c + 'C', '2026-03-04 08:00', tt === 'TT_Mile' ? '2026-03-04 08:00' : '2026-03-04 17:00', tt),
+            st ? T(c + 'S', 8, { actual_start: st }) : T(c + 'S', 8));
+        pl.push(L('U', c + 'C'), L(c + 'C', c + 'S', t, lag));
+    }
+    pa.push(D('P11C1', '2026-03-03 08:00', '2026-03-03 17:00'), D('P11C2', '2026-03-03 08:00', '2026-03-04 17:00'),
+        D('P11C3', '2026-03-06 08:00', '2026-03-06 08:00', 'TT_Mile'), T('P11S', 43, { actual_start: '2026-03-05 08:00' }));
+    pl.push(L('U', 'P11C1', 'FS', 8), L('P11C1', 'P11C2', 'SS', 4), L('P11C2', 'P11C3'), L('P11C1', 'P11C3', 'SS', 16),
+        L('P11C3', 'P11S', 'SS'));
+    for (const [c, t, lag, carries] of [['F1', 'SS', 4, true], ['F2', 'FS', 0, true], ['F3', 'SS', 4, false], ['F4', 'FS', 0, false]]) {
+        pa.push(T(c + 'W', 2, { actual_start: '2026-03-09 08:00' }), D(c + 'C', '2026-03-04 08:00', '2026-03-04 17:00'));
+        pl.push(L(c + 'W', c + 'C', t, lag));
+        if (carries) pl.push(L('U', c + 'C'));
+    }
+    const DD = '2026-03-11 08:00', CAR = '2026-03-13 08:00', THU = '2026-03-12 08:00';
+    const P6PS = {
+        actual_start: { P1S: CAR, P2S: DD, P3S: CAR, P4S: DD, P5S: DD, P6S: CAR, P7S: THU, P8S: THU, P9S: DD, P10S: DD, P11S: DD },
+        early_start: { P1S: CAR, P2S: CAR, P3S: CAR, P4S: CAR, P5S: CAR, P6S: CAR, P7S: THU, P8S: THU, P9S: CAR, P10S: CAR, P11S: '2026-03-16 08:00' },
+    };
+    const ps = {};
+    for (const f of Object.keys(P6PS)) ps[f] = run(pa, pl, f);
+    const psGot = Object.keys(P6PS).map((f) => Object.keys(P6PS[f]).map((c) => start(ps[f][c])));
+    check('HR-64: with SS lag from the Actual Start an SS link out of completed work carries no date through it; FS / FF / SF still do, and with lag from the Early Start SS does too (PS; P6 probe PN PY PS P1-P11)',
+        Object.keys(P6PS).every((f, i) => Object.keys(P6PS[f]).every((c, k) => psGot[i][k] === P6PS[f][c])), JSON.stringify(psGot));
+    const ffU = Object.keys(P6PS).map((f) => ['F1W', 'F2W', 'F3W', 'F4W'].map((c) => ps[f][c].ff_minutes).concat([ps[f].U.tf_minutes]));
+    check('HR-65: free float into completed work and the late dates do not change with "SS lag from" (PS; P6 probe F1-F4, U 333 h)',
+        ffU.every((v) => JSON.stringify(v) === JSON.stringify([960, 840, 0, 0, 333 * 60])), JSON.stringify(ffU));
+    // the whole-day pass, the same networks in days
+    const WD = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] } };
+    const A = (code, d, x) => Object.assign({ code, duration_days: d, clndr_id: 'C5' }, x || {});
+    const R = (p, s, t, lag) => ({ from_code: p, to_code: s, type: t || 'FS', lag_days: lag || 0 });
+    const UW = (code, d, rem, since, x) => A(code, d, Object.assign({ actual_start: since || '2026-03-02', remaining_duration: rem }, x || {}));
+    const dayRun = (acts, rels, f) => E.computeCPM([A('D1', 50)].concat(acts), rels, {
+        dataDate: '2026-03-11', calMap: WD, scheduleMode: 'retained_logic', ssLagFrom: f }).nodes;
+    const ap = { type: 'ALAP', date: '' };
+    const da = [], dl = [];
+    for (const [c, t, lag] of [['A1', 'SF', 0], ['A2', 'SF', 2], ['A3', 'SF', 7], ['A4', 'SF', 8], ['A5', 'SF', 10]]) {
+        da.push(UW(c + 'X', 3, 1, null, { constraint: ap }), UW(c + 'Y', 10, 8));
+        dl.push(R(c + 'X', c + 'Y', t, lag));
+    }
+    for (const [c, t, lag] of [['B1', 'SS', 2], ['B2', 'SF', 2], ['B3', 'SS', 8], ['B4', 'SF', 8]]) {
+        da.push(UW(c + 'X', 3, 1, null, { constraint: ap }), A(c + 'V', 5), A(c + 'Y', 1));
+        dl.push(R(c + 'V', c + 'Y'), R(c + 'X', c + 'Y', t, lag));
+    }
+    const dau = ['actual_start', 'early_start'].map((f) => dayRun(da, dl, f));
+    check('HR-66: whole days: ALAP work under way counts only the unexpired lag, and with SS lag from the Actual Start an SS link out of completed work carries no date (AU, PS)',
+        // a used-up lag holds no more than none; the unexpired days hold it back to P6's days (A4 Fri 20-Mar,
+        // A5 Wed 18-Mar). A1 itself prints the Friday: a start at Friday's close in whole days.
+        dau.every((n) => n.A2X.restart === n.A1X.restart && n.A3X.restart === n.A1X.restart &&
+            n.A4X.restart_date === '2026-03-20' && n.A5X.restart_date === '2026-03-18' &&
+            n.B1X.restart === n.B1Y.es && n.B3X.restart < n.B1X.restart && n.B4X.restart < n.B2X.restart) &&
+        (() => {
+            const pa2 = [UW('U', 4, 2)], pl2 = [];
+            for (const [c, t, st] of [['P1', 'FS', null], ['P2', 'SS', null], ['P5', 'SS', '2026-03-03'], ['P8', 'SF', '2026-03-05']]) {
+                pa2.push(A(c + 'C', 0, { actual_start: '2026-03-04', actual_finish: '2026-03-04', is_complete: true }),
+                    st ? UW(c + 'S', 3, 1, st) : A(c + 'S', 1));
+                pl2.push(R('U', c + 'C'), R(c + 'C', c + 'S', t));
+            }
+            const g = {};
+            for (const f of ['actual_start', 'early_start']) {
+                const n = dayRun(pa2, pl2, f);
+                g[f] = {};
+                for (const c of ['P1S', 'P2S', 'P5S', 'P8S']) g[f][c] = n[c].restart_date || n[c].es_date;
+            }
+            return g.actual_start.P2S === '2026-03-11' && g.actual_start.P5S === '2026-03-11' &&
+                g.early_start.P2S === g.early_start.P1S && g.early_start.P1S === g.actual_start.P1S &&
+                g.early_start.P5S === g.early_start.P1S && g.actual_start.P8S === g.early_start.P8S;
+        })(),
+        JSON.stringify(dau.map((n) => ['A1X', 'A2X', 'A3X', 'A4X', 'A5X', 'B1X', 'B1Y', 'B2X', 'B3X', 'B4X'].map((c) => c === 'B1Y' ? n[c].es : n[c].restart))));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

@@ -2855,8 +2855,21 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # before the data date starts ON the carried date). Without a data date
     # nothing is "after" it and the actual dates drive as before. JS paired
     # sites: _stampOf / _doneDrive.
-    def _stamp_of(pnode):
-        return max(dd_num, _passthrough_of(pnode), pnode.get('resume_hold') or 0)
+    def _stamp_of(pnode, rtype=None):
+        _carried = _passthrough_of(pnode) if (rtype is None or _carries_through(rtype)) else 0
+        return max(dd_num, _carried, pnode.get('resume_hold') or 0)
+
+    # PS (H6, 16-Oct-2026) - under retained logic with "SS lag from Actual
+    # Start" an SS link out of completed work starts from that work's actual
+    # start (the unexpired lag on from the data date): it carries no date the
+    # work carries from unfinished predecessors. FS, FF and SF links still
+    # carry it; under "Early Start" SS does too; the backward mirror is the
+    # same under both. Measured on P6 Professional 23.12.1's own F9 of the
+    # probes ZZ-CPP-H6S-PN / -PY / -PS (P1-P11, F1-F4; H6-07 A1190, A1030).
+    # JS paired site: _carriesThrough.
+    def _carries_through(rtype):
+        return not (rtype == 'SS' and schedule_mode == 'retained_logic'
+                    and _ss_lag_from == 'actual_start')
 
     # RES (P6 parity 2026-09-27) — P6 resumes no work before an activity's
     # RESUME date. Measured on P6's own F9 of the website demo update at its
@@ -2942,11 +2955,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     def _md_done(pnode, p, lag_cal, inst, want, node_cal):
         if not want:
             return (None, None)
-        _st = _stamp_of(pnode)
+        _st = _stamp_of(pnode, p['type'])
         if _st == dd_num:
             _o = _opening_from(date_to_num(data_date or ''), _constraint_time_minutes(data_date or ''),
                                node_cal)
-        elif _st == _passthrough_of(pnode):
+        elif _carries_through(p['type']) and _st == _passthrough_of(pnode):
             _o = False
         else:
             _rd = pnode.get('resume_date') or ''
@@ -2957,7 +2970,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     def _done_drive(pnode, p, lag_cal, ctx, sink):
         _rem = _unexpired_lag(_done_actual(pnode, p['type']), p['lag_days'],
                               lag_cal, dd_num)
-        return _lag_from_instant(_stamp_of(pnode), _rem, lag_cal,
+        return _lag_from_instant(_stamp_of(pnode, p['type']), _rem, lag_cal,
                                  alerts=sink, ctx=ctx)
 
     # RES — the activities a resume date holds (retained logic), and under
@@ -2987,9 +3000,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         # and eleven FF links in P6 exports of another job.
                         # A lag out of completed work into unfinished work
                         # keeps the FA rule (_done_drive).
-                        _d = _stamp_of(pnode)
+                        _d = _stamp_of(pnode, p['type'])
                     elif pnode['is_complete']:
-                        _d = _passthrough_of(pnode)
+                        _d = _passthrough_of(pnode) if _carries_through(p['type']) else 0
                     else:
                         _pt_lag_cal = _lag_cal_for(pnode, node)
                         if p['type'] in ('SS', 'SF'):
@@ -3115,7 +3128,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # PT — the date a completed predecessor carries from unfinished
             # work (0 when none, and always 0 under progress override). It
             # floors the drive below without the lag; see _passthrough_of.
-            _pt_inst = _passthrough_of(pnode)
+            _pt_inst = _passthrough_of(pnode) if _carries_through(t) else 0
             _via_pt = False
             # FA — a COMPLETED predecessor drives with its stamp plus the
             # unexpired part of the lag (_done_drive), for every link type;
@@ -4544,6 +4557,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             _s_start = (sn['restart'] if (sn.get('actual_start') and sn.get('restart') is not None)
                         else sn['es'])
             t = s['type']
+            # AU (H6, 16-Oct-2026) - an SS or SF lag out of work under way
+            # bounds the slide with only its unexpired part, as the forward
+            # pass and the free float count it; FS / FF lags in full
+            # (ZZ-CPP-H6S-AN / -AY / -AS A1-A10, -BN / -BY B1-B6; H6-07
+            # A1010). JS paired site: the ALAP post-pass.
+            if _a_started and t in ('SS', 'SF'):
+                lag = _started_lag_left(n, lag, s_cal)
             if t in ('FF', 'SF'):
                 _inst = _lag_back_from_instant(_finish_instant(sn), lag, s_cal, alerts=[], ctx=_a_ctx)
             else:

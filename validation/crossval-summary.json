@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.7",
-  "generated_utc": "2026-10-16T15:07:52.362Z",
+  "generated_utc": "2026-10-16T17:24:23.142Z",
   "fixtures": {
-    "total": 164,
-    "passed": 164,
+    "total": 168,
+    "passed": 168,
     "failed": 0
   },
   "checks": {
-    "executed": 10496,
+    "executed": 11149,
     "failed": 0,
-    "passed": 10496,
+    "passed": 11149,
     "skipped": 0,
-    "surface": 10496
+    "surface": 11149
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 162,
-    "project_finish": 162,
-    "critical_codes": 162,
-    "topo_order": 162,
-    "alert_count": 162,
-    "alert_severity_counts": 162,
-    "node <id>": 9490,
+    "project_finish_num": 166,
+    "project_finish": 166,
+    "critical_codes": 166,
+    "topo_order": 166,
+    "alert_count": 166,
+    "alert_severity_counts": 166,
+    "node <id>": 10117,
     "threw (both engines)": 2,
-    "hours": 32
+    "hours": 34
   },
   "rows": [
     {
@@ -1338,6 +1338,38 @@
       "id": "F168",
       "name": "F168 - EP: the same, in hours",
       "checks": 77,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F169",
+      "name": "F169 - AU: ALAP under way slides over SS / SF lags out of it by only their unexpired part, in hours",
+      "checks": 167,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F170",
+      "name": "F170 - AU: the same, whole days",
+      "checks": 150,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F171",
+      "name": "F171 - PS: SS lag from the Actual Start: an SS link out of completed work carries no date, in hours",
+      "checks": 177,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F172",
+      "name": "F172 - PS: the same, whole days",
+      "checks": 159,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

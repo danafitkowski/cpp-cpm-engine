@@ -342,8 +342,18 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 used -= lc.between(lo, hi)
         return max(0, lag - used)
 
-    def stamp(p):
-        return max(dd, p.get('pt') or dd, p.get('resume_hold') or dd)
+    def stamp(p, carried=True):
+        return max(dd, (p.get('pt') or dd) if carried else dd, p.get('resume_hold') or dd)
+
+    # PS (H6, 16-Oct-2026): under retained logic with "SS lag from Actual
+    # Start" an SS link out of completed work starts from that work's actual
+    # start (the unexpired lag on from the data date): it carries no date the
+    # work carries from unfinished predecessors. FS, FF and SF links still
+    # carry it; under "Early Start" SS does too; the backward mirror is the
+    # same under both (ZZ-CPP-H6S-PN / -PS P2 P4 P5 P9 P10 P11, -PY; H6-07
+    # A1190, A1030)
+    def carries(link_type):
+        return not (link_type == 'SS' and retained and ss_lag_from == 'actual_start')
 
     # PD (H3, 14-Oct-2026): under progress override an SS or SF link out of
     # work under way is laid from the data date, whichever "lag from" the
@@ -373,7 +383,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             actual = p['af'] if t in ('FS', 'FF') else (p['as'] if p['as'] is not None else p['af'])
             if dd is None:
                 return kind, lag_fwd(actual, r['lag'], lc)
-            base = stamp(p) if retained else dd
+            base = stamp(p, carries(t)) if retained else dd
             return kind, lag_fwd(base, unexpired(actual, r['lag'], lc), lc)
         if t in ('FS', 'FF'):
             return kind, lag_fwd(p['ef'], r['lag'], lc)
@@ -398,7 +408,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     if 'ef' not in p:
                         continue
                     if p['complete']:
-                        d = stamp(p)
+                        d = stamp(p, carries(r['type']))
                     elif r['type'] in ('SS', 'SF'):
                         src = ss_anchor(p) if r['type'] == 'SS' else sf_anchor(p)
                         lag = 0 if p['started'] else r['lag']
@@ -753,7 +763,13 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             seen = True
             lc = lag_cal(n, s)
             anchor = s['ef'] if r['type'] in ('FF', 'SF') else s.get('restart', s['es'])
-            t = lag_bwd(anchor, r['lag'], lc)
+            # AU (H6, 16-Oct-2026): an SS or SF lag out of work under way
+            # bounds the slide with only its unexpired part, as the forward
+            # pass and the free float count it; FS / FF lags in full
+            # (ZZ-CPP-H6S-AN / -AY / -AS A1-A10, -BN / -BY B1-B6; H6-07 A1010)
+            lag_u = (unexpired(n['as'], r['lag'], lc, n) if n['started'] and r['type'] in ('SS', 'SF')
+                   else r['lag'])
+            t = lag_bwd(anchor, lag_u, lc)
             if r['type'] in ('SS', 'SF'):
                 ls_b = t if ls_b is None else min(ls_b, t)
             else:

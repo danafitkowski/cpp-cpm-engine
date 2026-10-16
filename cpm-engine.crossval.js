@@ -3499,6 +3499,58 @@ compareFixture('F168 - EP: the same, in hours', {
     data_date: '2013-08-26 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
 }, { hours: true });
 
+// AU / PS (v2.10.7, P6 probes ZZ-CPP-H6S-*): As Late As Possible work under way slides over an SS or SF lag out of it
+// by only the unexpired part; under "SS lag from Actual Start" an SS link out of completed work carries no date.
+const auSince = '2026-03-02 08:00';
+const auActs = (A) => {
+    const out = [A('D1', 400)];
+    for (const c of ['A2', 'A4', 'A6']) {
+        out.push(A(c + 'X', 8, { actual_start: auSince, remaining_duration: 1, constraint: { type: 'ALAP', date: '' } }),
+            A(c + 'Y', 64, { actual_start: auSince, remaining_duration: 8 }));
+    }
+    for (const c of ['B1', 'B3', 'B4']) {
+        out.push(A(c + 'X', 8, { actual_start: auSince, remaining_duration: 1, constraint: { type: 'ALAP', date: '' } }),
+            A(c + 'V', 40), A(c + 'Y', 8));
+    }
+    return out;
+};
+const auRels = (R) => [R('A2X', 'A2Y', 'SF', 16), R('A4X', 'A4Y', 'SF', 64), R('A6X', 'A6Y', 'FF', 8),
+    R('B1V', 'B1Y'), R('B1X', 'B1Y', 'SS', 16), R('B3V', 'B3Y'), R('B3X', 'B3Y', 'SS', 64), R('B4V', 'B4Y'),
+    R('B4X', 'B4Y', 'SF', 64)];
+compareFixture('F169 - AU: ALAP under way slides over SS / SF lags out of it by only their unexpired part, in hours', {
+    activities: auActs(hA), relationships: auRels(hR), data_date: '2026-03-11 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', ss_lag_from: 'actual_start',
+}, { hours: true });
+compareFixture('F170 - AU: the same, whole days', {
+    activities: auActs(dA), relationships: auRels(dR), data_date: '2026-03-11', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', ss_lag_from: 'actual_start',
+});
+const psDone = (A, code, s, f) => A(code, 8, { actual_start: s, actual_finish: f, is_complete: true });
+const psActs = (A) => [A('D1', 400), A('U', 16, { actual_start: auSince, remaining_duration: 2 }),
+    psDone(A, 'P1C', '2026-03-04 08:00', '2026-03-04 17:00'), A('P1S', 8),
+    psDone(A, 'P2C', '2026-03-04 08:00', '2026-03-04 17:00'), A('P2S', 8),
+    psDone(A, 'P5C', '2026-03-04 08:00', '2026-03-04 17:00'),
+    A('P5S', 8, { actual_start: '2026-03-03 08:00', remaining_duration: 1 }),
+    psDone(A, 'P8C', '2026-03-04 08:00', '2026-03-04 17:00'),
+    A('P8S', 8, { actual_start: '2026-03-05 08:00', remaining_duration: 1 }),
+    psDone(A, 'P9C', '2026-03-04 08:00', '2026-03-04 17:00'),
+    A('P9S', 8, { actual_start: '2026-03-03 08:00', remaining_duration: 1 }),
+    psDone(A, 'Q1', '2026-03-03 08:00', '2026-03-03 17:00'), psDone(A, 'Q2', '2026-03-03 08:00', '2026-03-04 17:00'),
+    A('QS', 40, { actual_start: '2026-03-03 08:00', remaining_duration: 5 }),
+    A('W', 2, { actual_start: '2026-03-09 08:00', remaining_duration: 0.25 }),
+    psDone(A, 'WC', '2026-03-04 08:00', '2026-03-04 17:00')];
+const psRels = (R) => [R('U', 'P1C'), R('P1C', 'P1S'), R('U', 'P2C'), R('P2C', 'P2S', 'SS'), R('U', 'P5C'),
+    R('P5C', 'P5S', 'SS'), R('U', 'P8C'), R('P8C', 'P8S', 'SF'), R('U', 'P9C'), R('P9C', 'P9S', 'SS', 8),
+    R('U', 'Q1', 'FS', 8), R('Q1', 'Q2', 'SS', 4), R('Q2', 'QS', 'SS'), R('U', 'WC'), R('W', 'WC', 'SS', 4)];
+compareFixture('F171 - PS: SS lag from the Actual Start: an SS link out of completed work carries no date, in hours', {
+    activities: psActs(hA), relationships: psRels(hR), data_date: '2026-03-11 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', ss_lag_from: 'actual_start',
+}, { hours: true });
+compareFixture('F172 - PS: the same, whole days', {
+    activities: psActs(dA), relationships: psRels(dR), data_date: '2026-03-11', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', ss_lag_from: 'actual_start',
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +
