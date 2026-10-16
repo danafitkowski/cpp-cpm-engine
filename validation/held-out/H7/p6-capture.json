@@ -1,0 +1,65 @@
+{
+ "cases": {
+  "H7-01": {
+   "data_date": "2016-08-15 08:00",
+   "scheduled": "2026-10-16 13:54",
+   "must_finish_by": ""
+  },
+  "H7-02": {
+   "data_date": "2020-01-19 17:00",
+   "scheduled": "2026-10-16 13:55",
+   "must_finish_by": "2020-01-30 18:00"
+  },
+  "H7-03": {
+   "data_date": "2014-12-05 00:00",
+   "scheduled": "2026-10-16 13:56",
+   "must_finish_by": ""
+  },
+  "H7-04": {
+   "data_date": "2020-01-11 08:00",
+   "scheduled": "2026-10-16 13:57",
+   "must_finish_by": ""
+  },
+  "H7-05": {
+   "data_date": "2017-10-26 00:00",
+   "scheduled": "2026-10-16 13:58",
+   "must_finish_by": ""
+  },
+  "H7-06": {
+   "data_date": "2020-01-02 08:00",
+   "scheduled": "2026-10-16 13:59",
+   "must_finish_by": ""
+  },
+  "H7-07": {
+   "data_date": "2013-05-27 08:00",
+   "scheduled": "2026-10-16 14:00",
+   "must_finish_by": "2013-06-10 00:00"
+  },
+  "H7-08": {
+   "data_date": "2020-01-03 08:00",
+   "scheduled": "2026-10-16 14:00",
+   "must_finish_by": ""
+  },
+  "H7-09": {
+   "data_date": "2017-05-08 00:00",
+   "scheduled": "2026-10-16 14:01",
+   "must_finish_by": ""
+  },
+  "H7-10": {
+   "data_date": "2020-01-08 08:00",
+   "scheduled": "2026-10-16 14:02",
+   "must_finish_by": ""
+  },
+  "H7-11": {
+   "data_date": "2014-10-13 08:00",
+   "scheduled": "2026-10-16 14:03",
+   "must_finish_by": "2014-10-31 11:00"
+  },
+  "H7-12": {
+   "data_date": "2020-01-12 00:00",
+   "scheduled": "2026-10-16 14:04",
+   "must_finish_by": ""
+  }
+ },
+ "left_out": {}
+}

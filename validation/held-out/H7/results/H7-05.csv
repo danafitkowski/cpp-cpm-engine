@@ -1,0 +1,134 @@
+case,task_code,field,engine,p6,match
+H7-05,A1010,early_start,2017-10-26 00:00,2017-10-26 00:00,Y
+H7-05,A1010,early_finish,2017-10-26 05:00,2017-10-26 05:00,Y
+H7-05,A1010,late_start,2017-11-03 19:00,2017-11-03 19:00,Y
+H7-05,A1010,late_finish,2017-11-04 00:00,2017-11-04 00:00,Y
+H7-05,A1010,total_float_hr,211,211,Y
+H7-05,A1010,free_float_hr,0,0,Y
+H7-05,A1010,critical,false,false,Y
+H7-05,A1020,early_start,2017-10-26 00:00,2017-10-26 00:00,Y
+H7-05,A1020,early_finish,2017-10-26 20:00,2017-10-26 20:00,Y
+H7-05,A1020,late_start,2017-11-04 20:00,2017-11-04 20:00,Y
+H7-05,A1020,late_finish,2017-11-05 16:00,2017-11-05 16:00,Y
+H7-05,A1020,total_float_hr,236,236,Y
+H7-05,A1020,free_float_hr,0,0,Y
+H7-05,A1020,critical,false,false,Y
+H7-05,A1040,early_start,2017-10-26 00:00,2017-10-26 00:00,Y
+H7-05,A1040,early_finish,2017-10-26 07:00,2017-10-26 07:00,Y
+H7-05,A1040,late_start,2017-11-09 09:00,2017-11-09 09:00,Y
+H7-05,A1040,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1040,total_float_hr,345,345,Y
+H7-05,A1040,free_float_hr,0,0,Y
+H7-05,A1040,critical,false,false,Y
+H7-05,A1050,early_start,2017-10-27 12:00,2017-10-27 12:00,Y
+H7-05,A1050,early_finish,2017-10-30 20:00,2017-10-30 20:00,Y
+H7-05,A1050,late_start,2017-11-06 08:00,2017-11-06 08:00,Y
+H7-05,A1050,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1050,total_float_hr,236,236,Y
+H7-05,A1050,free_float_hr,172,172,Y
+H7-05,A1050,critical,false,false,Y
+H7-05,A1060,early_start,2017-10-26 00:00,2017-10-26 00:00,Y
+H7-05,A1060,early_finish,2017-10-26 03:00,2017-10-26 03:00,Y
+H7-05,A1060,late_start,2017-11-09 13:00,2017-11-09 13:00,Y
+H7-05,A1060,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1060,total_float_hr,349,349,Y
+H7-05,A1060,free_float_hr,277,277,Y
+H7-05,A1060,critical,false,false,Y
+H7-05,A1070,early_start,2017-10-26 00:00,2017-10-26 00:00,Y
+H7-05,A1070,early_finish,2017-10-26 05:00,2017-10-26 05:00,Y
+H7-05,A1070,late_start,2017-11-03 14:00,2017-11-03 14:00,Y
+H7-05,A1070,late_finish,2017-11-03 19:00,2017-11-03 19:00,Y
+H7-05,A1070,total_float_hr,206,206,Y
+H7-05,A1070,free_float_hr,2,2,Y
+H7-05,A1070,critical,false,false,Y
+H7-05,A1080,early_start,2017-10-26 00:00,2017-10-26 00:00,Y
+H7-05,A1080,early_finish,2017-10-26 02:00,2017-10-26 02:00,Y
+H7-05,A1080,late_start,2017-10-26 13:00,2017-10-26 13:00,Y
+H7-05,A1080,late_finish,2017-10-26 15:00,2017-10-26 15:00,Y
+H7-05,A1080,total_float_hr,13,13,Y
+H7-05,A1080,free_float_hr,0,0,Y
+H7-05,A1080,critical,false,false,Y
+H7-05,A1100,early_start,2017-10-26 08:00,2017-10-26 08:00,Y
+H7-05,A1100,early_finish,2017-10-28 14:00,2017-10-28 14:00,Y
+H7-05,A1100,late_start,2017-11-07 10:00,2017-11-07 10:00,Y
+H7-05,A1100,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1100,total_float_hr,82,82,Y
+H7-05,A1100,free_float_hr,58,58,Y
+H7-05,A1100,critical,false,false,Y
+H7-05,A1110,early_start,2017-11-01 08:00,2017-11-01 08:00,Y
+H7-05,A1110,early_finish,2017-11-04 09:00,2017-11-04 09:00,Y
+H7-05,A1110,late_start,2017-11-01 15:00,2017-11-01 15:00,Y
+H7-05,A1110,late_finish,2017-11-04 16:00,2017-11-04 16:00,Y
+H7-05,A1110,total_float_hr,7,7,Y
+H7-05,A1110,free_float_hr,0,0,Y
+H7-05,A1110,critical,false,false,Y
+H7-05,A1120,early_start,2017-10-27 06:00,2017-10-27 06:00,Y
+H7-05,A1120,early_finish,2017-10-27 08:00,2017-10-27 08:00,Y
+H7-05,A1120,late_start,2017-11-03 14:00,2017-11-03 14:00,Y
+H7-05,A1120,late_finish,2017-11-03 16:00,2017-11-03 16:00,Y
+H7-05,A1120,total_float_hr,92,92,Y
+H7-05,A1120,free_float_hr,0,0,Y
+H7-05,A1120,critical,false,false,Y
+H7-05,A1130,early_start,2017-11-04 09:00,2017-11-04 09:00,Y
+H7-05,A1130,early_finish,2017-11-04 17:00,2017-11-04 17:00,Y
+H7-05,A1130,late_start,2017-11-06 00:00,2017-11-06 00:00,Y
+H7-05,A1130,late_finish,2017-11-06 08:00,2017-11-06 08:00,Y
+H7-05,A1130,total_float_hr,39,39,Y
+H7-05,A1130,free_float_hr,39,39,Y
+H7-05,A1130,critical,false,false,Y
+H7-05,A1140,early_start,2017-11-06 08:00,2017-11-06 08:00,Y
+H7-05,A1140,early_finish,2017-11-07 16:00,2017-11-07 16:00,Y
+H7-05,A1140,late_start,2017-11-08 08:00,2017-11-08 08:00,Y
+H7-05,A1140,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1140,total_float_hr,16,16,Y
+H7-05,A1140,free_float_hr,28,28,Y
+H7-05,A1140,critical,false,false,Y
+H7-05,A1150,early_start,2017-10-26 00:00,2017-10-26 00:00,Y
+H7-05,A1150,early_finish,2017-10-26 13:00,2017-10-26 13:00,Y
+H7-05,A1150,late_start,2017-11-06 08:00,2017-11-06 08:00,Y
+H7-05,A1150,late_finish,2017-11-06 21:00,2017-11-06 21:00,Y
+H7-05,A1150,total_float_hr,272,272,Y
+H7-05,A1150,free_float_hr,220,220,Y
+H7-05,A1150,critical,false,false,Y
+H7-05,A1160,early_start,2017-10-26 08:00,2017-10-26 08:00,Y
+H7-05,A1160,early_finish,2017-10-30 10:00,2017-10-30 10:00,Y
+H7-05,A1160,late_start,2017-11-03 14:00,2017-11-03 14:00,Y
+H7-05,A1160,late_finish,2017-11-07 16:00,2017-11-07 16:00,Y
+H7-05,A1160,total_float_hr,62,62,Y
+H7-05,A1160,free_float_hr,0,0,Y
+H7-05,A1160,critical,false,false,Y
+H7-05,A1170,early_start,2017-11-06 08:00,2017-11-06 08:00,Y
+H7-05,A1170,early_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1170,late_start,2017-11-06 08:00,2017-11-06 08:00,Y
+H7-05,A1170,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1170,total_float_hr,0,0,Y
+H7-05,A1170,free_float_hr,0,0,Y
+H7-05,A1170,critical,true,true,Y
+H7-05,A1180,early_start,2017-11-04 09:00,2017-11-04 09:00,Y
+H7-05,A1180,early_finish,2017-11-04 17:00,2017-11-04 17:00,Y
+H7-05,A1180,late_start,2017-11-09 08:00,2017-11-09 08:00,Y
+H7-05,A1180,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1180,total_float_hr,119,119,Y
+H7-05,A1180,free_float_hr,47,47,Y
+H7-05,A1180,critical,false,false,Y
+H7-05,A1190,early_start,2017-10-30 18:00,2017-10-30 18:00,Y
+H7-05,A1190,early_finish,2017-10-31 02:00,2017-10-31 02:00,Y
+H7-05,A1190,late_start,2017-11-08 08:00,2017-11-08 08:00,Y
+H7-05,A1190,late_finish,2017-11-08 16:00,2017-11-08 16:00,Y
+H7-05,A1190,total_float_hr,206,206,Y
+H7-05,A1190,free_float_hr,134,134,Y
+H7-05,A1190,critical,false,false,Y
+H7-05,A1200,early_start,2017-11-05 20:00,2017-11-05 20:00,Y
+H7-05,A1200,early_finish,2017-11-06 08:00,2017-11-06 08:00,Y
+H7-05,A1200,late_start,2017-11-08 20:00,2017-11-08 20:00,Y
+H7-05,A1200,late_finish,2017-11-09 08:00,2017-11-09 08:00,Y
+H7-05,A1200,total_float_hr,72,72,Y
+H7-05,A1200,free_float_hr,0,0,Y
+H7-05,A1200,critical,false,false,Y
+H7-05,A1210,early_start,2017-11-06 16:00,2017-11-06 16:00,Y
+H7-05,A1210,early_finish,2017-11-06 16:00,2017-11-06 16:00,Y
+H7-05,A1210,late_start,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1210,late_finish,2017-11-09 16:00,2017-11-09 16:00,Y
+H7-05,A1210,total_float_hr,72,72,Y
+H7-05,A1210,free_float_hr,72,72,Y
+H7-05,A1210,critical,false,false,Y

@@ -1,0 +1,114 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "6c37aa2a99fd9c16f8db0d768913ff056087302736b87e38b793dbf182b76c7b"
+ },
+ "cases": {
+  "H7-01": {
+   "unfinished": 15,
+   "all_fields_match": 15,
+   "engine_unfinished": 15,
+   "hours_pass": true
+  },
+  "H7-02": {
+   "unfinished": 29,
+   "all_fields_match": 29,
+   "engine_unfinished": 29,
+   "hours_pass": true
+  },
+  "H7-03": {
+   "unfinished": 8,
+   "all_fields_match": 8,
+   "engine_unfinished": 8,
+   "hours_pass": true
+  },
+  "H7-04": {
+   "unfinished": 14,
+   "all_fields_match": 14,
+   "engine_unfinished": 14,
+   "hours_pass": true
+  },
+  "H7-05": {
+   "unfinished": 19,
+   "all_fields_match": 19,
+   "engine_unfinished": 19,
+   "hours_pass": true
+  },
+  "H7-06": {
+   "unfinished": 27,
+   "all_fields_match": 27,
+   "engine_unfinished": 27,
+   "hours_pass": true
+  },
+  "H7-07": {
+   "unfinished": 27,
+   "all_fields_match": 27,
+   "engine_unfinished": 27,
+   "hours_pass": true
+  },
+  "H7-08": {
+   "unfinished": 37,
+   "all_fields_match": 37,
+   "engine_unfinished": 37,
+   "hours_pass": true
+  },
+  "H7-09": {
+   "unfinished": 25,
+   "all_fields_match": 25,
+   "engine_unfinished": 25,
+   "hours_pass": true
+  },
+  "H7-10": {
+   "unfinished": 21,
+   "all_fields_match": 21,
+   "engine_unfinished": 21,
+   "hours_pass": true
+  },
+  "H7-11": {
+   "unfinished": 13,
+   "all_fields_match": 13,
+   "engine_unfinished": 13,
+   "hours_pass": true
+  },
+  "H7-12": {
+   "unfinished": 7,
+   "all_fields_match": 7,
+   "engine_unfinished": 7,
+   "hours_pass": true
+  }
+ },
+ "fields": {
+  "early_start": {
+   "match": 242,
+   "differ": 0
+  },
+  "early_finish": {
+   "match": 242,
+   "differ": 0
+  },
+  "late_start": {
+   "match": 242,
+   "differ": 0
+  },
+  "late_finish": {
+   "match": 242,
+   "differ": 0
+  },
+  "total_float_hr": {
+   "match": 242,
+   "differ": 0
+  },
+  "free_float_hr": {
+   "match": 242,
+   "differ": 0
+  },
+  "critical": {
+   "match": 242,
+   "differ": 0
+  }
+ },
+ "rows": 242,
+ "rows_all_match": 242,
+ "left_out": {},
+ "differences": []
+}

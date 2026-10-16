@@ -1,0 +1,50 @@
+case,task_code,field,engine,p6,match
+H7-12,A1040,early_start,2020-01-13 07:00,2020-01-13 07:00,Y
+H7-12,A1040,early_finish,2020-01-22 17:30,2020-01-22 17:30,Y
+H7-12,A1040,late_start,2020-01-13 07:00,2020-01-13 07:00,Y
+H7-12,A1040,late_finish,2020-01-22 17:30,2020-01-22 17:30,Y
+H7-12,A1040,total_float_hr,0,0,Y
+H7-12,A1040,free_float_hr,0,0,Y
+H7-12,A1040,critical,true,true,Y
+H7-12,A1090,early_start,2020-01-23 07:00,2020-01-23 07:00,Y
+H7-12,A1090,early_finish,2020-01-28 11:00,2020-01-28 11:00,Y
+H7-12,A1090,late_start,2020-01-23 07:00,2020-01-23 07:00,Y
+H7-12,A1090,late_finish,2020-01-28 11:00,2020-01-28 11:00,Y
+H7-12,A1090,total_float_hr,0,0,Y
+H7-12,A1090,free_float_hr,0,0,Y
+H7-12,A1090,critical,true,true,Y
+H7-12,A1100,early_start,2020-01-23 07:00,2020-01-23 07:00,Y
+H7-12,A1100,early_finish,2020-02-12 17:30,2020-02-12 17:30,Y
+H7-12,A1100,late_start,2020-01-23 07:00,2020-01-23 07:00,Y
+H7-12,A1100,late_finish,2020-02-12 17:30,2020-02-12 17:30,Y
+H7-12,A1100,total_float_hr,0,0,Y
+H7-12,A1100,free_float_hr,0,0,Y
+H7-12,A1100,critical,true,true,Y
+H7-12,A1110,early_start,2020-01-28 21:00,2020-01-28 21:00,Y
+H7-12,A1110,early_finish,2020-01-29 09:00,2020-01-29 09:00,Y
+H7-12,A1110,late_start,2020-02-03 00:00,2020-02-03 00:00,Y
+H7-12,A1110,late_finish,2020-02-03 12:00,2020-02-03 12:00,Y
+H7-12,A1110,total_float_hr,123,123,Y
+H7-12,A1110,free_float_hr,0,0,Y
+H7-12,A1110,critical,false,false,Y
+H7-12,A1120,early_start,2020-01-29 09:00,2020-01-29 09:00,Y
+H7-12,A1120,early_finish,2020-01-30 15:30,2020-01-30 15:30,Y
+H7-12,A1120,late_start,2020-02-11 11:00,2020-02-11 11:00,Y
+H7-12,A1120,late_finish,2020-02-12 17:30,2020-02-12 17:30,Y
+H7-12,A1120,total_float_hr,72,72,Y
+H7-12,A1120,free_float_hr,64,64,Y
+H7-12,A1120,critical,false,false,Y
+H7-12,A1130,early_start,2020-01-28 11:00,2020-01-28 11:00,Y
+H7-12,A1130,early_finish,2020-01-29 09:00,2020-01-29 09:00,Y
+H7-12,A1130,late_start,2020-02-12 09:00,2020-02-12 09:00,Y
+H7-12,A1130,late_finish,2020-02-12 17:30,2020-02-12 17:30,Y
+H7-12,A1130,total_float_hr,88,88,Y
+H7-12,A1130,free_float_hr,88,88,Y
+H7-12,A1130,critical,false,false,Y
+H7-12,A1140,early_start,2020-02-12 09:00,2020-02-12 09:00,Y
+H7-12,A1140,early_finish,2020-02-12 09:00,2020-02-12 09:00,Y
+H7-12,A1140,late_start,2020-02-12 17:30,2020-02-12 17:30,Y
+H7-12,A1140,late_finish,2020-02-12 17:30,2020-02-12 17:30,Y
+H7-12,A1140,total_float_hr,8.5,8.5,Y
+H7-12,A1140,free_float_hr,8.5,8.5,Y
+H7-12,A1140,critical,false,false,Y
