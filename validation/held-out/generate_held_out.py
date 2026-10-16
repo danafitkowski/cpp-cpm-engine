@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate a held-out set of Primavera P6 test schedules (XER) from a seed.
 
-    python generate_held_out.py --seed <hex> --set H1 --count 12 --out H1/cases
+    python generate_held_out.py --seed <hex> --set H1 --count 12 --out H1/cases [--dates pre2020]
 
 Standard library only, deterministic: the same seed, set name and count always
 write the same bytes. Each case is one synthetic project (no client data):
@@ -17,6 +17,9 @@ write the same bytes. Each case is one synthetic project (no client data):
   no successor;
 - constraints of every P6 type on about one activity in ten, and sometimes a
   Must Finish By;
+- a start date drawn from a window: the default one (March 2026 to January
+  2027) used by every set through H5, or, with --dates pre2020 (H6), one
+  before 1 January 2020 (see DATE_WINDOWS);
 - progress at a random data date: completed, in-progress (with remaining
   durations and, under some projects, expected finishes) and not-started work,
   with out-of-sequence progress arising from random jitter;
@@ -196,11 +199,27 @@ class Cal:
         return '(0||CalendarData()((0||DaysOfWeek()(%s))(0||Exceptions()(%s))))' % (days, exc)
 
 
-def make_case(seed, set_name, k):
+# Where a project starts. 'default' is the window every set through H5 used, with the same single draw, so those
+# sets regenerate byte for byte. 'pre2020' (H6) puts every project's start before 1 January 2020: an odd-numbered
+# case starts between 2 January 2012 and 31 December 2018, so all its work lies before 2020; an even-numbered one
+# starts in December 2019, so its work runs across 1 January 2020 and most are updated in 2020.
+DATE_WINDOWS = {
+    'default': lambda k: (date(2026, 3, 2), 330),
+    'pre2020': lambda k: ((date(2012, 1, 2), (date(2018, 12, 31) - date(2012, 1, 2)).days) if k % 2 else
+                          (date(2019, 12, 2), (date(2019, 12, 31) - date(2019, 12, 2)).days)),
+}
+
+
+def draw_start(rng, dates, k):
+    first, days = DATE_WINDOWS[dates](k)
+    return first + timedelta(days=rng.randint(0, days))
+
+
+def make_case(seed, set_name, k, dates='default'):
     rng = random.Random(hashlib.sha256(('%s|%s|%d' % (seed, set_name, k)).encode()).hexdigest())
     pid = 9100 + k
     short = '%s-%02d' % (set_name, k)
-    start = date(2026, 3, 2) + timedelta(days=rng.randint(0, 330))
+    start = draw_start(rng, dates, k)
     span_guess = 200
 
     # Calendars
@@ -453,11 +472,12 @@ def main():
     ap.add_argument('--set', default='H1')
     ap.add_argument('--count', type=int, default=12)
     ap.add_argument('--out', required=True)
+    ap.add_argument('--dates', default='default', choices=sorted(DATE_WINDOWS))
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     cases = []
     for k in range(1, a.count + 1):
-        short, text, features = make_case(a.seed, a.set, k)
+        short, text, features = make_case(a.seed, a.set, k, a.dates)
         path = os.path.join(a.out, short + '.xer')
         with open(path, 'w', encoding='utf-8', newline='') as f:
             f.write(text)

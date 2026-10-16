@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Freeze a held-out set: seed it from a drand beacon round named in advance, generate it, record every hash.
 
-    python freeze.py --set H1 --round <drand round> --count 12
+    python freeze.py --set H1 --round <drand round> --count 12 [--dates pre2020]
 
 Fetches round <round> of the drand default (mainnet) chain
 (8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce, a 30-second
@@ -12,7 +12,9 @@ the author included, could know the seed when the generator, the scorer and
 the protocol were committed. Writes <set>/cases/ (the XER files and
 cases.json) and <set>/cases/manifest.json: the round, its randomness and
 signature, and the SHA-256 of the engine, of each script in this folder (and of
-<set>/PROTOCOL.md when the set has its own) and of each case file.
+<set>/PROTOCOL.md when the set has its own) and of each case file. --dates is
+handed to the generator (H6 on: pre2020; every earlier set used the default),
+and from H6 on the manifest also records score_whole_day.js.
 """
 import argparse
 import hashlib
@@ -45,6 +47,7 @@ def main():
     ap.add_argument('--set', required=True)
     ap.add_argument('--round', type=int, required=True)
     ap.add_argument('--count', type=int, default=12)
+    ap.add_argument('--dates', default='default')
     a = ap.parse_args()
     url = 'https://api.drand.sh/%s/public/%d' % (CHAIN, a.round)
     beacon = json.load(urllib.request.urlopen(url, timeout=30))
@@ -54,7 +57,7 @@ def main():
     seed = beacon['randomness']
     out = os.path.join(HERE, a.set, 'cases')
     subprocess.check_call([sys.executable, os.path.join(HERE, 'generate_held_out.py'), '--seed', seed,
-                           '--set', a.set, '--count', str(a.count), '--out', out])
+                           '--set', a.set, '--count', str(a.count), '--out', out, '--dates', a.dates])
     cases = json.load(open(os.path.join(out, 'cases.json'), encoding='utf-8'))
     manifest = {
         'set': a.set,
@@ -62,10 +65,13 @@ def main():
                   'randomness': beacon['randomness'], 'signature': beacon['signature'],
                   'previous_signature': beacon.get('previous_signature', ''), 'url': url},
         'seed': seed,
+        'dates': a.dates,
         'engine': {'file': 'cpm-engine.js', 'version': engine_version(),
                    'sha256': sha(os.path.join(HERE, '..', '..', 'cpm-engine.js'))},
         'scripts': dict({n: sha(os.path.join(HERE, n)) for n in ('generate_held_out.py', 'score_held_out.js',
-                                                                'readback_p6_sqlite.py', 'freeze.py', 'PROTOCOL.md')},
+                                                                'readback_p6_sqlite.py', 'freeze.py', 'PROTOCOL.md',
+                                                                'score_whole_day.js')
+                         if os.path.exists(os.path.join(HERE, n))},
                         **({a.set + '/PROTOCOL.md': sha(os.path.join(HERE, a.set, 'PROTOCOL.md'))}
                            if os.path.exists(os.path.join(HERE, a.set, 'PROTOCOL.md')) else {})),
         'cases': {c['file']: c['sha256'] for c in cases['cases']},

@@ -6,10 +6,11 @@ The rules are in [`PROTOCOL.md`](PROTOCOL.md).
 
 | File | What it does |
 |---|---|
-| `generate_held_out.py` | Writes a set of synthetic P6 XER schedules from a seed (standard library only). |
+| `generate_held_out.py` | Writes a set of synthetic P6 XER schedules from a seed (standard library only). `--dates pre2020` (H6) dates them before 2020; the default is the window H1 to H5 used. |
 | `freeze.py` | Fetches the named drand round, generates the set from it, and records every hash in `manifest.json`. |
 | `readback_p6_sqlite.py` | Reads P6's own schedule of each case back from a P6 Professional SQLite database, read-only. |
 | `score_held_out.js` | Runs `cpm-engine.js` on each frozen case through its public API and compares it with P6, field by field. |
+| `score_whole_day.js` | From H6: compares the engine's whole-day pass with the calendar day of P6's dates (`--engine <file>` runs a diagnosis of another engine, never a score). |
 
 ## Sets
 
