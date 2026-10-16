@@ -1,0 +1,50 @@
+case,task_code,field,engine,p6,match
+H6-11,A1090,early_start,2017-02-15 08:00,2017-02-15 08:00,Y
+H6-11,A1090,early_finish,2017-02-17 11:00,2017-02-17 11:00,Y
+H6-11,A1090,late_start,2017-02-23 08:00,2017-02-23 08:00,Y
+H6-11,A1090,late_finish,2017-02-27 17:30,2017-02-27 17:30,Y
+H6-11,A1090,total_float_hr,51.5,51.5,Y
+H6-11,A1090,free_float_hr,0,0,Y
+H6-11,A1090,critical,false,false,Y
+H6-11,A1110,early_start,2017-02-20 07:00,2017-02-20 07:00,Y
+H6-11,A1110,early_finish,2017-02-24 09:00,2017-02-24 09:00,Y
+H6-11,A1110,late_start,2017-02-28 14:00,2017-02-28 14:00,Y
+H6-11,A1110,late_finish,2017-03-07 11:00,2017-03-07 11:00,Y
+H6-11,A1110,total_float_hr,57.5,57.5,Y
+H6-11,A1110,free_float_hr,53.5,53.5,Y
+H6-11,A1110,critical,false,false,Y
+H6-11,A1130,early_start,2017-03-07 07:00,2017-03-07 07:00,Y
+H6-11,A1130,early_finish,2017-03-20 13:30,2017-03-20 13:30,Y
+H6-11,A1130,late_start,2017-03-07 11:00,2017-03-07 11:00,Y
+H6-11,A1130,late_finish,2017-03-20 17:30,2017-03-20 17:30,Y
+H6-11,A1130,total_float_hr,4,4,Y
+H6-11,A1130,free_float_hr,4,4,Y
+H6-11,A1130,critical,false,false,Y
+H6-11,A1140,early_start,2017-02-20 07:00,2017-02-20 07:00,Y
+H6-11,A1140,early_finish,2017-02-28 11:30,2017-02-28 11:30,Y
+H6-11,A1140,late_start,2017-03-08 09:30,2017-03-08 09:30,Y
+H6-11,A1140,late_finish,2017-03-16 15:00,2017-03-16 15:00,Y
+H6-11,A1140,total_float_hr,105.5,105.5,Y
+H6-11,A1140,free_float_hr,2.5,2.5,Y
+H6-11,A1140,critical,false,false,Y
+H6-11,A1150,early_start,2017-03-01 07:00,2017-03-01 07:00,Y
+H6-11,A1150,early_finish,2017-03-01 11:00,2017-03-01 11:00,Y
+H6-11,A1150,late_start,2017-03-17 07:00,2017-03-17 07:00,Y
+H6-11,A1150,late_finish,2017-03-17 11:00,2017-03-17 11:00,Y
+H6-11,A1150,total_float_hr,103,103,Y
+H6-11,A1150,free_float_hr,103,103,Y
+H6-11,A1150,critical,false,false,Y
+H6-11,A1160,early_start,2017-03-20 07:00,2017-03-20 07:00,Y
+H6-11,A1160,early_finish,2017-03-30 17:30,2017-03-30 17:30,Y
+H6-11,A1160,late_start,2017-03-20 07:00,2017-03-20 07:00,Y
+H6-11,A1160,late_finish,2017-03-30 17:30,2017-03-30 17:30,Y
+H6-11,A1160,total_float_hr,0,0,Y
+H6-11,A1160,free_float_hr,0,0,Y
+H6-11,A1160,critical,true,true,Y
+H6-11,A1170,early_start,2017-03-30 17:30,2017-03-30 17:30,Y
+H6-11,A1170,early_finish,2017-03-30 17:30,2017-03-30 17:30,Y
+H6-11,A1170,late_start,2017-03-30 17:30,2017-03-30 17:30,Y
+H6-11,A1170,late_finish,2017-03-30 17:30,2017-03-30 17:30,Y
+H6-11,A1170,total_float_hr,0,0,Y
+H6-11,A1170,free_float_hr,0,0,Y
+H6-11,A1170,critical,true,true,Y

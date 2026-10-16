@@ -1,0 +1,220 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "b26fb799e736f694ff2c5c72ed9bdc67d340707724121888a3c06a4aad12a1ac"
+ },
+ "cases": {
+  "H6-01": {
+   "unfinished": 24,
+   "all_fields_match": 24,
+   "engine_unfinished": 24,
+   "hours_pass": true
+  },
+  "H6-02": {
+   "unfinished": 26,
+   "all_fields_match": 26,
+   "engine_unfinished": 26,
+   "hours_pass": true
+  },
+  "H6-03": {
+   "unfinished": 12,
+   "all_fields_match": 12,
+   "engine_unfinished": 12,
+   "hours_pass": true
+  },
+  "H6-04": {
+   "unfinished": 28,
+   "all_fields_match": 28,
+   "engine_unfinished": 28,
+   "hours_pass": true
+  },
+  "H6-05": {
+   "unfinished": 25,
+   "all_fields_match": 25,
+   "engine_unfinished": 25,
+   "hours_pass": true
+  },
+  "H6-06": {
+   "unfinished": 23,
+   "all_fields_match": 23,
+   "engine_unfinished": 23,
+   "hours_pass": true
+  },
+  "H6-07": {
+   "unfinished": 21,
+   "all_fields_match": 16,
+   "engine_unfinished": 21,
+   "hours_pass": true
+  },
+  "H6-08": {
+   "unfinished": 30,
+   "all_fields_match": 30,
+   "engine_unfinished": 30,
+   "hours_pass": true
+  },
+  "H6-09": {
+   "unfinished": 22,
+   "all_fields_match": 22,
+   "engine_unfinished": 22,
+   "hours_pass": true
+  },
+  "H6-10": {
+   "unfinished": 25,
+   "all_fields_match": 25,
+   "engine_unfinished": 25,
+   "hours_pass": true
+  },
+  "H6-11": {
+   "unfinished": 7,
+   "all_fields_match": 7,
+   "engine_unfinished": 7,
+   "hours_pass": true
+  },
+  "H6-12": {
+   "unfinished": 17,
+   "all_fields_match": 17,
+   "engine_unfinished": 17,
+   "hours_pass": true
+  }
+ },
+ "fields": {
+  "early_start": {
+   "match": 256,
+   "differ": 4
+  },
+  "early_finish": {
+   "match": 256,
+   "differ": 4
+  },
+  "late_start": {
+   "match": 260,
+   "differ": 0
+  },
+  "late_finish": {
+   "match": 260,
+   "differ": 0
+  },
+  "total_float_hr": {
+   "match": 256,
+   "differ": 4
+  },
+  "free_float_hr": {
+   "match": 257,
+   "differ": 3
+  },
+  "critical": {
+   "match": 260,
+   "differ": 0
+  }
+ },
+ "rows": 260,
+ "rows_all_match": 255,
+ "left_out": {},
+ "differences": [
+  {
+   "case": "H6-07",
+   "task_code": "A1010",
+   "field": "early_start",
+   "engine": "2013-04-01 13:00",
+   "p6": "2013-04-08 13:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1010",
+   "field": "early_finish",
+   "engine": "2013-04-15 12:00",
+   "p6": "2013-04-22 12:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1010",
+   "field": "total_float_hr",
+   "engine": 64,
+   "p6": 24
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1010",
+   "field": "free_float_hr",
+   "engine": 40,
+   "p6": 0
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1030",
+   "field": "free_float_hr",
+   "engine": 8,
+   "p6": 0
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1190",
+   "field": "early_start",
+   "engine": "2013-04-02 13:00",
+   "p6": "2013-04-01 08:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1190",
+   "field": "early_finish",
+   "engine": "2013-04-09 16:00",
+   "p6": "2013-04-08 11:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1190",
+   "field": "total_float_hr",
+   "engine": 41,
+   "p6": 53
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1240",
+   "field": "early_start",
+   "engine": "2013-04-10 16:00",
+   "p6": "2013-04-09 11:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1240",
+   "field": "early_finish",
+   "engine": "2013-04-12 11:00",
+   "p6": "2013-04-10 16:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1240",
+   "field": "total_float_hr",
+   "engine": 41,
+   "p6": 53
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1300",
+   "field": "early_start",
+   "engine": "2013-04-12 16:00",
+   "p6": "2013-04-11 11:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1300",
+   "field": "early_finish",
+   "engine": "2013-04-16 12:00",
+   "p6": "2013-04-12 17:00"
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1300",
+   "field": "total_float_hr",
+   "engine": 51,
+   "p6": 66
+  },
+  {
+   "case": "H6-07",
+   "task_code": "A1300",
+   "field": "free_float_hr",
+   "engine": 11,
+   "p6": 26
+  }
+ ]
+}

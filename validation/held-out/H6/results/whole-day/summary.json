@@ -1,0 +1,125 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "b26fb799e736f694ff2c5c72ed9bdc67d340707724121888a3c06a4aad12a1ac",
+  "version": "2.10.7",
+  "role": "score"
+ },
+ "rows": 260,
+ "whole_day": {
+  "all_four_match": 26,
+  "fields": {
+   "early_start": {
+    "match": 147,
+    "differ": 113
+   },
+   "early_finish": {
+    "match": 110,
+    "differ": 150
+   },
+   "late_start": {
+    "match": 124,
+    "differ": 136
+   },
+   "late_finish": {
+    "match": 114,
+    "differ": 146
+   }
+  }
+ },
+ "printed": {
+  "all_seven_match": 255,
+  "fields": {
+   "early_start": {
+    "match": 256,
+    "differ": 4
+   },
+   "early_finish": {
+    "match": 256,
+    "differ": 4
+   },
+   "late_start": {
+    "match": 260,
+    "differ": 0
+   },
+   "late_finish": {
+    "match": 260,
+    "differ": 0
+   },
+   "total_float_hr": {
+    "match": 256,
+    "differ": 4
+   },
+   "free_float_hr": {
+    "match": 257,
+    "differ": 3
+   },
+   "critical": {
+    "match": 260,
+    "differ": 0
+   }
+  }
+ },
+ "cases": {
+  "H6-01": {
+   "unfinished": 24,
+   "whole_day_all_four": 4,
+   "printed_all_seven": 24
+  },
+  "H6-02": {
+   "unfinished": 26,
+   "whole_day_all_four": 0,
+   "printed_all_seven": 26
+  },
+  "H6-03": {
+   "unfinished": 12,
+   "whole_day_all_four": 2,
+   "printed_all_seven": 12
+  },
+  "H6-04": {
+   "unfinished": 28,
+   "whole_day_all_four": 2,
+   "printed_all_seven": 28
+  },
+  "H6-05": {
+   "unfinished": 25,
+   "whole_day_all_four": 1,
+   "printed_all_seven": 25
+  },
+  "H6-06": {
+   "unfinished": 23,
+   "whole_day_all_four": 2,
+   "printed_all_seven": 23
+  },
+  "H6-07": {
+   "unfinished": 21,
+   "whole_day_all_four": 1,
+   "printed_all_seven": 16
+  },
+  "H6-08": {
+   "unfinished": 30,
+   "whole_day_all_four": 4,
+   "printed_all_seven": 30
+  },
+  "H6-09": {
+   "unfinished": 22,
+   "whole_day_all_four": 2,
+   "printed_all_seven": 22
+  },
+  "H6-10": {
+   "unfinished": 25,
+   "whole_day_all_four": 5,
+   "printed_all_seven": 25
+  },
+  "H6-11": {
+   "unfinished": 7,
+   "whole_day_all_four": 2,
+   "printed_all_seven": 7
+  },
+  "H6-12": {
+   "unfinished": 17,
+   "whole_day_all_four": 1,
+   "printed_all_seven": 17
+  }
+ }
+}
