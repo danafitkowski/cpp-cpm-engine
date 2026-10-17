@@ -2367,9 +2367,11 @@ compareFixture('F98 — RES: a resume date at or before the data date', {
     relationship_lag_calendar: 'predecessor',
 });
 
-// F99 — progress override: P6's handling of a resume date is unmeasured
-// there, so it is not applied, and one WARN names every row carrying one.
-compareFixture('F99 — RES: progress override does not apply a resume date', {
+// F99 — progress override: a completed activity's resume date holds nothing
+// (P6 probe ZZ-CPP-PORS, v2.10.8; under retained logic it holds its
+// successors, F96). Work under way restarts at its resume date under either
+// option (F173, F174).
+compareFixture('F99 — RES: under progress override a completed activity\'s resume date holds nothing', {
     activities: [
         { code: 'C', duration_days: 0, actual_start: '2025-08-28 08:00',
           actual_finish: '2025-09-04 17:00', suspend_date: '2025-09-04 17:00',
@@ -3549,6 +3551,28 @@ compareFixture('F171 - PS: SS lag from the Actual Start: an SS link out of compl
 compareFixture('F172 - PS: the same, whole days', {
     activities: psActs(dA), relationships: psRels(dR), data_date: '2026-03-11', cal_map: HCAL,
     relationship_lag_calendar: 'rcal_Predecessor', ss_lag_from: 'actual_start',
+});
+
+// RO (v2.10.8, P6 probe ZZ-CPP-PORS): under progress override a resume date after the data date holds the restart
+// of work under way, as under retained logic: snapped to the next opening off working time, kept mid-shift, and
+// held behind an unfinished predecessor progress override ignores. Before the data date or blank, the work restarts
+// at the data date. A completed activity's resume date holds nothing under progress override.
+const roSince = '2026-11-30 08:00';
+const roSusp = (A, code, resume, extra) => A(code, 80, Object.assign({ actual_start: roSince, remaining_duration: 5,
+    suspend_date: '2026-12-04 16:00' }, resume ? { resume_date: resume } : {}, extra || {}));
+const roActs = (A) => [roSusp(A, 'A1', '2026-12-14 08:00'), roSusp(A, 'A2', '2026-12-07 08:00'), roSusp(A, 'A3', null),
+    roSusp(A, 'A4', '2026-12-12 08:00'), roSusp(A, 'A5', '2026-12-14 10:30'), A('P6', 64), roSusp(A, 'A6', '2026-12-14 08:00'),
+    A('A7', 24, { actual_start: roSince, actual_finish: '2026-12-02 16:00', is_complete: true,
+        suspend_date: '2026-12-02 16:00', resume_date: '2026-12-14 08:00' }), A('B7', 16),
+    roSusp(A, 'A9', '2026-12-14 08:00'), A('B9', 16), A('A10', 80, { actual_start: roSince, remaining_duration: 5 })];
+const roRels = (R) => [R('P6', 'A6'), R('A7', 'B7'), R('A9', 'B9')];
+compareFixture('F173 - RO: under progress override a resume date after the data date holds work under way, in hours', {
+    activities: roActs(hA), relationships: roRels(hR), data_date: '2026-12-09 08:00', cal_map: HCAL,
+    schedule_mode: 'progress_override', relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F174 - RO: the same, whole days', {
+    activities: roActs(dA), relationships: roRels(dR), data_date: '2026-12-09', cal_map: HCAL,
+    schedule_mode: 'progress_override', relationship_lag_calendar: 'rcal_Predecessor',
 });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

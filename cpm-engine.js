@@ -2455,6 +2455,7 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBound) {
     const starts = [];
     const fins = [];
     const lfAct = actCal.prevWorkEnd(lfReq);
+    let bound = false;
     for (const g of asg) {
         const gc = g.cal;
         let f;
@@ -2465,6 +2466,7 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBound) {
             s = gc.sub(f, g.rem);
             actS = g.lag ? gc.sub(s, g.lag) : s;
             if (lsBound !== null && lsBound <= actS) {
+                bound = true;
                 actS = (gc.isFinish(lsBound) || gc.isStart(lsBound)) ? lsBound : gc.prevWorkEnd(lsBound);
                 s = g.lag ? gc.nextWork(gc.add(actS, g.lag)) : actS;
                 f = gc.add(s, g.rem);
@@ -2485,6 +2487,20 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBound) {
         }
         starts.push(actS);
         fins.push(f);
+    }
+    // RL (17-Oct-2026): with two or more assignments, the latest finish the
+    // bound gives any of them, at the activity calendar's last close at or
+    // before it, is the activity's late finish, and every assignment runs back
+    // from there (ZZ-CPP-RDSF B1, B2, B5; H9-08 A1050). One assignment keeps
+    // L13 (B3)
+    if (bound && asg.length > 1) {
+        const lfAll = actCal.prevWorkEnd(Math.max.apply(null, fins));
+        asg.forEach((g, i) => {
+            if (!(g.rem > 0)) return;
+            fins[i] = g.cal.prevWorkEnd(lfAll);
+            const s = g.cal.sub(fins[i], g.rem);
+            starts[i] = g.lag ? g.cal.sub(s, g.lag) : s;
+        });
     }
     return [Math.min.apply(null, starts), Math.max.apply(null, fins)];
 }
@@ -2847,7 +2863,11 @@ function computeCPMHours(activities, relationships, o) {
                     if (rl) bnd = lc.sub(bnd, rl);
                     lpt = (lpt === null) ? bnd : Math.min(lpt, bnd);
                 }
-                if (lpt !== null) n.lpt = lpt;
+                // CL (17-Oct-2026): one that passes back no date sits at the
+                // project finish, where P6 stores its late dates, and bounds
+                // its predecessors from there through the link and its lag
+                // (ZZ-CPP-H9FF X1-X5, Z2)
+                n.lpt = (lpt !== null) ? lpt : seed;
             }
             continue;
         }
@@ -3081,6 +3101,14 @@ function computeCPMHours(activities, relationships, o) {
         if (!n.complete) {
             tfFin = cal.between(rEf, n.lf);
             tfSta = cal.between(rEs, (n.rls !== undefined) ? n.rls : n.ls);
+            // RT (17-Oct-2026): on resource dependent work under way, and on
+            // any under "Start Float", P6 runs start float to the late finish
+            // less the remaining span on the activity calendar, not to the late
+            // start its assignments set, so it equals finish float
+            // (ZZ-CPP-RDTF T1-T11; H9-01 A1280; HW-07 A1090, A1100, A1160);
+            // work not started keeps its own late start under "Smallest"
+            // (T9; H9-01 A1060)
+            if (n.asg.length && (n.started || floatType === 'FT_Start')) tfSta = tfFin;
             tf = floatType === 'FT_Start' ? tfSta : (floatType === 'FT_Min' ? Math.min(tfFin, tfSta) : tfFin);
             const cands = [];
             for (const r of succs.get(c)) {
@@ -3093,7 +3121,10 @@ function computeCPMHours(activities, relationships, o) {
                 let sFin;
                 if (s.complete) {
                     if (!retained) continue;
-                    sStart = cal.nextWork(stamp(s));
+                    // FC (17-Oct-2026): at the date carried into it, as P6
+                    // stores that date, not moved to this activity's next
+                    // opening (ZZ-CPP-H9FF; H9-11 A1040)
+                    sStart = stamp(s);
                     sFin = sStart;
                 } else {
                     // RF (17-Oct-2026): free float runs to a successor's

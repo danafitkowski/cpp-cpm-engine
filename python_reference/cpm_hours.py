@@ -178,6 +178,7 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound):
     """
     starts, fins = [], []
     lf_act = act_cal.prev_work_end(lf_req)
+    bound = False
     for g in asg:
         gc = g['cal']
         if g['rem'] > 0:
@@ -185,6 +186,7 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound):
             s = gc.sub(f, g['rem'])
             act_s = gc.sub(s, g['lag']) if g['lag'] else s
             if ls_bound is not None and ls_bound <= act_s:
+                bound = True
                 act_s = ls_bound if (gc.is_finish(ls_bound) or gc.is_start(ls_bound)) else gc.prev_work_end(ls_bound)
                 s = gc.next_work(gc.add(act_s, g['lag'])) if g['lag'] else act_s
                 f = gc.add(s, g['rem'])
@@ -203,6 +205,18 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound):
             act_s = gc.sub(s, g['lag']) if g['lag'] else s
         starts.append(act_s)
         fins.append(f)
+    # RL (17-Oct-2026): with two or more assignments, the latest finish the bound
+    # gives any of them, at the activity calendar's last close at or before it, is
+    # the activity's late finish, and every assignment runs back from there
+    # (ZZ-CPP-RDSF B1, B2, B5; H9-08 A1050). One assignment keeps L13 (B3)
+    if bound and len(asg) > 1:
+        lf_all = act_cal.prev_work_end(max(fins))
+        for i, g in enumerate(asg):
+            if not g['rem'] > 0:
+                continue
+            fins[i] = g['cal'].prev_work_end(lf_all)
+            s = g['cal'].sub(fins[i], g['rem'])
+            starts[i] = g['cal'].sub(s, g['lag']) if g['lag'] else s
     return min(starts), max(fins)
 
 
@@ -574,8 +588,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     if rl:
                         bnd = lc.sub(bnd, rl)
                     lpt = bnd if lpt is None else min(lpt, bnd)
-                if lpt is not None:
-                    n['lpt'] = lpt
+                # CL (17-Oct-2026): one that passes back no date sits at the
+                # project finish, where P6 stores its late dates, and bounds
+                # its predecessors from there through the link and its lag
+                # (ZZ-CPP-H9FF X1-X5, Z2)
+                n['lpt'] = lpt if lpt is not None else seed
             continue
         # resource dependent work snaps on each assignment's calendar (RD)
         lf = seed if n['asg'] else (cal.prev_work_end(seed) if n['rem'] > 0 else seed)
@@ -825,13 +842,22 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # (remaining late start - remaining early start) or the smaller
             tf_fin = cal.between(r_ef, n['lf'])
             tf_sta = cal.between(r_es, n.get('rls', n['ls']))
+            # RT (17-Oct-2026): on resource dependent work under way, and on
+            # any under "Start Float", P6 runs start float to the late finish
+            # less the remaining span on the activity calendar, not to the late
+            # start its assignments set, so it equals finish float
+            # (ZZ-CPP-RDTF T1-T11; H9-01 A1280; HW-07 A1090, A1100, A1160);
+            # work not started keeps its own late start under "Smallest"
+            # (T9; H9-01 A1060)
+            if n['asg'] and (n['started'] or float_type == 'FT_Start'):
+                tf_sta = tf_fin
             tf = tf_sta if float_type == 'FT_Start' else (min(tf_fin, tf_sta) if float_type == 'FT_Min' else tf_fin)
         ff = ff_signed = None
         if not n['complete']:
             # Free float (day engine FF rules, in working minutes): the least
             # slack to any successor, floored at zero. A completed successor
-            # is measured at its stamp under retained logic (snapped to this
-            # activity's calendar), skipped otherwise; an SS / SF slack off
+            # is measured at its stamp under retained logic (the date carried
+            # into it, not snapped), skipped otherwise; an SS / SF slack off
             # work under way runs from the anchor the forward pass used, with
             # the unexpired lag (none into completed work). Slack is counted
             # on this activity's calendar.
@@ -847,7 +873,10 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 if s['complete']:
                     if not retained or dd is None:
                         continue
-                    s_start = s_fin = cal.next_work(stamp(s))
+                    # FC (17-Oct-2026): at the date carried into it, as P6
+                    # stores that date, not moved to this activity's next
+                    # opening (ZZ-CPP-H9FF; H9-11 A1040)
+                    s_start = s_fin = stamp(s)
                 elif s.get('rem_dates'):
                     # RF (17-Oct-2026): to a successor's remaining dates where they
                     # differ from its early ones, the remaining start for FS / SS,

@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  a1a343c13c53715a88f08dec3903d939ef553f440d5511420f2b629ef11e5892
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  fbe8e5499012f35592595b7a5318c77f337b54e7aa84ab52524cc8298deb42da
+cpm_hours.py    SHA-256:  1325e409664c28a5cc42f297f4d463ae547df2ab5c6d270a92e2eeebe6af949e
 
 (Candidate after v2.10.7, unreleased, 2026-10-17 - cpm_hours.py bumped from
 bcb198bc...: resource dependent work under way takes the remaining dates
@@ -215,6 +215,15 @@ d7c7f4a5... and cpm_hours.py again: under progress override a resume date
 after the data date holds the restart of work under way, as under retained
 logic, and a completed activity's holds nothing there (RO); measured on P6
 probe ZZ-CPP-PORS, 13 of 13 rows, validation/p6-probes/po-resume-2026-10-17.
+Then cpm_hours.py again from fbe8e549..., for the rows held-out set H9 left
+after RO: free float into a completed successor runs to the date carried
+into it, not moved to the activity's next opening (FC); a completed
+successor that passes back no date sits at the project finish on the late
+side (CL); on resource dependent work under way, and on any under "Start
+Float", start float equals finish float (RT); and with two or more
+assignments an SS / SF bound sets the late finish every assignment runs
+back from (RL); measured on P6 probes ZZ-CPP-H9FF, ZZ-CPP-RDTF and
+ZZ-CPP-RDSF, validation/p6-probes/h9-followups-2026-10-17.
 cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left
@@ -668,8 +677,8 @@ Python reference: <repo>/python_reference/cpm.py
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 168 passed, 0 failed
-  Checks:   11149 / 11149 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 170 passed, 0 failed
+  Checks:   11390 / 11390 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 
