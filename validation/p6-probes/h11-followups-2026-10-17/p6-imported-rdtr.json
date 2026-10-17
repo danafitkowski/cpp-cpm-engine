@@ -1,0 +1,208 @@
+{
+ "case": "ZZ-CPP-RDTR",
+ "proj_id": 5156,
+ "differences": [
+  "TASK T6 remain_drtn_hr_cnt: xer '24' p6 22.0",
+  "TASK T6 target_drtn_hr_cnt: xer '40' p6 38.0",
+  "TASK T7 target_drtn_hr_cnt: xer '40' p6 38.0",
+  "TASK T11 remain_drtn_hr_cnt: xer '24' p6 16.0",
+  "TASKRSRC T6/ZZ-RDTR-RL target_qty_per_hr: xer '1' p6 1.05263157894737",
+  "TASKRSRC T7/ZZ-RDTR-RE target_qty_per_hr: xer '1' p6 1.05263157894737",
+  "TASKRSRC T10/ZZ-RDTR-R7 target_qty_per_hr: xer '2' p6 1.0",
+  "TASKRSRC T11/ZZ-RDTR-R7 target_qty_per_hr: xer '1' p6 0.714285714285714"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "T1": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T10": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T11": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T2": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T3": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T4": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T5": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T6": {
+    "remain_drtn_hr_cnt": 22.0,
+    "target_drtn_hr_cnt": 38.0
+   },
+   "T7": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 38.0
+   },
+   "T8": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "T9": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "T1",
+    "rsrc_short_name": "ZZ-RDTR-RH",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T10",
+    "rsrc_short_name": "ZZ-RDTR-R7",
+    "remain_qty": 24.0,
+    "target_qty": 56.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 32.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T10",
+    "rsrc_short_name": "ZZ-RDTR-RH",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T11",
+    "rsrc_short_name": "ZZ-RDTR-R7",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.714285714285714,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T2",
+    "rsrc_short_name": "ZZ-RDTR-RH",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T3",
+    "rsrc_short_name": "ZZ-RDTR-RH",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T4",
+    "rsrc_short_name": "ZZ-RDTR-RH",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T5",
+    "rsrc_short_name": "ZZ-RDTR-RH",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T6",
+    "rsrc_short_name": "ZZ-RDTR-RL",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.05263157894737,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T7",
+    "rsrc_short_name": "ZZ-RDTR-RE",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.05263157894737,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T8",
+    "rsrc_short_name": "ZZ-RDTR-RX",
+    "remain_qty": 24.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "T9",
+    "rsrc_short_name": "ZZ-RDTR-RH",
+    "remain_qty": 24.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

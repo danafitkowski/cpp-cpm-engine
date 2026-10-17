@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  9d267097cf60c3621d6ae124918751a94207f0807f19ef34426dc7aeab7445fd
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  874a599ddf4e1be4ee49d4ae8039093a51bc83c1dba898ad50fa355bf00ce53f
+cpm_hours.py    SHA-256:  ded871c6f749654964f9db800e1f2caabc46f10133505718567645ed0c64c8f2
 
 (v2.10.8 candidate, unreleased, 2026-10-17 - cpm.py bumped from a1a343c1...:
 ENGINE_VERSION reads 2.10.8. cpm_hours.py bumped from
@@ -235,7 +235,11 @@ two or more assignments the activity starts where the first of them would
 and every assignment runs from that one start), RW (an SS / SF lead bounds
 each assignment at its own calendar's next opening) and LC on resource
 dependent work; measured on P6 probes ZZ-CPP-RD2F and ZZ-CPP-RD2L, 55 of 55
-rows, validation/p6-probes/h10-followups-2026-10-17.
+rows, validation/p6-probes/h10-followups-2026-10-17. Then from 874a599d...,
+for the row held-out set H11 left: RT's clause for resource dependent work
+under way holds under progress override only (under retained logic such work
+keeps its own late start); measured on P6 probes ZZ-CPP-RDTR and ZZ-CPP-RDTS,
+28 of 28 rows, validation/p6-probes/h11-followups-2026-10-17.
 cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left

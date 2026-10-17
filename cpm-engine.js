@@ -3141,14 +3141,15 @@ function computeCPMHours(activities, relationships, o) {
         if (!n.complete) {
             tfFin = cal.between(rEf, n.lf);
             tfSta = cal.between(rEs, (n.rls !== undefined) ? n.rls : n.ls);
-            // RT (17-Oct-2026): on resource dependent work under way, and on
-            // any under "Start Float", P6 runs start float to the late finish
-            // less the remaining span on the activity calendar, not to the late
-            // start its assignments set, so it equals finish float
-            // (ZZ-CPP-RDTF T1-T11; H9-01 A1280; HW-07 A1090, A1100, A1160);
-            // work not started keeps its own late start under "Smallest"
-            // (T9; H9-01 A1060)
-            if (n.asg.length && (n.started || floatType === 'FT_Start')) tfSta = tfFin;
+            // RT (17-Oct-2026): on resource dependent work under "Start Float",
+            // and on work under way under progress override, P6 runs start
+            // float to the late finish less the remaining span on the activity
+            // calendar, not to the late start its assignments set, so it equals
+            // finish float (ZZ-CPP-RDTF T1-T11; H9-01 A1280; HW-07 A1090, A1100,
+            // A1160; H11-02, H11-03, H11-10). Under retained logic work under way
+            // keeps its own late start (ZZ-CPP-RDTR T1-T11; H11-07 A1260), as
+            // does work not started under "Smallest" (T9; H9-01 A1060)
+            if (n.asg.length && (floatType === 'FT_Start' || (n.started && po))) tfSta = tfFin;
             tf = floatType === 'FT_Start' ? tfSta : (floatType === 'FT_Min' ? Math.min(tfFin, tfSta) : tfFin);
             const cands = [];
             for (const r of succs.get(c)) {

@@ -873,14 +873,15 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # (remaining late start - remaining early start) or the smaller
             tf_fin = cal.between(r_ef, n['lf'])
             tf_sta = cal.between(r_es, n.get('rls', n['ls']))
-            # RT (17-Oct-2026): on resource dependent work under way, and on
-            # any under "Start Float", P6 runs start float to the late finish
-            # less the remaining span on the activity calendar, not to the late
-            # start its assignments set, so it equals finish float
-            # (ZZ-CPP-RDTF T1-T11; H9-01 A1280; HW-07 A1090, A1100, A1160);
-            # work not started keeps its own late start under "Smallest"
-            # (T9; H9-01 A1060)
-            if n['asg'] and (n['started'] or float_type == 'FT_Start'):
+            # RT (17-Oct-2026): on resource dependent work under "Start Float",
+            # and on work under way under progress override, P6 runs start
+            # float to the late finish less the remaining span on the activity
+            # calendar, not to the late start its assignments set, so it equals
+            # finish float (ZZ-CPP-RDTF T1-T11; H9-01 A1280; HW-07 A1090, A1100,
+            # A1160; H11-02, H11-03, H11-10). Under retained logic work under way
+            # keeps its own late start (ZZ-CPP-RDTR T1-T11; H11-07 A1260), as
+            # does work not started under "Smallest" (T9; H9-01 A1060)
+            if n['asg'] and (float_type == 'FT_Start' or (n['started'] and po)):
                 tf_sta = tf_fin
             tf = tf_sta if float_type == 'FT_Start' else (min(tf_fin, tf_sta) if float_type == 'FT_Min' else tf_fin)
         ff = ff_signed = None
