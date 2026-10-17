@@ -152,6 +152,15 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.7 (reviewed 2026-10-16)
+
+The day-number epoch limitation (audit HIGH R12) and H6's two differences are **CLOSED**. v2.10.7 moves computed values (change class A under the operator procedure): day numbers count from 1 January 1900, so the whole-day pass keeps the dates of a schedule dated before 2020 and an actual start on 1 January 2020; As Late As Possible work under way slides over a start-to-start or start-to-finish lag by only its unexpired part; and under "Calculate start-to-start lag from: Actual Start" a start-to-start link out of completed work carries no date from unfinished work (see CHANGELOG.md). The two rules were measured on eight P6 probes, so they are fitted. Held-out set H7 then scored these bytes once at 242 of 242, all 12 cases clean, deciding the start-to-start rule on eight activities; it drew no case for the As Late As Possible rule.
+- The unit suite grew from 1,489 to 1,498.
+- The cross-validation surface grew from 162 to 168 fixtures and from 10,350 of 10,350 to 11,149 of 11,149 comparisons, 0 skipped, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.71% statements / 83.74% branches / 96.88% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+- No held-out difference is open.
+
 ## Status at v2.10.6 (reviewed 2026-10-14)
 
 H4's two differences are **CLOSED**. v2.10.6 moves computed values (change class A under the operator procedure): under progress override, As Late As Possible work slides past an FS or SS link into a successor already under way, and a Mandatory Start or Mandatory Finish on work not started sets its own late date whatever its successors need, the earlier pin governing where an activity carries both (see CHANGELOG.md). The rules were measured on four P6 probes, so they are fitted; held-out set H5 then scored these bytes once at 205 of 205, all 12 cases clean, though its draw gave neither rule a value to decide.
@@ -343,4 +352,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.6. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.7. Update on every release that closes or opens an audit item.

@@ -12,6 +12,98 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.7 - 2026-10-16 - Schedules dated before 2020 in the whole-day pass, and the two situations held-out set H6 left
+
+**Computed values move (Class A): engine math changed.** Three changes, in both passes where they apply, with the
+Python reference changed in step:
+
+- **Day numbers count from 1 January 1900** (`EPOCH_YEAR` 1900; 2020 through v2.10.6). The whole-day pass reads a day
+  number of 0 or less as no date. With the epoch at 1 January 2020, a schedule dated before 2020 lost its data date and
+  its dates in that pass: its day numbers, driving predecessors and whole-day float were wrong there, and so were the
+  printed dates wherever the hours pass does not run. An actual start on 1 January 2020 itself read as none, so that
+  work was scheduled as not started. DAUBERT.md disclosed only that last case (audit HIGH R12), so the disclosure
+  understated the defect; it is now closed. Day numbers are relative, so for a schedule dated 2020 or later no date or
+  float moves. Two things do change there: every raw day number (`es`, `ef`, `ls`, `lf`) reads 43,829 higher, and a
+  network with no data date and no start date now counts from 1 January 1900 instead of 1 January 2020 (the
+  `missing-data-date` alert fires, as before).
+- **As Late As Possible work under way (AU).** It slides over a start-to-start or start-to-finish link out of it by
+  only the unexpired part of the lag: the lag counted from the work's actual start, less the working time already
+  elapsed to the data date. Finish-to-start and finish-to-finish lags count in full, as before. P6 does this under
+  either "Calculate start-to-start lag from" setting, either float type and either lag calendar, whether the successor
+  is under way or not started (H6-07 A1010).
+- **A date carried through completed work, over a start-to-start link (PS).** Under retained logic with "Calculate
+  start-to-start lag from: Actual Start", a start-to-start link out of completed work starts from that work's actual
+  start and carries no date the work carries from unfinished predecessors. Finish-to-start, finish-to-finish and
+  start-to-finish links still carry it, and under "Early Start" a start-to-start link does too. The backward pass is
+  unchanged (H6-07 A1190, A1240, A1300 and A1030's free float).
+
+Eight synthetic probe projects measured AU and PS in P6 Professional 23.12.1
+([`validation/p6-probes/h6-situations-2026-10-16/`](validation/p6-probes/h6-situations-2026-10-16/)), and this
+release reproduces them.
+
+**Verified.**
+- **Held-out set H7,** drawn after the engine was frozen, on schedules dated before or across 1 January 2020, and
+  scored once on these bytes: **242 of 242** unfinished activities match P6 on all seven fields, all 12 cases clean
+  ([`validation/held-out/H7/RESULT.md`](validation/held-out/H7/RESULT.md)).
+  - Its draw gave PS eight activities to decide (H7-06, under "Actual Start"); v2.10.6 gives 234 of 242. It also drew
+    PS's "Early Start" side (H7-01), where P6 keeps the carried date, as this release does. It drew no case for AU.
+  - In the whole-day pass this release puts 110 of H7's 242 early starts on P6's calendar day; v2.10.6 puts 41 there,
+    and none on the six cases dated wholly before 2020.
+- **Held-out set H6,** drawn the same way, scored the candidate once before AU and PS were added: 255 of 260, its five
+  differences all in one case (H6-07) and all present in v2.10.6
+  ([`validation/held-out/H6/RESULT.md`](validation/held-out/H6/RESULT.md)). They are the two situations AU and PS now
+  settle, so H6 is fitted for these bytes. Its whole-day measure: 147 early starts of 260 on P6's day, against
+  v2.10.6's 55.
+- **The probes:** 152 of 152 probe rows match P6 on the four dates and both floats (the candidate H6 scored: 117).
+  EP-1 to EP-5 and HR-63 to HR-66 pin the changes, and F167 to F172 hand both engines the shapes. The probes are
+  fitted, not held out.
+- **Against P6, through CPP's converters and this engine** (the measuring machine's P6 database, 348 projects,
+  96,278 unfinished activities): 40 rows moved against v2.10.6, all onto P6, all in the eight probe projects and H6-07;
+  none moved elsewhere. 96,276 match P6 on all four dates and both floats (v2.10.6: 96,236).
+- **The epoch change on its own,** measured before AU and PS: on the database as it then stood (327 projects P6 had
+  freshly scheduled, 95,669 unfinished activities) no printed value moved. The 7 P6 probe projects dated 2013 (140 open
+  activities) get 120 early starts and 103 late starts on P6's dates from the whole-day pass, where v2.10.6 gave none.
+  The Python reference, old against new, moved no value on 325 projects dated 2020 or later (174,449 activities).
+- **JS against Python** on the database (348 projects, 172,924 activities): every field equal.
+- **XER census on the measuring machine.** Under the epoch change, 30 of 699 files move, every one explained:
+  - 18 dated before 2020;
+  - 11 with no data date, none of which moves once given one;
+  - one synthetic file whose late dates reach 2007, where only the whole-day pass moves.
+
+  Under AU and PS, 7 of 707 files move: the probe files.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.6, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values, re-based raw day numbers and version stamps aside;
+  the capture cases read 256 of 256 at each data date.
+- **JS unit suite:** 1,498 checks green, up from 1,489 (EP-1 to EP-5, HR-63 to HR-66).
+- **Cross-validation:** 168 fixtures, 11149 of 11149 executed, 0 skipped, 0 failures; alert parity on 166 of 168
+  (the other 2 must throw).
+- **Coverage,** re-measured on these bytes: 94.71% statements, 83.74% branches, 96.88% functions.
+- **CI on these bytes before the tag:** 9 of 9 verification legs (Node 18, 20 and 22 on ubuntu, macOS and Windows)
+  and the cross-validation workflow.
+
+**Who is affected.**
+- Schedules dated before 2020, or with work under way that started on 1 January 2020: the whole-day pass's day numbers,
+  driving predecessors and whole-day float, and printed dates wherever the hours pass does not run.
+- Any caller that reads raw day numbers (they read 43,829 higher), and any network run with no data date and no start
+  date (it now starts on 1 January 1900).
+- Schedules with As Late As Possible work under way that has a start-to-start or start-to-finish link with a lag out
+  of it.
+- Schedules under retained logic with "Calculate start-to-start lag from: Actual Start" where a start-to-start link
+  runs out of completed work that carries the date of unfinished work.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version is
+re-run under §12.2 where its schedule carries any of these situations.
+
+**Not claimed.**
+- AU rests on five P6 probe projects and the one held-out case it was fitted to (H6-07). No held-out case has decided
+  it since: across the 84 held-out cases of H1 to H7 the situation came up once.
+- PS was decided by held-out cases on each side once (H7-06 under "Actual Start", H7-01 under "Early Start"). That
+  supports the rule; it does not cover every form it can take.
+- The whole-day pass cannot place work that starts or ends part-way through a day. On H7 it agrees with P6's calendar
+  day less often than on H1 to H5, and it gives the same whole-day dates when the same schedules are moved past 2020.
+
+---
+
 ## v2.10.6 - 2026-10-14 - The two differences held-out set H4 left: As Late As Possible work past a successor under way, and a mandatory date on the late side
 
 **Computed values move (Class A): engine math changed.** Held-out set H4 scored v2.10.4 at 233 of 237. Its four
