@@ -42,10 +42,27 @@
 // line give the figure over every row, the out-of-scope rows counted as not
 // matching. Each of these keys appears only when a set has such rows, so the
 // results of a set without them are unchanged.
+//
+// P6's import laid over (pre-registered for H8): P6 re-sizes resource
+// dependent work (TT_Rsrc) when it imports an XER. It fits each assignment
+// between the activity's planned dates on the resource's own calendar,
+// recalculates units per hour, and derives the activity's remaining and
+// planned durations from its assignments (the 13-Oct-2026 resource dependent
+// probes; H8's smoke case HW-01). A P6 export carries that sizing; a generated
+// case file does not. So where <set>/p6-imported/<case>.json exists
+// (import_p6_sqlite.py, run after the case's import and before its F9),
+// p6_imported_overlay.js lays P6's values over the case text before parseXER:
+// the remaining and planned duration of each resource dependent activity and
+// the quantities, units per hour, lags and actual units of each of its
+// assignments; nothing else changes. The SHA-256 check stays on the frozen
+// file. Both modes do this; each case laid over gets p6_imported_overlay
+// (tasks, assignments) in summary.json and the counts are printed. A set
+// without p6-imported/ is scored as before and its results are unchanged.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { overlay } = require('./p6_imported_overlay.js');
 
 const SET = path.resolve(process.argv[2] || '');
 const ENGINE_ONLY = process.argv.includes('--engine-only');
@@ -136,21 +153,32 @@ function taskTypes(text) {
 
 const results = {};
 for (const c of cases) {
-    const text = fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1');
+    let text = fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1');
     const sha = crypto.createHash('sha256').update(fs.readFileSync(path.join(SET, 'cases', c.file))).digest('hex');
     if (sha !== c.sha256) {
         console.error(c.case + ': the case file does not hash to cases.json (' + sha + ')');
         process.exitCode = 2;
         return;
     }
+    // P6's import laid over (pre-registered for H8; see the head of this file)
+    const importedPath = path.join(SET, 'p6-imported', c.case + '.json');
+    let laid = null;
+    if (fs.existsSync(importedPath)) {
+        const o = overlay(text, JSON.parse(fs.readFileSync(importedPath, 'utf8')));
+        text = o.text;
+        laid = { tasks: o.tasks, assignments: o.assignments };
+    }
     results[c.case] = runEngine(text);
     results[c.case].types = taskTypes(text);
+    if (laid) results[c.case].p6_imported_overlay = laid;
 }
 
 if (ENGINE_ONLY) {
     for (const [name, r] of Object.entries(results)) {
+        const laid = r.p6_imported_overlay;
         console.log(name + ': ' + Object.keys(r.out).length + ' unfinished activities scheduled, hours pass ' +
-            (r.hours.applied ? 'applied' : 'NOT applied (' + r.hours.reason + ')') + ', ' + r.alerts + ' ALERTs');
+            (r.hours.applied ? 'applied' : 'NOT applied (' + r.hours.reason + ')') + ', ' + r.alerts + ' ALERTs' +
+            (laid ? ', P6\'s import laid over ' + laid.tasks + ' tasks and ' + laid.assignments + ' assignments' : ''));
     }
     return;
 }
@@ -212,6 +240,7 @@ for (const c of cases) {
     summary.cases[c.case] = { unfinished: rows, all_fields_match: ok,
         engine_unfinished: Object.keys(eng).length, hours_pass: !!results[c.case].hours.applied };
     if (oos) summary.cases[c.case].out_of_scope = oos;
+    if (results[c.case].p6_imported_overlay) summary.cases[c.case].p6_imported_overlay = results[c.case].p6_imported_overlay;
     summary.rows += rows;
     summary.rows_all_match += ok;
     fs.writeFileSync(path.join(SET, 'results', c.case + '.csv'), lines.join('\n') + '\n');
@@ -228,3 +257,8 @@ if (outOfScope.length) {
 }
 for (const f of FIELDS) console.log('  ' + f + ': ' + summary.fields[f].match + ' of ' + (summary.fields[f].match + summary.fields[f].differ));
 console.log('  differences listed: ' + summary.differences.length);
+const laidOver = Object.values(summary.cases).map((s) => s.p6_imported_overlay).filter(Boolean);
+if (laidOver.length) {
+    console.log('P6\'s import laid over ' + laidOver.length + ' cases: ' + laidOver.reduce((n, o) => n + o.tasks, 0) +
+        ' tasks, ' + laidOver.reduce((n, o) => n + o.assignments, 0) + ' assignments');
+}
