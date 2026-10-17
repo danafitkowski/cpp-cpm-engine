@@ -15,7 +15,9 @@ signature, and the SHA-256 of the engine, of each script in this folder (and of
 <set>/PROTOCOL.md when the set has its own) and of each case file. --dates is
 handed to the generator (H6 on: pre2020; every earlier set used the default),
 and so is --features (H8 on: wide; every earlier set used the default), which
-the manifest records; from H6 on the manifest also records score_whole_day.js.
+the manifest records; from H6 on the manifest also records score_whole_day.js,
+and from H8 on import_p6_sqlite.py and p6_imported_overlay.js (P6's import laid
+over each case before the engine reads it).
 """
 import argparse
 import hashlib
@@ -74,7 +76,8 @@ def main():
                    'sha256': sha(os.path.join(HERE, '..', '..', 'cpm-engine.js'))},
         'scripts': dict({n: sha(os.path.join(HERE, n)) for n in ('generate_held_out.py', 'score_held_out.js',
                                                                 'readback_p6_sqlite.py', 'freeze.py', 'PROTOCOL.md',
-                                                                'score_whole_day.js')
+                                                                'score_whole_day.js', 'import_p6_sqlite.py',
+                                                                'p6_imported_overlay.js')
                          if os.path.exists(os.path.join(HERE, n))},
                         **({a.set + '/PROTOCOL.md': sha(os.path.join(HERE, a.set, 'PROTOCOL.md'))}
                            if os.path.exists(os.path.join(HERE, a.set, 'PROTOCOL.md')) else {})),

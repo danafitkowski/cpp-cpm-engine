@@ -32,10 +32,22 @@
 // listed in summary.json's out_of_scope (case, task code, task type, P6's values, whether the engine returned a node);
 // all_rows and a second printed line give each figure over every row, the out-of-scope rows counted as not matching.
 // Each of these keys appears only when a set has such rows, so the results of a set without them are unchanged.
+//
+// P6's import laid over (pre-registered for H8), as in score_held_out.js: P6 re-sizes resource dependent work (TT_Rsrc)
+// when it imports an XER. It fits each assignment between the activity's planned dates on the resource's own calendar,
+// recalculates units per hour, and derives the activity's remaining and planned durations from its assignments (the
+// 13-Oct-2026 resource dependent probes; H8's smoke case HW-01). A P6 export carries that sizing; a generated case file
+// does not. So where <set>/p6-imported/<case>.json exists (import_p6_sqlite.py, run after the case's import and before
+// its F9), p6_imported_overlay.js lays P6's values over the case text before parseXER: the remaining and planned
+// duration of each resource dependent activity and the quantities, units per hour, lags and actual units of each of
+// its assignments; nothing else changes. The SHA-256 check stays on the frozen file. Each case laid over gets
+// p6_imported_overlay (tasks, assignments) in summary.json and the counts are printed. A set without p6-imported/ is
+// scored as before and its results are unchanged.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { overlay } = require('./p6_imported_overlay.js');
 
 const SET = path.resolve(process.argv[2] || '');
 const ei = process.argv.indexOf('--engine');
@@ -170,7 +182,15 @@ for (const c of cases) {
         process.exitCode = 2;
         return;
     }
-    const text = fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1');
+    let text = fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1');
+    // P6's import laid over (pre-registered for H8; see the head of this file)
+    const importedPath = path.join(SET, 'p6-imported', c.case + '.json');
+    let laid = null;
+    if (fs.existsSync(importedPath)) {
+        const o = overlay(text, JSON.parse(fs.readFileSync(importedPath, 'utf8')));
+        text = o.text;
+        laid = { tasks: o.tasks, assignments: o.assignments };
+    }
     const { res, out } = runEngine(text);
     const types = taskTypes(text);
     const cs = { unfinished: 0, whole_day_all_four: 0, printed_all_seven: 0 };
@@ -219,6 +239,7 @@ for (const c of cases) {
         if (all7) { summary.printed.all_seven_match++; cs.printed_all_seven++; }
     }
     if (oos) cs.out_of_scope = oos;
+    if (laid) cs.p6_imported_overlay = laid;
     summary.cases[c.case] = cs;
 }
 if (outOfScope.length) {
@@ -255,4 +276,9 @@ console.log('printed fields: ' + summary.printed.all_seven_match + ' of ' + summ
 if (outOfScope.length) {
     console.log('printed fields, all rows: ' + summary.all_rows.printed_all_seven_match + ' of ' + summary.all_rows.rows +
         ', the ' + outOfScope.length + ' out-of-scope rows counted as not matching');
+}
+const laidOver = Object.values(summary.cases).map((s) => s.p6_imported_overlay).filter(Boolean);
+if (laidOver.length) {
+    console.log('P6\'s import laid over ' + laidOver.length + ' cases: ' + laidOver.reduce((n, o) => n + o.tasks, 0) +
+        ' tasks, ' + laidOver.reduce((n, o) => n + o.assignments, 0) + ' assignments');
 }
