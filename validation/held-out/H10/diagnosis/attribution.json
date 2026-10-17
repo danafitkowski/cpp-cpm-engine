@@ -1,0 +1,14 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). Each row: the engine scored on the frozen H10 cases with the same scorer; the rule rows remove one rule from the frozen v2.10.8 candidate (ec033162) in a scratch copy.",
+ "engines": {
+  "v2.10.7 (6c37aa2a)": 182,
+  "RU + RF, the engine H9 scored (cf47c1f9)": 185,
+  "RU + RF + RO (34a031db)": 203,
+  "v2.10.8 candidate without FC": 236,
+  "v2.10.8 candidate without CL": 236,
+  "v2.10.8 candidate without RT": 233,
+  "v2.10.8 candidate without RL": 236,
+  "v2.10.8 candidate without RQ": 206,
+  "v2.10.8 candidate (ec033162), the score": 236
+ }
+}

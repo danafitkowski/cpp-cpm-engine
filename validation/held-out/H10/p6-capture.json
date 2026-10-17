@@ -1,0 +1,65 @@
+{
+ "cases": {
+  "H10-01": {
+   "data_date": "2026-07-15 08:00",
+   "scheduled": "2026-10-17 11:37",
+   "must_finish_by": "2026-07-16 18:00"
+  },
+  "H10-02": {
+   "data_date": "2026-10-23 08:00",
+   "scheduled": "2026-10-17 11:37",
+   "must_finish_by": ""
+  },
+  "H10-03": {
+   "data_date": "2026-07-10 00:00",
+   "scheduled": "2026-10-17 11:37",
+   "must_finish_by": ""
+  },
+  "H10-04": {
+   "data_date": "2026-12-01 08:00",
+   "scheduled": "2026-10-17 11:38",
+   "must_finish_by": ""
+  },
+  "H10-05": {
+   "data_date": "2026-09-05 08:00",
+   "scheduled": "2026-10-17 11:38",
+   "must_finish_by": ""
+  },
+  "H10-06": {
+   "data_date": "2026-08-01 00:00",
+   "scheduled": "2026-10-17 11:39",
+   "must_finish_by": ""
+  },
+  "H10-07": {
+   "data_date": "2026-09-15 17:00",
+   "scheduled": "2026-10-17 11:39",
+   "must_finish_by": ""
+  },
+  "H10-08": {
+   "data_date": "2026-07-14 00:00",
+   "scheduled": "2026-10-17 11:39",
+   "must_finish_by": ""
+  },
+  "H10-09": {
+   "data_date": "2026-06-24 08:00",
+   "scheduled": "2026-10-17 11:40",
+   "must_finish_by": ""
+  },
+  "H10-10": {
+   "data_date": "2026-06-26 08:00",
+   "scheduled": "2026-10-17 11:40",
+   "must_finish_by": ""
+  },
+  "H10-11": {
+   "data_date": "2026-10-26 08:00",
+   "scheduled": "2026-10-17 11:41",
+   "must_finish_by": ""
+  },
+  "H10-12": {
+   "data_date": "2027-01-25 08:00",
+   "scheduled": "2026-10-17 11:41",
+   "must_finish_by": ""
+  }
+ },
+ "left_out": {}
+}
