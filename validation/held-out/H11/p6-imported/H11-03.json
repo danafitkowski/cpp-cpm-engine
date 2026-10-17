@@ -1,0 +1,141 @@
+{
+ "case": "H11-03",
+ "proj_id": 5146,
+ "differences": [
+  "TASK A1030 remain_drtn_hr_cnt: xer '29' p6 30.0",
+  "TASKRSRC A1030/H11-03-R2 target_qty_per_hr: xer '1' p6 0.713375796178344",
+  "TASKRSRC A1030/H11-03-R1 target_qty_per_hr: xer '0.5' p6 0.608695652173913",
+  "TASKRSRC A1040/H11-03-R2 remain_qty_per_hr: xer '2' p6 1.45454545454545",
+  "TASKRSRC A1040/H11-03-R2 target_qty_per_hr: xer '2' p6 1.45454545454545",
+  "TASKRSRC A1070/H11-03-R2 remain_qty_per_hr: xer '2' p6 0.864864864864865",
+  "TASKRSRC A1070/H11-03-R2 target_qty_per_hr: xer '2' p6 0.864864864864865",
+  "TASKRSRC A1100/H11-03-R2 remain_qty_per_hr: xer '2' p6 1.77777777777778",
+  "TASKRSRC A1100/H11-03-R2 target_qty_per_hr: xer '2' p6 1.77777777777778",
+  "TASKRSRC A1100/H11-03-R1 remain_qty_per_hr: xer '1' p6 0.941176470588235",
+  "TASKRSRC A1100/H11-03-R1 target_qty_per_hr: xer '1' p6 0.941176470588235",
+  "TASKRSRC A1190/H11-03-R2 remain_qty_per_hr: xer '2' p6 1.09268292682927",
+  "TASKRSRC A1190/H11-03-R2 target_qty_per_hr: xer '2' p6 1.09268292682927"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1030": {
+    "remain_drtn_hr_cnt": 30.0,
+    "target_drtn_hr_cnt": 56.0
+   },
+   "A1040": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "A1070": {
+    "remain_drtn_hr_cnt": 32.0,
+    "target_drtn_hr_cnt": 32.0
+   },
+   "A1100": {
+    "remain_drtn_hr_cnt": 8.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1190": {
+    "remain_drtn_hr_cnt": 56.0,
+    "target_drtn_hr_cnt": 56.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1030",
+    "rsrc_short_name": "H11-03-R1",
+    "remain_qty": 14.5,
+    "target_qty": 28.0,
+    "remain_qty_per_hr": 0.5,
+    "target_qty_per_hr": 0.608695652173913,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 13.5,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1030",
+    "rsrc_short_name": "H11-03-R2",
+    "remain_qty": 29.0,
+    "target_qty": 56.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.713375796178344,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 27.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1040",
+    "rsrc_short_name": "H11-03-R2",
+    "remain_qty": 48.0,
+    "target_qty": 48.0,
+    "remain_qty_per_hr": 1.45454545454545,
+    "target_qty_per_hr": 1.45454545454545,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1070",
+    "rsrc_short_name": "H11-03-R1",
+    "remain_qty": 72.0,
+    "target_qty": 72.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 8.0,
+    "relag_drtn_hr_cnt": 8.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1070",
+    "rsrc_short_name": "H11-03-R2",
+    "remain_qty": 64.0,
+    "target_qty": 64.0,
+    "remain_qty_per_hr": 0.864864864864865,
+    "target_qty_per_hr": 0.864864864864865,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1100",
+    "rsrc_short_name": "H11-03-R1",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 0.941176470588235,
+    "target_qty_per_hr": 0.941176470588235,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1100",
+    "rsrc_short_name": "H11-03-R2",
+    "remain_qty": 16.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.77777777777778,
+    "target_qty_per_hr": 1.77777777777778,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1190",
+    "rsrc_short_name": "H11-03-R2",
+    "remain_qty": 112.0,
+    "target_qty": 112.0,
+    "remain_qty_per_hr": 1.09268292682927,
+    "target_qty_per_hr": 1.09268292682927,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
