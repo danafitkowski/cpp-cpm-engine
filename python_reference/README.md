@@ -200,9 +200,9 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  9d267097cf60c3621d6ae124918751a94207f0807f19ef34426dc7aeab7445fd
+cpm.py          SHA-256:  e7517b05fd4c27e53fbb7403c90b06b395f1988da05a97261b69615baf917afc
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  ded871c6f749654964f9db800e1f2caabc46f10133505718567645ed0c64c8f2
+cpm_hours.py    SHA-256:  78c280008aeeda5b128541d2b5b93b9e630adbd0e1624ee3d6eec5344c0bacdb
 
 (v2.10.8 candidate, unreleased, 2026-10-17 - cpm.py bumped from a1a343c1...:
 ENGINE_VERSION reads 2.10.8. cpm_hours.py bumped from
@@ -239,7 +239,16 @@ rows, validation/p6-probes/h10-followups-2026-10-17. Then from 874a599d...,
 for the row held-out set H11 left: RT's clause for resource dependent work
 under way holds under progress override only (under retained logic such work
 keeps its own late start); measured on P6 probes ZZ-CPP-RDTR and ZZ-CPP-RDTS,
-28 of 28 rows, validation/p6-probes/h11-followups-2026-10-17.
+28 of 28 rows, validation/p6-probes/h11-followups-2026-10-17. Then
+cpm_hours.py from ded871c6... and cpm.py from 9d267097..., for the five
+rows held-out set H12 left: an FF / SF requirement later than the expected
+finish places resource dependent work as RQ does and the expected finish
+re-sizes nothing (RX); the project's late finish caps a Mandatory Start or
+Mandatory Finish pin, so the float can go negative (MC, both passes); and
+an SS / SF bound on resource dependent work is held against the activity's
+late start, the earliest of its assignments' (RA); measured on P6 probes
+ZZ-CPP-RDXP, ZZ-CPP-RDXR, ZZ-CPP-MSNP, ZZ-CPP-MSNR and ZZ-CPP-RD2S, 74 of 74
+rows, validation/p6-probes/h12-followups-2026-10-17.
 cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left
@@ -686,8 +695,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 293344
-  sha-256:  9d267097cf60c3621d6ae124918751a94207f0807f19ef34426dc7aeab7445fd
+  bytes: 293940
+  sha-256:  e7517b05fd4c27e53fbb7403c90b06b395f1988da05a97261b69615baf917afc
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

@@ -2468,6 +2468,34 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
     const starts = [];
     const fins = [];
     const lfAct = actCal.prevWorkEnd(lfReq);
+    // RA (H12, 17-Oct-2026): P6 holds an SS / SF bound, a lag's or a lead's,
+    // against the activity's late start, the earliest of its assignments' own.
+    // Where that start already meets it, no assignment takes it, not even one
+    // whose own late start is later; where it does not, each takes it as below
+    // (ZZ-CPP-RD2S S1 S4 S5 against S2 S6; H12-11 A1160)
+    if ((lsBoundIn !== null && lsBoundIn !== undefined) || (leadAt !== null && leadAt !== undefined)) {
+        let first = null;
+        let firstCal = null;
+        for (const g of asg) {
+            const gc = g.cal;
+            const f = gc.prevWorkEnd(lfAct);
+            const s = g.rem > 0 ? gc.sub(f, g.rem) : f;
+            const a = g.lag ? gc.sub(s, g.lag) : s;
+            if (first === null || a < first) {
+                first = a;
+                firstCal = gc;
+            }
+        }
+        let b = (lsBoundIn !== null && lsBoundIn !== undefined) ? lsBoundIn : null;
+        if (first !== null && leadAt !== null && leadAt !== undefined) {
+            const w = firstCal.nextWork(leadAt);
+            b = (b === null) ? w : Math.min(b, w);
+        }
+        if (first === null || b === null || b > first) {
+            lsBoundIn = null;
+            leadAt = null;
+        }
+    }
     let bound = false;
     for (const g of asg) {
         const gc = g.cal;
@@ -2791,7 +2819,13 @@ function computeCPMHours(activities, relationships, o) {
             n.es = inst;
             n.ef = inst;
         } else if (n.asg.length) {
-            const [es, ef] = _hrRsrcPlace(n, cal, startReq, finishReq, n.xf);
+            // RX (H12, 17-Oct-2026): an FF / SF requirement later than the
+            // expected finish places the work as RQ does, against the
+            // requirement, and the expected finish re-sizes nothing; one at or
+            // before it leaves XR to re-size each assignment (ZZ-CPP-RDXP and
+            // -RDXR X11 against X1 and X12; H12-06 A1210)
+            const rx = xfOn && xfFloor !== null && xfFloor > n.xf;
+            const [es, ef] = _hrRsrcPlace(n, cal, startReq, rx ? xfFloor : finishReq, rx ? null : n.xf);
             if (n.started) {
                 n.restart = es;
                 n.es = n.as;
@@ -3047,7 +3081,18 @@ function computeCPMHours(activities, relationships, o) {
                 }
                 if (pin === null || p[1] < pin[1] || (p[1] === pin[1] && p[0] < pin[0])) pin = p;
             }
-            if (pin !== null) [ls, lf] = pin;
+            // MC (H12, 17-Oct-2026): the project's late finish still caps the
+            // pin. Where the pin would put the late finish after the Must
+            // Finish By, P6 keeps the late finish the Must Finish By gives and
+            // the late start that much earlier, so the float goes negative;
+            // a pin before it holds, whatever its successors need
+            // (ZZ-CPP-MSNP and -MSNR M1 M2 M4 M5 M9 against M3 M6 M8; H12-09
+            // A1330)
+            if (pin !== null) {
+                const cap = n.rem > 0 ? cal.prevWorkEnd(seed) : zero(seed);
+                if (pin[1] > cap) pin = n.rem > 0 ? [cal.sub(cap, n.rem), cap] : [cap, cap];
+                [ls, lf] = pin;
+            }
         }
         n.lf = lf;
         if (n.started) {
@@ -6196,6 +6241,16 @@ function computeCPM(activities, relationships, opts) {
             });
             minLF = _secondaryMandatoryLF;
             _mlBy = cstr2;
+        }
+        // MC (H12, 17-Oct-2026) — the project's late finish still caps a
+        // mandatory pin: where the pin would put the late finish after the
+        // seed (the Must Finish By), P6 keeps the seed, so the float goes
+        // negative (ZZ-CPP-MSNP / -MSNR M1 M2 M4 M5 M9; H12-09 A1330). Python
+        // paired site: the same block in compute_cpm.
+        if (_mlBy && _mlBy !== 'ext' && _isMandatoryConstraint(_mlBy) && Number.isFinite(node._seedLF) &&
+                minLF > node._seedLF) {
+            minLF = node._seedLF;
+            _mlBy = null;
         }
         // EX (v2.9.57) — the external late finish caps the late finish.
         if (node.external_late_finish) {

@@ -184,6 +184,26 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
     """
     starts, fins = [], []
     lf_act = act_cal.prev_work_end(lf_req)
+    # RA (H12, 17-Oct-2026): P6 holds an SS / SF bound, a lag's or a lead's,
+    # against the activity's late start, the earliest of its assignments' own.
+    # Where that start already meets it, no assignment takes it, not even one
+    # whose own late start is later; where it does not, each takes it as below
+    # (ZZ-CPP-RD2S S1 S4 S5 against S2 S6; H12-11 A1160)
+    if ls_bound_in is not None or lead_at is not None:
+        first = first_cal = None
+        for g in asg:
+            gc = g['cal']
+            f = gc.prev_work_end(lf_act)
+            s = gc.sub(f, g['rem']) if g['rem'] > 0 else f
+            a = gc.sub(s, g['lag']) if g['lag'] else s
+            if first is None or a < first:
+                first, first_cal = a, gc
+        b = ls_bound_in
+        if first is not None and lead_at is not None:
+            w = first_cal.next_work(lead_at)
+            b = w if b is None else min(b, w)
+        if first is None or b is None or b > first:
+            ls_bound_in = lead_at = None
     bound = False
     for g in asg:
         gc = g['cal']
@@ -506,7 +526,13 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             inst = t if on else cal.next_work(t)
             n['es'] = n['ef'] = inst
         elif n['asg']:
-            es, ef = _rsrc_place(n, cal, start_req, finish_req, n['xf'])
+            # RX (H12, 17-Oct-2026): an FF / SF requirement later than the
+            # expected finish places the work as RQ does, against the
+            # requirement, and the expected finish re-sizes nothing; one at or
+            # before it leaves XR to re-size each assignment (ZZ-CPP-RDXP and
+            # -RDXR X11 against X1 and X12; H12-06 A1210)
+            rx = xf_on and xf_floor is not None and xf_floor > n['xf']
+            es, ef = _rsrc_place(n, cal, start_req, xf_floor if rx else finish_req, None if rx else n['xf'])
             if n['started']:
                 n['restart'] = es
                 n['es'] = n['as']
@@ -775,7 +801,19 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     p = (cal.sub(f0, n['rem']), f0)
                 if pin is None or p[1] < pin[1] or (p[1] == pin[1] and p[0] < pin[0]):
                     pin = p
+            # MC (H12, 17-Oct-2026): the project's late finish still caps the
+            # pin. Where the pin would put the late finish after the Must
+            # Finish By, P6 keeps the late finish the Must Finish By gives and
+            # the late start that much earlier, so the float goes negative; a
+            # pin before it holds, whatever its successors need (ZZ-CPP-MSNP
+            # and -MSNR M1 M2 M4 M5 M9 against M3 M6 M8; H12-09 A1330)
             if pin is not None:
+                if n['rem'] > 0:
+                    cap = cal.prev_work_end(seed)
+                else:
+                    cap = seed if (tt == 'TT_Mile' and cal.is_start(seed)) else cal.prev_work_end(seed)
+                if pin[1] > cap:
+                    pin = (cal.sub(cap, n['rem']), cap) if n['rem'] > 0 else (cap, cap)
                 ls, lf = pin
         n['lf'] = lf
         if n['started']:

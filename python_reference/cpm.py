@@ -4383,6 +4383,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 code, min_lf, _c, node_cal, node['duration_days'], alerts)
             if min_lf != _ml_prev:
                 _ml_by = _c
+        # MC (H12, 17-Oct-2026) — the project's late finish still caps a
+        # mandatory pin: where the pin would put the late finish after the
+        # seed (the Must Finish By), P6 keeps the seed, so the float goes
+        # negative (ZZ-CPP-MSNP / -MSNR M1 M2 M4 M5 M9; H12-09 A1330). JS
+        # paired site: the same block in computeCPM.
+        if (isinstance(_ml_by, dict) and _ml_by.get('type') in ('MS_Start', 'MS_Finish', 'MFO')
+                and node.get('_seed_lf') is not None and min_lf > node['_seed_lf']):
+            min_lf = node['_seed_lf']
+            _ml_by = None
         # EX (v2.9.57) — the external late finish caps the late finish.
         if node['external_late_finish']:
             _ext_lf_num = _external_late_finish_num(
