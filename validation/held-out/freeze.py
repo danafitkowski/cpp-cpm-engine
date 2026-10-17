@@ -77,7 +77,7 @@ def main():
         'scripts': dict({n: sha(os.path.join(HERE, n)) for n in ('generate_held_out.py', 'score_held_out.js',
                                                                 'readback_p6_sqlite.py', 'freeze.py', 'PROTOCOL.md',
                                                                 'score_whole_day.js', 'import_p6_sqlite.py',
-                                                                'p6_imported_overlay.js')
+                                                                'p6_imported_overlay.js', 'merge_cases.py')
                          if os.path.exists(os.path.join(HERE, n))},
                         **({a.set + '/PROTOCOL.md': sha(os.path.join(HERE, a.set, 'PROTOCOL.md'))}
                            if os.path.exists(os.path.join(HERE, a.set, 'PROTOCOL.md')) else {})),
