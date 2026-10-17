@@ -1,0 +1,151 @@
+{
+ "case": "H14-04",
+ "proj_id": 5203,
+ "differences": [
+  "TASK A1050 remain_drtn_hr_cnt: xer '15' p6 9.0",
+  "TASK A1100 remain_drtn_hr_cnt: xer '90' p6 132.0",
+  "TASK A1100 target_drtn_hr_cnt: xer '120' p6 109.0",
+  "TASKRSRC A1050/H14-04-R1 target_qty_per_hr: xer '1' p6 0.461538461538462",
+  "TASKRSRC A1080/H14-04-R1 remain_qty_per_hr: xer '1' p6 0.432432432432432",
+  "TASKRSRC A1080/H14-04-R1 target_qty_per_hr: xer '1' p6 0.432432432432432",
+  "TASKRSRC A1100/H14-04-R2 target_qty_per_hr: xer '1' p6 1.875",
+  "TASKRSRC A1110/H14-04-R1 remain_qty_per_hr: xer '1' p6 0.307692307692308",
+  "TASKRSRC A1110/H14-04-R1 target_qty_per_hr: xer '1' p6 0.307692307692308",
+  "TASKRSRC A1110/H14-04-R2 remain_qty_per_hr: xer '1' p6 3.0",
+  "TASKRSRC A1110/H14-04-R2 target_qty_per_hr: xer '1' p6 3.0",
+  "TASKRSRC A1120/H14-04-R2 remain_qty_per_hr: xer '2' p6 2.66666666666667",
+  "TASKRSRC A1120/H14-04-R2 target_qty_per_hr: xer '2' p6 2.66666666666667",
+  "TASKRSRC A1120/H14-04-R1 remain_qty_per_hr: xer '2' p6 1.06666666666667",
+  "TASKRSRC A1120/H14-04-R1 target_qty_per_hr: xer '2' p6 1.06666666666667"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1030": {
+    "remain_drtn_hr_cnt": 5.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1050": {
+    "remain_drtn_hr_cnt": 9.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "A1080": {
+    "remain_drtn_hr_cnt": 32.0,
+    "target_drtn_hr_cnt": 32.0
+   },
+   "A1090": {
+    "remain_drtn_hr_cnt": 2.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1100": {
+    "remain_drtn_hr_cnt": 132.0,
+    "target_drtn_hr_cnt": 109.0
+   },
+   "A1110": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "A1120": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 16.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1030",
+    "rsrc_short_name": "H14-04-R1",
+    "remain_qty": 5.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 3.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1050",
+    "rsrc_short_name": "H14-04-R1",
+    "remain_qty": 15.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.461538461538462,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 9.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1080",
+    "rsrc_short_name": "H14-04-R1",
+    "remain_qty": 32.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 0.432432432432432,
+    "target_qty_per_hr": 0.432432432432432,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1100",
+    "rsrc_short_name": "H14-04-R2",
+    "remain_qty": 90.0,
+    "target_qty": 120.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.875,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 30.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H14-04-R1",
+    "remain_qty": 40.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 0.307692307692308,
+    "target_qty_per_hr": 0.307692307692308,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H14-04-R2",
+    "remain_qty": 24.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 16.0,
+    "relag_drtn_hr_cnt": 16.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1120",
+    "rsrc_short_name": "H14-04-R1",
+    "remain_qty": 32.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 1.06666666666667,
+    "target_qty_per_hr": 1.06666666666667,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1120",
+    "rsrc_short_name": "H14-04-R2",
+    "remain_qty": 32.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 2.66666666666667,
+    "target_qty_per_hr": 2.66666666666667,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

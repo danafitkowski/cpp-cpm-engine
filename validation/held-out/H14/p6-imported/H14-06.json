@@ -1,0 +1,83 @@
+{
+ "case": "H14-06",
+ "proj_id": 5205,
+ "differences": [
+  "TASK A1050 remain_drtn_hr_cnt: xer '19' p6 21.0",
+  "TASK A1050 target_drtn_hr_cnt: xer '56' p6 31.0",
+  "TASK A1060 target_drtn_hr_cnt: xer '4' p6 3.0",
+  "TASKRSRC A1050/H14-06-R3 target_qty_per_hr: xer '1' p6 2.07407407407407",
+  "TASKRSRC A1060/H14-06-R1 target_qty_per_hr: xer '3' p6 4.0",
+  "TASKRSRC A1110/H14-06-R1 remain_qty_per_hr: xer '1' p6 1.5",
+  "TASKRSRC A1110/H14-06-R1 target_qty_per_hr: xer '1' p6 1.5"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1050": {
+    "remain_drtn_hr_cnt": 21.0,
+    "target_drtn_hr_cnt": 31.0
+   },
+   "A1060": {
+    "remain_drtn_hr_cnt": 2.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "A1100": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "A1110": {
+    "remain_drtn_hr_cnt": 12.0,
+    "target_drtn_hr_cnt": 12.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1050",
+    "rsrc_short_name": "H14-06-R3",
+    "remain_qty": 19.0,
+    "target_qty": 56.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 2.07407407407407,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 37.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1060",
+    "rsrc_short_name": "H14-06-R1",
+    "remain_qty": 6.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 4.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 6.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H14-06-R1",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 1.5,
+    "target_qty_per_hr": 1.5,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H14-06-R2",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

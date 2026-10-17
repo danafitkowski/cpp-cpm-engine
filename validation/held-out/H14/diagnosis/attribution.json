@@ -1,0 +1,68 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). Each row: the engine scored on the frozen H14 cases with the same scorer. The step rows are earlier engines. The rule rows take one rule out of a candidate in a scratch copy: FC, CL, RT, RL, RQ, RW and LC on resource dependent work out of the candidate H12 scored (fa8850b5), the copies H12's diagnosis built; RX, MC and RA out of the candidate H13 scored (f07a6ee8), the copies H13's diagnosis built; RZ and RG out of this candidate (dc5b1636). RQ out: the requirement rule v2.10.7 shipped; RQ in its H10 form: the rule the candidate H10 scored.",
+ "engines": {
+  "v2.10.7 (6c37aa2a)": 115,
+  "RU + RF, the engine H9 scored (cf47c1f9)": 116,
+  "RU + RF + RO (34a031db)": 166,
+  "the candidate H10 scored (ec033162)": 172,
+  "the candidate H11 scored (a24270c3)": 195,
+  "the candidate H12 scored (fa8850b5)": 195,
+  "the candidate H13 scored (f07a6ee8)": 195,
+  "the candidate H12 scored without FC": 195,
+  "the candidate H12 scored without CL": 195,
+  "the candidate H12 scored without RT": 189,
+  "the candidate H12 scored without RL": 195,
+  "the candidate H12 scored without RQ": 172,
+  "the candidate H12 scored with RQ in its H10 form": 172,
+  "the candidate H12 scored without RW": 195,
+  "the candidate H12 scored without LC on resource dependent work": 195,
+  "the candidate H13 scored without RX": 195,
+  "the candidate H13 scored without MC": 195,
+  "the candidate H13 scored without RA": 195,
+  "v2.10.8 candidate without RZ": 197,
+  "v2.10.8 candidate without RG": 195,
+  "v2.10.8 candidate (dc5b1636), the score": 197
+ },
+ "steps": {
+  "v2.10.7 to RU + RF": {
+   "onto": [
+    "H14-02 A1150"
+   ],
+   "away": []
+  },
+  "RU + RF to RU + RF + RO": {
+   "onto": 50,
+   "away": 0
+  },
+  "RU + RF + RO to the candidate H10 scored": {
+   "onto": [
+    "H14-01 A1050",
+    "H14-01 A1270",
+    "H14-08 A1140",
+    "H14-08 A1170",
+    "H14-08 A1200",
+    "H14-09 A1010"
+   ],
+   "away": []
+  },
+  "the candidate H10 scored to the candidate H11 scored": {
+   "onto": 23,
+   "away": 0
+  },
+  "the candidate H11 scored to the candidate H12 scored": {
+   "onto": 0,
+   "away": 0
+  },
+  "the candidate H12 scored to the candidate H13 scored": {
+   "onto": 0,
+   "away": 0
+  },
+  "the candidate H13 scored to this candidate": {
+   "onto": [
+    "H14-09 A1200",
+    "H14-09 A1260"
+   ],
+   "away": []
+  }
+ }
+}
