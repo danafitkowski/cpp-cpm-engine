@@ -1,0 +1,19 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). Each row: the engine scored on the frozen H12 cases with the same scorer. The step rows are earlier engines; the rule rows take one rule out of the frozen v2.10.8 candidate (fa8850b5) in a scratch copy. RQ out: the requirement rule v2.10.7 shipped; RQ in its H10 form: the rule the candidate H10 scored; RW out: an SS / SF lead on resource dependent work bounds the activity at the lag calendar's next opening, and LC on resource dependent work has nothing to act on.",
+ "engines": {
+  "v2.10.7 (6c37aa2a)": 195,
+  "RU + RF, the engine H9 scored (cf47c1f9)": 195,
+  "RU + RF + RO (34a031db)": 265,
+  "the candidate H10 scored (ec033162)": 272,
+  "the candidate H11 scored (a24270c3)": 273,
+  "v2.10.8 candidate without FC": 274,
+  "v2.10.8 candidate without CL": 274,
+  "v2.10.8 candidate without RT": 265,
+  "v2.10.8 candidate without RL": 274,
+  "v2.10.8 candidate without RQ": 273,
+  "v2.10.8 candidate with RQ in its H10 form": 273,
+  "v2.10.8 candidate without RW": 274,
+  "v2.10.8 candidate without LC on resource dependent work": 274,
+  "v2.10.8 candidate (fa8850b5), the score": 274
+ }
+}

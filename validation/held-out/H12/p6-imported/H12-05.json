@@ -1,0 +1,80 @@
+{
+ "case": "H12-05",
+ "proj_id": 5162,
+ "differences": [
+  "TASKRSRC A1150/H12-05-R1 remain_qty_per_hr: xer '1' p6 1.73913043478261",
+  "TASKRSRC A1150/H12-05-R1 target_qty_per_hr: xer '1' p6 1.73913043478261",
+  "TASKRSRC A1150/H12-05-R2 remain_qty_per_hr: xer '0.5' p6 0.645161290322581",
+  "TASKRSRC A1150/H12-05-R2 target_qty_per_hr: xer '0.5' p6 0.645161290322581",
+  "TASKRSRC A1170/H12-05-R2 remain_qty_per_hr: xer '0.5' p6 0.833333333333333",
+  "TASKRSRC A1170/H12-05-R2 target_qty_per_hr: xer '0.5' p6 0.833333333333333",
+  "TASKRSRC A1170/H12-05-R1 remain_qty_per_hr: xer '1' p6 1.29032258064516",
+  "TASKRSRC A1170/H12-05-R1 target_qty_per_hr: xer '1' p6 1.29032258064516"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1090": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 16.0
+   },
+   "A1150": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "A1170": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1150",
+    "rsrc_short_name": "H12-05-R1",
+    "remain_qty": 40.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.73913043478261,
+    "target_qty_per_hr": 1.73913043478261,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1150",
+    "rsrc_short_name": "H12-05-R2",
+    "remain_qty": 20.0,
+    "target_qty": 20.0,
+    "remain_qty_per_hr": 0.645161290322581,
+    "target_qty_per_hr": 0.645161290322581,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1170",
+    "rsrc_short_name": "H12-05-R1",
+    "remain_qty": 40.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.29032258064516,
+    "target_qty_per_hr": 1.29032258064516,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1170",
+    "rsrc_short_name": "H12-05-R2",
+    "remain_qty": 20.0,
+    "target_qty": 20.0,
+    "remain_qty_per_hr": 0.833333333333333,
+    "target_qty_per_hr": 0.833333333333333,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
