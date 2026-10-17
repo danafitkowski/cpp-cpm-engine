@@ -2440,7 +2440,13 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
         if (g.rem > 0) {
             f = gc.add(s, g.rem);
         } else {
-            if (req) {
+            // RZ (H13, 17-Oct-2026): an assignment with no work left sits at
+            // its own calendar's next opening at or after the activity's
+            // start, and holds the early finish from there. A finish
+            // requirement moves it only where no assignment has work left;
+            // beside one with work it does not (ZZ-CPP-RDZA, -RDZD against
+            // -RDZB, -RDZC; H13-06 A1230; H12-01 A1200 keeps its Monday)
+            if (req && !asg.some((h) => h.rem > 0)) {
                 s = Math.max(s, gc.nextWork(finishReq));
                 a0 = Math.max(a0, g.lag ? gc.sub(s, g.lag) : s);
             }
@@ -2504,7 +2510,11 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
         // on, not at the lag calendar's (H10-08 A1240: a lead landing at
         // Tue 17:00 starts a 24-hour resource at Tue 17:00 and a Mon-Fri
         // 08:00-17:00 one at Wed 08:00)
-        let lsBound = lsBoundIn;
+        // RG (H13, 17-Oct-2026): so does a lag's: off the assignment's
+        // working time the bound moves on to its next opening, not back to
+        // the close before (ZZ-CPP-SSNA..SSNI A1130, whose resource has the
+        // bound's day off; H13-09 A1130)
+        let lsBound = (lsBoundIn !== null && lsBoundIn !== undefined) ? gc.nextWork(lsBoundIn) : null;
         if (leadAt !== null && leadAt !== undefined) {
             const w = gc.nextWork(leadAt);
             lsBound = (lsBound === null) ? w : Math.min(lsBound, w);

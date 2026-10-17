@@ -154,7 +154,13 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
         if g['rem'] > 0:
             f = gc.add(s, g['rem'])
         else:
-            if req:
+            # RZ (H13, 17-Oct-2026): an assignment with no work left sits at its
+            # own calendar's next opening at or after the activity's start, and
+            # holds the early finish from there. A finish requirement moves it
+            # only where no assignment has work left; beside one with work it
+            # does not (ZZ-CPP-RDZA, -RDZD against -RDZB, -RDZC; H13-06 A1230;
+            # H12-01 A1200 keeps its Monday)
+            if req and not any(h['rem'] > 0 for h in asg):
                 s = max(s, gc.next_work(finish_req))
                 a0 = max(a0, gc.sub(s, g['lag']) if g['lag'] else s)
             f = s
@@ -212,7 +218,11 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
         # not at the lag calendar's (H10-08 A1240: a lead landing at Tue 17:00
         # starts a 24-hour resource at Tue 17:00 and a Mon-Fri 08:00-17:00 one
         # at Wed 08:00)
-        ls_bound = ls_bound_in
+        # RG (H13, 17-Oct-2026): so does a lag's: off the assignment's working
+        # time the bound moves on to its next opening, not back to the close
+        # before (ZZ-CPP-SSNA..SSNI A1130, whose resource has the bound's day
+        # off; H13-09 A1130)
+        ls_bound = gc.next_work(ls_bound_in) if ls_bound_in is not None else None
         if lead_at is not None:
             w = gc.next_work(lead_at)
             ls_bound = w if ls_bound is None else min(ls_bound, w)

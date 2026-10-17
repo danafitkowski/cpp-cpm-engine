@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  e7517b05fd4c27e53fbb7403c90b06b395f1988da05a97261b69615baf917afc
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  78c280008aeeda5b128541d2b5b93b9e630adbd0e1624ee3d6eec5344c0bacdb
+cpm_hours.py    SHA-256:  9860ebf7642d33cec4eb6edfd6e52a94492102e06d6e858359492bbc6f11bffe
 
 (v2.10.8 candidate, unreleased, 2026-10-17 - cpm.py bumped from a1a343c1...:
 ENGINE_VERSION reads 2.10.8. cpm_hours.py bumped from
@@ -248,7 +248,15 @@ Mandatory Finish pin, so the float can go negative (MC, both passes); and
 an SS / SF bound on resource dependent work is held against the activity's
 late start, the earliest of its assignments' (RA); measured on P6 probes
 ZZ-CPP-RDXP, ZZ-CPP-RDXR, ZZ-CPP-MSNP, ZZ-CPP-MSNR and ZZ-CPP-RD2S, 74 of 74
-rows, validation/p6-probes/h12-followups-2026-10-17.
+rows, validation/p6-probes/h12-followups-2026-10-17. Then
+cpm_hours.py from 78c28000..., for the four rows held-out set H13 left: an
+assignment with no work left sits at its resource's next opening at or after
+the activity's start, and a finish requirement moves it only where no
+assignment has work left (RZ); and an SS / SF bound on resource dependent
+work, a lag's as a lead's, moves to each assignment's next opening off its
+working time (RG); measured on thirteen clones of H13-06 and H13-09
+(ZZ-CPP-RDZA..RDZD, ZZ-CPP-SSNA..SSNI), 349 of 349 rows,
+validation/p6-probes/h13-followups-2026-10-17.
 cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left
