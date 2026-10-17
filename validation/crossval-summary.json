@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.7",
-  "generated_utc": "2026-10-16T17:24:23.142Z",
+  "engine_version": "2.10.8",
+  "generated_utc": "2026-10-17T15:16:27.431Z",
   "fixtures": {
-    "total": 168,
-    "passed": 168,
+    "total": 170,
+    "passed": 170,
     "failed": 0
   },
   "checks": {
-    "executed": 11149,
+    "executed": 11390,
     "failed": 0,
-    "passed": 11149,
+    "passed": 11390,
     "skipped": 0,
-    "surface": 11149
+    "surface": 11390
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 166,
-    "project_finish": 166,
-    "critical_codes": 166,
-    "topo_order": 166,
-    "alert_count": 166,
-    "alert_severity_counts": 166,
-    "node <id>": 10117,
+    "project_finish_num": 168,
+    "project_finish": 168,
+    "critical_codes": 168,
+    "topo_order": 168,
+    "alert_count": 168,
+    "alert_severity_counts": 168,
+    "node <id>": 10345,
     "threw (both engines)": 2,
-    "hours": 34
+    "hours": 35
   },
   "rows": [
     {
@@ -784,7 +784,7 @@
     },
     {
       "id": "F99",
-      "name": "F99 — RES: progress override does not apply a resume date",
+      "name": "F99 — RES: under progress override a completed activity's resume date holds nothing",
       "checks": 33,
       "fails": 0,
       "skips": 0,
@@ -1370,6 +1370,22 @@
       "id": "F172",
       "name": "F172 - PS: the same, whole days",
       "checks": 159,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F173",
+      "name": "F173 - RO: under progress override a resume date after the data date holds work under way, in hours",
+      "checks": 127,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F174",
+      "name": "F174 - RO: the same, whole days",
+      "checks": 114,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

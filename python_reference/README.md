@@ -200,11 +200,12 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  a1a343c13c53715a88f08dec3903d939ef553f440d5511420f2b629ef11e5892
+cpm.py          SHA-256:  9d267097cf60c3621d6ae124918751a94207f0807f19ef34426dc7aeab7445fd
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  1325e409664c28a5cc42f297f4d463ae547df2ab5c6d270a92e2eeebe6af949e
+cpm_hours.py    SHA-256:  37594dd41d73a28b03cb54ff40034a74a6df6980bfbedd0b1a926a36e914e5db
 
-(Candidate after v2.10.7, unreleased, 2026-10-17 - cpm_hours.py bumped from
+(v2.10.8 candidate, unreleased, 2026-10-17 - cpm.py bumped from a1a343c1...:
+ENGINE_VERSION reads 2.10.8. cpm_hours.py bumped from
 bcb198bc...: resource dependent work under way takes the remaining dates
 P6 gives it, starting at the activity calendar's next opening where its
 resource's calendar puts the early start off it (RU), and free float runs
@@ -222,8 +223,12 @@ successor that passes back no date sits at the project finish on the late
 side (CL); on resource dependent work under way, and on any under "Start
 Float", start float equals finish float (RT); and with two or more
 assignments an SS / SF bound sets the late finish every assignment runs
-back from (RL); measured on P6 probes ZZ-CPP-H9FF, ZZ-CPP-RDTF and
-ZZ-CPP-RDSF, validation/p6-probes/h9-followups-2026-10-17.
+back from (RL); then from 1325e409...: an SF / FF finish requirement on
+resource dependent work finishes each assignment at its resource's last
+close at or before the requirement and starts its remaining work earlier
+on the resource's calendar (RQ, replacing rule 9 of 13-Oct-2026); measured
+on P6 probes ZZ-CPP-H9FF, ZZ-CPP-RDTF and ZZ-CPP-RDSF, 53 of 53 rows,
+validation/p6-probes/h9-followups-2026-10-17.
 cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left
@@ -671,7 +676,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 293344
-  sha-256:  a1a343c13c53715a88f08dec3903d939ef553f440d5511420f2b629ef11e5892
+  sha-256:  9d267097cf60c3621d6ae124918751a94207f0807f19ef34426dc7aeab7445fd
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

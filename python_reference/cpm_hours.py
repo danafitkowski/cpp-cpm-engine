@@ -146,23 +146,19 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
 def _rsrc_requirement(gc, act_cal, fr, rem):
     """(start, finish) an FF / SF finish requirement fr puts on an assignment of rem minutes on calendar gc (RQ).
 
-    Where fr is inside the resource's working time the assignment finishes there and starts rem earlier on its own
-    calendar (ZZ-CPP-RSRC3 L14: 15:00, 11:00-15:00 on an 08:00-16:00 resource; L3 L4 L8, ZZ-CPP-RSRC C2). Where fr
-    is an opening, a close or outside the resource's working time, P6 takes the resource's next opening, walks rem
-    back on the ACTIVITY's calendar to the assignment's start and works forward on the resource's: an SF -8 h
-    requirement at 08:00 starts a 4 h assignment at 13:00 the day before and finishes it 09:00 (ZZ-CPP-RSRC2 S2 S4
-    S12; S1 S3 S9 4898 24 with 16 h; ZZ-CPP-RSRC3 L1 L2). Where that finish and fr are the same working instant on
-    the activity's calendar, the assignment prints fr (13:00 after lunch, 08:00 after a weekend: ZZ-CPP-RSRC C6 C7,
-    ZZ-CPP-RSRC2 S5 S10 S11).
+    RQ (17-Oct-2026): the assignment finishes at the resource's last close at or before fr (fr itself inside the
+    resource's working time: ZZ-CPP-RSRC3 L14, 15:00, 11:00-15:00 on an 08:00-16:00 resource; L3 L4 L8, ZZ-CPP-RSRC
+    C2) and starts rem earlier on the resource's calendar (ZZ-CPP-RDSF S1-S10, H9-09 A1230). An early start that
+    lands off the activity's calendar then restarts at its next opening (rule 8): an SF -8 h requirement at 08:00
+    puts a 4 h assignment at 12:00-16:00 the day before, inside the activity calendar's lunch, so it runs 13:00 to
+    09:00 (ZZ-CPP-RSRC2 S2 S4 S8 S12; ZZ-CPP-RSRC3 L1 L2). Where no activity working time separates that finish from
+    fr, the finish is the activity calendar's next opening at or after fr (RDSF S8, Fri 07:00 after a holiday;
+    ZZ-CPP-RSRC C6 C7, ZZ-CPP-RSRC2 S5 S10 S11, where fr is that opening).
     """
-    if gc.is_start(fr) and gc.is_finish(fr):
-        # interior: both a valid start and a valid finish on the resource's calendar, inside a working period
-        return gc.sub(fr, rem), fr
-    fg = gc.next_work(fr)
-    s = gc.next_work(act_cal.sub(fg, rem))
-    f = gc.add(s, rem)
+    f = gc.prev_work_end(fr)
+    s = gc.sub(f, rem)
     if fr > f and act_cal.between(f, fr) == 0:
-        f = fr
+        return s, act_cal.next_work(fr)
     return s, f
 
 

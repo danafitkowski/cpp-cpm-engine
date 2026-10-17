@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.7';
+const ENGINE_VERSION = '2.10.8';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2435,17 +2435,18 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
 
 // [start, finish] an FF / SF finish requirement fr puts on an assignment of
 // rem minutes on calendar gc (RQ). Python paired site:
-// cpm_hours._rsrc_requirement. Inside the resource's working time it finishes
-// there; on an opening, a close or off its working time the start is rem back
-// on the activity's calendar from the resource's next opening, the finish rem
-// forward on the resource's, printed as fr where the two are one working
-// instant on the activity's calendar.
+// cpm_hours._rsrc_requirement. RQ (17-Oct-2026): the assignment finishes at
+// the resource's last close at or before fr (fr itself inside the resource's
+// working time) and starts rem earlier on the resource's calendar (ZZ-CPP-RDSF
+// S1-S10, H9-09 A1230; an early start that lands off the activity calendar
+// restarts at its next opening: ZZ-CPP-RSRC2 S2 S8, 13:00 - 09:00). Where no
+// activity working time separates that finish from fr, the finish is the
+// activity calendar's next opening at or after fr (RDSF S8 Fri 07:00 after a
+// holiday; RSRC C6 C7).
 function _hrRsrcRequirement(gc, actCal, fr, rem) {
-    if (gc.isStart(fr) && gc.isFinish(fr)) return [gc.sub(fr, rem), fr];
-    const fg = gc.nextWork(fr);
-    const s = gc.nextWork(actCal.sub(fg, rem));
-    let f = gc.add(s, rem);
-    if (fr > f && actCal.between(f, fr) === 0) f = fr;
+    const f = gc.prevWorkEnd(fr);
+    const s = gc.sub(f, rem);
+    if (fr > f && actCal.between(f, fr) === 0) return [s, actCal.nextWork(fr)];
     return [s, f];
 }
 
@@ -11256,17 +11257,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '168 cross-validation fixtures. The harness defines 11149 ' +
+                '170 cross-validation fixtures. The harness defines 11390 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 11149 / 11149" is the whole comparison surface. ' +
+                'reported "Checks: 11390 / 11390" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 11149 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 11390 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 166 of the 168 fixtures: ' +
+                'severity-level alert parity, compared on 168 of the 170 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11305,18 +11306,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '11149 comparisons it defines over 168 fixtures and skips none; every ' +
+                '11390 comparisons it defines over 170 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '168 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '170 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 11149 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 11390 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 166 of the 168 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 168 of the 170 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +
