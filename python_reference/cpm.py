@@ -2897,7 +2897,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # _resumeFloorOf.
     def _resume_floor(n):
         _r = n.get('resume_instant') or 0
-        if schedule_mode != 'retained_logic' or dd_num <= 0 or _r <= dd_num:
+        # RO (H9, 17-Oct-2026): either option for work under way; the
+        # completed-work call sits in the retained-logic branch only
+        if dd_num <= 0 or _r <= dd_num:
             return 0
         if not n.get('suspend_date'):
             return 0
@@ -3530,6 +3532,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 # every predecessor here. JS paired site: efAnchor block.
                 if _restart_ff_drive > _ef_anchor:
                     _ef_anchor = _restart_ff_drive
+                # RO (H9, 17-Oct-2026) — no remaining work before the resume
+                # date under progress override either (ZZ-CPP-PORS A1 A4 A5
+                # A6 A8 A9); snapped below like any restart.
+                _rf_po = _resume_floor(node)
+                if _rf_po > _ef_anchor:
+                    _ef_anchor = _rf_po
+                    _resume_held.append(node)
                 # PO_SNAP (P6 parity 2026-09-21) — progress_override applies
                 # the same D3 snap. Measured on a real P6 export: data date
                 # 2026-09-18 15:00 encodes as the open of Saturday Sep 19;
@@ -3939,8 +3948,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # constraint-pinned).
         node['driving_predecessor'] = driving_pred
 
-    # RES — one alert names every activity a resume date holds (retained
-    # logic) or would have held (progress override, not applied).
+    # RES — one alert names every activity a resume date holds: work under
+    # way under either option, completed work under retained logic (RO, H9,
+    # 17-Oct-2026: under progress override P6 restarts work under way at its
+    # resume date and lets a completed activity's resume date hold nothing,
+    # ZZ-CPP-PORS; until then the engine applied neither there and warned).
     if _resume_held:
         alerts.append({
             'severity': 'INFO',
@@ -3948,34 +3960,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             'message': (
                 '%d %s held to a resume date later than the data date: %s. '
                 'P6 resumes no work before an activity\'s resume date, so a '
-                'completed activity is stamped there and a started one '
-                'restarts there, and their successors are scheduled from it.'
+                'started one restarts there and, under retained logic, a '
+                'completed one is stamped there, and their successors are '
+                'scheduled from it.'
                 % (len(_resume_held),
                    'activity is' if len(_resume_held) == 1 else 'activities are',
                    '; '.join('%s (resume %s)' % (n['code'], n['resume_date'])
                              for n in _resume_held))
             ),
         })
-    if schedule_mode == 'progress_override' and dd_num > 0:
-        _po_res = [n for c, n in nodes.items()
-                   if (n.get('resume_instant') or 0) > dd_num
-                   and n.get('suspend_date')
-                   and (n['is_complete'] or n.get('actual_start'))]
-        if _po_res:
-            alerts.append({
-                'severity': 'WARN',
-                'context': 'resume-date-not-applied',
-                'message': (
-                    '%d %s a resume date later than the data date: %s. Under '
-                    'retained logic P6 resumes no work before it; its handling '
-                    'under progress override is unmeasured, so these dates '
-                    'were not applied.'
-                    % (len(_po_res),
-                       'activity carries' if len(_po_res) == 1 else 'activities carry',
-                       '; '.join('%s (resume %s)' % (n['code'], n['resume_date'])
-                                 for n in _po_res))
-                ),
-            })
     if dd_num > 0:
         _no_susp = [n for c, n in nodes.items()
                     if (n.get('resume_instant') or 0) > dd_num

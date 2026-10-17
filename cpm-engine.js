@@ -2551,7 +2551,13 @@ function computeCPMHours(activities, relationships, o) {
         const rd = _hrInst(a.resume_date);
         n.susp = _hrInst(a.suspend_date);
         n.res = rd;
-        n.rf = (scheduleMode === 'retained_logic' && a.suspend_date && rd !== null && rd > dd) ? rd : null;
+        // RO (H9, 17-Oct-2026): under progress override too. P6 restarts
+        // suspended work under way at a resume date after the data date under
+        // either option (ZZ-CPP-PORS A1 A4 A5 A6 A8 A9; H9-12 A1150, H9-10
+        // A1160, H9-01 A1280, H9-06 A1050); a completed activity's resume date
+        // holds its successors under retained logic only (A7 / B7), and the
+        // forward pass reads it only there
+        n.rf = (a.suspend_date && rd !== null && rd > dd) ? rd : null;
         n.ext_es = useExternalDates ? _hrInst(a.external_early_start) : null;
         n.ext_lf = useExternalDates ? _hrInst(a.external_late_finish) : null;
         n.xf = (useExpectedFinish && !n.complete) ? _hrInst(a.expected_finish) : null;
@@ -4366,7 +4372,9 @@ function computeCPM(activities, relationships, opts) {
     // site: _resume_floor.
     function _resumeFloorOf(n) {
         const r = n.resume_instant || 0;
-        if (_scheduleMode !== 'retained_logic' || ddNum <= 0 || r <= ddNum) return 0;
+        // RO (H9, 17-Oct-2026): either option for work under way; the
+        // completed-work call sits in the retained-logic branch only
+        if (ddNum <= 0 || r <= ddNum) return 0;
         if (!n.suspend_date) return 0;
         return r;
     }
@@ -4446,8 +4454,8 @@ function computeCPM(activities, relationships, opts) {
         return [inst, _lagKindFwd(_o, _rem)];
     }
 
-    // RES — the activities a resume date holds (retained logic), and under
-    // progress override the ones it would have held (disclosed, not applied).
+    // RES — the activities a resume date holds: work under way under either
+    // option, completed work under retained logic (RO).
     const _resumeHeld = [];
 
     // Forward pass.
@@ -5108,6 +5116,14 @@ function computeCPM(activities, relationships, opts) {
                 // engine ignored every predecessor here. Python paired site:
                 // compute_cpm restart anchor.
                 if (_restartFFDrive > efAnchor) efAnchor = _restartFFDrive;
+                // RO (H9, 17-Oct-2026) — no remaining work before the resume
+                // date under progress override either (ZZ-CPP-PORS A1 A4 A5
+                // A6 A8 A9); snapped below like any restart.
+                const _rfPO = _resumeFloorOf(node);
+                if (_rfPO > efAnchor) {
+                    efAnchor = _rfPO;
+                    _resumeHeld.push(node);
+                }
                 // PO_SNAP (P6 parity 2026-09-21) — progress_override applies
                 // the same D3 snap. Measured on a real-file oracle: a data
                 // date encoded as the open of a non-working day left the
@@ -5574,8 +5590,11 @@ function computeCPM(activities, relationships, opts) {
     const _order = sortRes.order;
     const _orderLen = _order.length;
 
-    // RES — one alert names every activity a resume date holds (retained
-    // logic) or would have held (progress override, not applied).
+    // RES — one alert names every activity a resume date holds: work under
+    // way under either option, completed work under retained logic (RO, H9,
+    // 17-Oct-2026: under progress override P6 restarts work under way at its
+    // resume date and lets a completed activity's resume date hold nothing,
+    // ZZ-CPP-PORS; until then the engine applied neither there and warned).
     if (_resumeHeld.length > 0) {
         alerts.push({
             severity: 'INFO',
@@ -5585,32 +5604,10 @@ function computeCPM(activities, relationships, opts) {
                 ' held to a resume date later than the data date: ' +
                 _resumeHeld.map((n) => n.code + ' (resume ' + n.resume_date + ')').join('; ') +
                 '. P6 resumes no work before an activity\'s resume date, so a ' +
-                'completed activity is stamped there and a started one ' +
-                'restarts there, and their successors are scheduled from it.',
+                'started one restarts there and, under retained logic, a ' +
+                'completed one is stamped there, and their successors are ' +
+                'scheduled from it.',
         });
-    }
-    if (_scheduleMode === 'progress_override' && ddNum > 0) {
-        const _poRes = [];
-        for (const c in nodes) {
-            const n = nodes[c];
-            if ((n.resume_instant || 0) > ddNum && n.suspend_date &&
-                    (n.is_complete || n.actual_start)) {
-                _poRes.push(n);
-            }
-        }
-        if (_poRes.length > 0) {
-            alerts.push({
-                severity: 'WARN',
-                context: 'resume-date-not-applied',
-                message: _poRes.length + ' ' +
-                    (_poRes.length === 1 ? 'activity carries' : 'activities carry') +
-                    ' a resume date later than the data date: ' +
-                    _poRes.map((n) => n.code + ' (resume ' + n.resume_date + ')').join('; ') +
-                    '. Under retained logic P6 resumes no work before it; its ' +
-                    'handling under progress override is unmeasured, so these ' +
-                    'dates were not applied.',
-            });
-        }
     }
     if (ddNum > 0) {
         const _noSusp = [];

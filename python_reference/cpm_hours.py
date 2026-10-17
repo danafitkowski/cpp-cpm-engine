@@ -261,11 +261,14 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         n['c1'] = _cstr(a.get('constraint'), a.get('task_type'))
         n['c2'] = _cstr(a.get('constraint2'), a.get('task_type'))
         # RES (v2.9.49): P6 resumes no work before the resume date of a
-        # SUSPENDED activity (retained logic, resume after the data date).
+        # SUSPENDED activity (resume after the data date). RO (H9, 17-Oct-2026):
+        # under progress override too for work under way (ZZ-CPP-PORS; H9-12
+        # A1150); a completed activity's resume date holds its successors under
+        # retained logic only (A7 / B7), and the forward pass reads it only there.
         rd = _inst(a.get('resume_date'))
         n['susp'] = _inst(a.get('suspend_date'))
         n['res'] = rd
-        n['rf'] = (rd if schedule_mode == 'retained_logic' and a.get('suspend_date') and rd is not None
+        n['rf'] = (rd if a.get('suspend_date') and rd is not None
                    and dd is not None and rd > dd else None)
         # EX (v2.9.57): external early start floors the start (the restart once
         # started), external late finish caps the late finish; SD_None ignores both.

@@ -11779,15 +11779,27 @@ console.log('\n=== BDR — the float burndown chart prints in ink, nothing under
         holds[0].message.indexOf('C (resume 2025-09-04 17:00)') >= 0,
         JSON.stringify(holds.map((a) => a.severity + ' ' + a.message.slice(0, 160))));
 
-    // RES-5 — progress override: P6's handling of a resume date there is
-    // unmeasured, so it is not applied, and a WARN says so.
+    // RES-5 — progress override (RO, H9 / ZZ-CPP-PORS, 17-Oct-2026): P6
+    // restarts suspended work under way at its resume date, as under retained
+    // logic (A1), but a completed activity's resume date holds nothing there
+    // (A7 / B7). Until then the engine applied neither and warned
+    // (resume-date-not-applied, retired).
     r = run([held(), started('P1', '2025-09-04 08:00', 20)], [rel('C', 'P1')], DD_FILED,
         'progress_override');
-    const po = r.alerts.filter((a) => a.context === 'resume-date-not-applied');
-    check('RES-5: under progress override a resume date is not applied, and a WARN names it',
-        r.nodes.P1.restart_date === '2025-09-04' && po.length === 1 && po[0].severity === 'WARN' &&
-        po[0].message.indexOf('C (resume 2025-09-04 17:00)') >= 0,
-        r.nodes.P1.restart_date + ' ' + JSON.stringify(po.map((a) => a.message.slice(0, 120))));
+    const poDone = r.nodes.P1.restart_date;
+    const poAlerts = r.alerts.filter((a) => a.context === 'resume-date-not-applied' ||
+        a.context === 'resume-date-holds').length;
+    r = run([{ code: 'P', duration_days: 15, remaining_duration: 10,
+               actual_start: '2026-09-21 08:00', suspend_date: '2026-09-28 08:00',
+               resume_date: '2026-10-12 08:00', clndr_id: 'MF' }], [], '2026-10-05 08:00',
+        'progress_override');
+    const poHolds = r.alerts.filter((a) => a.context === 'resume-date-holds');
+    check('RES-5: under progress override work under way restarts on its resume date; a completed activity\'s holds nothing',
+        poDone === '2025-09-04' && poAlerts === 0 &&
+        r.nodes.P.restart_date === '2026-10-12' && r.nodes.P.ef_last_worked_date === '2026-10-23' &&
+        poHolds.length === 1 && poHolds[0].message.indexOf('P (resume 2026-10-12 08:00)') >= 0,
+        [poDone, poAlerts, r.nodes.P.restart_date, r.nodes.P.ef_last_worked_date,
+         JSON.stringify(poHolds.map((a) => a.message.slice(0, 100)))].join(' / '));
 
     // RES-6 — a resume date with NO suspend date is not applied, and a WARN
     // names it. Every P6-scheduled row the rule was measured on carries both

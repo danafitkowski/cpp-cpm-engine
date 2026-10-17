@@ -1,0 +1,30 @@
+{
+ "case": "ZZ-CPP-PORS",
+ "proj_id": 5126,
+ "differences": [
+  "TASK A8 remain_drtn_hr_cnt: xer '12' p6 8.0",
+  "TASKRSRC A8/ZZ-PORS-R6 target_qty_per_hr: xer '1' p6 0.727272727272727"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A8": {
+    "remain_drtn_hr_cnt": 8.0,
+    "target_drtn_hr_cnt": 24.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A8",
+    "rsrc_short_name": "ZZ-PORS-R6",
+    "remain_qty": 12.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.727272727272727,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 12.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

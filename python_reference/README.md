@@ -200,9 +200,9 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  d7c7f4a53a0cc54af32e190ac1eac9b5f68e83e55e2daa086e6f85f3bc357180
+cpm.py          SHA-256:  a1a343c13c53715a88f08dec3903d939ef553f440d5511420f2b629ef11e5892
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  c66ec133e8d854ff2a3f25a254d51954d30e9ef240e4cf5d246838e4c4c004a7
+cpm_hours.py    SHA-256:  fbe8e5499012f35592595b7a5318c77f337b54e7aa84ab52524cc8298deb42da
 
 (Candidate after v2.10.7, unreleased, 2026-10-17 - cpm_hours.py bumped from
 bcb198bc...: resource dependent work under way takes the remaining dates
@@ -210,8 +210,12 @@ P6 gives it, starting at the activity calendar's next opening where its
 resource's calendar puts the early start off it (RU), and free float runs
 to a successor's remaining dates where they differ from its early ones
 (RF); measured on P6 probes ZZ-CPP-RDU and ZZ-CPP-RDU2, 30 of 30 rows,
-validation/p6-probes/rd-underway-2026-10-17. cpm.py and cpm_minutes.py
-unchanged.)
+validation/p6-probes/rd-underway-2026-10-17. Then cpm.py bumped from
+d7c7f4a5... and cpm_hours.py again: under progress override a resume date
+after the data date holds the restart of work under way, as under retained
+logic, and a completed activity's holds nothing there (RO); measured on P6
+probe ZZ-CPP-PORS, 13 of 13 rows, validation/p6-probes/po-resume-2026-10-17.
+cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left
 2026-10-16 - cpm.py bumped from 8189c519..., cpm_hours.py from 75a98421...:
@@ -657,8 +661,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 293596
-  sha-256:  d7c7f4a53a0cc54af32e190ac1eac9b5f68e83e55e2daa086e6f85f3bc357180
+  bytes: 293344
+  sha-256:  a1a343c13c53715a88f08dec3903d939ef553f440d5511420f2b629ef11e5892
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
