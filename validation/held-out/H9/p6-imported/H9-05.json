@@ -1,0 +1,62 @@
+{
+ "case": "H9-05",
+ "proj_id": 5118,
+ "differences": [
+  "TASK A1190 remain_drtn_hr_cnt: xer '5' p6 40.0",
+  "TASK A1290 remain_drtn_hr_cnt: xer '32' p6 7.0",
+  "TASK A1290 target_drtn_hr_cnt: xer '32' p6 7.0",
+  "TASKRSRC A1190/H9-05-R2 target_qty_per_hr: xer '3' p6 3.69230769230769",
+  "TASKRSRC A1290/H9-05-R2 remain_qty_per_hr: xer '0.5' p6 2.46153846153846",
+  "TASKRSRC A1290/H9-05-R2 target_qty_per_hr: xer '0.5' p6 2.46153846153846"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1190": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1290": {
+    "remain_drtn_hr_cnt": 7.0,
+    "target_drtn_hr_cnt": 7.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1190",
+    "rsrc_short_name": "H9-05-R1",
+    "remain_qty": 15.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 9.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1190",
+    "rsrc_short_name": "H9-05-R2",
+    "remain_qty": 15.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.69230769230769,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 9.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1290",
+    "rsrc_short_name": "H9-05-R2",
+    "remain_qty": 16.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 2.46153846153846,
+    "target_qty_per_hr": 2.46153846153846,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

@@ -1,0 +1,47 @@
+{
+ "case": "H9-12",
+ "proj_id": 5125,
+ "differences": [
+  "TASKRSRC A1150/H9-12-R1 target_qty_per_hr: xer '1' p6 0.941176470588235",
+  "TASKRSRC A1280/H9-12-R1 remain_qty_per_hr: xer '1' p6 1.28",
+  "TASKRSRC A1280/H9-12-R1 target_qty_per_hr: xer '1' p6 1.28"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1150": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1280": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 16.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1150",
+    "rsrc_short_name": "H9-12-R1",
+    "remain_qty": 3.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.941176470588235,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 5.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1280",
+    "rsrc_short_name": "H9-12-R1",
+    "remain_qty": 16.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.28,
+    "target_qty_per_hr": 1.28,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
