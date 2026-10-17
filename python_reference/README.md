@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  e7517b05fd4c27e53fbb7403c90b06b395f1988da05a97261b69615baf917afc
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  9860ebf7642d33cec4eb6edfd6e52a94492102e06d6e858359492bbc6f11bffe
+cpm_hours.py    SHA-256:  1666555d75fdad65770b1f4f02754c4adf4c9f2500870a87d51bd595f894584a
 
 (v2.10.8 candidate, unreleased, 2026-10-17 - cpm.py bumped from a1a343c1...:
 ENGINE_VERSION reads 2.10.8. cpm_hours.py bumped from
@@ -256,7 +256,12 @@ assignment has work left (RZ); and an SS / SF bound on resource dependent
 work, a lag's as a lead's, moves to each assignment's next opening off its
 working time (RG); measured on thirteen clones of H13-06 and H13-09
 (ZZ-CPP-RDZA..RDZD, ZZ-CPP-SSNA..SSNI), 349 of 349 rows,
-validation/p6-probes/h13-followups-2026-10-17.
+validation/p6-probes/h13-followups-2026-10-17. Then cpm_hours.py from
+9860ebf7..., for the row held-out set H14 left: under retained logic a
+completed successor bounds the As Late As Possible slide as it bounds free
+float (FC), at the date carried into it, and is not an open end (AC);
+measured on six clones of H14-11 (ZZ-CPP-ALCA..ALCF), 144 of 144 rows,
+validation/p6-probes/h14-followups-2026-10-17.
 cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left

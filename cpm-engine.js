@@ -3134,12 +3134,16 @@ function computeCPMHours(activities, relationships, o) {
         let seen = false;
         for (const r of succs.get(c)) {
             const s = nodes.get(r.to_code);
-            if (s.complete) continue;
-            if (n.started && !retained && (r.type === 'SS' || r.type === 'SF')) continue;
-            if (s.started && po && (r.type === 'FS' || r.type === 'SS')) continue;
+            // AC (H14, 17-Oct-2026): under retained logic a completed
+            // successor bounds the slide as it bounds free float (FC), at the
+            // date carried into it; it is not an open end (ZZ-CPP-ALCA, -ALCC,
+            // -ALCD against -ALCB, -ALCE, -ALCF; H14-11 A1010)
+            if (s.complete && !retained) continue;
+            if (!s.complete && n.started && !retained && (r.type === 'SS' || r.type === 'SF')) continue;
+            if (!s.complete && s.started && po && (r.type === 'FS' || r.type === 'SS')) continue;
             seen = true;
             const lc = lagCal(n, s);
-            const anchor = (r.type === 'FF' || r.type === 'SF') ? s.ef : restartOf(s);
+            const anchor = s.complete ? stamp(s) : ((r.type === 'FF' || r.type === 'SF') ? s.ef : restartOf(s));
             // AU (H6, 16-Oct-2026): an SS or SF lag out of work under way
             // bounds the slide with only its unexpired part, as the forward
             // pass and the free float count it; FS / FF lags in full

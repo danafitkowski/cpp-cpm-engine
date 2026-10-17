@@ -858,15 +858,22 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         seen = False
         for r in succs[c]:
             s = nodes[r['to_code']]
-            if s['complete']:
+            # AC (H14, 17-Oct-2026): under retained logic a completed successor
+            # bounds the slide as it bounds free float (FC), at the date carried
+            # into it; it is not an open end (ZZ-CPP-ALCA, -ALCC, -ALCD against
+            # -ALCB, -ALCE, -ALCF; H14-11 A1010)
+            if s['complete'] and not retained:
                 continue
-            if n['started'] and not retained and r['type'] in ('SS', 'SF'):
+            if not s['complete'] and n['started'] and not retained and r['type'] in ('SS', 'SF'):
                 continue
-            if s['started'] and po and r['type'] in ('FS', 'SS'):
+            if not s['complete'] and s['started'] and po and r['type'] in ('FS', 'SS'):
                 continue
             seen = True
             lc = lag_cal(n, s)
-            anchor = s['ef'] if r['type'] in ('FF', 'SF') else s.get('restart', s['es'])
+            if s['complete']:
+                anchor = stamp(s)
+            else:
+                anchor = s['ef'] if r['type'] in ('FF', 'SF') else s.get('restart', s['es'])
             # AU (H6, 16-Oct-2026): an SS or SF lag out of work under way
             # bounds the slide with only its unexpired part, as the forward
             # pass and the free float count it; FS / FF lags in full
