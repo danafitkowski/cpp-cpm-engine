@@ -1,0 +1,508 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "6c37aa2a99fd9c16f8db0d768913ff056087302736b87e38b793dbf182b76c7b",
+  "version": "2.10.7",
+  "role": "diagnosis"
+ },
+ "rows": 259,
+ "whole_day": {
+  "all_four_match": 23,
+  "fields": {
+   "early_start": {
+    "match": 105,
+    "differ": 154
+   },
+   "early_finish": {
+    "match": 102,
+    "differ": 157
+   },
+   "late_start": {
+    "match": 85,
+    "differ": 174
+   },
+   "late_finish": {
+    "match": 82,
+    "differ": 177
+   }
+  }
+ },
+ "printed": {
+  "all_seven_match": 218,
+  "fields": {
+   "early_start": {
+    "match": 225,
+    "differ": 34
+   },
+   "early_finish": {
+    "match": 225,
+    "differ": 34
+   },
+   "late_start": {
+    "match": 256,
+    "differ": 3
+   },
+   "late_finish": {
+    "match": 258,
+    "differ": 1
+   },
+   "total_float_hr": {
+    "match": 224,
+    "differ": 35
+   },
+   "free_float_hr": {
+    "match": 238,
+    "differ": 21
+   },
+   "critical": {
+    "match": 258,
+    "differ": 1
+   }
+  }
+ },
+ "cases": {
+  "H13-01": {
+   "unfinished": 23,
+   "whole_day_all_four": 2,
+   "printed_all_seven": 22,
+   "out_of_scope": 3,
+   "p6_imported_overlay": {
+    "tasks": 4,
+    "assignments": 5
+   }
+  },
+  "H13-02": {
+   "unfinished": 20,
+   "whole_day_all_four": 0,
+   "printed_all_seven": 20,
+   "out_of_scope": 2,
+   "p6_imported_overlay": {
+    "tasks": 4,
+    "assignments": 3
+   }
+  },
+  "H13-03": {
+   "unfinished": 29,
+   "whole_day_all_four": 4,
+   "printed_all_seven": 29,
+   "p6_imported_overlay": {
+    "tasks": 3,
+    "assignments": 3
+   }
+  },
+  "H13-04": {
+   "unfinished": 15,
+   "whole_day_all_four": 0,
+   "printed_all_seven": 15,
+   "out_of_scope": 3,
+   "p6_imported_overlay": {
+    "tasks": 5,
+    "assignments": 5
+   }
+  },
+  "H13-05": {
+   "unfinished": 29,
+   "whole_day_all_four": 1,
+   "printed_all_seven": 23,
+   "p6_imported_overlay": {
+    "tasks": 6,
+    "assignments": 12
+   }
+  },
+  "H13-06": {
+   "unfinished": 22,
+   "whole_day_all_four": 0,
+   "printed_all_seven": 20,
+   "p6_imported_overlay": {
+    "tasks": 6,
+    "assignments": 7
+   }
+  },
+  "H13-07": {
+   "unfinished": 20,
+   "whole_day_all_four": 0,
+   "printed_all_seven": 19,
+   "out_of_scope": 2,
+   "p6_imported_overlay": {
+    "tasks": 7,
+    "assignments": 7
+   }
+  },
+  "H13-08": {
+   "unfinished": 15,
+   "whole_day_all_four": 3,
+   "printed_all_seven": 1,
+   "out_of_scope": 2,
+   "p6_imported_overlay": {
+    "tasks": 6,
+    "assignments": 8
+   }
+  },
+  "H13-09": {
+   "unfinished": 29,
+   "whole_day_all_four": 1,
+   "printed_all_seven": 15,
+   "out_of_scope": 4,
+   "p6_imported_overlay": {
+    "tasks": 5,
+    "assignments": 6
+   }
+  },
+  "H13-10": {
+   "unfinished": 19,
+   "whole_day_all_four": 4,
+   "printed_all_seven": 18,
+   "out_of_scope": 1,
+   "p6_imported_overlay": {
+    "tasks": 5,
+    "assignments": 5
+   }
+  },
+  "H13-11": {
+   "unfinished": 26,
+   "whole_day_all_four": 3,
+   "printed_all_seven": 25,
+   "out_of_scope": 3,
+   "p6_imported_overlay": {
+    "tasks": 3,
+    "assignments": 5
+   }
+  },
+  "H13-12": {
+   "unfinished": 12,
+   "whole_day_all_four": 5,
+   "printed_all_seven": 11,
+   "p6_imported_overlay": {
+    "tasks": 5,
+    "assignments": 9
+   }
+  }
+ },
+ "out_of_scope": [
+  {
+   "case": "H13-01",
+   "task_code": "A1390",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2026-12-30 13:00",
+    "early_finish": "2026-12-30 13:00",
+    "late_start": "2026-12-31 16:00",
+    "late_finish": "2026-12-31 16:00",
+    "total_float_hr": 13,
+    "free_float_hr": 0,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-01",
+   "task_code": "A1400",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2027-01-06 13:30",
+    "early_finish": "2027-01-19 09:00",
+    "late_start": "2027-01-06 13:30",
+    "late_finish": "2027-01-19 09:00",
+    "total_float_hr": 0,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-01",
+   "task_code": "A1410",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2026-12-21 15:30",
+    "early_finish": "2027-01-14 15:30",
+    "late_start": "2027-01-05 11:00",
+    "late_finish": "2027-01-19 09:00",
+    "total_float_hr": 4,
+    "free_float_hr": 0,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-02",
+   "task_code": "A1260",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2027-01-08 17:00",
+    "early_finish": "2027-01-18 16:00",
+    "late_start": "2026-12-24 11:00",
+    "late_finish": "2027-01-07 00:00",
+    "total_float_hr": -58.5,
+    "free_float_hr": 41.5,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-02",
+   "task_code": "A1270",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2027-01-11 07:00",
+    "early_finish": "2027-01-20 08:00",
+    "late_start": "2026-12-25 09:00",
+    "late_finish": "2027-01-06 04:00",
+    "total_float_hr": -81,
+    "free_float_hr": 29,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-04",
+   "task_code": "A1230",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2026-05-06 15:30",
+    "early_finish": "2026-05-13 15:00",
+    "late_start": "2026-04-27 15:30",
+    "late_finish": "2026-05-06 17:30",
+    "total_float_hr": -37.5,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-04",
+   "task_code": "A1240",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-04-27 07:00",
+    "early_finish": "2026-05-21 17:30",
+    "late_start": "2026-04-15 07:00",
+    "late_finish": "2026-05-13 17:30",
+    "total_float_hr": -51.5,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-04",
+   "task_code": "A1250",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-04-27 07:00",
+    "early_finish": "2026-05-19 08:30",
+    "late_start": "2026-04-27 15:30",
+    "late_finish": "2026-05-12 11:00",
+    "total_float_hr": -37.5,
+    "free_float_hr": 28.5,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-07",
+   "task_code": "A1230",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-12-10 08:00",
+    "early_finish": "2026-12-24 08:30",
+    "late_start": "2026-12-30 10:30",
+    "late_finish": "2027-01-07 12:00",
+    "total_float_hr": 99.5,
+    "free_float_hr": 0,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-07",
+   "task_code": "A1240",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-12-10 08:00",
+    "early_finish": "2026-12-14 12:00",
+    "late_start": "2026-12-14 17:30",
+    "late_finish": "2026-12-28 12:00",
+    "total_float_hr": 168,
+    "free_float_hr": 0,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-08",
+   "task_code": "A1210",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2027-01-15 13:00",
+    "early_finish": "2027-01-18 08:00",
+    "late_start": "2027-01-12 11:00",
+    "late_finish": "2027-01-12 11:00",
+    "total_float_hr": -141,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-08",
+   "task_code": "A1220",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-12-21 07:00",
+    "early_finish": "2027-01-21 11:00",
+    "late_start": "2026-12-21 06:00",
+    "late_finish": "2027-01-26 17:00",
+    "total_float_hr": 36,
+    "free_float_hr": 73,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-09",
+   "task_code": "A1370",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-05-14 08:00",
+    "early_finish": "2026-06-09 16:30",
+    "late_start": "2026-06-10 10:00",
+    "late_finish": "2026-06-10 10:00",
+    "total_float_hr": 4,
+    "free_float_hr": 0,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-09",
+   "task_code": "A1380",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2026-05-28 10:30",
+    "early_finish": "2026-07-15 09:30",
+    "late_start": "2026-05-26 17:00",
+    "late_finish": "2026-07-08 17:30",
+    "total_float_hr": -32.5,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-09",
+   "task_code": "A1390",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-05-14 08:00",
+    "early_finish": "2026-07-15 09:30",
+    "late_start": "2026-06-10 10:00",
+    "late_finish": "2026-07-08 17:30",
+    "total_float_hr": -32.5,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-09",
+   "task_code": "A1400",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-05-18 07:00",
+    "early_finish": "2026-07-15 09:30",
+    "late_start": "2026-05-08 07:00",
+    "late_finish": "2026-07-08 17:30",
+    "total_float_hr": -35,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-10",
+   "task_code": "A1320",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2027-01-13 08:00",
+    "early_finish": "2027-02-04 17:00",
+    "late_start": "2027-01-28 13:00",
+    "late_finish": "2027-02-08 12:00",
+    "total_float_hr": 12,
+    "free_float_hr": 12,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-11",
+   "task_code": "A1340",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2026-12-28 11:00",
+    "early_finish": "2026-12-28 11:00",
+    "late_start": "2027-01-19 08:30",
+    "late_finish": "2027-01-22 11:00",
+    "total_float_hr": 123.5,
+    "free_float_hr": 0,
+    "critical": false
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-11",
+   "task_code": "A1350",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_NotStart",
+    "early_start": "2027-01-05 11:00",
+    "early_finish": "2027-01-22 11:00",
+    "late_start": "2027-01-11 15:00",
+    "late_finish": "2027-01-22 11:00",
+    "total_float_hr": 0,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  },
+  {
+   "case": "H13-11",
+   "task_code": "A1360",
+   "task_type": "TT_WBS",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-12-21 13:00",
+    "early_finish": "2027-01-22 16:30",
+    "late_start": "2026-12-23 16:30",
+    "late_finish": "2027-01-22 16:30",
+    "total_float_hr": 0,
+    "free_float_hr": 0,
+    "critical": true
+   },
+   "engine_node": false
+  }
+ ],
+ "all_rows": {
+  "rows": 279,
+  "whole_day_all_four_match": 23,
+  "printed_all_seven_match": 218
+ }
+}

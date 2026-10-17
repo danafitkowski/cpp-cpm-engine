@@ -1,0 +1,11 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). Each row: the engine scored on the frozen H13 cases with the same scorer. The step rows are earlier engines; the rule rows take one of the rules added after H12 out of the frozen v2.10.8 candidate (f07a6ee8) in a scratch copy.",
+ "engines": {
+  "v2.10.7 (6c37aa2a)": 218,
+  "the candidate H12 scored (fa8850b5)": 255,
+  "v2.10.8 candidate without RX": 255,
+  "v2.10.8 candidate without MC": 255,
+  "v2.10.8 candidate without RA": 255,
+  "v2.10.8 candidate (f07a6ee8), the score": 255
+ }
+}

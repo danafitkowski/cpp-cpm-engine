@@ -1,0 +1,144 @@
+{
+ "case": "H13-08",
+ "proj_id": 5182,
+ "differences": [
+  "TASK A1040 remain_drtn_hr_cnt: xer '44' p6 38.0",
+  "TASK A1090 remain_drtn_hr_cnt: xer '39' p6 20.0",
+  "TASKRSRC A1020/H13-08-R3 target_qty_per_hr: xer '1' p6 0.533333333333333",
+  "TASKRSRC A1040/H13-08-R2 target_qty_per_hr: xer '1' p6 0.622222222222222",
+  "TASKRSRC A1040/H13-08-R3 target_qty_per_hr: xer '1' p6 0.32183908045977",
+  "TASKRSRC A1090/H13-08-R3 target_qty_per_hr: xer '0.5' p6 0.173410404624277",
+  "TASKRSRC A1110/H13-08-R1 remain_qty_per_hr: xer '2' p6 1.26315789473684",
+  "TASKRSRC A1110/H13-08-R1 target_qty_per_hr: xer '2' p6 1.26315789473684",
+  "TASKRSRC A1150/H13-08-R1 remain_qty_per_hr: xer '2' p6 1.28",
+  "TASKRSRC A1150/H13-08-R1 target_qty_per_hr: xer '2' p6 1.28",
+  "TASKRSRC A1150/H13-08-R3 remain_qty_per_hr: xer '1' p6 0.326530612244898",
+  "TASKRSRC A1150/H13-08-R3 target_qty_per_hr: xer '1' p6 0.326530612244898"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1020": {
+    "remain_drtn_hr_cnt": 6.0,
+    "target_drtn_hr_cnt": 16.0
+   },
+   "A1040": {
+    "remain_drtn_hr_cnt": 38.0,
+    "target_drtn_hr_cnt": 56.0
+   },
+   "A1070": {
+    "remain_drtn_hr_cnt": 5.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1090": {
+    "remain_drtn_hr_cnt": 20.0,
+    "target_drtn_hr_cnt": 120.0
+   },
+   "A1110": {
+    "remain_drtn_hr_cnt": 120.0,
+    "target_drtn_hr_cnt": 120.0
+   },
+   "A1150": {
+    "remain_drtn_hr_cnt": 32.0,
+    "target_drtn_hr_cnt": 32.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1020",
+    "rsrc_short_name": "H13-08-R3",
+    "remain_qty": 6.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.533333333333333,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 10.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1040",
+    "rsrc_short_name": "H13-08-R2",
+    "remain_qty": 44.0,
+    "target_qty": 56.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.622222222222222,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 12.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1040",
+    "rsrc_short_name": "H13-08-R3",
+    "remain_qty": 44.0,
+    "target_qty": 56.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.32183908045977,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 12.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1070",
+    "rsrc_short_name": "H13-08-R1",
+    "remain_qty": 10.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 6.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1090",
+    "rsrc_short_name": "H13-08-R3",
+    "remain_qty": 19.5,
+    "target_qty": 60.0,
+    "remain_qty_per_hr": 0.5,
+    "target_qty_per_hr": 0.173410404624277,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 40.5,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H13-08-R1",
+    "remain_qty": 240.0,
+    "target_qty": 240.0,
+    "remain_qty_per_hr": 1.26315789473684,
+    "target_qty_per_hr": 1.26315789473684,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1150",
+    "rsrc_short_name": "H13-08-R1",
+    "remain_qty": 64.0,
+    "target_qty": 64.0,
+    "remain_qty_per_hr": 1.28,
+    "target_qty_per_hr": 1.28,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1150",
+    "rsrc_short_name": "H13-08-R3",
+    "remain_qty": 32.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 0.326530612244898,
+    "target_qty_per_hr": 0.326530612244898,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
