@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate a held-out set of Primavera P6 test schedules (XER) from a seed.
 
-    python generate_held_out.py --seed <hex> --set H1 --count 12 --out H1/cases [--dates pre2020] [--features wide]
+    python generate_held_out.py --seed <hex> --set H1 --count 12 --out H1/cases [--dates pre2020] [--features wide|wide2]
 
 Standard library only, deterministic: the same seed, set name and count always
 write the same bytes. Each case is one synthetic project (no client data):
@@ -56,6 +56,16 @@ never drew:
 Those draws come from a second random stream, so a wide case is the default
 case of the same seed with the features added, and every set before H8
 regenerates byte for byte.
+
+With --features wide2 (H10 on) each case draws the same five features,
+heavier: resource dependent work and suspended work in nine cases in ten,
+two to three resources each with three to twelve holidays, three to seven
+TT_Rsrc activities and one to three suspended ones. The second stream's last
+draw then puts about half the cases under progress override and the rest
+under retained logic, in place of the default case's option. So a set gives
+the rules the engine took from H8 and H9 more to decide: the remaining dates
+of resource dependent work under way, free float to them, and resume dates
+under progress override. --features wide keeps H8's and H9's draws exactly.
 
 The generator never runs a scheduling engine: its rough planning pass only
 places actual dates and constraint dates. What P6 makes of each file is P6's
@@ -153,6 +163,20 @@ CURRTYPE_ROW = {'curr_id': '1', 'decimal_digit_cnt': '2', 'curr_symbol': '$', 'd
 # --features wide (H8 on): the chance that a case draws each feature (see draw_wide).
 WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.6,
                'external': 0.55}
+
+# The wide profiles: each feature's chance, the counts drawn (resources per case, resource dependent activities,
+# holidays on a resource's calendar, suspended activities) and the chance a case is put under progress override
+# (None: the options stay the default case's). 'wide' (H8, H9) keeps the draws above exactly. 'wide2' (H10 on)
+# draws the same features heavier, so a set gives the rules the engine took from H8 and H9 more to decide: the
+# remaining dates of resource dependent work under way, free float to them, and resume dates under progress
+# override.
+WIDE_PROFILES = {
+    'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
+             'suspended': (1, 2), 'po': None},
+    'wide2': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                         'external': 0.55},
+              'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5},
+}
 
 # The values P6 23.12 writes for a project created with its defaults.
 PROJECT_DEFAULTS = {
@@ -278,11 +302,11 @@ def guid(*parts):
     return base64.b64encode(hashlib.sha256('|'.join(str(p) for p in parts).encode()).digest()[:16]).decode()[:22]
 
 
-def draw_cal(rng, cid, name, days):
+def draw_cal(rng, cid, name, days, hol=(0, 6)):
     # A calendar from the WEEKS pool with random holidays and, sometimes, a worked exception day over the given days.
     desc, week = WEEKS[rng.choice(sorted(WEEKS))]
     workdays = [d for d in days if week.get(d.weekday())]
-    holidays = set(rng.sample(workdays, rng.randint(0, 6)))
+    holidays = set(rng.sample(workdays, rng.randint(*hol)))
     offdays = [d for d in days if not week.get(d.weekday())]
     workexc = {}
     if offdays and rng.random() < 0.4:
@@ -324,11 +348,13 @@ def place(rng, cal, base, edge):
     return t
 
 
-def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals, es, ef, at):
+def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals, es, ef, at, profile='wide'):
     """--features wide: add resource dependent work, level of effort, WBS summary, suspend / resume and external
     dates to a drawn case, every draw from rng (a stream of its own, so the case's base draws are those of
     --features default). Returns what the XER writer needs beyond the TASK rows."""
     n0 = len(acts)
+    pf = WIDE_PROFILES[profile]
+    chance = pf['chance']
     w = {'resources': [], 'assignments': [], 'wbs_nodes': [], 'outer': 'SD_Both'}
     days = [start + timedelta(days=x) for x in range(int(span * 1.5) + 30)]
 
@@ -336,15 +362,15 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
     # 1-2 assignments (sometimes none, sometimes a lag). Each assignment's duration plus its lag is the activity's
     # (remaining and planned), the sizing P6's import would otherwise impose, so P6 keeps the file's inputs.
     todo = [a for a in acts if a['type'] == 'TT_Task' and a['status'] != 'TK_Complete']
-    if todo and rng.random() < WIDE_CHANCE['resource_dependent']:
-        for i in range(1, rng.randint(1, 3) + 1):
+    if todo and rng.random() < chance['resource_dependent']:
+        for i in range(1, rng.randint(*pf['resources']) + 1):
             rid = '%s-R%d' % (short, i)
             rtype = 'RT_Labor' if rng.random() < 0.7 else 'RT_Equip'
             w['resources'].append({'id': pid * 10 + i, 'seq': i, 'short': rid, 'type': rtype,
                                    'name': '%s synthetic %s' % (rid, 'crew' if rtype == 'RT_Labor' else 'equipment'),
-                                   'cal': draw_cal(rng, str(pid * 10 + 4 + i), rid, days),
+                                   'cal': draw_cal(rng, str(pid * 10 + 4 + i), rid, days, pf['holidays']),
                                    'guid': guid(short, pid, 'RSRC', i)})
-        for a in sorted(rng.sample(todo, min(len(todo), rng.randint(2, 5))), key=lambda x: x['i']):
+        for a in sorted(rng.sample(todo, min(len(todo), rng.randint(*pf['rd_acts']))), key=lambda x: x['i']):
             a['type'] = 'TT_Rsrc'
             a.setdefault('tags', []).append('resource dependent')
             started = a['status'] == 'TK_Active'
@@ -362,7 +388,7 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
     # b. Level of effort: 1-3 TT_LOE activities, each hung between an earlier activity (usually SS, sometimes FS,
     # sometimes a lag) and a later unfinished one (usually FF, sometimes FS); the network stays acyclic because
     # every link still runs from a lower activity number to a higher one with the LOE between them.
-    if rng.random() < WIDE_CHANCE['level_of_effort']:
+    if rng.random() < chance['level_of_effort']:
         for _ in range(rng.randint(1, 3)):
             i = len(acts)
             p = rng.choice([a for a in acts[:n0 - 1] if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_Mile')])
@@ -397,7 +423,7 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
 
     # c. WBS summary: 2-4 child nodes under the project node, the activities spread across them, and 1-2 TT_WBS
     # activities (no relationships), each in a child node that holds other activities.
-    if rng.random() < WIDE_CHANCE['wbs_summary']:
+    if rng.random() < chance['wbs_summary']:
         for j in range(1, rng.randint(2, 4) + 1):
             w['wbs_nodes'].append({'wbs_id': pid * 10 + j, 'seq_num': str(j), 'wbs_short_name': 'W%d' % j,
                                    'wbs_name': '%s area %d (synthetic)' % (short, j)})
@@ -430,8 +456,8 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
     # the activity calendar's working time (a shift's close or within a shift); the resume mostly 1-15 days after
     # the data date, sometimes before it (after the suspend), sometimes blank. Never a resume without a suspend.
     active = [a for a in acts[:n0] if a['status'] == 'TK_Active' and a['type'] in ('TT_Task', 'TT_Rsrc')]
-    if active and rng.random() < WIDE_CHANCE['suspended']:
-        for a in rng.sample(active, min(len(active), rng.randint(1, 2))):
+    if active and rng.random() < chance['suspended']:
+        for a in rng.sample(active, min(len(active), rng.randint(*pf['suspended']))):
             cal, st = a['cal'], a['act_start']
             t = st + (data_date - st) * rng.uniform(0.2, 1.0)
             t = t.replace(minute=0, second=0, microsecond=0)
@@ -453,7 +479,7 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
     # e. External early start / late finish dates on 1-3 unfinished activities, near their planned dates: later and
     # earlier than logic, on shift edges, mid-shift and off working time. SD_Both (about 75%) or SD_None.
     todo = [a for a in acts[:n0] if a['status'] != 'TK_Complete']
-    if todo and rng.random() < WIDE_CHANCE['external']:
+    if todo and rng.random() < chance['external']:
         for a in rng.sample(todo, min(len(todo), rng.randint(1, 3))):
             which = pick(rng, [('es', 40), ('lf', 30), ('both', 30)])
             if which in ('es', 'both'):
@@ -462,6 +488,9 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
                 a['ext_lf'] = place(rng, a['cal'], at(max(1.0, ef[a['i']] + rng.uniform(-8, 15))), 'finish')
             a.setdefault('tags', []).append('external dates')
     w['outer'] = 'SD_Both' if rng.random() < 0.75 else 'SD_None'
+    # wide2: progress override in about half the cases, the stream's last draw (wide makes none)
+    if pf['po'] is not None:
+        w['po'] = rng.random() < pf['po']
     return w
 
 
@@ -664,9 +693,12 @@ def make_case(seed, set_name, k, dates='default', features='default'):
     # --features wide: the five features H1-H7 never drew, from a stream of their own (the draws above are the
     # default mode's, so a wide case is its default case with the features added)
     wide = None
-    if features == 'wide':
+    if features in WIDE_PROFILES:
         wrng = random.Random(hashlib.sha256(('%s|%s|%d|wide' % (seed, set_name, k)).encode()).hexdigest())
-        wide = draw_wide(wrng, short, pid, start, span, dd_day, data_date, acts, rels, cals, es, ef, at)
+        wide = draw_wide(wrng, short, pid, start, span, dd_day, data_date, acts, rels, cals, es, ef, at, features)
+        if wide.get('po') is not None:     # wide2: the option the second stream drew replaces the default's
+            opts['sched_retained_logic'] = 'N' if wide['po'] else 'Y'
+            opts['sched_progress_override'] = 'Y' if wide['po'] else 'N'
 
     # Write the XER
     def row(table, values):
@@ -810,7 +842,7 @@ def main():
     ap.add_argument('--count', type=int, default=12)
     ap.add_argument('--out', required=True)
     ap.add_argument('--dates', default='default', choices=sorted(DATE_WINDOWS))
-    ap.add_argument('--features', default='default', choices=['default', 'wide'])
+    ap.add_argument('--features', default='default', choices=['default'] + sorted(WIDE_PROFILES))
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     cases = []
