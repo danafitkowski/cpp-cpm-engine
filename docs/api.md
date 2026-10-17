@@ -13,7 +13,7 @@ const E = require('@critical-path-partners/cpm-engine');
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
 | `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.7'` at the current tag.|
-| `E.EPOCH_YEAR`         | number  | `1900` — the epoch anchor for internal day-offset arithmetic (2020 through v2.10.6). |
+| `E.EPOCH_YEAR`         | number  | `1900` — the epoch anchor for internal day-offset arithmetic (since v2.10.7; 2020 before). |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
 | `E.VALID_REL_TYPES`    | string[]| `['FS', 'SS', 'FF', 'SF']`.                                              |
