@@ -11,9 +11,14 @@
 //
 // Each activity carries its remaining duration in days and, unless complete,
 // its remaining hours (remaining_hours, remaining_hours_days), its actual
-// dates, constraints, expected finish and calendar, as getTasks() gives them;
-// each relationship its type and lag in days and hours. opts carries the data
-// date (PROJECT.last_recalc_date), the calendar map, the project calendar
+// dates, constraints, expected finish and calendar, as getTasks() gives them,
+// with its suspend / resume and external dates, its resource assignments
+// (resource dependent work, each on its resource's calendar) and, from H8 on,
+// their count (resource_assignments: P6 keeps the remaining duration of
+// assigned work an expected finish leaves no working time; P6 probes
+// ZZ-CPP-XFUNITS / -XFUNITS2 matched 0 of 138 and 1 of 7 through this path
+// without it, 138 and 7 with it); each relationship its type and lag in days
+// and hours. opts carries the data date (PROJECT.last_recalc_date), the calendar map, the project calendar
 // (PROJECT.clndr_id) and the file's scheduling options: progress override
 // when SCHEDOPTIONS sched_progress_override is Y, otherwise retained logic;
 // the start-to-start lag anchor (sched_lag_early_start_flag); and the float
@@ -26,6 +31,17 @@
 // and free float in hours (|difference| < 0.01 h); and the critical flag
 // (P6: total float <= 0 h, its default "total float less than or equal to 0";
 // the engine: criticalCodes).
+//
+// Out of scope (pre-registered for H8): a P6 row whose task_type in the case
+// file's TASK table is TT_LOE (level of effort) or TT_WBS (WBS summary). The
+// engine leaves both out of its network by design (ALERT task-dropped) and
+// returns no node for them. Such rows are kept out of rows, rows_all_match,
+// fields, differences and each case's unfinished / all_fields_match, and
+// listed in summary.json's out_of_scope (case, task code, task type, P6's
+// values, whether the engine returned a node); all_rows and a second printed
+// line give the figure over every row, the out-of-scope rows counted as not
+// matching. Each of these keys appears only when a set has such rows, so the
+// results of a set without them are unchanged.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -76,6 +92,7 @@ function runEngine(text) {
         task_type: k.task_type, expected_finish: k.expected_finish, constraint: k.constraint,
         constraint2: k.constraint2, external_early_start: k.external_early_start,
         external_late_finish: k.external_late_finish, suspend_date: k.suspend_date, resume_date: k.resume_date,
+        resource_assignments: k.resource_assignments,
     }, !k.is_complete ? { remaining_hours: k.remaining_hours, remaining_hours_days: k.remaining_hours_days } : {},
     k.assignments ? { assignments: k.assignments } : {},
     k.actual_start ? { actual_start: k.actual_start } : {},
@@ -105,7 +122,16 @@ function runEngine(text) {
             total_float_hr: n.tf_hours, free_float_hr: n.ff_hours, critical: crit.has(code),
         };
     }
-    return { out, hours: res.hours || {}, alerts: (res.alerts || []).filter((a) => a.severity === 'ALERT').length };
+    return { out, hours: res.hours || {}, alerts: (res.alerts || []).filter((a) => a.severity === 'ALERT').length,
+        nodes: new Set(Object.keys(res.nodes)) };
+}
+
+// task_type of every activity in the case file's TASK table; TT_LOE and TT_WBS rows are out of scope
+const OUT_OF_SCOPE = new Set(['TT_LOE', 'TT_WBS']);
+function taskTypes(text) {
+    const o = {};
+    for (const r of table(text, 'TASK')) o[r.task_code] = r.task_type;
+    return o;
 }
 
 const results = {};
@@ -118,6 +144,7 @@ for (const c of cases) {
         return;
     }
     results[c.case] = runEngine(text);
+    results[c.case].types = taskTypes(text);
 }
 
 if (ENGINE_ONLY) {
@@ -144,12 +171,13 @@ const num = (x) => (x === '' || x === null || x === undefined ? null : Number(x)
 const summary = { engine: { file: 'cpm-engine.js', sha256: engineSha }, cases: {}, fields: {}, rows: 0,
     rows_all_match: 0, left_out: capture.left_out || {}, differences: [] };
 FIELDS.forEach((f) => { summary.fields[f] = { match: 0, differ: 0 }; });
+const outOfScope = [];
 fs.mkdirSync(path.join(SET, 'results'), { recursive: true });
 for (const c of cases) {
     if (!p6[c.case]) continue;
     const eng = results[c.case].out;
     const lines = ['case,task_code,field,engine,p6,match'];
-    let rows = 0, ok = 0;
+    let rows = 0, ok = 0, oos = 0;
     for (const [code, pr] of Object.entries(p6[c.case])) {
         const er = eng[code] || {};
         const p6v = {
@@ -157,6 +185,13 @@ for (const c of cases) {
             late_finish: pr.late_finish, total_float_hr: num(pr.total_float_hr), free_float_hr: num(pr.free_float_hr),
             critical: num(pr.total_float_hr) !== null && num(pr.total_float_hr) <= 0,
         };
+        const type = results[c.case].types[code] || '';
+        if (OUT_OF_SCOPE.has(type)) {
+            outOfScope.push({ case: c.case, task_code: code, task_type: type,
+                p6: Object.assign({ status: pr.status }, p6v), engine_node: results[c.case].nodes.has(code) });
+            oos++;
+            continue;
+        }
         let all = true;
         for (const f of FIELDS) {
             const a = er[f], b = p6v[f];
@@ -176,11 +211,20 @@ for (const c of cases) {
     }
     summary.cases[c.case] = { unfinished: rows, all_fields_match: ok,
         engine_unfinished: Object.keys(eng).length, hours_pass: !!results[c.case].hours.applied };
+    if (oos) summary.cases[c.case].out_of_scope = oos;
     summary.rows += rows;
     summary.rows_all_match += ok;
     fs.writeFileSync(path.join(SET, 'results', c.case + '.csv'), lines.join('\n') + '\n');
 }
+if (outOfScope.length) {
+    summary.out_of_scope = outOfScope;
+    summary.all_rows = { rows: summary.rows + outOfScope.length, all_fields_match: summary.rows_all_match };
+}
 fs.writeFileSync(path.join(SET, 'results', 'summary.json'), JSON.stringify(summary, null, 1) + '\n');
 console.log(summary.rows_all_match + ' of ' + summary.rows + ' unfinished activities match P6 on all ' + FIELDS.length + ' fields');
+if (outOfScope.length) {
+    console.log('all rows: ' + summary.all_rows.all_fields_match + ' of ' + summary.all_rows.rows + ', the ' +
+        outOfScope.length + ' level of effort and WBS summary rows (out of scope) counted as not matching');
+}
 for (const f of FIELDS) console.log('  ' + f + ': ' + summary.fields[f].match + ' of ' + (summary.fields[f].match + summary.fields[f].differ));
 console.log('  differences listed: ' + summary.differences.length);

@@ -25,6 +25,13 @@
 //
 // The run path is score_held_out.js's, copied without change: parseXER -> getTasks / getRelationships / getCalMap ->
 // computeCPM with the same activities, relationships and options.
+//
+// Out of scope (pre-registered for H8), as in score_held_out.js: a P6 row whose task_type in the case file's TASK table
+// is TT_LOE (level of effort) or TT_WBS (WBS summary), which the engine leaves out of its network by design (ALERT
+// task-dropped, no node). Such rows are kept out of rows, both comparisons, whole-day.csv and each case's counts, and
+// listed in summary.json's out_of_scope (case, task code, task type, P6's values, whether the engine returned a node);
+// all_rows and a second printed line give each figure over every row, the out-of-scope rows counted as not matching.
+// Each of these keys appears only when a set has such rows, so the results of a set without them are unchanged.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -76,6 +83,7 @@ function runEngine(text) {
         task_type: k.task_type, expected_finish: k.expected_finish, constraint: k.constraint,
         constraint2: k.constraint2, external_early_start: k.external_early_start,
         external_late_finish: k.external_late_finish, suspend_date: k.suspend_date, resume_date: k.resume_date,
+        resource_assignments: k.resource_assignments,
     }, !k.is_complete ? { remaining_hours: k.remaining_hours, remaining_hours_days: k.remaining_hours_days } : {},
     k.assignments ? { assignments: k.assignments } : {},
     k.actual_start ? { actual_start: k.actual_start } : {},
@@ -106,6 +114,14 @@ function runEngine(text) {
         };
     }
     return { res, out };
+}
+
+// task_type of every activity in the case file's TASK table; TT_LOE and TT_WBS rows are out of scope
+const OUT_OF_SCOPE = new Set(['TT_LOE', 'TT_WBS']);
+function taskTypes(text) {
+    const o = {};
+    for (const r of table(text, 'TASK')) o[r.task_code] = r.task_type;
+    return o;
 }
 
 // --- the whole-day pass's own dates
@@ -145,6 +161,7 @@ const summary = {
 DAY.forEach((f) => { summary.whole_day.fields[f] = { match: 0, differ: 0 }; });
 SEVEN.forEach((f) => { summary.printed.fields[f] = { match: 0, differ: 0 }; });
 const lines = ['case,task_code,status,field,whole_day,p6_day,match'];
+const outOfScope = [];
 for (const c of cases) {
     if (!p6[c.case]) continue;
     const sha = crypto.createHash('sha256').update(fs.readFileSync(path.join(SET, 'cases', c.file))).digest('hex');
@@ -153,9 +170,22 @@ for (const c of cases) {
         process.exitCode = 2;
         return;
     }
-    const { res, out } = runEngine(fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1'));
+    const text = fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1');
+    const { res, out } = runEngine(text);
+    const types = taskTypes(text);
     const cs = { unfinished: 0, whole_day_all_four: 0, printed_all_seven: 0 };
+    let oos = 0;
     for (const [code, pr] of Object.entries(p6[c.case])) {
+        if (OUT_OF_SCOPE.has(types[code] || '')) {
+            outOfScope.push({ case: c.case, task_code: code, task_type: types[code],
+                p6: { status: pr.status, early_start: pr.early_start, early_finish: pr.early_finish,
+                    late_start: pr.late_start, late_finish: pr.late_finish, total_float_hr: num(pr.total_float_hr),
+                    free_float_hr: num(pr.free_float_hr),
+                    critical: num(pr.total_float_hr) !== null && num(pr.total_float_hr) <= 0 },
+                engine_node: Object.prototype.hasOwnProperty.call(res.nodes, code) });
+            oos++;
+            continue;
+        }
         cs.unfinished++;
         summary.rows++;
         const n = res.nodes[code] || {};
@@ -188,14 +218,21 @@ for (const c of cases) {
         }
         if (all7) { summary.printed.all_seven_match++; cs.printed_all_seven++; }
     }
+    if (oos) cs.out_of_scope = oos;
     summary.cases[c.case] = cs;
+}
+if (outOfScope.length) {
+    summary.out_of_scope = outOfScope;
+    summary.all_rows = { rows: summary.rows + outOfScope.length, whole_day_all_four_match: summary.whole_day.all_four_match,
+        printed_all_seven_match: summary.printed.all_seven_match };
 }
 
 const scored = path.join(SET, 'results', 'summary.json');
 if (!DIAGNOSIS && fs.existsSync(scored)) {
     const s = JSON.parse(fs.readFileSync(scored, 'utf8'));
     const same = s.rows === summary.rows && s.rows_all_match === summary.printed.all_seven_match &&
-        SEVEN.every((f) => s.fields[f].match === summary.printed.fields[f].match);
+        SEVEN.every((f) => s.fields[f].match === summary.printed.fields[f].match) &&
+        (s.out_of_scope || []).length === outOfScope.length;
     if (!same) {
         console.error('the seven printed fields differ from score_held_out.js\'s results/summary.json: stopping');
         process.exitCode = 3;
@@ -209,5 +246,13 @@ fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null
 console.log((DIAGNOSIS ? 'DIAGNOSIS (not a score), engine ' : 'engine ') + summary.engine.version + ' ' + engineSha.slice(0, 16));
 console.log('whole-day pass: ' + summary.whole_day.all_four_match + ' of ' + summary.rows +
     ' unfinished activities on P6\'s day for all four dates');
+if (outOfScope.length) {
+    console.log('whole-day pass, all rows: ' + summary.all_rows.whole_day_all_four_match + ' of ' + summary.all_rows.rows +
+        ', the ' + outOfScope.length + ' level of effort and WBS summary rows (out of scope) counted as not matching');
+}
 for (const f of DAY) console.log('  ' + f + ': ' + summary.whole_day.fields[f].match + ' of ' + summary.rows);
 console.log('printed fields: ' + summary.printed.all_seven_match + ' of ' + summary.rows + ' on all seven');
+if (outOfScope.length) {
+    console.log('printed fields, all rows: ' + summary.all_rows.printed_all_seven_match + ' of ' + summary.all_rows.rows +
+        ', the ' + outOfScope.length + ' out-of-scope rows counted as not matching');
+}

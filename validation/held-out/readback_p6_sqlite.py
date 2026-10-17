@@ -6,9 +6,11 @@
 Read-only (the database is opened with mode=ro). For every case listed in
 <set>/cases/cases.json, the project whose Project ID is the case name must
 have been imported and scheduled by P6 (PROJECT.last_schedule_date set), and
-no activity or relationship may have been edited after that F9 (update_date
-at or before last_schedule_date); a case that fails either test is reported
-and left out, never patched.
+no activity, relationship or resource assignment may have been edited after
+that F9 (TASK, TASKPRED and, from H8 on, TASKRSRC rows: update_date at or
+before last_schedule_date); a case that fails either test is reported and left
+out, never patched. A case with no resource assignments has no TASKRSRC rows,
+so the TASKRSRC test leaves it as before.
 
 Writes <set>/p6-results.csv, one row per unfinished activity, with P6's
 computed values as the comparison reads them:
@@ -69,10 +71,12 @@ def main():
             import datetime as _dt
             stamp = (_dt.datetime.strptime(stamp[:19], '%Y-%m-%d %H:%M:%S') +
                      _dt.timedelta(seconds=1)).strftime('%Y-%m-%d %H:%M:%S')
+        # From H8 on (resource dependent work): the resource assignments too.
         edited = con.execute(
             "select (select count(*) from TASK where proj_id = ? and delete_session_id is null and update_date > ?) + "
-            "(select count(*) from TASKPRED where proj_id = ? and delete_session_id is null and update_date > ?)",
-            (pid, stamp, pid, stamp)).fetchone()[0]
+            "(select count(*) from TASKPRED where proj_id = ? and delete_session_id is null and update_date > ?) + "
+            "(select count(*) from TASKRSRC where proj_id = ? and delete_session_id is null and update_date > ?)",
+            (pid, stamp, pid, stamp, pid, stamp)).fetchone()[0]
         if edited:
             capture['left_out'][name] = '%d rows edited after the F9' % edited
             continue
