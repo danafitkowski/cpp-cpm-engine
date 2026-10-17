@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate a held-out set of Primavera P6 test schedules (XER) from a seed.
 
-    python generate_held_out.py --seed <hex> --set H1 --count 12 --out H1/cases [--dates pre2020]
+    python generate_held_out.py --seed <hex> --set H1 --count 12 --out H1/cases [--dates pre2020] [--features wide]
 
 Standard library only, deterministic: the same seed, set name and count always
 write the same bytes. Each case is one synthetic project (no client data):
@@ -28,12 +28,38 @@ write the same bytes. Each case is one synthetic project (no client data):
   24-hour, project default), the start-to-start lag anchor, and Use Expected
   Finish Dates.
 
+With --features wide (H8 on; every earlier set used the default) each case
+also draws, each feature with its own chance, the five features H1 to H7
+never drew:
+
+- resource dependent work: one to three resources (labour or equipment), each
+  on a global calendar of its own drawn from the same pool with its own
+  holidays, and two to five TT_Rsrc activities with one or two assignments
+  (sometimes none, sometimes a lag), written in the tables and field order of
+  a P6 23.12 export (CURRTYPE, RSRC and TASKRSRC); each assignment's units and
+  lag already size it to the activity's remaining and planned durations, so
+  P6's import has nothing to re-size;
+- level of effort: one to three TT_LOE activities hung from an earlier
+  activity (usually SS) to a later one (usually FF), some started;
+- WBS summary: two to four child WBS nodes with the activities spread across
+  them, and one or two TT_WBS activities, without relationships, in nodes
+  that hold other activities;
+- suspend and resume dates on work under way, the resume mostly after the
+  data date, sometimes before it, sometimes blank;
+- external early start and late finish dates near planned dates, with
+  sched_outer_depend_type SD_Both or, about one case in four, SD_None.
+
+Those draws come from a second random stream, so a wide case is the default
+case of the same seed with the features added, and every set before H8
+regenerates byte for byte.
+
 The generator never runs a scheduling engine: its rough planning pass only
 places actual dates and constraint dates. What P6 makes of each file is P6's
 answer, captured by scheduling it, and what the engine makes of it is
 scored against that (see PROTOCOL.md).
 """
 import argparse
+import base64
 import hashlib
 import json
 import math
@@ -94,7 +120,35 @@ FIELDS = {
              'create_user', 'update_user', 'location_id', 'crt_path_num'],
     'TASKPRED': ['task_pred_id', 'task_id', 'pred_task_id', 'proj_id', 'pred_proj_id', 'pred_type',
                  'lag_hr_cnt', 'comments', 'float_path', 'aref', 'arls'],
+    # --features wide only. The three resource tables carry the field lists of a P6 23.12 export (the 2026-10-13
+    # resource dependent probes, rsrc_dependent_2026_10_13/build_r.py in the P6 oracle repo).
+    'CURRTYPE': ['curr_id', 'decimal_digit_cnt', 'curr_symbol', 'decimal_symbol', 'digit_group_symbol',
+                 'pos_curr_fmt_type', 'neg_curr_fmt_type', 'curr_type', 'curr_short_name', 'group_digit_cnt',
+                 'base_exch_rate'],
+    'RSRC': ['rsrc_id', 'parent_rsrc_id', 'clndr_id', 'role_id', 'shift_id', 'user_id', 'pobs_id', 'guid',
+             'rsrc_seq_num', 'email_addr', 'employee_code', 'office_phone', 'other_phone', 'rsrc_name',
+             'rsrc_short_name', 'rsrc_title_name', 'def_qty_per_hr', 'cost_qty_type', 'ot_factor', 'active_flag',
+             'auto_compute_act_flag', 'def_cost_qty_link_flag', 'ot_flag', 'curr_id', 'unit_id', 'rsrc_type',
+             'location_id', 'rsrc_notes', 'load_tasks_flag', 'level_flag', 'last_checksum'],
+    'TASKRSRC': ['taskrsrc_id', 'task_id', 'proj_id', 'cost_qty_link_flag', 'role_id', 'acct_id', 'rsrc_id',
+                 'pobs_id', 'skill_level', 'remain_qty', 'target_qty', 'remain_qty_per_hr', 'target_lag_drtn_hr_cnt',
+                 'target_qty_per_hr', 'act_ot_qty', 'act_reg_qty', 'relag_drtn_hr_cnt', 'ot_factor', 'cost_per_qty',
+                 'target_cost', 'act_reg_cost', 'act_ot_cost', 'remain_cost', 'act_start_date', 'act_end_date',
+                 'restart_date', 'reend_date', 'target_start_date', 'target_end_date', 'rem_late_start_date',
+                 'rem_late_end_date', 'rollup_dates_flag', 'target_crv', 'remain_crv', 'actual_crv',
+                 'ts_pend_act_end_flag', 'guid', 'rate_type', 'act_this_per_cost', 'act_this_per_qty', 'curv_id',
+                 'rsrc_type', 'cost_per_qty_source_type', 'create_user', 'create_date', 'has_rsrchours',
+                 'taskrsrc_sum_id'],
 }
+
+# P6's base currency row as a P6 23.12 export writes it (the RSRC rows name curr_id 1).
+CURRTYPE_ROW = {'curr_id': '1', 'decimal_digit_cnt': '2', 'curr_symbol': '$', 'decimal_symbol': '.',
+                'digit_group_symbol': ',', 'pos_curr_fmt_type': '#1.1', 'neg_curr_fmt_type': '(#1.1)',
+                'curr_type': 'US Dollar', 'curr_short_name': 'USD', 'group_digit_cnt': '3', 'base_exch_rate': '1'}
+
+# --features wide (H8 on): the chance that a case draws each feature (see draw_wide).
+WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.6,
+               'external': 0.55}
 
 # The values P6 23.12 writes for a project created with its defaults.
 PROJECT_DEFAULTS = {
@@ -215,7 +269,220 @@ def draw_start(rng, dates, k):
     return first + timedelta(days=rng.randint(0, days))
 
 
-def make_case(seed, set_name, k, dates='default'):
+def guid(*parts):
+    # A P6-style GUID (22 characters, base64 of 16 bytes, no padding), derived from the parts so it is deterministic.
+    return base64.b64encode(hashlib.sha256('|'.join(str(p) for p in parts).encode()).digest()[:16]).decode()[:22]
+
+
+def draw_cal(rng, cid, name, days):
+    # A calendar from the WEEKS pool with random holidays and, sometimes, a worked exception day over the given days.
+    desc, week = WEEKS[rng.choice(sorted(WEEKS))]
+    workdays = [d for d in days if week.get(d.weekday())]
+    holidays = set(rng.sample(workdays, rng.randint(0, 6)))
+    offdays = [d for d in days if not week.get(d.weekday())]
+    workexc = {}
+    if offdays and rng.random() < 0.4:
+        workexc[rng.choice(offdays)] = rng.choice([[(480, 720)], [(420, 960)], [(360, 600), (660, 900)]])
+    hours = [sum(b - a for a, b in sl) / 60.0 for sl in week.values()]
+    return Cal(cid, '%s %s' % (name, desc), week, holidays, workexc, hours[0] if len(set(hours)) == 1 else 8.0)
+
+
+def slot_at(cal, t):
+    # The working slot (start, finish) holding instant t, or None when t is off working time.
+    m = t.hour * 60 + t.minute
+    for a, b in cal.slots(t.date()):
+        if a <= m < b:
+            d = datetime(t.year, t.month, t.day)
+            return d + timedelta(minutes=a), d + timedelta(minutes=b)
+    return None
+
+
+def place(rng, cal, base, edge):
+    # An external date near base: on a shift edge (the next opening for a start, the last close for a finish),
+    # mid-shift, or off working time.
+    how = pick(rng, [('edge', 50), ('mid', 25), ('off', 25)])
+    if how == 'off':
+        for x in range(10):
+            d = base.date() + timedelta(days=x)
+            day = datetime(d.year, d.month, d.day)
+            if not cal.slots(d):
+                return day + timedelta(minutes=rng.choice([600, 780]))
+            for m in (150, 1350, 735, 1035):
+                if not slot_at(cal, day + timedelta(minutes=m)):
+                    return day + timedelta(minutes=m)
+        how = 'edge'
+    t = cal.first_start_at_or_after(base) if edge == 'start' else cal.last_end_at_or_before(base)
+    sl = slot_at(cal, t if edge == 'start' else t - timedelta(minutes=1))
+    if how == 'mid' and sl:
+        steps = int((sl[1] - sl[0]).total_seconds() // 900) - 1
+        if steps >= 1:
+            return sl[0] + timedelta(minutes=15 * rng.randint(1, steps))
+    return t
+
+
+def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals, es, ef, at):
+    """--features wide: add resource dependent work, level of effort, WBS summary, suspend / resume and external
+    dates to a drawn case, every draw from rng (a stream of its own, so the case's base draws are those of
+    --features default). Returns what the XER writer needs beyond the TASK rows."""
+    n0 = len(acts)
+    w = {'resources': [], 'assignments': [], 'wbs_nodes': [], 'outer': 'SD_Both'}
+    days = [start + timedelta(days=x) for x in range(int(span * 1.5) + 30)]
+
+    # a. Resource dependent work: 1-3 resources, each on a calendar of its own, and 2-5 TT_Rsrc activities with
+    # 1-2 assignments (sometimes none, sometimes a lag). Each assignment's duration plus its lag is the activity's
+    # (remaining and planned), the sizing P6's import would otherwise impose, so P6 keeps the file's inputs.
+    todo = [a for a in acts if a['type'] == 'TT_Task' and a['status'] != 'TK_Complete']
+    if todo and rng.random() < WIDE_CHANCE['resource_dependent']:
+        for i in range(1, rng.randint(1, 3) + 1):
+            rid = '%s-R%d' % (short, i)
+            rtype = 'RT_Labor' if rng.random() < 0.7 else 'RT_Equip'
+            w['resources'].append({'id': pid * 10 + i, 'seq': i, 'short': rid, 'type': rtype,
+                                   'name': '%s synthetic %s' % (rid, 'crew' if rtype == 'RT_Labor' else 'equipment'),
+                                   'cal': draw_cal(rng, str(pid * 10 + 4 + i), rid, days),
+                                   'guid': guid(short, pid, 'RSRC', i)})
+        for a in sorted(rng.sample(todo, min(len(todo), rng.randint(2, 5))), key=lambda x: x['i']):
+            a['type'] = 'TT_Rsrc'
+            a.setdefault('tags', []).append('resource dependent')
+            started = a['status'] == 'TK_Active'
+            n_asg = pick(rng, [(1, 50), (2, 40), (0, 10)])
+            for j, res in enumerate(rng.sample(w['resources'], min(n_asg, len(w['resources'])))):
+                rate = rng.choice([0.5, 1, 1, 1, 2, 3]) if res['type'] == 'RT_Labor' else rng.choice([1, 1, 2])
+                lag = rng.choice([4, 8, 16]) if j and not started and rng.random() < 0.5 else 0
+                if lag >= a['remain']:
+                    lag = 0
+                target_q = (a['hours'] - lag) * rate
+                remain_q = (a['remain'] - lag) * rate
+                w['assignments'].append({'act': a, 'res': res, 'rate': rate, 'lag': lag, 'remain_q': remain_q,
+                                         'target_q': target_q, 'act_q': target_q - remain_q})
+
+    # b. Level of effort: 1-3 TT_LOE activities, each hung between an earlier activity (usually SS, sometimes FS,
+    # sometimes a lag) and a later unfinished one (usually FF, sometimes FS); the network stays acyclic because
+    # every link still runs from a lower activity number to a higher one with the LOE between them.
+    if rng.random() < WIDE_CHANCE['level_of_effort']:
+        for _ in range(rng.randint(1, 3)):
+            i = len(acts)
+            p = rng.choice([a for a in acts[:n0 - 1] if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_Mile')])
+            later = [a for a in acts[p['i'] + 1:n0]
+                     if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_FinMile') and a['status'] != 'TK_Complete']
+            if not later:
+                continue
+            s = rng.choice(later)
+            ptype = pick(rng, [('PR_SS', 70), ('PR_FS', 30)])
+            plag = 0 if rng.random() < 0.7 else rng.choice([4, 8, 16])
+            stype = pick(rng, [('PR_FF', 70), ('PR_FS', 30)])
+            cal = rng.choice(cals)
+            es[i] = es[p['i']] if ptype == 'PR_SS' else ef[p['i']]
+            ef[i] = max(es[i] + 1, ef[s['i']] if stype == 'PR_FF' else es[s['i']])
+            hours = max(8, 8 * int(round((ef[i] - es[i]) * cal.week_hours() / 7.0 / 8)))
+            loe = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': 'TT_LOE', 'cal': cal, 'hours': hours,
+                   'preds': [], 'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': hours,
+                   'xf': None, 'pct': 0, 'cstr': '', 'cstr_date': None, 'cstr2': '', 'cstr_date2': None,
+                   'tags': ['level of effort']}
+            anchor = p['act_start'] if ptype == 'PR_SS' else p['act_end']
+            if anchor and plag == 0 and rng.random() < 0.75:
+                st = cal.first_start_at_or_after(anchor)
+                if st < data_date:
+                    rem = max(1, int(round(max(8.0, (ef[i] - dd_day) * cal.week_hours() / 7.0))))
+                    loe.update({'status': 'TK_Active', 'act_start': st, 'remain': rem, 'hours': max(hours, rem + 8)})
+                    loe['pct'] = int(round(100 * (1 - rem / float(loe['hours']))))
+            acts.append(loe)
+            rels.append({'pred': p['i'], 'succ': i, 'type': ptype, 'lag': plag})
+            loe['preds'].append(rels[-1])
+            rels.append({'pred': i, 'succ': s['i'], 'type': stype, 'lag': 0})
+            s['preds'].append(rels[-1])
+
+    # c. WBS summary: 2-4 child nodes under the project node, the activities spread across them, and 1-2 TT_WBS
+    # activities (no relationships), each in a child node that holds other activities.
+    if rng.random() < WIDE_CHANCE['wbs_summary']:
+        for j in range(1, rng.randint(2, 4) + 1):
+            w['wbs_nodes'].append({'wbs_id': pid * 10 + j, 'seq_num': str(j), 'wbs_short_name': 'W%d' % j,
+                                   'wbs_name': '%s area %d (synthetic)' % (short, j)})
+        for a in acts:
+            if rng.random() < 0.85:
+                a['wbs'] = rng.choice(w['wbs_nodes'])['wbs_id']
+        held = [nd for nd in w['wbs_nodes'] if any(a.get('wbs') == nd['wbs_id'] for a in acts)]
+        for nd in rng.sample(held, min(len(held), rng.randint(1, 2))):
+            members = [a for a in acts if a.get('wbs') == nd['wbs_id']]
+            i = len(acts)
+            cal = rng.choice(cals)
+            es[i] = min(es[a['i']] for a in members)
+            ef[i] = max(ef[a['i']] for a in members)
+            hours = max(8, 8 * int(round((ef[i] - es[i]) * cal.week_hours() / 7.0 / 8)))
+            ws = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': 'TT_WBS', 'cal': cal, 'hours': hours,
+                  'preds': [], 'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': hours,
+                  'xf': None, 'pct': 0, 'cstr': '', 'cstr_date': None, 'cstr2': '', 'cstr_date2': None,
+                  'wbs': nd['wbs_id'], 'tags': ['WBS summary of %s' % nd['wbs_short_name']]}
+            begun = [a['act_start'] for a in members if a['act_start']]
+            if begun and all(a['status'] == 'TK_Complete' for a in members):
+                ws.update({'status': 'TK_Complete', 'act_start': min(begun),
+                           'act_end': max(a['act_end'] for a in members), 'remain': 0, 'pct': 100})
+            elif begun:
+                rem = max(1, int(round(max(8.0, (ef[i] - dd_day) * cal.week_hours() / 7.0))))
+                ws.update({'status': 'TK_Active', 'act_start': min(begun), 'remain': rem, 'hours': max(hours, rem + 8)})
+                ws['pct'] = int(round(100 * (1 - rem / float(ws['hours']))))
+            acts.append(ws)
+
+    # d. Suspend / resume on work under way: the suspend after the actual start, at or before the data date, on
+    # the activity calendar's working time (a shift's close or within a shift); the resume mostly 1-15 days after
+    # the data date, sometimes before it (after the suspend), sometimes blank. Never a resume without a suspend.
+    active = [a for a in acts[:n0] if a['status'] == 'TK_Active' and a['type'] in ('TT_Task', 'TT_Rsrc')]
+    if active and rng.random() < WIDE_CHANCE['suspended']:
+        for a in rng.sample(active, min(len(active), rng.randint(1, 2))):
+            cal, st = a['cal'], a['act_start']
+            t = st + (data_date - st) * rng.uniform(0.2, 1.0)
+            t = t.replace(minute=0, second=0, microsecond=0)
+            sus = t if rng.random() < 0.5 and slot_at(cal, t) else cal.last_end_at_or_before(t)
+            if not st < sus <= data_date:
+                continue
+            r = rng.random()
+            res = None
+            if r < 0.25:
+                res = cal.first_start_at_or_after(sus + timedelta(hours=rng.uniform(1, 72)))
+                if res > data_date:
+                    res = None
+                    r = 1.0
+            if r >= 0.35:
+                res = cal.first_start_at_or_after(data_date + timedelta(days=rng.uniform(1, 15)))
+            a.update({'suspend': sus, 'resume': res})
+            a.setdefault('tags', []).append('suspended')
+
+    # e. External early start / late finish dates on 1-3 unfinished activities, near their planned dates: later and
+    # earlier than logic, on shift edges, mid-shift and off working time. SD_Both (about 75%) or SD_None.
+    todo = [a for a in acts[:n0] if a['status'] != 'TK_Complete']
+    if todo and rng.random() < WIDE_CHANCE['external']:
+        for a in rng.sample(todo, min(len(todo), rng.randint(1, 3))):
+            which = pick(rng, [('es', 40), ('lf', 30), ('both', 30)])
+            if which in ('es', 'both'):
+                a['ext_es'] = place(rng, a['cal'], at(max(0.0, es[a['i']] + rng.uniform(-8, 12))), 'start')
+            if which in ('lf', 'both'):
+                a['ext_lf'] = place(rng, a['cal'], at(max(1.0, ef[a['i']] + rng.uniform(-8, 15))), 'finish')
+            a.setdefault('tags', []).append('external dates')
+    w['outer'] = 'SD_Both' if rng.random() < 0.75 else 'SD_None'
+    return w
+
+
+def wide_task_fields(a, pid, assignments):
+    # --features wide: the TASK fields a drawn feature sets (each blank or the default mode's value otherwise).
+    f = {'wbs_id': a.get('wbs', pid * 10), 'suspend_date': fmt(a.get('suspend')), 'resume_date': fmt(a.get('resume')),
+         'external_early_start_date': fmt(a.get('ext_es')), 'external_late_end_date': fmt(a.get('ext_lf'))}
+    if a['type'] == 'TT_Rsrc':
+        mine = [g for g in assignments if g['act'] is a]
+        lab = [g for g in mine if g['res']['type'] == 'RT_Labor']
+        eqp = [g for g in mine if g['res']['type'] != 'RT_Labor']
+        f.update({'duration_type': 'DT_FixedRate', 'rsrc_id': lab[0]['res']['id'] if lab else '',
+                  'act_work_qty': '%g' % sum(g['act_q'] for g in lab),
+                  'remain_work_qty': '%g' % sum(g['remain_q'] for g in lab),
+                  'target_work_qty': '%g' % sum(g['target_q'] for g in lab),
+                  'act_equip_qty': '%g' % sum(g['act_q'] for g in eqp),
+                  'remain_equip_qty': '%g' % sum(g['remain_q'] for g in eqp),
+                  'target_equip_qty': '%g' % sum(g['target_q'] for g in eqp)})
+    if a.get('tags'):
+        f['task_name'] = ('Activity %s (%s), %g h on %s' % (a['code'], '; '.join(a['tags']), a['hours'],
+                                                             a['cal'].name))[:120]
+    return f
+
+
+def make_case(seed, set_name, k, dates='default', features='default'):
     rng = random.Random(hashlib.sha256(('%s|%s|%d' % (seed, set_name, k)).encode()).hexdigest())
     pid = 9100 + k
     short = '%s-%02d' % (set_name, k)
@@ -390,6 +657,13 @@ def make_case(seed, set_name, k, dates='default'):
     if rng.random() < 0.35:
         must_finish = primary.last_end_at_or_before(at(span + rng.uniform(-15, 10)))
 
+    # --features wide: the five features H1-H7 never drew, from a stream of their own (the draws above are the
+    # default mode's, so a wide case is its default case with the features added)
+    wide = None
+    if features == 'wide':
+        wrng = random.Random(hashlib.sha256(('%s|%s|%d|wide' % (seed, set_name, k)).encode()).hexdigest())
+        wide = draw_wide(wrng, short, pid, start, span, dd_day, data_date, acts, rels, cals, es, ef, at)
+
     # Write the XER
     def row(table, values):
         return '%R' + TAB + TAB.join(str(values.get(f, '')) for f in FIELDS[table])
@@ -407,6 +681,8 @@ def make_case(seed, set_name, k, dates='default'):
           'limit_multiple_longest_path_calc': 'Y', 'max_multiple_longest_path': '10',
           'use_total_float_multiple_longest_paths': 'Y'}
     so.update(opts)
+    if wide:
+        so['sched_outer_depend_type'] = wide['outer']
     wbs = {'wbs_id': pid * 10, 'proj_id': pid, 'seq_num': '1', 'est_wt': '1', 'proj_node_flag': 'Y',
            'sum_data_flag': 'N', 'status_code': 'WS_Open', 'wbs_short_name': short,
            'wbs_name': 'Held-out P6 comparison case %s (synthetic)' % short, 'ev_user_pct': '0.06',
@@ -414,6 +690,9 @@ def make_case(seed, set_name, k, dates='default'):
            'indep_remain_work_qty': '0', 'ev_compute_type': 'EC_Cmp_pct', 'ev_etc_compute_type': 'EE_Rem_hr'}
     lines = [TAB.join(['ERMHDR', '23.12', '2026-10-13', 'Project', 'admin', 'admin', 'dbxDatabaseNoName',
                        'Project Management', 'USD'])]
+    resources = wide['resources'] if wide else []
+    if resources:       # P6's own export order: CURRTYPE, PROJECT, CALENDAR, SCHEDOPTIONS, PROJWBS, RSRC, TASK, ...
+        lines += ['%T' + TAB + 'CURRTYPE', '%F' + TAB + TAB.join(FIELDS['CURRTYPE']), row('CURRTYPE', CURRTYPE_ROW)]
     lines += ['%T' + TAB + 'PROJECT', '%F' + TAB + TAB.join(FIELDS['PROJECT']), row('PROJECT', proj)]
     lines += ['%T' + TAB + 'CALENDAR', '%F' + TAB + TAB.join(FIELDS['CALENDAR'])]
     for c in cals:
@@ -423,12 +702,31 @@ def make_case(seed, set_name, k, dates='default'):
                                       'day_hr_cnt': '%g' % c.declared, 'week_hr_cnt': '%g' % wh,
                                       'month_hr_cnt': '%g' % round(wh * 4.3), 'year_hr_cnt': '%g' % round(wh * 52),
                                       'rsrc_private': 'N', 'clndr_data': c.clndr_data()}))
+    for r in resources:     # a resource's calendar: a global calendar, as the probes' export writes one
+        c, wh = r['cal'], r['cal'].week_hours()
+        lines.append(row('CALENDAR', {'clndr_id': c.cid, 'default_flag': 'N', 'clndr_name': c.name, 'proj_id': '',
+                                      'clndr_type': 'CA_Base', 'day_hr_cnt': '%g' % c.declared,
+                                      'week_hr_cnt': '%g' % wh, 'month_hr_cnt': '%g' % round(wh * 4.3),
+                                      'year_hr_cnt': '%g' % round(wh * 52), 'rsrc_private': 'N',
+                                      'clndr_data': c.clndr_data()}))
     lines += ['%T' + TAB + 'SCHEDOPTIONS', '%F' + TAB + TAB.join(FIELDS['SCHEDOPTIONS']), row('SCHEDOPTIONS', so)]
     lines += ['%T' + TAB + 'PROJWBS', '%F' + TAB + TAB.join(FIELDS['PROJWBS']), row('PROJWBS', wbs)]
+    for nd in (wide['wbs_nodes'] if wide else []):
+        lines.append(row('PROJWBS', dict(wbs, proj_node_flag='N', parent_wbs_id=pid * 10, **nd)))
+    if resources:
+        lines += ['%T' + TAB + 'RSRC', '%F' + TAB + TAB.join(FIELDS['RSRC'])]
+        for r in resources:
+            lines.append(row('RSRC', {'rsrc_id': r['id'], 'clndr_id': r['cal'].cid, 'guid': r['guid'],
+                                      'rsrc_seq_num': r['seq'], 'rsrc_name': r['name'], 'rsrc_short_name': r['short'],
+                                      'def_qty_per_hr': '1', 'cost_qty_type': 'QT_Hour', 'active_flag': 'Y',
+                                      'auto_compute_act_flag': 'N', 'def_cost_qty_link_flag': 'Y', 'ot_flag': 'N',
+                                      'curr_id': '1', 'rsrc_type': r['type']}))
     lines += ['%T' + TAB + 'TASK', '%F' + TAB + TAB.join(FIELDS['TASK'])]
+    planned = {}
     for a in acts:
         planned_start = a['act_start'] or a['cal'].first_start_at_or_after(at(es[a['i']]))
-        lines.append(row('TASK', {
+        planned[a['i']] = planned_start
+        task = {
             'task_id': pid * 1000 + a['i'], 'proj_id': pid, 'wbs_id': pid * 10, 'clndr_id': a['cal'].cid,
             'phys_complete_pct': a['pct'], 'rev_fdbk_flag': 'N', 'est_wt': '1', 'lock_plan_flag': 'N',
             'auto_compute_act_flag': 'N', 'complete_pct_type': 'CP_Phys', 'task_type': a['type'],
@@ -441,17 +739,35 @@ def make_case(seed, set_name, k, dates='default'):
             'expect_end_date': fmt(a['xf']), 'target_start_date': fmt(planned_start),
             'cstr_type': a['cstr'], 'priority_type': 'PT_Normal', 'cstr_date2': fmt(a['cstr_date2']),
             'cstr_type2': a['cstr2'], 'act_this_per_work_qty': '0', 'act_this_per_equip_qty': '0',
-            'create_user': 'admin', 'update_user': 'admin'}))
+            'create_user': 'admin', 'update_user': 'admin'}
+        if wide:
+            task.update(wide_task_fields(a, pid, wide['assignments']))
+        lines.append(row('TASK', task))
     lines += ['%T' + TAB + 'TASKPRED', '%F' + TAB + TAB.join(FIELDS['TASKPRED'])]
     for j, r in enumerate(rels):
         lines.append(row('TASKPRED', {'task_pred_id': pid * 1000 + 500 + j, 'task_id': pid * 1000 + r['succ'],
                                       'pred_task_id': pid * 1000 + r['pred'], 'proj_id': pid,
                                       'pred_proj_id': pid, 'pred_type': r['type'], 'lag_hr_cnt': '%g' % r['lag']}))
+    if resources:
+        lines += ['%T' + TAB + 'TASKRSRC', '%F' + TAB + TAB.join(FIELDS['TASKRSRC'])]
+        for j, g in enumerate(wide['assignments']):
+            a, r = g['act'], g['res']
+            lines.append(row('TASKRSRC', {
+                'taskrsrc_id': pid * 1000 + 800 + j, 'task_id': pid * 1000 + a['i'], 'proj_id': pid,
+                'cost_qty_link_flag': 'Y', 'rsrc_id': r['id'], 'remain_qty': '%g' % g['remain_q'],
+                'target_qty': '%g' % g['target_q'], 'remain_qty_per_hr': '%.10g' % g['rate'],
+                'target_lag_drtn_hr_cnt': '%g' % g['lag'], 'target_qty_per_hr': '%.10g' % g['rate'],
+                'act_ot_qty': '0', 'act_reg_qty': '%g' % g['act_q'], 'relag_drtn_hr_cnt': '%g' % g['lag'],
+                'cost_per_qty': '0', 'target_cost': '0', 'act_reg_cost': '0', 'act_ot_cost': '0', 'remain_cost': '0',
+                'act_start_date': fmt(a['act_start']), 'act_end_date': fmt(a['act_end']),
+                'target_start_date': fmt(planned[a['i']]), 'rollup_dates_flag': 'Y', 'ts_pend_act_end_flag': 'N',
+                'rate_type': 'COST_PER_QTY', 'act_this_per_cost': '0', 'act_this_per_qty': '0',
+                'rsrc_type': r['type'], 'cost_per_qty_source_type': 'ST_Rsrc', 'create_user': 'admin'}))
     lines.append('%E')
     text = '\r\n'.join(lines) + '\r\n'
 
-    features = {
-        'activities': n, 'unfinished': sum(1 for a in acts if a['status'] != 'TK_Complete'),
+    summary = {
+        'activities': len(acts), 'unfinished': sum(1 for a in acts if a['status'] != 'TK_Complete'),
         'completed': sum(1 for a in acts if a['status'] == 'TK_Complete'),
         'in_progress': sum(1 for a in acts if a['status'] == 'TK_Active'),
         'relationships': {t: sum(1 for r in rels if r['type'] == t) for t in ('PR_FS', 'PR_SS', 'PR_FF', 'PR_SF')},
@@ -463,7 +779,24 @@ def make_case(seed, set_name, k, dates='default'):
         'open_ends': len(keep_open), 'calendars': [c.name for c in cals],
         'data_date': fmt(data_date), 'must_finish_by': fmt(must_finish), 'options': opts,
     }
-    return short, text, features
+    if wide:
+        asg = wide['assignments']
+        summary.update({
+            'resource_dependent': sum(1 for a in acts if a['type'] == 'TT_Rsrc'), 'assignments': len(asg),
+            'assignment_lags': sum(1 for g in asg if g['lag']), 'resources': len(resources),
+            'resource_types': sorted(r['type'] for r in resources),
+            'level_of_effort': sum(1 for a in acts if a['type'] == 'TT_LOE'),
+            'level_of_effort_started': sum(1 for a in acts if a['type'] == 'TT_LOE' and a['act_start']),
+            'wbs_summary': sum(1 for a in acts if a['type'] == 'TT_WBS'), 'wbs_nodes': len(wide['wbs_nodes']),
+            'suspended': sum(1 for a in acts if a.get('suspend')),
+            'resume': {'after_data_date': sum(1 for a in acts if a.get('resume') and a['resume'] > data_date),
+                       'before_data_date': sum(1 for a in acts if a.get('resume') and a['resume'] <= data_date),
+                       'blank': sum(1 for a in acts if a.get('suspend') and not a.get('resume'))},
+            'external_early_start': sum(1 for a in acts if a.get('ext_es')),
+            'external_late_finish': sum(1 for a in acts if a.get('ext_lf')),
+            'outer_depend_type': wide['outer'],
+        })
+    return short, text, summary
 
 
 def main():
@@ -473,11 +806,12 @@ def main():
     ap.add_argument('--count', type=int, default=12)
     ap.add_argument('--out', required=True)
     ap.add_argument('--dates', default='default', choices=sorted(DATE_WINDOWS))
+    ap.add_argument('--features', default='default', choices=['default', 'wide'])
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     cases = []
     for k in range(1, a.count + 1):
-        short, text, features = make_case(a.seed, a.set, k, a.dates)
+        short, text, features = make_case(a.seed, a.set, k, a.dates, a.features)
         path = os.path.join(a.out, short + '.xer')
         with open(path, 'w', encoding='utf-8', newline='') as f:
             f.write(text)
