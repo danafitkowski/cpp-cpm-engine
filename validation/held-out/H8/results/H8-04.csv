@@ -1,0 +1,85 @@
+case,task_code,field,engine,p6,match
+H8-04,A1080,early_start,2026-07-06 07:00,2026-07-06 07:00,Y
+H8-04,A1080,early_finish,2026-07-06 08:00,2026-07-06 08:00,Y
+H8-04,A1080,late_start,2026-08-06 16:30,2026-08-06 16:30,Y
+H8-04,A1080,late_finish,2026-08-06 17:30,2026-08-06 17:30,Y
+H8-04,A1080,total_float_hr,199,199,Y
+H8-04,A1080,free_float_hr,0,0,Y
+H8-04,A1080,critical,false,false,Y
+H8-04,A1090,early_start,2026-07-06 07:00,2026-07-06 07:00,Y
+H8-04,A1090,early_finish,2026-07-08 08:00,2026-07-08 08:00,Y
+H8-04,A1090,late_start,2026-07-02 12:30,2026-07-02 12:30,Y
+H8-04,A1090,late_finish,2026-07-07 13:30,2026-07-07 13:30,Y
+H8-04,A1090,total_float_hr,-5,-5,Y
+H8-04,A1090,free_float_hr,0,0,Y
+H8-04,A1090,critical,true,true,Y
+H8-04,A1150,early_start,2026-07-08 08:00,2026-07-08 08:00,Y
+H8-04,A1150,early_finish,2026-07-22 08:00,2026-07-22 08:00,Y
+H8-04,A1150,late_start,2026-07-07 13:30,2026-07-07 13:30,Y
+H8-04,A1150,late_finish,2026-07-21 13:30,2026-07-21 13:30,Y
+H8-04,A1150,total_float_hr,-5,-5,Y
+H8-04,A1150,free_float_hr,0,0,Y
+H8-04,A1150,critical,true,true,Y
+H8-04,A1160,early_start,2026-07-06 08:00,2026-07-06 08:00,Y
+H8-04,A1160,early_finish,2026-07-16 12:00,2026-07-16 12:00,Y
+H8-04,A1160,late_start,2026-07-27 13:00,2026-07-27 13:00,Y
+H8-04,A1160,late_finish,2026-08-06 17:00,2026-08-06 17:00,Y
+H8-04,A1160,total_float_hr,124,124,Y
+H8-04,A1160,free_float_hr,0,0,Y
+H8-04,A1160,critical,false,false,Y
+H8-04,A1170,early_start,2026-07-29 08:00,2026-07-29 08:00,Y
+H8-04,A1170,early_finish,2026-07-29 08:00,2026-07-29 08:00,Y
+H8-04,A1170,late_start,2026-07-28 13:30,2026-07-28 13:30,Y
+H8-04,A1170,late_finish,2026-07-28 13:30,2026-07-28 13:30,Y
+H8-04,A1170,total_float_hr,-5,-5,Y
+H8-04,A1170,free_float_hr,0,0,Y
+H8-04,A1170,critical,true,true,Y
+H8-04,A1180,early_start,2026-07-29 08:00,2026-07-29 08:00,Y
+H8-04,A1180,early_finish,2026-07-29 12:00,2026-07-29 12:00,Y
+H8-04,A1180,late_start,2026-08-05 15:30,2026-08-05 15:30,Y
+H8-04,A1180,late_finish,2026-08-06 09:00,2026-08-06 09:00,Y
+H8-04,A1180,total_float_hr,47,47,Y
+H8-04,A1180,free_float_hr,82,82,Y
+H8-04,A1180,critical,false,false,Y
+H8-04,A1210,early_start,2026-07-08 12:30,2026-07-08 12:30,Y
+H8-04,A1210,early_finish,2026-07-13 08:00,2026-07-13 08:00,Y
+H8-04,A1210,late_start,2026-07-28 13:30,2026-07-28 13:30,Y
+H8-04,A1210,late_finish,2026-07-30 09:00,2026-07-30 09:00,Y
+H8-04,A1210,total_float_hr,111,111,Y
+H8-04,A1210,free_float_hr,72,72,Y
+H8-04,A1210,critical,false,false,Y
+H8-04,A1220,early_start,2026-07-08 08:00,2026-07-08 08:00,Y
+H8-04,A1220,early_finish,2026-07-08 08:00,2026-07-08 08:00,Y
+H8-04,A1220,late_start,2026-08-06 17:30,2026-08-06 17:30,Y
+H8-04,A1220,late_finish,2026-08-06 17:30,2026-08-06 17:30,Y
+H8-04,A1220,total_float_hr,179,179,Y
+H8-04,A1220,free_float_hr,214,214,Y
+H8-04,A1220,critical,false,false,Y
+H8-04,A1230,early_start,2026-07-22 08:00,2026-07-22 08:00,Y
+H8-04,A1230,early_finish,2026-07-23 10:00,2026-07-23 10:00,Y
+H8-04,A1230,late_start,2026-08-05 11:00,2026-08-05 11:00,Y
+H8-04,A1230,late_finish,2026-08-06 13:30,2026-08-06 13:30,Y
+H8-04,A1230,total_float_hr,83,83,Y
+H8-04,A1230,free_float_hr,0,0,Y
+H8-04,A1230,critical,false,false,Y
+H8-04,A1240,early_start,2026-07-23 10:00,2026-07-23 10:00,Y
+H8-04,A1240,early_finish,2026-07-23 14:30,2026-07-23 14:30,Y
+H8-04,A1240,late_start,2026-08-06 13:30,2026-08-06 13:30,Y
+H8-04,A1240,late_finish,2026-08-06 17:30,2026-08-06 17:30,Y
+H8-04,A1240,total_float_hr,83,83,Y
+H8-04,A1240,free_float_hr,118,118,Y
+H8-04,A1240,critical,false,false,Y
+H8-04,A1250,early_start,2026-08-06 12:30,2026-08-06 12:30,Y
+H8-04,A1250,early_finish,2026-08-13 12:00,2026-08-13 12:00,Y
+H8-04,A1250,late_start,2026-08-03 07:00,2026-08-03 07:00,Y
+H8-04,A1250,late_finish,2026-08-06 17:30,2026-08-06 17:30,Y
+H8-04,A1250,total_float_hr,-35,-35,Y
+H8-04,A1250,free_float_hr,0,0,Y
+H8-04,A1250,critical,true,true,Y
+H8-04,A1260,early_start,2026-08-13 12:00,2026-08-13 12:00,Y
+H8-04,A1260,early_finish,2026-08-13 12:00,2026-08-13 12:00,Y
+H8-04,A1260,late_start,2026-08-06 17:30,2026-08-06 17:30,Y
+H8-04,A1260,late_finish,2026-08-06 17:30,2026-08-06 17:30,Y
+H8-04,A1260,total_float_hr,-35,-35,Y
+H8-04,A1260,free_float_hr,0,0,Y
+H8-04,A1260,critical,true,true,Y

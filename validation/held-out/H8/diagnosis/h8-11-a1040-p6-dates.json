@@ -1,0 +1,55 @@
+{
+ "case": "H8-11",
+ "source": "P6 Professional 23.12.1 TASK and TASKRSRC rows after the H8 capture F9 (read-only); the read-back compares the remaining early dates (restart_date, reend_date) of work under way",
+ "activities": {
+  "A1030": {
+   "task_type": "TT_Rsrc",
+   "status": "TK_Active",
+   "remain_drtn_hr_cnt": 6.5,
+   "early_start_date": "2026-12-10 07:00",
+   "early_end_date": "2026-12-10 13:30",
+   "restart_date": "2026-12-10 07:00",
+   "reend_date": "2026-12-10 13:30",
+   "late_start_date": "2026-12-07 16:30",
+   "late_end_date": "2026-12-10 12:00",
+   "total_float_hr_cnt": -1.5,
+   "free_float_hr_cnt": 0.0,
+   "assignments": [
+    {
+     "resource": "H8-11-R1",
+     "remain_qty": 18.0,
+     "remain_qty_per_hr": 3.0,
+     "restart_date": "2026-12-10 07:00",
+     "reend_date": "2026-12-10 13:30"
+    }
+   ]
+  },
+  "A1040": {
+   "task_type": "TT_Rsrc",
+   "status": "TK_Active",
+   "remain_drtn_hr_cnt": 10.0,
+   "early_start_date": "2026-12-15 06:00",
+   "early_end_date": "2026-12-15 18:00",
+   "restart_date": "2026-12-15 07:00",
+   "reend_date": "2026-12-16 07:00",
+   "late_start_date": "2026-12-16 17:30",
+   "late_end_date": "2026-12-17 17:30",
+   "total_float_hr_cnt": 20.0,
+   "free_float_hr_cnt": 20.0,
+   "assignments": [
+    {
+     "resource": "H8-11-R2",
+     "remain_qty": 12.0,
+     "remain_qty_per_hr": 1.0,
+     "restart_date": "2026-12-15 07:00",
+     "reend_date": "2026-12-16 07:00"
+    }
+   ]
+  }
+ },
+ "engine": {
+  "early_start": "2026-12-15 06:00",
+  "early_finish": "2026-12-15 18:00"
+ },
+ "engine_sha256": "6c37aa2a99fd9c16f8db0d768913ff056087302736b87e38b793dbf182b76c7b"
+}

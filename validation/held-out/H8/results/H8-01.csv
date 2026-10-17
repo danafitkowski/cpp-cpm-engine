@@ -1,0 +1,29 @@
+case,task_code,field,engine,p6,match
+H8-01,A1010,early_start,2026-11-24 13:00,2026-11-24 13:00,Y
+H8-01,A1010,early_finish,2026-11-24 14:00,2026-11-24 14:00,Y
+H8-01,A1010,late_start,2026-11-20 16:00,2026-11-20 16:00,Y
+H8-01,A1010,late_finish,2026-11-20 17:00,2026-11-20 17:00,Y
+H8-01,A1010,total_float_hr,-5,-5,Y
+H8-01,A1010,free_float_hr,0,0,Y
+H8-01,A1010,critical,true,true,Y
+H8-01,A1130,early_start,2026-11-25 07:00,2026-11-25 07:00,Y
+H8-01,A1130,early_finish,2026-11-25 14:00,2026-11-25 14:00,Y
+H8-01,A1130,late_start,2026-11-20 10:00,2026-11-20 10:00,Y
+H8-01,A1130,late_finish,2026-11-20 17:00,2026-11-20 17:00,Y
+H8-01,A1130,total_float_hr,-27,-27,Y
+H8-01,A1130,free_float_hr,41,41,Y
+H8-01,A1130,critical,true,true,Y
+H8-01,A1140,early_start,2026-11-11 08:00,2026-11-11 08:00,Y
+H8-01,A1140,early_finish,2026-11-25 15:00,2026-11-25 15:00,Y
+H8-01,A1140,late_start,2026-11-02 10:00,2026-11-02 10:00,Y
+H8-01,A1140,late_finish,2026-11-16 17:00,2026-11-16 17:00,Y
+H8-01,A1140,total_float_hr,-68,-68,Y
+H8-01,A1140,free_float_hr,0,0,Y
+H8-01,A1140,critical,true,true,Y
+H8-01,A1150,early_start,2026-12-02 15:00,2026-12-02 15:00,Y
+H8-01,A1150,early_finish,2026-12-02 15:00,2026-12-02 15:00,Y
+H8-01,A1150,late_start,2026-11-20 17:00,2026-11-20 17:00,Y
+H8-01,A1150,late_finish,2026-11-20 17:00,2026-11-20 17:00,Y
+H8-01,A1150,total_float_hr,-68,-68,Y
+H8-01,A1150,free_float_hr,0,0,Y
+H8-01,A1150,critical,true,true,Y
