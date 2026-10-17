@@ -1,0 +1,308 @@
+{
+ "case": "ZZ-CPP-RD2L",
+ "proj_id": 5143,
+ "differences": [
+  "TASK L5 remain_drtn_hr_cnt: xer '24' p6 23.0",
+  "TASK L5 target_drtn_hr_cnt: xer '24' p6 23.0",
+  "TASK L7 remain_drtn_hr_cnt: xer '24' p6 21.0",
+  "TASK L7 target_drtn_hr_cnt: xer '24' p6 21.0",
+  "TASK L11 remain_drtn_hr_cnt: xer '30' p6 13.0",
+  "TASKRSRC L11/ZZ-RD2L-R8 target_qty_per_hr: xer '1' p6 0.521739130434783",
+  "TASKRSRC L11/ZZ-RD2L-R24 target_qty_per_hr: xer '1' p6 0.262857142857143",
+  "TASKRSRC L12/ZZ-RD2L-R24 target_qty_per_hr: xer '1' p6 0.201550387596899"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "L1": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "L10": {
+    "remain_drtn_hr_cnt": 8.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "L11": {
+    "remain_drtn_hr_cnt": 13.0,
+    "target_drtn_hr_cnt": 46.0
+   },
+   "L12": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 32.0
+   },
+   "L2": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "L3": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "L4": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "L5": {
+    "remain_drtn_hr_cnt": 23.0,
+    "target_drtn_hr_cnt": 23.0
+   },
+   "L6": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "L7": {
+    "remain_drtn_hr_cnt": 21.0,
+    "target_drtn_hr_cnt": 21.0
+   },
+   "L8": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "L9": {
+    "remain_drtn_hr_cnt": 24.0,
+    "target_drtn_hr_cnt": 24.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "L1",
+    "rsrc_short_name": "ZZ-RD2L-R24H",
+    "remain_qty": 57.0,
+    "target_qty": 57.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L1",
+    "rsrc_short_name": "ZZ-RD2L-R8PH",
+    "remain_qty": 48.0,
+    "target_qty": 48.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L10",
+    "rsrc_short_name": "ZZ-RD2L-R24",
+    "remain_qty": 18.0,
+    "target_qty": 18.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L10",
+    "rsrc_short_name": "ZZ-RD2L-R8",
+    "remain_qty": 16.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L11",
+    "rsrc_short_name": "ZZ-RD2L-R24",
+    "remain_qty": 30.0,
+    "target_qty": 46.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.262857142857143,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L11",
+    "rsrc_short_name": "ZZ-RD2L-R8",
+    "remain_qty": 8.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.521739130434783,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L12",
+    "rsrc_short_name": "ZZ-RD2L-R24",
+    "remain_qty": 10.0,
+    "target_qty": 26.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.201550387596899,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L12",
+    "rsrc_short_name": "ZZ-RD2L-R8",
+    "remain_qty": 16.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L2",
+    "rsrc_short_name": "ZZ-RD2L-R24",
+    "remain_qty": 57.0,
+    "target_qty": 57.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L2",
+    "rsrc_short_name": "ZZ-RD2L-R8P",
+    "remain_qty": 48.0,
+    "target_qty": 48.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L3",
+    "rsrc_short_name": "ZZ-RD2L-R24",
+    "remain_qty": 57.0,
+    "target_qty": 57.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L4",
+    "rsrc_short_name": "ZZ-RD2L-R8",
+    "remain_qty": 48.0,
+    "target_qty": 48.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L5",
+    "rsrc_short_name": "ZZ-RD2L-R7",
+    "remain_qty": 46.0,
+    "target_qty": 46.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L6",
+    "rsrc_short_name": "ZZ-RD2L-R7",
+    "remain_qty": 46.0,
+    "target_qty": 46.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L6",
+    "rsrc_short_name": "ZZ-RD2L-R8P",
+    "remain_qty": 48.0,
+    "target_qty": 48.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L7",
+    "rsrc_short_name": "ZZ-RD2L-RN",
+    "remain_qty": 30.0,
+    "target_qty": 30.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L8",
+    "rsrc_short_name": "ZZ-RD2L-R24",
+    "remain_qty": 57.0,
+    "target_qty": 57.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L8",
+    "rsrc_short_name": "ZZ-RD2L-RN",
+    "remain_qty": 30.0,
+    "target_qty": 30.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L9",
+    "rsrc_short_name": "ZZ-RD2L-R24",
+    "remain_qty": 57.0,
+    "target_qty": 57.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "L9",
+    "rsrc_short_name": "ZZ-RD2L-R8P",
+    "remain_qty": 48.0,
+    "target_qty": 48.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

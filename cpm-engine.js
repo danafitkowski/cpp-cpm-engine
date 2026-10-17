@@ -2396,11 +2396,38 @@ function _hrExpectedFinish(n, cal, start, floor, startPred) {
 // takes the activity calendar's next opening, then each assignment its own
 // calendar's; an assignment lag delays the assignment, not the activity; an
 // expected finish re-sizes each assignment on its own calendar (XR); an FF /
-// SF requirement can move it later (_hrRsrcRequirement).
+// SF requirement can move it later (RQ, below).
 function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
     const starts = [];
     const fins = [];
-    const actStart = actCal.nextWork(startReq);
+    const req = finishReq !== null && finishReq !== undefined;
+    let actStart = actCal.nextWork(startReq);
+    // RQ (H9 / H10, 17-Oct-2026): an FF / SF finish requirement off the
+    // activity calendar's working time first moves to its next opening (one
+    // at a close stays: ZZ-CPP-RSRC C2). Each assignment reaches it at its
+    // resource's last close at or before that, starting its work that much
+    // earlier on its own calendar. The activity starts where the first of
+    // them would, at the activity calendar's next opening, and every
+    // assignment runs from that one start on its own calendar, as with no
+    // requirement (ZZ-CPP-RD2F C1-C3, D1-D11; ZZ-CPP-RDSF S1-S10; H10-04
+    // A1040; H9-09 A1230)
+    let bound = false;
+    if (req) {
+        const frA = actCal.isFinish(finishReq) ? finishReq : actCal.nextWork(finishReq);
+        let first = null;
+        for (const g of asg) {
+            if (!(g.rem > 0)) continue;
+            const gc = g.cal;
+            const sg = gc.sub(gc.prevWorkEnd(frA), g.rem);
+            const ag = g.lag ? gc.sub(sg, g.lag) : sg;
+            first = (first === null) ? ag : Math.min(first, ag);
+        }
+        if (first !== null) first = actCal.nextWork(first);
+        if (first !== null && first > actStart) {
+            actStart = first;
+            bound = true;
+        }
+    }
     for (const g of asg) {
         const gc = g.cal;
         let a0 = gc.nextWork(actStart);
@@ -2412,53 +2439,48 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
         let f;
         if (g.rem > 0) {
             f = gc.add(s, g.rem);
-            if (finishReq !== null && finishReq !== undefined) {
-                const [rs, rf] = _hrRsrcRequirement(gc, actCal, finishReq, g.rem);
-                if (rs > s) {
-                    s = rs;
-                    f = rf;
-                    a0 = Math.max(a0, g.lag ? gc.sub(s, g.lag) : s);
-                }
-            }
         } else {
-            if (finishReq !== null && finishReq !== undefined) {
+            if (req) {
                 s = Math.max(s, gc.nextWork(finishReq));
                 a0 = Math.max(a0, g.lag ? gc.sub(s, g.lag) : s);
             }
             f = s;
         }
-        starts.push(a0);
+        starts.push(bound ? actStart : a0);
         fins.push(f);
     }
-    return [Math.min.apply(null, starts), Math.max.apply(null, fins)];
-}
-
-// [start, finish] an FF / SF finish requirement fr puts on an assignment of
-// rem minutes on calendar gc (RQ). Python paired site:
-// cpm_hours._rsrc_requirement. RQ (17-Oct-2026): the assignment finishes at
-// the resource's last close at or before fr (fr itself inside the resource's
-// working time) and starts rem earlier on the resource's calendar (ZZ-CPP-RDSF
-// S1-S10, H9-09 A1230; an early start that lands off the activity calendar
-// restarts at its next opening: ZZ-CPP-RSRC2 S2 S8, 13:00 - 09:00). Where no
-// activity working time separates that finish from fr, the finish is the
-// activity calendar's next opening at or after fr (RDSF S8 Fri 07:00 after a
-// holiday; RSRC C6 C7).
-function _hrRsrcRequirement(gc, actCal, fr, rem) {
-    const f = gc.prevWorkEnd(fr);
-    const s = gc.sub(f, rem);
-    if (fr > f && actCal.between(f, fr) === 0) return [s, actCal.nextWork(fr)];
-    return [s, f];
+    let ef = Math.max.apply(null, fins);
+    // where the requirement set the start and no activity working time
+    // separates the finish from the requirement, the finish prints as the
+    // activity calendar's next opening (RD2F D4 D5; RDSF S8 Fri 07:00 after
+    // a holiday; ZZ-CPP-RSRC C6 C7, ZZ-CPP-RSRC2 S5 S10 S11)
+    if (bound) {
+        const lo = Math.min(ef, finishReq);
+        const hi = Math.max(ef, finishReq);
+        if (actCal.between(lo, hi) === 0) ef = actCal.isFinish(hi) ? hi : actCal.nextWork(hi);
+    }
+    return [Math.min.apply(null, starts), ef];
 }
 
 // [late start, late finish] of resource dependent work from its driving
 // assignments (RD). Python paired site: cpm_hours._rsrc_backward.
-function _hrRsrcBackward(asg, actCal, lfReq, lsBound) {
+function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
     const starts = [];
     const fins = [];
     const lfAct = actCal.prevWorkEnd(lfReq);
     let bound = false;
     for (const g of asg) {
         const gc = g.cal;
+        // RW (H10, 17-Oct-2026): an SS / SF lead bounds each assignment at its
+        // own calendar's next opening at or after the instant the lead lands
+        // on, not at the lag calendar's (H10-08 A1240: a lead landing at
+        // Tue 17:00 starts a 24-hour resource at Tue 17:00 and a Mon-Fri
+        // 08:00-17:00 one at Wed 08:00)
+        let lsBound = lsBoundIn;
+        if (leadAt !== null && leadAt !== undefined) {
+            const w = gc.nextWork(leadAt);
+            lsBound = (lsBound === null) ? w : Math.min(lsBound, w);
+        }
         let f;
         let s;
         let actS;
@@ -2875,6 +2897,8 @@ function computeCPMHours(activities, relationships, o) {
         // resource dependent work snaps on each assignment's calendar (RD)
         let lf = n.asg.length ? seed : (n.rem > 0 ? cal.prevWorkEnd(seed) : seed);
         let lsBound = null;
+        // RW: the instant an SS / SF lead lands on, for resource dependent work
+        let leadAt = null;
         // LC (H3, 14-Oct-2026): on timed work a lead that lands on a close -
         // a lunch break, the end of a day, a week or a short Friday - stays
         // there as the late start when it binds (ZZ-CPP-H3S-L and -LO L1-L12;
@@ -2916,8 +2940,14 @@ function computeCPMHours(activities, relationships, o) {
                 const b = lagBwd(r.type === 'SS' ? sLs : sLf, lag, lc);
                 // off working time it falls back to the close before
                 if (timed) toLead((cal.isFinish(b) || cal.isStart(b)) ? b : cal.prevWorkEnd(b));
-                // zero-length and resource dependent work: a lead walked
-                // forward to a close is a start, the next opening
+                // RW: resource dependent work takes a lead where it lands; each
+                // assignment walks it to its own next opening (_hrRsrcBackward)
+                if (lag < 0 && n.asg.length) {
+                    leadAt = (leadAt === null) ? b : Math.min(leadAt, b);
+                    continue;
+                }
+                // zero-length work: a lead walked forward to a close is a
+                // start, the next opening
                 const bo = lag < 0 ? lc.nextWork(b) : b;
                 lsBound = (lsBound === null) ? bo : Math.min(lsBound, bo);
             }
@@ -2954,7 +2984,16 @@ function computeCPMHours(activities, relationships, o) {
         }
         let ls;
         if (n.asg.length) {
-            [ls, lf] = _hrRsrcBackward(n.asg, cal, lf, lsBound);
+            [ls, lf] = _hrRsrcBackward(n.asg, cal, lf, lsBound, leadAt);
+            // LC on resource dependent work (H10, 17-Oct-2026): where no
+            // activity working time separates the instant a lead lands on
+            // (at the activity calendar's close before it, off working
+            // time) from the late start, P6 prints that instant
+            // (ZZ-CPP-RD2L L4 L5 L6 L8; L7 keeps its later start)
+            if (leadAt !== null) {
+                const bA = (cal.isFinish(leadAt) || cal.isStart(leadAt)) ? leadAt : cal.prevWorkEnd(leadAt);
+                if (ls >= bA && cal.between(bA, ls) === 0) ls = bA;
+            }
         } else if (n.rem > 0) {
             lf = cal.prevWorkEnd(lf);
             ls = cal.sub(lf, n.rem);

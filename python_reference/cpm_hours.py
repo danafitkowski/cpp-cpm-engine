@@ -106,12 +106,37 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
     The start requirement first takes the activity's own calendar's next opening (4898: a constraint on a holiday of
     the activity's calendar starts the next day there). Each assignment then works on its own resource's calendar: it
     starts at that calendar's first opening at or after the activity's start (after its own lag) and runs its
-    remaining duration there. An FF / SF requirement (_rsrc_requirement) can move it later. The activity runs from
+    remaining duration there. An FF / SF requirement can move it later (RQ, below). The activity runs from
     the earliest assignment start to the latest assignment finish (P6 help: resource dependent activity, driving
     resource; 4898, resources on P6's internal Standard calendar).
     """
     starts, fins = [], []
+    req = finish_req is not None
     act_start = act_cal.next_work(start_req)
+    # RQ (H9 / H10, 17-Oct-2026): an FF / SF finish requirement off the activity
+    # calendar's working time first moves to its next opening (one at a close
+    # stays: ZZ-CPP-RSRC C2). Each assignment reaches it at its resource's last
+    # close at or before that, starting its work that much earlier on its own
+    # calendar. The activity starts where the first of them would, at the
+    # activity calendar's next opening, and every assignment runs from that one
+    # start on its own calendar, as with no requirement (ZZ-CPP-RD2F C1-C3,
+    # D1-D11; ZZ-CPP-RDSF S1-S10; H10-04 A1040; H9-09 A1230)
+    bound = False
+    if req:
+        fr_a = finish_req if act_cal.is_finish(finish_req) else act_cal.next_work(finish_req)
+        first = None
+        for g in asg:
+            if not g['rem'] > 0:
+                continue
+            gc = g['cal']
+            sg = gc.sub(gc.prev_work_end(fr_a), g['rem'])
+            ag = gc.sub(sg, g['lag']) if g['lag'] else sg
+            first = ag if first is None else min(first, ag)
+        if first is not None:
+            first = act_cal.next_work(first)
+        if first is not None and first > act_start:
+            act_start = first
+            bound = True
     for g in asg:
         gc = g['cal']
         a0 = gc.next_work(act_start)
@@ -128,41 +153,26 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
                 g['rem'] = gc.between(s, x_end)
         if g['rem'] > 0:
             f = gc.add(s, g['rem'])
-            if finish_req is not None:
-                rs_, rf_ = _rsrc_requirement(gc, act_cal, finish_req, g['rem'])
-                if rs_ > s:
-                    s, f = rs_, rf_
-                    a0 = max(a0, gc.sub(s, g['lag']) if g['lag'] else s)
         else:
-            if finish_req is not None:
+            if req:
                 s = max(s, gc.next_work(finish_req))
                 a0 = max(a0, gc.sub(s, g['lag']) if g['lag'] else s)
             f = s
-        starts.append(a0)
+        starts.append(act_start if bound else a0)
         fins.append(f)
-    return min(starts), max(fins)
+    ef = max(fins)
+    # where the requirement set the start and no activity working time separates
+    # the finish from the requirement, the finish prints as the activity
+    # calendar's next opening (RD2F D4 D5; RDSF S8 Fri 07:00 after a holiday;
+    # ZZ-CPP-RSRC C6 C7, ZZ-CPP-RSRC2 S5 S10 S11)
+    if bound:
+        lo, hi = min(ef, finish_req), max(ef, finish_req)
+        if act_cal.between(lo, hi) == 0:
+            ef = hi if act_cal.is_finish(hi) else act_cal.next_work(hi)
+    return min(starts), ef
 
 
-def _rsrc_requirement(gc, act_cal, fr, rem):
-    """(start, finish) an FF / SF finish requirement fr puts on an assignment of rem minutes on calendar gc (RQ).
-
-    RQ (17-Oct-2026): the assignment finishes at the resource's last close at or before fr (fr itself inside the
-    resource's working time: ZZ-CPP-RSRC3 L14, 15:00, 11:00-15:00 on an 08:00-16:00 resource; L3 L4 L8, ZZ-CPP-RSRC
-    C2) and starts rem earlier on the resource's calendar (ZZ-CPP-RDSF S1-S10, H9-09 A1230). An early start that
-    lands off the activity's calendar then restarts at its next opening (rule 8): an SF -8 h requirement at 08:00
-    puts a 4 h assignment at 12:00-16:00 the day before, inside the activity calendar's lunch, so it runs 13:00 to
-    09:00 (ZZ-CPP-RSRC2 S2 S4 S8 S12; ZZ-CPP-RSRC3 L1 L2). Where no activity working time separates that finish from
-    fr, the finish is the activity calendar's next opening at or after fr (RDSF S8, Fri 07:00 after a holiday;
-    ZZ-CPP-RSRC C6 C7, ZZ-CPP-RSRC2 S5 S10 S11, where fr is that opening).
-    """
-    f = gc.prev_work_end(fr)
-    s = gc.sub(f, rem)
-    if fr > f and act_cal.between(f, fr) == 0:
-        return s, act_cal.next_work(fr)
-    return s, f
-
-
-def _rsrc_backward(asg, act_cal, lf_req, ls_bound):
+def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
     """(late start, late finish) of resource dependent work from its driving assignments (RD).
 
     The late finish requirement first takes the activity's own calendar's last close at or before it (ZZ-CPP-RSRC
@@ -177,6 +187,15 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound):
     bound = False
     for g in asg:
         gc = g['cal']
+        # RW (H10, 17-Oct-2026): an SS / SF lead bounds each assignment at its
+        # own calendar's next opening at or after the instant the lead lands on,
+        # not at the lag calendar's (H10-08 A1240: a lead landing at Tue 17:00
+        # starts a 24-hour resource at Tue 17:00 and a Mon-Fri 08:00-17:00 one
+        # at Wed 08:00)
+        ls_bound = ls_bound_in
+        if lead_at is not None:
+            w = gc.next_work(lead_at)
+            ls_bound = w if ls_bound is None else min(ls_bound, w)
         if g['rem'] > 0:
             f = gc.prev_work_end(lf_act)
             s = gc.sub(f, g['rem'])
@@ -593,6 +612,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # resource dependent work snaps on each assignment's calendar (RD)
         lf = seed if n['asg'] else (cal.prev_work_end(seed) if n['rem'] > 0 else seed)
         ls_bound = None
+        # RW: the instant an SS / SF lead lands on, for resource dependent work
+        lead_at = None
         # LC (H3, 14-Oct-2026): on timed work a lead that lands on a close - a
         # lunch break, the end of a day, a week or a short Friday - stays there
         # as the late start when it binds (ZZ-CPP-H3S-L and -LO L1-L12; H3-11
@@ -638,8 +659,13 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 if timed:
                     # off working time it falls back to the close before
                     to_lead(b if (cal.is_finish(b) or cal.is_start(b)) else cal.prev_work_end(b))
-                # zero-length and resource dependent work: a lead walked
-                # forward to a close is a start, the next opening
+                # RW: resource dependent work takes a lead where it lands; each
+                # assignment walks it to its own next opening (_rsrc_backward)
+                if lag < 0 and n['asg']:
+                    lead_at = b if lead_at is None else min(lead_at, b)
+                    continue
+                # zero-length work: a lead walked forward to a close is a
+                # start, the next opening
                 bo = lc.next_work(b) if lag < 0 else b
                 ls_bound = bo if ls_bound is None else min(ls_bound, bo)
         if n['ext_lf'] is not None:
@@ -682,7 +708,16 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         to_lead(at)
                     ls_bound = at if ls_bound is None else min(ls_bound, at)
         if n['asg']:
-            ls, lf = _rsrc_backward(n['asg'], cal, lf, ls_bound)
+            ls, lf = _rsrc_backward(n['asg'], cal, lf, ls_bound, lead_at)
+            # LC on resource dependent work (H10, 17-Oct-2026): where no
+            # activity working time separates the instant a lead lands on (at
+            # the activity calendar's close before it, off working time) from
+            # the late start, P6 prints that instant (ZZ-CPP-RD2L L4 L5 L6 L8;
+            # L7 keeps its later start)
+            if lead_at is not None:
+                b_a = lead_at if (cal.is_finish(lead_at) or cal.is_start(lead_at)) else cal.prev_work_end(lead_at)
+                if ls >= b_a and cal.between(b_a, ls) == 0:
+                    ls = b_a
         elif n['rem'] > 0:
             lf = cal.prev_work_end(lf)
             ls = cal.sub(lf, n['rem'])
