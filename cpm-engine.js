@@ -2496,7 +2496,12 @@ function _hrRsrcPlace(n, cal, startReq, finishReq, xf) {
     const [es, ef] = _hrRsrcForward(n.asg, cal, startReq, finishReq, xf);
     delete n.rem_dates;
     const rs = cal.nextWork(es);
-    if (rs !== es && !n.started) n.rem_dates = _hrRsrcForward(n.asg, cal, rs, finishReq, xf);
+    // RU (H8, 17-Oct-2026): work under way too. P6 starts the remaining work
+    // of started resource dependent work at the activity calendar's next
+    // opening as it does for work not started, whatever drives the restart
+    // (the data date, an unfinished or a completed predecessor; H8-11 A1040,
+    // ZZ-CPP-RDU U1 U2 U4 U5 U6)
+    if (rs !== es) n.rem_dates = _hrRsrcForward(n.asg, cal, rs, finishReq, xf);
     const rd = n.rem_dates || [es, ef];
     n.rem = cal.between(rd[0], rd[1]);
     return [es, ef];
@@ -3085,8 +3090,12 @@ function computeCPMHours(activities, relationships, o) {
                     sStart = cal.nextWork(stamp(s));
                     sFin = sStart;
                 } else {
-                    sStart = restartOf(s);
-                    sFin = s.ef;
+                    // RF (17-Oct-2026): free float runs to a successor's
+                    // remaining dates where they differ from its early ones,
+                    // its remaining start for FS / SS, its remaining finish
+                    // for FF / SF (ZZ-CPP-RDU X, ZZ-CPP-RDU2)
+                    sStart = s.rem_dates ? s.rem_dates[0] : restartOf(s);
+                    sFin = s.rem_dates ? s.rem_dates[1] : s.ef;
                 }
                 const sa = (t === 'FS' || t === 'SS') ? sStart : sFin;
                 let own;
@@ -3117,7 +3126,8 @@ function computeCPMHours(activities, relationships, o) {
         const pDates = n.rem_dates || [n.es, n.ef];
         out[c] = {
             es: pDates[0], ef: pDates[1], ls: n.ls, lf: n.lf,
-            restart: n.restart !== undefined ? n.restart : null,
+            // the printed restart of work under way is its remaining start (RU)
+            restart: n.restart !== undefined ? (n.rem_dates ? n.rem_dates[0] : n.restart) : null,
             rls: n.rls !== undefined ? n.rls : null,
             tf_minutes: tf, ff_minutes: ff,
             // the two total floats P6 picks between, and free float before the

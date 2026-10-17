@@ -217,8 +217,13 @@ def _rsrc_place(n, cal, start_req, finish_req, xf=None):
     # activity calendar's next opening and the assignments run again from
     # there; the network keeps the early dates (successors follow them), the
     # activity's printed dates and float follow the remaining ones.
+    # RU (H8, 17-Oct-2026): work under way too. P6 starts the remaining work of
+    # started resource dependent work at the activity calendar's next opening as
+    # it does for work not started, whatever drives the restart (the data date,
+    # an unfinished or a completed predecessor; H8-11 A1040, ZZ-CPP-RDU U1 U2 U4
+    # U5 U6)
     rs = cal.next_work(es)
-    if rs != es and not n['started']:
+    if rs != es:
         n['rem_dates'] = _rsrc_forward(n['asg'], cal, rs, finish_req, xf)
     # the activity's remaining duration, as P6 stores it: the working time
     # between its remaining dates on its own calendar
@@ -840,6 +845,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     if not retained or dd is None:
                         continue
                     s_start = s_fin = cal.next_work(stamp(s))
+                elif s.get('rem_dates'):
+                    # RF (17-Oct-2026): to a successor's remaining dates where they
+                    # differ from its early ones, the remaining start for FS / SS,
+                    # the remaining finish for FF / SF (ZZ-CPP-RDU X, ZZ-CPP-RDU2)
+                    s_start, s_fin = s['rem_dates']
                 else:
                     s_start, s_fin = s.get('restart', s['es']), s['ef']
                 sa = s_start if t in ('FS', 'SS') else s_fin
@@ -871,7 +881,9 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 ff_signed = cal.between(r_ef, proj_ef)
             ff = max(0, ff_signed)
         p_es, p_ef = n.get('rem_dates') or (n['es'], n['ef'])
-        out[c] = {'es': p_es, 'ef': p_ef, 'ls': n['ls'], 'lf': n['lf'], 'restart': n.get('restart'),
+        # the printed restart of work under way is its remaining start (RU)
+        restart = n['rem_dates'][0] if ('restart' in n and n.get('rem_dates')) else n.get('restart')
+        out[c] = {'es': p_es, 'ef': p_ef, 'ls': n['ls'], 'lf': n['lf'], 'restart': restart,
                   'rls': n.get('rls'), 'tf_minutes': tf, 'ff_minutes': ff,
                   # the two total floats P6 picks between, and free float
                   # before the floor at zero (printed float, v2.10.1)

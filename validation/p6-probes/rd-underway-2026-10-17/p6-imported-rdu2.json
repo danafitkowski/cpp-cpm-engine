@@ -1,0 +1,164 @@
+{
+ "case": "ZZ-CPP-RDU2",
+ "proj_id": 5113,
+ "differences": [
+  "TASK NS remain_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK NS target_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK US remain_drtn_hr_cnt: xer '12' p6 10.0",
+  "TASK NF remain_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK NF target_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK UF remain_drtn_hr_cnt: xer '12' p6 10.0",
+  "TASK NR remain_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK NR target_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK UR remain_drtn_hr_cnt: xer '12' p6 10.0",
+  "TASK NX remain_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK NX target_drtn_hr_cnt: xer '12' p6 3.0",
+  "TASK UX remain_drtn_hr_cnt: xer '12' p6 10.0",
+  "TASKRSRC NS/ZZ-RDU2-R6 remain_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC NS/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC US/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 0.864864864864865",
+  "TASKRSRC NF/ZZ-RDU2-R6 remain_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC NF/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC UF/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 0.864864864864865",
+  "TASKRSRC NR/ZZ-RDU2-R6 remain_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC NR/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC UR/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 0.864864864864865",
+  "TASKRSRC NX/ZZ-RDU2-R6 remain_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC NX/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 4.0",
+  "TASKRSRC UX/ZZ-RDU2-R6 target_qty_per_hr: xer '1' p6 0.864864864864865"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "NF": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "NR": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "NS": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "NX": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "UF": {
+    "remain_drtn_hr_cnt": 10.0,
+    "target_drtn_hr_cnt": 16.0
+   },
+   "UR": {
+    "remain_drtn_hr_cnt": 10.0,
+    "target_drtn_hr_cnt": 16.0
+   },
+   "US": {
+    "remain_drtn_hr_cnt": 10.0,
+    "target_drtn_hr_cnt": 16.0
+   },
+   "UX": {
+    "remain_drtn_hr_cnt": 10.0,
+    "target_drtn_hr_cnt": 16.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "NF",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 4.0,
+    "target_qty_per_hr": 4.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "NR",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 4.0,
+    "target_qty_per_hr": 4.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "NS",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 4.0,
+    "target_qty_per_hr": 4.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "NX",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 4.0,
+    "target_qty_per_hr": 4.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "UF",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.864864864864865,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 4.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "UR",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.864864864864865,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 4.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "US",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.864864864864865,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 4.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "UX",
+    "rsrc_short_name": "ZZ-RDU2-R6",
+    "remain_qty": 12.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.864864864864865,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 4.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

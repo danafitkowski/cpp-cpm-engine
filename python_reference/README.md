@@ -202,7 +202,16 @@ have been applied:
 ```
 cpm.py          SHA-256:  d7c7f4a53a0cc54af32e190ac1eac9b5f68e83e55e2daa086e6f85f3bc357180
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  bcb198bc83bb002e1850ee59ad8b1d7c169d4787fc91f930a4ceb1f1e73ca69b
+cpm_hours.py    SHA-256:  c66ec133e8d854ff2a3f25a254d51954d30e9ef240e4cf5d246838e4c4c004a7
+
+(Candidate after v2.10.7, unreleased, 2026-10-17 - cpm_hours.py bumped from
+bcb198bc...: resource dependent work under way takes the remaining dates
+P6 gives it, starting at the activity calendar's next opening where its
+resource's calendar puts the early start off it (RU), and free float runs
+to a successor's remaining dates where they differ from its early ones
+(RF); measured on P6 probes ZZ-CPP-RDU and ZZ-CPP-RDU2, 30 of 30 rows,
+validation/p6-probes/rd-underway-2026-10-17. cpm.py and cpm_minutes.py
+unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left
 2026-10-16 - cpm.py bumped from 8189c519..., cpm_hours.py from 75a98421...:
