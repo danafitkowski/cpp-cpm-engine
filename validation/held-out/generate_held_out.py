@@ -37,8 +37,12 @@ never drew:
   holidays, and two to five TT_Rsrc activities with one or two assignments
   (sometimes none, sometimes a lag), written in the tables and field order of
   a P6 23.12 export (CURRTYPE, RSRC and TASKRSRC); each assignment's units and
-  lag already size it to the activity's remaining and planned durations, so
-  P6's import has nothing to re-size;
+  lag add up to the activity's remaining and planned durations. P6's import
+  still re-sizes them: it fits each assignment between the activity's planned
+  dates on the resource's own calendar and derives the activity's durations
+  from its assignments (H8's smoke cases, 17-Oct-2026), so the H8 capture
+  records P6's sizing before each F9 (import_p6_sqlite.py) and the scorers lay
+  it over the file (p6_imported_overlay.js);
 - level of effort: one to three TT_LOE activities hung from an earlier
   activity (usually SS) to a later one (usually FF), some started;
 - WBS summary: two to four child WBS nodes with the activities spread across
