@@ -261,8 +261,12 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
                     s = gc.sub(f, g['rem'])
                     act_s = gc.sub(s, g['lag']) if g['lag'] else s
         else:
-            bound = lf_act if ls_bound is None else min(lf_act, ls_bound)
-            f = s = gc.prev_work_end(bound)
+            # the cap is its own name: the bound flag above decides RL below
+            # (H18-08 A1120: an assignment with no work beside one with work,
+            # no bound taken, must not run the others back; JS's block-scoped
+            # const kept the two apart)
+            cap = lf_act if ls_bound is None else min(lf_act, ls_bound)
+            f = s = gc.prev_work_end(cap)
             act_s = gc.sub(s, g['lag']) if g['lag'] else s
         starts.append(act_s)
         fins.append(f)

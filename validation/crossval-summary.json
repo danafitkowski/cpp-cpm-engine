@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.10",
-  "generated_utc": "2026-10-18T17:35:43.590Z",
+  "generated_utc": "2026-10-18T18:49:43.419Z",
   "fixtures": {
-    "total": 173,
-    "passed": 173,
+    "total": 174,
+    "passed": 174,
     "failed": 0
   },
   "checks": {
-    "executed": 11739,
+    "executed": 11776,
     "failed": 0,
-    "passed": 11739,
+    "passed": 11776,
     "skipped": 0,
-    "surface": 11739
+    "surface": 11776
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 171,
-    "project_finish": 171,
-    "critical_codes": 171,
-    "topo_order": 171,
-    "alert_count": 171,
-    "alert_severity_counts": 171,
-    "node <id>": 10674,
+    "project_finish_num": 172,
+    "project_finish": 172,
+    "critical_codes": 172,
+    "topo_order": 172,
+    "alert_count": 172,
+    "alert_severity_counts": 172,
+    "node <id>": 10704,
     "threw (both engines)": 2,
-    "hours": 37
+    "hours": 38
   },
   "rows": [
     {
@@ -1410,6 +1410,14 @@
       "id": "F177",
       "name": "F177 - ZP: an assignment with no work after the FF / SF requirement that set its start keeps its own time; one before the requirement's next opening prints there, in hours",
       "checks": 127,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F178",
+      "name": "F178 - RL: no bound taken, an assignment with no work beside one with work leaves the late finish where the work ends, in hours",
+      "checks": 37,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

@@ -3643,6 +3643,26 @@ compareFixture('F177 - ZP: an assignment with no work after the FF / SF requirem
     data_date: '2026-12-04 08:00', cal_map: ZPCAL, relationship_lag_calendar: 'rcal_Predecessor',
 }, { hours: true });
 
+// RL takes the late finish back to the activity calendar's close only where an SS / SF bound was taken. Through the
+// v2.10.10 candidate the Python port's empty-assignment branch wrote its cap into the bound flag, so RL ran on resource
+// dependent work with an assignment that has no work and no bound (held-out H18-08 A1120 through the production
+// converter; the JS engine and P6 kept the work's own finish). Here the work's resource stops at 12:30, inside the
+// activity calendar's lunch: the late finish stays at 12:30. Both assignment orders.
+const RLCAL = {
+    A: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: RAW_MF_0817 },
+    W: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: zpRaw(MON_FRI, '08:00', '12:30') },
+    E: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: zpRaw(MON_FRI, '08:00', '12:00') },
+};
+const rlR = (code, asg) => Object.assign(zT(code, Math.max.apply(null, asg.map((g) => g[1])), 'A'), {
+    task_type: 'TT_Rsrc', resource_assignments: asg.length,
+    assignments: asg.map((g) => ({ clndr_id: g[0], remaining_hours: g[1], lag_hours: 0, driving: true })) });
+compareFixture('F178 - RL: no bound taken, an assignment with no work beside one with work leaves the late finish where the work ends, in hours', {
+    activities: [rlR('Y1', [['W', 8], ['E', 0]]), rlR('Y2', [['E', 0], ['W', 8]]), zT('T', 4, 'A')],
+    relationships: [hR('T', 'Y1'), hR('T', 'Y2')],
+    data_date: '2026-12-07 08:00', cal_map: RLCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    project_finish: '2026-12-11 17:00',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +
