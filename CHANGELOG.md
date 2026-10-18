@@ -12,6 +12,74 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.9 - 2026-10-18 - The lag off a suspended predecessor, in both passes
+
+**Computed values move (Class A): engine math changed.** One rule, SU, with the Python reference
+(`python_reference/cpm_hours.py` and `cpm.py`) changed in step, measured on synthetic P6 probe projects in Primavera
+P6 Professional 23.12.1 before it went in.
+
+- **The lag off a suspended predecessor (SU).** The elapsed part of a start-to-start or start-to-finish lag off
+  progressed work is the working time from the predecessor's actual start to the data date, less the time it sat
+  suspended in between: from its suspend date to its resume date, or to the data date when it has none. The forward
+  drive, free float and the As Late As Possible slide count it so; the backward pass counts the whole elapsed time,
+  the suspension included, as P6 does. Since v2.10.0 only the hours pass's forward drive off work under way counted it
+  so. Now:
+  - the hours pass counts it so off a completed predecessor too: P6 starts the successor at the data date plus the
+    16 h left (ZZ-CPP-SPLR S8, Fri 11 Dec 08:00), where v2.10.8 laid it at the data date;
+  - the whole-day pass counts it so in the same places, so both passes lay the same lag. It reads a suspension at
+    17:00 as starting the next day, as it reads every date.
+
+  Measured on ZZ-CPP-SPLR, -SPLO and -SPLN (retained logic, progress override, "SS lag from Actual Start"): a resume
+  date after or before the data date or none, SS and SF links, a mid-shift resume, a completed predecessor, and an FS
+  lag as the control.
+- **An RB bound in a midday break, measured.** The v2.10.8 CHANGELOG listed a start-to-start bound in a break between
+  two working periods of one day as not measured. ZZ-CPP-RBMR and -RBMO measure nine: the bound falls back to the
+  activity calendar's close before the break, as RB has it before the calendar opens, and each assignment takes its
+  own next opening from there. No engine change.
+
+**Verified.**
+- **The probes:** 5 synthetic P6 probe projects, 92 rows, every one matching P6 on the four dates and both floats;
+  v2.10.8 matches 89 ([`validation/p6-probes/susp-lag-rb-break-2026-10-18/`](validation/p6-probes/susp-lag-rb-break-2026-10-18/)).
+  The probes are fitted, not held out. The earlier probe sets (2,420 rows) and the Larchmere capture (4,608
+  comparisons) still match.
+- **Held-out sets H1 to H16,** re-scored on these bytes as a regression check: all 3,741 unfinished activities match P6
+  on all seven fields, as on v2.10.8. No new held-out set was drawn for this release. An earlier draft of SU also left
+  the suspension out of the backward pass; held-out cases H13-03 (retained logic) and H13-10 (progress override)
+  caught it, four late dates moving away from P6's own F9, and the release counts the whole elapsed time there.
+- **Against P6, through CPP's converters and this engine** (the measuring machine's P6 database, 522
+  projects, 100,759 unfinished activities): 3 rows moved against v2.10.8, all onto P6, all in the new probe projects (S8 of ZZ-CPP-SPLR, -SPLO and -SPLN); none moved elsewhere. 100,757 match P6 on all four dates and both
+  floats (v2.10.8: 100,754).
+- **JS against Python** on the database (522 projects, 180,204 activities): every field equal.
+- **XER census on the measuring machine:** of 910 distinct XER files (906 readable), 6 move, every one synthetic: the
+  three new probes, the 23-Sep-2026 SSL probe (S13-S) and two held-out cases (H13-03 A1200, H13-10 A1280). In the last
+  three only whole-day pass fields move; the hours pass, which prints the dates, is unchanged there. No real export
+  moves.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.8, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values.
+- **JS unit suite:** 1,498 checks green, as in v2.10.8. The rule is pinned by the P6 probe replays
+  (`npm run test:p6-comparison`).
+- **Cross-validation:** 172 fixtures, 11612 of 11612 executed, 0 skipped, 0 failures; alert parity on 170 of 172
+  (the other 2 must throw). F175 and F176 hand both engines the lags SU decides, forward and backward (hours, whole
+  days).
+- **Coverage,** re-measured on these bytes: 94.64% statements, 83.23% branches, 96.90% functions.
+
+**Who is affected.**
+- Schedules with a start-to-start or start-to-finish lag off a completed activity that was suspended before the data
+  date, where the data date has not used the whole lag up (both passes).
+- Schedules with such a lag off suspended work under way (the whole-day pass's fields: day numbers, `tf` and `ff`).
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version is
+re-run under §12.2 where its schedule carries this situation.
+
+**Not claimed.**
+- SU rests on its five probe projects and two held-out cases; no held-out set was drawn after it.
+- The backward count is measured on two held-out cases with start-to-start lags (H13-03 under retained logic, H13-10
+  under progress override). A start-to-finish lag off a suspended predecessor that binds on the late side is not
+  measured.
+- The whole-day pass counts a suspension that starts or ends part-way through a day to the day.
+
+---
+
 ## v2.10.8 - 2026-10-18 - Resource dependent work, suspended work under progress override, completed successors and mandatory constraints under negative float: the situations held-out sets H8 to H15 left
 
 **Computed values move (Class A): engine math changed.** Seventeen changes, with the Python reference

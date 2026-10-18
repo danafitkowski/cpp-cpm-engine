@@ -152,6 +152,15 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.9 (reviewed 2026-10-18)
+
+The lag off a suspended predecessor, one of the shapes DAUBERT.md listed as not measured, is **CLOSED**. v2.10.9 moves computed values (change class A under the operator procedure): rule SU, measured on five synthetic P6 probe projects (92 rows) and so fitted, with the backward count measured on held-out cases H13-03 and H13-10 (see CHANGELOG.md). An RB bound in a midday break, listed as not measured at v2.10.8, is measured and needs no change. No new held-out set was drawn; H1 to H16 still match P6 on all 3,741 unfinished activities.
+- The unit suite stays at 1,498; the rule is pinned by the P6 probe replays.
+- The cross-validation surface grew from 170 to 172 fixtures and from 11,390 of 11,390 to 11,612 of 11,612 comparisons, 0 skipped, still 0 failures.
+- Coverage was re-measured on the new bytes: 94.64% statements / 83.23% branches / 96.90% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+- No held-out difference is open.
+
 ## Status at v2.10.8 (reviewed 2026-10-18)
 
 The situations held-out sets H8 to H15 found are **CLOSED**. v2.10.8 moves computed values (change class A under the operator procedure): seventeen rules for resource dependent work, suspended work under progress override, completed successors and mandatory constraints under a Must Finish By, each measured on synthetic P6 probe projects (949 rows) and so fitted (see CHANGELOG.md). Held-out set H16 then scored these bytes once at 217 of 217, all 12 cases clean, where v2.10.7 gives 136.
@@ -361,4 +370,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.8. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.9. Update on every release that closes or opens an audit item.
