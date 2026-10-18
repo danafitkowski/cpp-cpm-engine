@@ -1,0 +1,21 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). The production Python engine (the released v2.10.10: canonical cpm.py with python_reference/cpm_hours.py fa97fec2), run on H20's 12 projects as P6's database holds them after the F9, through the production converter. Counts only.",
+ "against_p6": {
+  "projects": 12,
+  "unfinished_activities": 198,
+  "on_p6_all_four_dates_and_both_floats": 195,
+  "off": [
+   "H20-11 A1130",
+   "H20-11 A1150",
+   "H20-11 A1210"
+  ]
+ },
+ "against_this_engine": {
+  "projects": 12,
+  "activities": 317,
+  "every_field_equal": 317
+ },
+ "python_before_the_rl_correction": {
+  "the v2.10.10 candidate before it (cpm_hours fb091d18)": 195
+ }
+}

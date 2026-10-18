@@ -1,0 +1,53 @@
+{
+ "note": "P6's own stored values for the three H20-11 activities that differ, read from P6's database after its F9 (synthetic case).",
+ "activities": [
+  {
+   "task_code": "A1130",
+   "task_type": "TT_Task",
+   "status_code": "TK_Active",
+   "remain_drtn_hr_cnt": 96.0,
+   "target_drtn_hr_cnt": 120.0,
+   "act_start_date": "2026-03-24 08:00:00",
+   "expect_end_date": "2026-04-14 17:00:00",
+   "cstr_type": "CS_ALAP",
+   "early_start_date": "2026-04-01 08:00:00",
+   "early_end_date": "2026-04-16 17:00:00",
+   "late_start_date": "2026-04-10 08:00:00",
+   "late_end_date": "2026-04-27 17:00:00",
+   "total_float_hr_cnt": 56.0,
+   "free_float_hr_cnt": 0.0
+  },
+  {
+   "task_code": "A1150",
+   "task_type": "TT_Task",
+   "status_code": "TK_NotStart",
+   "remain_drtn_hr_cnt": 32.0,
+   "target_drtn_hr_cnt": 32.0,
+   "act_start_date": null,
+   "expect_end_date": null,
+   "cstr_type": null,
+   "early_start_date": "2026-04-24 08:00:00",
+   "early_end_date": "2026-04-29 17:00:00",
+   "late_start_date": "2026-05-05 08:00:00",
+   "late_end_date": "2026-05-08 17:00:00",
+   "total_float_hr_cnt": 56.0,
+   "free_float_hr_cnt": 0.0
+  },
+  {
+   "task_code": "A1210",
+   "task_type": "TT_Rsrc",
+   "status_code": "TK_NotStart",
+   "remain_drtn_hr_cnt": 48.0,
+   "target_drtn_hr_cnt": 48.0,
+   "act_start_date": null,
+   "expect_end_date": null,
+   "cstr_type": null,
+   "early_start_date": "2026-05-07 08:00:00",
+   "early_end_date": "2026-05-14 17:00:00",
+   "late_start_date": "2026-06-08 15:00:00",
+   "late_end_date": "2026-06-15 17:00:00",
+   "total_float_hr_cnt": 176.0,
+   "free_float_hr_cnt": 192.0
+  }
+ ]
+}
