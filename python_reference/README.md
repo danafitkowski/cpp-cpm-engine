@@ -200,9 +200,20 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  f3503896f412b36b48d9572f678e4ca8491cdf83f65937282eae8a4d9f6607d4
+cpm.py          SHA-256:  9fab4c0b8311683b7e95de9933ebb6aa2021b782fb9628ac1a25dc799ee44580
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  b5b96203372a06f479c1cb3ed1ee366ac902f005e0baa5eaaea48792e3399b3e
+cpm_hours.py    SHA-256:  fb091d1814e5e9cc04803ff3d57d587f9dd272c12a66436990f8fe083c1adf3c
+
+(v2.10.10 candidate, unreleased, 2026-10-18 - cpm.py bumped from f3503896...:
+ENGINE_VERSION reads 2.10.10; nothing else. cpm_hours.py bumped from
+b5b96203...: where an FF or SF requirement sets the start of resource
+dependent work and no activity working time separates its finish from
+the requirement, the finish prints at the requirement as it stands on
+the activity calendar, and an assignment with no work that sits later
+keeps its own time (ZP, _rsrc_forward), measured on the P6 probes
+ZZ-CPP-RZFA to -RZFS (validation/p6-probes/h17-followups-2026-10-18)
+after held-out case H17-10 A1070. The harness gains 1 fixture (F177):
+173 fixtures, 11739 of 11739 executed.)
 
 (v2.10.9 candidate, unreleased, 2026-10-18 - cpm.py bumped from e7517b05...:
 ENGINE_VERSION reads 2.10.9; the whole-day pass leaves the days a
@@ -727,15 +738,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 295576
-  sha-256:  f3503896f412b36b48d9572f678e4ca8491cdf83f65937282eae8a4d9f6607d4
+  bytes: 295577
+  sha-256:  9fab4c0b8311683b7e95de9933ebb6aa2021b782fb9628ac1a25dc799ee44580
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 172 passed, 0 failed
-  Checks:   11612 / 11612 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 173 passed, 0 failed
+  Checks:   11739 / 11739 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

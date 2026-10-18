@@ -168,13 +168,18 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
         fins.append(f)
     ef = max(fins)
     # where the requirement set the start and no activity working time separates
-    # the finish from the requirement, the finish prints as the activity
-    # calendar's next opening (RD2F D4 D5; RDSF S8 Fri 07:00 after a holiday;
-    # ZZ-CPP-RSRC C6 C7, ZZ-CPP-RSRC2 S5 S10 S11)
+    # the finish from the requirement, the finish prints at the requirement as it
+    # stands on the activity calendar: at a close, or at the next opening after
+    # it (RD2F D4 D5; RDSF S8 Fri 07:00 after a holiday; ZZ-CPP-RSRC C6 C7,
+    # ZZ-CPP-RSRC2 S5 S10 S11). ZP (H17, 18-Oct-2026): an assignment with no
+    # work that sits later than that keeps its own time (ZZ-CPP-RZFA, -RZFB,
+    # -RZFE, -RZFS; H17-10 A1070: Thu 07:00 after a requirement at Wed 16:00,
+    # where the activity calendar opens at 08:00; ZZ-CPP-RZFG: one at Thu 07:00
+    # before the requirement's next opening, Thu 08:00, prints there)
     if bound:
         lo, hi = min(ef, finish_req), max(ef, finish_req)
         if act_cal.between(lo, hi) == 0:
-            ef = hi if act_cal.is_finish(hi) else act_cal.next_work(hi)
+            ef = max(ef, fr_a)
     return min(starts), ef
 
 

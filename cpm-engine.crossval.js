@@ -3602,6 +3602,47 @@ compareFixture('F176 - SU: the same, whole days', {
     relationship_lag_calendar: 'rcal_Predecessor', project_finish: '2026-12-17',
 });
 
+// ZP (v2.10.10, P6 probes ZZ-CPP-RZFA to -RZFS, held-out H17-10 A1070): where an FF / SF requirement sets the start of
+// resource dependent work and no activity working time separates its finish from the requirement, the finish prints at
+// the requirement as it stands on the activity calendar; an assignment with no work that sits later keeps its own time.
+// One P6 day number per holiday: 46364 Tue 8 Dec 2026, 46365 Wed 9 Dec 2026.
+const zpRaw = (days, s, f, exc) => '(0||CalendarData()((0||DaysOfWeek()(' +
+    [1, 2, 3, 4, 5, 6, 7].map((d) => '(0||' + d + '()(' +
+        (days.indexOf(d) >= 0 ? '(0||0(s|' + s + '|f|' + f + ')())' : '') + '))').join('') +
+    '))(0||Exceptions()(' + (exc || []).map((n, i) => '(0||' + i + '(d|' + n + ')())').join('') + '))))';
+const MON_FRI = [2, 3, 4, 5, 6];
+const MON_SAT = [2, 3, 4, 5, 6, 7];
+const ZPCAL = {
+    A: { work_days: [1, 2, 3, 4, 5, 6], holidays: [], raw: zpRaw(MON_SAT, '08:00', '16:00') },
+    B: { work_days: [1, 2, 3, 4, 5, 6], holidays: [], raw: zpRaw(MON_SAT, '11:00', '19:00') },
+    M: { work_days: [1, 2, 3, 4, 5, 6], holidays: [], raw: zpRaw(MON_SAT, '08:00', '12:00') },
+    L: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: zpRaw(MON_FRI, '07:00', '17:00', [46365]) },
+    L6: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: zpRaw(MON_FRI, '06:00', '16:00', [46365]) },
+    L9: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: zpRaw(MON_FRI, '09:00', '17:00', [46365]) },
+    LW: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: zpRaw(MON_FRI, '07:00', '17:00') },
+    LT: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: zpRaw(MON_FRI, '07:00', '17:00', [46364, 46365]) },
+    E: { work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 24, holidays: [] },
+};
+const zT = (code, h, cal) => ({ code, duration_days: h / 8, remaining_hours: h, remaining_hours_days: h / 8,
+    clndr_id: cal });
+// resource dependent on A; asg: [calendar, hours]
+const zR = (code, asg) => Object.assign(zT(code, Math.max.apply(null, asg.map((g) => g[1])), 'A'), {
+    task_type: 'TT_Rsrc', resource_assignments: asg.length,
+    assignments: asg.map((g) => ({ clndr_id: g[0], remaining_hours: g[1], lag_hours: 0, driving: true })) });
+compareFixture('F177 - ZP: an assignment with no work after the FF / SF requirement that set its start keeps its own time; one before the requirement\'s next opening prints there, in hours', {
+    activities: [
+        zT('P1', 40, 'A'), zR('Z1', [['E', 8], ['L', 0]]),
+        zT('P2', 40, 'A'), zR('Z2', [['E', 8], ['L6', 0]]),
+        zT('P3', 40, 'A'), zR('Z3', [['E', 8], ['L9', 0]]),
+        zT('P4', 40, 'A'), zR('Z4', [['E', 8], ['LW', 0]]),
+        zT('P5', 40, 'B'), zR('Z5', [['M', 4], ['LT', 0]]),
+        zT('P6', 40, 'A'), zR('Z6', [['E', 8], ['L', 0]]),
+    ],
+    relationships: [hR('P1', 'Z1', 'FF'), hR('P2', 'Z2', 'FF'), hR('P3', 'Z3', 'FF'), hR('P4', 'Z4', 'FF'),
+        hR('P5', 'Z5', 'FF'), hR('P6', 'Z6', 'SF', 40)],
+    data_date: '2026-12-04 08:00', cal_map: ZPCAL, relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

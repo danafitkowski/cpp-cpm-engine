@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.9';
+const ENGINE_VERSION = '2.10.10';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2433,8 +2433,9 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
     // requirement (ZZ-CPP-RD2F C1-C3, D1-D11; ZZ-CPP-RDSF S1-S10; H10-04
     // A1040; H9-09 A1230)
     let bound = false;
+    let frA = null;
     if (req) {
-        const frA = actCal.isFinish(finishReq) ? finishReq : actCal.nextWork(finishReq);
+        frA = actCal.isFinish(finishReq) ? finishReq : actCal.nextWork(finishReq);
         let first = null;
         for (const g of asg) {
             if (!(g.rem > 0)) continue;
@@ -2478,13 +2479,19 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
     }
     let ef = Math.max.apply(null, fins);
     // where the requirement set the start and no activity working time
-    // separates the finish from the requirement, the finish prints as the
-    // activity calendar's next opening (RD2F D4 D5; RDSF S8 Fri 07:00 after
-    // a holiday; ZZ-CPP-RSRC C6 C7, ZZ-CPP-RSRC2 S5 S10 S11)
+    // separates the finish from the requirement, the finish prints at the
+    // requirement as it stands on the activity calendar: at a close, or at the
+    // next opening after it (RD2F D4 D5; RDSF S8 Fri 07:00 after a holiday;
+    // ZZ-CPP-RSRC C6 C7, ZZ-CPP-RSRC2 S5 S10 S11). ZP (H17, 18-Oct-2026): an
+    // assignment with no work that sits later than that keeps its own time
+    // (ZZ-CPP-RZFA, -RZFB, -RZFE, -RZFS; H17-10 A1070: Thu 07:00 after a
+    // requirement at Wed 16:00, where the activity calendar opens at 08:00;
+    // ZZ-CPP-RZFG: one at Thu 07:00 before the requirement's next opening,
+    // Thu 08:00, prints there)
     if (bound) {
         const lo = Math.min(ef, finishReq);
         const hi = Math.max(ef, finishReq);
-        if (actCal.between(lo, hi) === 0) ef = actCal.isFinish(hi) ? hi : actCal.nextWork(hi);
+        if (actCal.between(lo, hi) === 0) ef = Math.max(ef, frA);
     }
     return [Math.min.apply(null, starts), ef];
 }
@@ -11418,17 +11425,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '172 cross-validation fixtures. The harness defines 11612 ' +
+                '173 cross-validation fixtures. The harness defines 11739 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 11612 / 11612" is the whole comparison surface. ' +
+                'reported "Checks: 11739 / 11739" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 11612 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 11739 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 170 of the 172 fixtures: ' +
+                'severity-level alert parity, compared on 171 of the 173 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11467,18 +11474,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '11612 comparisons it defines over 172 fixtures and skips none; every ' +
+                '11739 comparisons it defines over 173 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '172 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '173 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 11612 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 11739 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 170 of the 172 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 171 of the 173 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +
