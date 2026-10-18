@@ -1,0 +1,30 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). The released v2.10.9 (46bfd975), run on the frozen H19 cases with the same scorers, in a scratch copy with cases/manifest.json deleted. From it to this candidate the JS engine changed by rule ZP and the disclosure figures only.",
+ "engines": {
+  "v2.10.9, released (46bfd975)": 216,
+  "the v2.10.10 candidate: the score (691105fd)": 216
+ },
+ "steps": {
+  "v2.10.9 to the v2.10.10 candidate (ZP)": {
+   "values_changed": 0,
+   "onto": [],
+   "away": []
+  }
+ },
+ "zp_shape": {
+  "note": "Assignments P6's import left with no work on unfinished resource dependent work, and which of their activities have a finish-to-finish or start-to-finish predecessor.",
+  "empty_assignments": [
+   "H19-07 A1290 R2",
+   "H19-08 A1110 R1",
+   "H19-08 A1110 R2"
+  ],
+  "with_a_finish_requirement_link": []
+ },
+ "rl_shape": {
+  "note": "Unfinished resource dependent work with two or more assignments, one with no work beside one with work, and no start-to-start or start-to-finish successor: the shape in which the Python engine before the v2.10.10 correction ran RL without a bound.",
+  "activities": [
+   "H19-07 A1290"
+  ],
+  "python_before_the_correction": "the same values as after it: the assignments' late finishes fall at a close of the activity calendar (Mon 17 Mar 2014 16:00), so RL has nothing to move"
+ }
+}
