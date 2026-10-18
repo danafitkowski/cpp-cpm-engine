@@ -1,0 +1,43 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). Each engine is scored on the frozen H17 cases with the same scorers, in a scratch copy with cases/manifest.json deleted. v2.10.8 is the engine H16 scored; the only change from it to v2.10.9 is rule SU.",
+ "engines": {
+  "v2.10.8, released (bbdf1b95)": 207,
+  "v2.10.9, released: the score (46bfd975)": 207
+ },
+ "steps": {
+  "v2.10.8 to v2.10.9 (SU)": {
+   "values_changed": 0,
+   "onto": [],
+   "away": []
+  }
+ },
+ "su_links": {
+  "note": "Start-to-start or start-to-finish links off a started predecessor with a suspend date, in the frozen cases.",
+  "links": [
+   {
+    "case": "H17-07",
+    "pred": "A1060",
+    "succ": "A1120",
+    "type": "PR_SF",
+    "lag_hr": 0,
+    "succ_status": "TK_NotStart"
+   },
+   {
+    "case": "H17-09",
+    "pred": "A1080",
+    "succ": "A1120",
+    "type": "PR_SS",
+    "lag_hr": -4,
+    "succ_status": "TK_Complete"
+   },
+   {
+    "case": "H17-11",
+    "pred": "A1030",
+    "succ": "A1040",
+    "type": "PR_SS",
+    "lag_hr": 16,
+    "succ_status": "TK_Complete"
+   }
+  ]
+ }
+}

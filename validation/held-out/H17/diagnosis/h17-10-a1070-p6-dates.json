@@ -1,0 +1,55 @@
+{
+ "note": "P6's own values for H17-10 A1070 after its F9, read read-only from the P6 Professional 23.12.1 database on 18-Oct-2026. Times are local to the schedule.",
+ "tasks": {
+  "A1060": {
+   "early_start": "2026-12-04 08:00",
+   "early_finish": "2026-12-09 16:00",
+   "late_start": "2026-12-07 15:30",
+   "late_finish": "2026-12-12 15:30"
+  },
+  "A1070": {
+   "early_start": "2026-12-09 08:00",
+   "early_finish": "2026-12-10 07:00",
+   "late_start": "2026-12-10 17:00",
+   "late_finish": "2026-12-12 15:30"
+  }
+ },
+ "assignments": [
+  {
+   "resource": "H17-10-R1",
+   "type": "RT_Labor",
+   "remain_qty": 0.0,
+   "target_qty": 0.0,
+   "remain_qty_per_hr": 1.0,
+   "early_start": "2026-12-10 07:00",
+   "early_finish": "2026-12-10 07:00",
+   "late_start": "2026-12-10 17:00",
+   "late_finish": "2026-12-10 17:00"
+  },
+  {
+   "resource": "H17-10-R2",
+   "type": "RT_Equip",
+   "remain_qty": 8.0,
+   "target_qty": 8.0,
+   "remain_qty_per_hr": 1.0,
+   "early_start": "2026-12-09 08:00",
+   "early_finish": "2026-12-09 16:00",
+   "late_start": "2026-12-12 07:30",
+   "late_finish": "2026-12-12 15:30"
+  }
+ ],
+ "engine_v2.10.9": {
+  "early_start": "2026-12-09 08:00",
+  "early_finish": "2026-12-10 08:00",
+  "late_start": "2026-12-10 17:00",
+  "late_finish": "2026-12-12 15:30"
+ },
+ "calendars": {
+  "activity": "H17-10 Mon-Sat 08:00-16:00",
+  "H17-10-R1 (labour)": "Mon-Fri 07:00-17:00, with exceptions; Wed 9 Dec 2026 is one (non-working)",
+  "H17-10-R2 (equipment)": "every day 00:00-24:00, with exceptions; it works Wed 9 and Thu 10 Dec 2026"
+ },
+ "planned": {
+  "A1070 target_start_date in the case": "2026-12-05 08:00 (a Saturday)"
+ }
+}
