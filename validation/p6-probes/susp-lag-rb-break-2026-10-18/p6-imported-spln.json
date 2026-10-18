@@ -1,0 +1,9 @@
+{
+ "case": "ZZ-CPP-SPLN",
+ "proj_id": 5251,
+ "differences": [],
+ "resource_dependent": {
+  "tasks": {},
+  "assignments": []
+ }
+}

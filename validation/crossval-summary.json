@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.8",
-  "generated_utc": "2026-10-17T15:16:27.431Z",
+  "engine_version": "2.10.9",
+  "generated_utc": "2026-10-18T13:39:12.675Z",
   "fixtures": {
-    "total": 170,
-    "passed": 170,
+    "total": 172,
+    "passed": 172,
     "failed": 0
   },
   "checks": {
-    "executed": 11390,
+    "executed": 11612,
     "failed": 0,
-    "passed": 11390,
+    "passed": 11612,
     "skipped": 0,
-    "surface": 11390
+    "surface": 11612
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 168,
-    "project_finish": 168,
-    "critical_codes": 168,
-    "topo_order": 168,
-    "alert_count": 168,
-    "alert_severity_counts": 168,
-    "node <id>": 10345,
+    "project_finish_num": 170,
+    "project_finish": 170,
+    "critical_codes": 170,
+    "topo_order": 170,
+    "alert_count": 170,
+    "alert_severity_counts": 170,
+    "node <id>": 10554,
     "threw (both engines)": 2,
-    "hours": 35
+    "hours": 36
   },
   "rows": [
     {
@@ -1386,6 +1386,22 @@
       "id": "F174",
       "name": "F174 - RO: the same, whole days",
       "checks": 114,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F175",
+      "name": "F175 - SU: an SS / SF lag off a suspended predecessor counts only the time outside the suspension, in hours",
+      "checks": 117,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F176",
+      "name": "F176 - SU: the same, whole days",
+      "checks": 105,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

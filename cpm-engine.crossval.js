@@ -3575,6 +3575,32 @@ compareFixture('F174 - RO: the same, whole days', {
     schedule_mode: 'progress_override', relationship_lag_calendar: 'rcal_Predecessor',
 });
 
+// SU (v2.10.9, P6 probes ZZ-CPP-SPLR / -SPLO / -SPLN): off a suspended predecessor only the working time outside the
+// suspension counts as elapsed - work under way or complete, the resume date after or before the data date or
+// missing, SS and SF - in both passes, forward and backward; the Must Finish By makes P1's start-to-start bound bind.
+const suSince = '2026-11-30 08:00';
+const suActs = (A) => [
+    A('P1', 8, { actual_start: suSince, remaining_duration: 1, suspend_date: '2026-12-03 17:00',
+        resume_date: '2026-12-14 08:00' }), A('S1', 8),
+    A('P2', 8, { actual_start: suSince, remaining_duration: 1, suspend_date: '2026-12-02 17:00',
+        resume_date: '2026-12-07 08:00' }), A('S2', 8),
+    A('P3', 8, { actual_start: suSince, remaining_duration: 1, suspend_date: '2026-12-03 17:00' }), A('S3', 8),
+    A('P5', 8, { actual_start: suSince, remaining_duration: 1, suspend_date: '2026-12-03 17:00',
+        resume_date: '2026-12-14 08:00' }), A('S5', 8),
+    A('X8', 8),
+    A('P8', 32, { actual_start: suSince, actual_finish: '2026-12-08 17:00', is_complete: true,
+        suspend_date: '2026-12-01 17:00', resume_date: '2026-12-07 08:00' }), A('S8', 8)];
+const suRels = (R) => [R('P1', 'S1', 'SS', 48), R('P2', 'S2', 'SS', 48), R('P3', 'S3', 'SS', 48),
+    R('P5', 'S5', 'SF', 48), R('X8', 'P8'), R('P8', 'S8', 'SS', 48)];
+compareFixture('F175 - SU: an SS / SF lag off a suspended predecessor counts only the time outside the suspension, in hours', {
+    activities: suActs(hA), relationships: suRels(hR), data_date: '2026-12-09 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', project_finish: '2026-12-17 17:00',
+}, { hours: true });
+compareFixture('F176 - SU: the same, whole days', {
+    activities: suActs(dA), relationships: suRels(dR), data_date: '2026-12-09', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', project_finish: '2026-12-17',
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

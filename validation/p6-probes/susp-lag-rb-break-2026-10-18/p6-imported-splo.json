@@ -1,0 +1,9 @@
+{
+ "case": "ZZ-CPP-SPLO",
+ "proj_id": 5250,
+ "differences": [],
+ "resource_dependent": {
+  "tasks": {},
+  "assignments": []
+ }
+}

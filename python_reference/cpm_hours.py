@@ -462,7 +462,9 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if dd is None:
                 return kind, lag_fwd(actual, r['lag'], lc)
             base = stamp(p, carries(t)) if retained else dd
-            return kind, lag_fwd(base, unexpired(actual, r['lag'], lc), lc)
+            # SU (18-Oct-2026): off completed work that was suspended an SS / SF lag counts only the time
+            # outside the suspension as elapsed, as off work under way (ZZ-CPP-SPLR / -SPLO / -SPLN S8)
+            return kind, lag_fwd(base, unexpired(actual, r['lag'], lc, p if t in ('SS', 'SF') else None), lc)
         if t in ('FS', 'FF'):
             return kind, lag_fwd(p['ef'], r['lag'], lc)
         if p['started'] and (retained or po):
@@ -646,7 +648,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         continue
                     lc = lag_cal(n, s)
                     actual = n['af'] if r['type'] in ('FS', 'FF') else (n['as'] if n['as'] is not None else n['af'])
-                    rl = unexpired(actual, r['lag'], lc)
+                    rl = unexpired(actual, r['lag'], lc, n if r['type'] in ('SS', 'SF') else None)
                     if rl:
                         bnd = lc.sub(bnd, rl)
                     lpt = bnd if lpt is None else min(lpt, bnd)
@@ -695,7 +697,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             lc = lag_cal(n, s)
             lag = r['lag']
             if r['type'] in ('SS', 'SF') and n['started'] and (retained or po):
-                lag = unexpired(n['as'], lag, lc)
+                # SU: the same elapsed count as the forward pass, the suspension left out
+                lag = unexpired(n['as'], lag, lc, n)
             if r['type'] in ('FS', 'FF'):
                 v = lag_bwd(s_ls if r['type'] == 'FS' else s_lf, lag, lc)
                 if timed:

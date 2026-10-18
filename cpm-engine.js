@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.8';
+const ENGINE_VERSION = '2.10.9';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1151,7 +1151,7 @@ function _lagBackFromInstant(instant, lag, lagCal, alerts, ctx) {
     return _lagFromInstant(instant, -lag, lagCal, alerts, ctx);
 }
 
-function _unexpiredLag(actualInstant, lag, lagCal, ddNum) {
+function _unexpiredLag(actualInstant, lag, lagCal, ddNum, suspNode) {
     // The part of a relationship lag out of PROGRESSED work that the data
     // date has not already used up: `lag` less the working days of lagCal
     // from the predecessor's actual date (its actual start for SS / SF) to
@@ -1159,10 +1159,31 @@ function _unexpiredLag(actualInstant, lag, lagCal, ddNum) {
     // and never below zero, so a lead lays nothing. Without a calendar the
     // elapsed count is ordinal, the same 7-day fallback the lag walk itself
     // takes there. Python paired site: _unexpired_lag.
+    // SU (18-Oct-2026): off a SUSPENDED predecessor (suspNode, handed in for
+    // SS / SF links) only the working days outside its suspension count as
+    // elapsed, as the hours pass counts them (ZZ-CPP-SPLR / -SPLO / -SPLN
+    // S1-S9; SSL1 S13-S).
     if (!(lag > 0)) return 0;
     if (!(actualInstant > 0) || !(ddNum > 0) || actualInstant >= ddNum) return lag;
-    if (!lagCal) return Math.max(0, lag - (ddNum - actualInstant));
-    return Math.max(0, lag - _countWorkDaysBetween(actualInstant - 1, ddNum - 1, lagCal));
+    const susp = _suspensionWindow(suspNode, actualInstant, ddNum);
+    if (!lagCal) return Math.max(0, lag - ((ddNum - actualInstant) - (susp ? susp[1] - susp[0] : 0)));
+    let used = _countWorkDaysBetween(actualInstant - 1, ddNum - 1, lagCal);
+    if (susp) used -= _countWorkDaysBetween(susp[0] - 1, susp[1] - 1, lagCal);
+    return Math.max(0, lag - used);
+}
+
+function _suspensionWindow(node, actualInstant, ddNum) {
+    // SU (18-Oct-2026) - the day instants a predecessor sat suspended between
+    // its actual start and the data date: from its suspend date to its resume
+    // date, or the data date without one; null when it was not suspended
+    // there. Python paired site: _suspension_window.
+    if (!node || !node.suspend_date) return null;
+    const s = _instantOf(node.suspend_date);
+    if (!(s > 0)) return null;
+    const r = node.resume_instant > 0 ? node.resume_instant : ddNum;
+    const lo = Math.max(actualInstant, s);
+    const hi = Math.min(ddNum, r);
+    return hi > lo ? [lo, hi] : null;
 }
 
 // MD (P6 parity 2026-10-12) — a milestone occupies one instant, and P6 prints
@@ -2751,7 +2772,10 @@ function computeCPMHours(activities, relationships, o) {
         if (p.complete) {
             const actual = (t === 'FS' || t === 'FF') ? p.af : (p.as !== null ? p.as : p.af);
             const base = retained ? stamp(p, carries(t)) : dd;
-            return [kind, lagFwd(base, unexpired(actual, r.lag, lc), lc)];
+            // SU (18-Oct-2026): off completed work that was suspended an SS /
+            // SF lag counts only the time outside the suspension as elapsed,
+            // as off work under way (ZZ-CPP-SPLR / -SPLO / -SPLN S8)
+            return [kind, lagFwd(base, unexpired(actual, r.lag, lc, (t === 'SS' || t === 'SF') ? p : null), lc)];
         }
         if (t === 'FS' || t === 'FF') return [kind, lagFwd(p.ef, r.lag, lc)];
         if (p.started && (retained || po)) {
@@ -2936,7 +2960,7 @@ function computeCPMHours(activities, relationships, o) {
                     if (bnd === undefined || bnd === null) continue;
                     const lc = lagCal(n, s);
                     const actual = (r.type === 'FS' || r.type === 'FF') ? n.af : (n.as !== null ? n.as : n.af);
-                    const rl = unexpired(actual, r.lag, lc);
+                    const rl = unexpired(actual, r.lag, lc, (r.type === 'SS' || r.type === 'SF') ? n : null);
                     if (rl) bnd = lc.sub(bnd, rl);
                     lpt = (lpt === null) ? bnd : Math.min(lpt, bnd);
                 }
@@ -2985,7 +3009,8 @@ function computeCPMHours(activities, relationships, o) {
             }
             const lc = lagCal(n, s);
             let lag = r.lag;
-            if ((r.type === 'SS' || r.type === 'SF') && n.started && (retained || po)) lag = unexpired(n.as, lag, lc);
+            // SU: the same elapsed count as the forward pass, the suspension left out
+            if ((r.type === 'SS' || r.type === 'SF') && n.started && (retained || po)) lag = unexpired(n.as, lag, lc, n);
             if (r.type === 'FS' || r.type === 'FF') {
                 const v = lagBwd(r.type === 'FS' ? sLs : sLf, lag, lc);
                 if (timed) linkLf.push(v);
@@ -4400,11 +4425,10 @@ function computeCPM(activities, relationships, opts) {
     // nothing. "Calculate start-to-start lag from Actual Start" moves the SS
     // anchor to the data date (_ssAnchorOf). An SS / SF link into a
     // COMPLETED activity lays no lag (the pass-through loop).
-    // Not modelled: a SUSPENDED predecessor. P6 counts only the working time
-    // before the suspension as elapsed and restarts at the resume date. The
-    // engine reads neither suspend nor resume, so it lays such a link from
-    // the data date with the whole elapsed count (SSL1 S13: P6 26 Oct,
-    // engine 12 Oct).
+    // SU (18-Oct-2026): off a SUSPENDED predecessor only the working time
+    // outside the suspension counts as elapsed (_unexpiredLag), and the work
+    // restarts at its resume date (_resumeFloorOf): SSL1 S13; ZZ-CPP-SPLR /
+    // -SPLO / -SPLN S1-S9.
     // Python paired sites: _ss_off_started / _started_lag_left.
     function _ssOffStarted(pnode) {
         // SO (H2, 13-Oct-2026): progress override lays an SS / SF link out of
@@ -4415,7 +4439,7 @@ function computeCPM(activities, relationships, opts) {
     }
 
     function _startedLagLeft(pnode, lag, lagCal) {
-        return _unexpiredLag(pnode.as_instant || 0, lag, lagCal, ddNum);
+        return _unexpiredLag(pnode.as_instant || 0, lag, lagCal, ddNum, pnode);
     }
 
     // SSL measured (P6 probe 2026-09-23) — the INSTANT an SS link off a
@@ -4532,7 +4556,8 @@ function computeCPM(activities, relationships, opts) {
     }
 
     function _doneDrive(pnode, p, lagCal, ctx, sink) {
-        const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum);
+        const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum,
+            (p.type === 'SS' || p.type === 'SF') ? pnode : null);
         return _lagFromInstant(_stampOf(pnode, p.type), _rem, lagCal, sink, ctx);
     }
 
@@ -4597,7 +4622,8 @@ function computeCPM(activities, relationships, opts) {
             const _rd = pnode.resume_date || '';
             _o = _openingFrom(dateToNum(_rd), _constraintTimeMinutes(_rd), calFor(pnode));
         }
-        const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum);
+        const _rem = _unexpiredLag(_doneActual(pnode, p.type), p.lag_days, lagCal, ddNum,
+            (p.type === 'SS' || p.type === 'SF') ? pnode : null);
         return [inst, _lagKindFwd(_o, _rem)];
     }
 
@@ -6026,7 +6052,8 @@ function computeCPM(activities, relationships, opts) {
                         // (silent: the forward walk of the same link already
                         // disclosed any missing calendar)
                         const _sCal = lagCalFor(node, snode);
-                        const _rl = _unexpiredLag(_doneActual(node, s.type), s.lag_days, _sCal, ddNum);
+                        const _rl = _unexpiredLag(_doneActual(node, s.type), s.lag_days, _sCal, ddNum,
+                            (s.type === 'SS' || s.type === 'SF') ? node : null);
                         if (_rl) {
                             _b = _lagBackFromInstant(_b, _rl, _sCal, [],
                                 'backward unexpired lag ' + code + '->' + snode.code);

@@ -140,7 +140,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.8'
+ENGINE_VERSION = '2.10.9'
 
 
 # =============================================================================
@@ -982,21 +982,47 @@ def _lag_back_from_instant(instant, lag, lag_cal, *, alerts, ctx):
     return _lag_from_instant(instant, -lag, lag_cal, alerts=alerts, ctx=ctx)
 
 
-def _unexpired_lag(actual_instant, lag, lag_cal, dd_num):
+def _unexpired_lag(actual_instant, lag, lag_cal, dd_num, susp_node=None):
     """The part of a relationship lag out of PROGRESSED work that the data
     date has not already used up: `lag` less the working days of `lag_cal`
     from the predecessor's actual date (its actual start for SS / SF) to the
     data date - none when that actual is at or after the data date - and
     never below zero, so a lead lays nothing. Without a calendar the elapsed
     count is ordinal, the same 7-day fallback the lag walk itself takes
-    there. JS paired site: _unexpiredLag."""
+    there. JS paired site: _unexpiredLag.
+
+    SU (18-Oct-2026): off a SUSPENDED predecessor (susp_node, handed in for
+    SS / SF links) only the working days outside its suspension count as
+    elapsed, as the hours pass counts them (ZZ-CPP-SPLR / -SPLO / -SPLN
+    S1-S9; SSL1 S13-S)."""
     if lag <= 0:
         return 0
     if actual_instant <= 0 or dd_num <= 0 or actual_instant >= dd_num:
         return lag
+    susp = _suspension_window(susp_node, actual_instant, dd_num)
     if not lag_cal:
-        return max(0, lag - (dd_num - actual_instant))
-    return max(0, lag - _count_work_days_between(actual_instant - 1, dd_num - 1, lag_cal))
+        return max(0, lag - ((dd_num - actual_instant) - ((susp[1] - susp[0]) if susp else 0)))
+    used = _count_work_days_between(actual_instant - 1, dd_num - 1, lag_cal)
+    if susp:
+        used -= _count_work_days_between(susp[0] - 1, susp[1] - 1, lag_cal)
+    return max(0, lag - used)
+
+
+def _suspension_window(node, actual_instant, dd_num):
+    """SU (18-Oct-2026) - the day instants a predecessor sat suspended between
+    its actual start and the data date: from its suspend date to its resume
+    date, or the data date without one; None when it was not suspended
+    there. JS paired site: _suspensionWindow."""
+    if not node or not node.get('suspend_date'):
+        return None
+    s = _instant_of(node['suspend_date'])
+    if not s or s <= 0:
+        return None
+    r = node.get('resume_instant') or 0
+    r = r if r > 0 else dd_num
+    lo = max(actual_instant, s)
+    hi = min(dd_num, r)
+    return (lo, hi) if hi > lo else None
 
 
 # MD (P6 parity 2026-10-12) — a milestone occupies one instant, and P6 prints
@@ -2780,11 +2806,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # nothing. "Calculate start-to-start lag from Actual Start" moves the SS
     # anchor to the data date (_ss_anchor_for). An SS / SF link into a
     # COMPLETED activity lays no lag (the pass-through loop).
-    # Not modelled: a SUSPENDED predecessor. P6 counts only the working time
-    # before the suspension as elapsed and restarts at the resume date. The
-    # engine reads neither suspend nor resume, so it lays such a link from
-    # the data date with the whole elapsed count (SSL1 S13: P6 26 Oct,
-    # engine 12 Oct).
+    # SU (18-Oct-2026): off a SUSPENDED predecessor only the working time
+    # outside the suspension counts as elapsed (_unexpired_lag), and the work
+    # restarts at its resume date (_resume_floor): SSL1 S13; ZZ-CPP-SPLR /
+    # -SPLO / -SPLN S1-S9.
     # JS paired sites: _ssOffStarted / _startedLagLeft.
     def _ss_off_started(pnode):
         # SO (H2, 13-Oct-2026): progress override lays an SS / SF link out of
@@ -2795,7 +2820,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 and pnode.get('restart') is not None)
 
     def _started_lag_left(pnode, lag, lag_cal):
-        return _unexpired_lag(pnode.get('as_instant') or 0, lag, lag_cal, dd_num)
+        return _unexpired_lag(pnode.get('as_instant') or 0, lag, lag_cal, dd_num, pnode)
 
     # SSL measured (P6 probe 2026-09-23) — the INSTANT an SS link off a
     # started predecessor is laid from. Under P6's "Calculate start-to-start
@@ -2966,12 +2991,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         else:
             _rd = pnode.get('resume_date') or ''
             _o = _opening_from(date_to_num(_rd), _constraint_time_minutes(_rd), _cal_for(pnode))
-        _rem = _unexpired_lag(_done_actual(pnode, p['type']), p['lag_days'], lag_cal, dd_num)
+        _rem = _unexpired_lag(_done_actual(pnode, p['type']), p['lag_days'], lag_cal, dd_num,
+                              pnode if p['type'] in ('SS', 'SF') else None)
         return (inst, _lag_kind_fwd(_o, _rem))
 
     def _done_drive(pnode, p, lag_cal, ctx, sink):
         _rem = _unexpired_lag(_done_actual(pnode, p['type']), p['lag_days'],
-                              lag_cal, dd_num)
+                              lag_cal, dd_num, pnode if p['type'] in ('SS', 'SF') else None)
         return _lag_from_instant(_stamp_of(pnode, p['type']), _rem, lag_cal,
                                  alerts=sink, ctx=ctx)
 
@@ -4202,7 +4228,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         # disclosed any missing calendar)
                         _s_cal = _lag_cal_for(node, snode)
                         _rl = _unexpired_lag(_done_actual(node, s['type']), s['lag_days'],
-                                             _s_cal, dd_num)
+                                             _s_cal, dd_num,
+                                             node if s['type'] in ('SS', 'SF') else None)
                         if _rl:
                             _b = _lag_back_from_instant(
                                 _b, _rl, _s_cal, alerts=[],
