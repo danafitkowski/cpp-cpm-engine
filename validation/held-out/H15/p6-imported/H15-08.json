@@ -1,0 +1,97 @@
+{
+ "case": "H15-08",
+ "proj_id": 5225,
+ "differences": [
+  "TASK A1040 target_drtn_hr_cnt: xer '8' p6 0.0",
+  "TASK A1110 remain_drtn_hr_cnt: xer '22' p6 16.0",
+  "TASKRSRC A1030/H15-08-R1 target_qty_per_hr: xer '1' p6 0.666666666666667",
+  "TASKRSRC A1040/H15-08-R2 target_qty: xer '8' p6 0.0",
+  "TASKRSRC A1110/H15-08-R1 target_qty_per_hr: xer '0.5' p6 0.197530864197531"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1030": {
+    "remain_drtn_hr_cnt": 13.0,
+    "target_drtn_hr_cnt": 24.0
+   },
+   "A1040": {
+    "remain_drtn_hr_cnt": 7.0,
+    "target_drtn_hr_cnt": 0.0
+   },
+   "A1050": {
+    "remain_drtn_hr_cnt": 2.0,
+    "target_drtn_hr_cnt": 4.0
+   },
+   "A1090": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1110": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 32.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1030",
+    "rsrc_short_name": "H15-08-R1",
+    "remain_qty": 13.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.666666666666667,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 11.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1030",
+    "rsrc_short_name": "H15-08-R3",
+    "remain_qty": 13.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 11.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1040",
+    "rsrc_short_name": "H15-08-R2",
+    "remain_qty": 7.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 1.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1050",
+    "rsrc_short_name": "H15-08-R1",
+    "remain_qty": 2.0,
+    "target_qty": 4.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 2.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H15-08-R1",
+    "remain_qty": 11.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 0.5,
+    "target_qty_per_hr": 0.197530864197531,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 5.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
