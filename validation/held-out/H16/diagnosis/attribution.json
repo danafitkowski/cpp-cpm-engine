@@ -1,0 +1,77 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). Each row: the engine scored on the frozen H16 cases with the same scorer. The step rows are earlier engines. The rule rows take one rule out of a candidate in a scratch copy: FC, CL, RT, RL, RQ, RW and LC on resource dependent work out of the candidate H12 scored (fa8850b5); RX, MC and RA out of the candidate H13 scored (f07a6ee8); RZ and RG out of the candidate H14 scored (dc5b1636). AC is the only change from dc5b1636 to the candidate H15 scored (4b87b66f), and RB the only change from 4b87b66f to this candidate. RQ out: the requirement rule v2.10.7 shipped; RQ in its H10 form: the rule the candidate H10 scored.",
+ "engines": {
+  "v2.10.7 (6c37aa2a)": 136,
+  "RU + RF, the engine H9 scored (cf47c1f9)": 139,
+  "RU + RF + RO (34a031db)": 189,
+  "the candidate H10 scored (ec033162)": 211,
+  "the candidate H11 scored (a24270c3)": 217,
+  "the candidate H12 scored (fa8850b5)": 217,
+  "the candidate H13 scored (f07a6ee8)": 217,
+  "the candidate H14 scored (dc5b1636)": 217,
+  "the candidate H15 scored (4b87b66f)": 217,
+  "the candidate H12 scored without FC": 217,
+  "the candidate H12 scored without CL": 217,
+  "the candidate H12 scored without RT": 209,
+  "the candidate H12 scored without RL": 217,
+  "the candidate H12 scored without RQ": 197,
+  "the candidate H12 scored with RQ in its H10 form": 211,
+  "the candidate H12 scored without RW": 217,
+  "the candidate H12 scored without LC on resource dependent work": 217,
+  "the candidate H13 scored without RX": 217,
+  "the candidate H13 scored without MC": 217,
+  "the candidate H13 scored without RA": 217,
+  "the candidate H14 scored without RZ": 217,
+  "the candidate H14 scored without RG": 217,
+  "v2.10.8 candidate (bbdf1b95), the score": 217
+ },
+ "steps": {
+  "v2.10.7 to RU + RF": {
+   "onto": [
+    "H16-03 A1270",
+    "H16-04 A1210",
+    "H16-10 A1250"
+   ],
+   "away": []
+  },
+  "RU + RF to RU + RF + RO": {
+   "onto": 50,
+   "away": 0
+  },
+  "RU + RF + RO to the candidate H10 scored": {
+   "onto": 22,
+   "away": 0
+  },
+  "the candidate H10 scored to the candidate H11 scored": {
+   "onto": [
+    "H16-02 A1240",
+    "H16-04 A1260",
+    "H16-04 A1270",
+    "H16-04 A1330",
+    "H16-09 A1050",
+    "H16-12 A1210"
+   ],
+   "away": []
+  },
+  "the candidate H11 scored to the candidate H12 scored": {
+   "onto": 0,
+   "away": 0
+  },
+  "the candidate H12 scored to the candidate H13 scored": {
+   "onto": 0,
+   "away": 0
+  },
+  "the candidate H13 scored to the candidate H14 scored": {
+   "onto": 0,
+   "away": 0
+  },
+  "the candidate H14 scored to the candidate H15 scored (AC)": {
+   "onto": 0,
+   "away": 0
+  },
+  "the candidate H15 scored to this candidate (RB)": {
+   "onto": 0,
+   "away": 0
+  }
+ }
+}
