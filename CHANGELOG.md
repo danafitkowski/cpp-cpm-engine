@@ -12,6 +12,102 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.10 - 2026-10-18 - The finish of resource dependent work under a finish requirement; RL in the Python engine
+
+**Computed values move (Class A): engine math changed.** One rule in both engines, ZP, measured on synthetic P6 probe
+projects in Primavera P6 Professional 23.12.1 before it went in. One correction to the Python engine alone
+(`python_reference/cpm_hours.py`, the hours pass the analysis tools compute with): RL runs only where a bound was taken.
+Held-out set H17 found the ZP shape. H18, drawn after the rule, scored the engine's bytes clean, and the release checks
+after it found the Python slip. H19, drawn after both, scored these bytes clean.
+
+- **The finish of resource dependent work whose start a finish requirement sets (ZP).** Where a finish-to-finish or
+  start-to-finish requirement sets the start of resource dependent work and no activity working time separates its
+  finish from the requirement, the finish prints at the later of itself and the requirement as it stands on the
+  activity calendar: the requirement itself at a close, or the activity calendar's next opening after one off its
+  working time. So an assignment with no work that sits after the requirement keeps its own time. Through v2.10.9 the
+  finish printed as the activity calendar's next opening there (RQ's last clause). The two differ only where such an
+  empty assignment sits after a requirement at a close and before the activity calendar's next opening: held-out case
+  H17-10 A1070, where P6 prints Thu 10 Dec 2026 07:00 and v2.10.9 printed 08:00.
+
+  Measured on ZZ-CPP-RZFA to -RZFS, seven clones of H17-10: the empty assignment's resource opening earlier (06:00) or
+  later (09:00), working the day the requirement falls on, retained logic, a start-to-finish link, and a requirement
+  off the activity calendar's working time, where P6 prints the calendar's next opening as before.
+- **RL only where a bound was taken, in the Python engine.** RL takes resource dependent work's late finish back to
+  the activity calendar's last close at or before the latest finish its assignments reach, and runs each assignment
+  with work back from there. It applies only where a start-to-start or start-to-finish bound was taken in the backward
+  pass. In the Python engine of v2.10.8 and v2.10.9, an assignment with no work wrote its finish cap into the flag that
+  decides RL: one name held both. So RL also ran on work with two or more assignments, one of them with no work, where
+  no bound was taken. The JS engine was never affected: its block-scoped `const` kept the two apart.
+
+  The release checks found it on held-out case H18-08 A1120, through the production converter. P6 and the JS engine
+  print the late finish at 18:00; the Python engine printed 17:30, and three predecessors followed. Fixture F178 pins
+  it: it fails on the old port and passes on the corrected one.
+
+**Verified.**
+- **Held-out set H17** scored the released v2.10.9 once at 207 of 208 unfinished activities on all seven fields; the
+  one difference is H17-10 A1070's early finish, and v2.10.8, diagnosed after the score, gives the same 207
+  ([`validation/held-out/H17/RESULT.md`](validation/held-out/H17/RESULT.md)). H17 is now fitted: 208 of 208 on these
+  bytes.
+- **Held-out set H18,** drawn after ZP from a drand round named before it was published, scored the engine once:
+  208 of 208 unfinished activities on all seven fields, all 12 cases clean
+  ([`validation/held-out/H18/RESULT.md`](validation/held-out/H18/RESULT.md)). v2.10.9 gives the same 208, so H18 gave
+  ZP nothing to decide. The result reports one departure from its protocol: one case was scheduled twice in a row in
+  P6, with nothing changed between. These bytes differ from the ones H18 scored only in the disclosure figures.
+- **Held-out set H19,** drawn after both changes, scored these bytes once: 216 of 216 unfinished activities on all
+  seven fields, all 12 cases clean ([`validation/held-out/H19/RESULT.md`](validation/held-out/H19/RESULT.md)). It is
+  the first set to draw resource dependent work, level of effort, WBS summary, suspended work and external dates on
+  schedules dated before or across 1 January 2020. v2.10.9 gives the same 216. The production Python engine, on H19's
+  projects in P6's database, matches P6 on all 216 and this engine on all 353 activities. H19 gave neither change
+  anything to move.
+- **Held-out sets H1 to H18,** re-scored on these bytes: all 4,157 unfinished activities match P6 on all seven fields.
+- **The probes:** 7 synthetic P6 probe projects, 168 rows, every one matching P6 on the four dates and both floats;
+  v2.10.9 matches 164
+  ([`validation/p6-probes/h17-followups-2026-10-18/`](validation/p6-probes/h17-followups-2026-10-18/)). The probes are
+  fitted, not held out. The earlier probe sets (2,512 rows) and the Larchmere capture (4,608 comparisons) still match.
+- **Against P6, through CPP's converters and the Python engine** (the measuring machine's P6 database,
+  565 projects, 101,559 unfinished activities): 9 rows moved against v2.10.9, all onto P6: 5 from ZP, in held-out case H17-10 and four of its probe projects, and 4 from the Python RL correction, in held-out case H18-08; none moved elsewhere. 101,557 match P6 on all four
+  dates and both floats (v2.10.9: 101,548).
+- **JS against Python** on the database (565 projects, 181,396 activities): every field equal. Through
+  the production converter on 7,000 generated schedules (189,441 activities), with some assignments emptied and some
+  durations re-sized, the two changes P6's import makes to resource dependent work: every field equal.
+- **A scope audit of the JS engine.** Nine block-scoped declarations shadow a name of the same function's enclosing
+  scope. A port with one scope per function that keeps the names would clobber the outer value at each. The RL flag
+  was the only one where the outer value is read afterwards; at the other eight the inner branch returns at once.
+- **XER census on the measuring machine:** of 930 distinct XER files, none moves. Through the JS engine 926 are
+  readable (225,346 activities). Through the Python engine and the production converter, 1,068 projects compute
+  (334,760 activities), and neither change moves a value.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.9, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values.
+- **JS unit suite:** 1,498 checks green, as in v2.10.9. ZP is pinned by the P6 probe replays
+  (`npm run test:p6-comparison`).
+- **Cross-validation:** 174 fixtures, 11776 of 11776 executed, 0 skipped, 0 failures; alert parity on 172 of 174
+  (the other 2 must throw). F177 hands both engines the finishes ZP decides, and F178 work with an assignment that
+  has no work and no bound taken, both in hours.
+- **Coverage,** re-measured on these bytes: 94.64% statements, 83.22% branches, 96.90% functions.
+
+**Who is affected.**
+- **ZP, both engines.** Schedules with resource dependent work whose start a finish-to-finish or start-to-finish
+  requirement sets and which carries an assignment with no work left, where that assignment's resource opens after a
+  requirement at a close of the activity calendar and before the calendar's next opening. Its early finish moves
+  earlier, to the empty assignment's own time, and so may whatever it drives. The whole-day pass is unchanged.
+- **RL, the Python engine of v2.10.8 and v2.10.9 (the analysis tools).** Resource dependent work with two or more
+  assignments, one with work and one with none, where the backward pass took no start-to-start or start-to-finish
+  bound, and the latest finish among its assignments falls outside the activity calendar's working time. Its
+  assignments with work ran back from the activity calendar's last close before that finish. So its late dates printed
+  earlier than P6's, its total float was less, and the late dates of the work driving it could follow. Early dates and
+  free float were not affected, and neither was the JS engine.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). Re-run a deliverable issued on an earlier version
+under §12.2 where its schedule carries either situation.
+
+**Not claimed.**
+- ZP rests on its seven probe projects and on held-out case H17-10. H18 and H19, drawn after it, gave it nothing to
+  decide.
+- The RL correction rests on held-out case H18-08 and fixture F178. The one activity H19 drew with its shape
+  (H19-07 A1290) gave it nothing to move.
+
+---
+
 ## v2.10.9 - 2026-10-18 - The lag off a suspended predecessor, in both passes
 
 **Computed values move (Class A): engine math changed.** One rule, SU, with the Python reference
