@@ -1,0 +1,83 @@
+{
+ "case": "H20-09",
+ "proj_id": 5305,
+ "differences": [
+  "TASK A1110 remain_drtn_hr_cnt: xer '61' p6 169.0",
+  "TASK A1110 target_drtn_hr_cnt: xer '80' p6 79.0",
+  "TASK A1120 remain_drtn_hr_cnt: xer '24' p6 10.0",
+  "TASK A1120 target_drtn_hr_cnt: xer '24' p6 10.0",
+  "TASK A1130 remain_drtn_hr_cnt: xer '27' p6 91.0",
+  "TASK A1130 target_drtn_hr_cnt: xer '120' p6 106.0",
+  "TASKRSRC A1110/H20-09-R1 target_qty_per_hr: xer '1' p6 2.16216216216216",
+  "TASKRSRC A1110/H20-09-R2 target_qty_per_hr: xer '1' p6 2.66666666666667",
+  "TASKRSRC A1120/H20-09-R2 remain_qty_per_hr: xer '3' p6 7.2",
+  "TASKRSRC A1120/H20-09-R2 target_qty_per_hr: xer '3' p6 7.2",
+  "TASKRSRC A1130/H20-09-R3 target_qty_per_hr: xer '1' p6 3.0"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1110": {
+    "remain_drtn_hr_cnt": 169.0,
+    "target_drtn_hr_cnt": 79.0
+   },
+   "A1120": {
+    "remain_drtn_hr_cnt": 10.0,
+    "target_drtn_hr_cnt": 10.0
+   },
+   "A1130": {
+    "remain_drtn_hr_cnt": 91.0,
+    "target_drtn_hr_cnt": 106.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H20-09-R1",
+    "remain_qty": 61.0,
+    "target_qty": 80.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 2.16216216216216,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 19.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1110",
+    "rsrc_short_name": "H20-09-R2",
+    "remain_qty": 61.0,
+    "target_qty": 80.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 2.66666666666667,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 19.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1120",
+    "rsrc_short_name": "H20-09-R2",
+    "remain_qty": 72.0,
+    "target_qty": 72.0,
+    "remain_qty_per_hr": 7.2,
+    "target_qty_per_hr": 7.2,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1130",
+    "rsrc_short_name": "H20-09-R3",
+    "remain_qty": 27.0,
+    "target_qty": 120.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 93.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
