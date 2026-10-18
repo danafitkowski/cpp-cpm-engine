@@ -1,0 +1,35 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). The released v2.10.9, the engine H17 scored, run on the frozen H18 cases with the same scorers, in a scratch copy with cases/manifest.json deleted. The only change from it to this candidate is rule ZP.",
+ "engines": {
+  "v2.10.9, released (46bfd975)": 208,
+  "the v2.10.10 candidate: the score (14e2f392)": 208
+ },
+ "steps": {
+  "v2.10.9 to the v2.10.10 candidate (ZP)": {
+   "values_changed": 0,
+   "onto": [],
+   "away": []
+  }
+ },
+ "zp_shape": {
+  "note": "Assignments P6's import left with no work, and which of their activities have a finish-to-finish or start-to-finish predecessor.",
+  "empty_assignments": [
+   "H18-01 A1080 R3",
+   "H18-05 A1100 R2",
+   "H18-07 A1050 R1",
+   "H18-08 A1110 R3",
+   "H18-08 A1120 R3",
+   "H18-08 A1220 R2",
+   "H18-08 A1220 R1",
+   "H18-09 A1280 R2",
+   "H18-09 A1280 R1",
+   "H18-10 A1090 R1"
+  ],
+  "with_a_finish_requirement_link": [
+   "H18-01 A1080",
+   "H18-08 A1110",
+   "H18-08 A1120",
+   "H18-08 A1220"
+  ]
+ }
+}
