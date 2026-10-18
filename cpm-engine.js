@@ -2502,6 +2502,16 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
             leadAt = null;
         }
     }
+    // RB (H15, 18-Oct-2026): a lag's bound off the activity calendar's working
+    // time first falls back to that calendar's close before it, as on timed
+    // work; each assignment then takes its own next opening from there (RG).
+    // The caller prints the late start at that close where no activity working
+    // time separates the two (LC). An assignment working in the gap starts
+    // before the close and runs to it (ZZ-CPP-SBNA..SBNI A1070: Tue 07:00
+    // before an 08:00 opening is Mon 17:00; H15-10 A1070)
+    const bAct = (lsBoundIn !== null && lsBoundIn !== undefined)
+        ? ((actCal.isFinish(lsBoundIn) || actCal.isStart(lsBoundIn)) ? lsBoundIn : actCal.prevWorkEnd(lsBoundIn))
+        : null;
     let bound = false;
     for (const g of asg) {
         const gc = g.cal;
@@ -2514,7 +2524,7 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
         // working time the bound moves on to its next opening, not back to
         // the close before (ZZ-CPP-SSNA..SSNI A1130, whose resource has the
         // bound's day off; H13-09 A1130)
-        let lsBound = (lsBoundIn !== null && lsBoundIn !== undefined) ? gc.nextWork(lsBoundIn) : null;
+        let lsBound = (bAct !== null) ? gc.nextWork(bAct) : null;
         if (leadAt !== null && leadAt !== undefined) {
             const w = gc.nextWork(leadAt);
             lsBound = (lsBound === null) ? w : Math.min(lsBound, w);
@@ -2563,7 +2573,7 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
             starts[i] = g.lag ? g.cal.sub(s, g.lag) : s;
         });
     }
-    return [Math.min.apply(null, starts), Math.max.apply(null, fins)];
+    return [Math.min.apply(null, starts), Math.max.apply(null, fins), bAct];
 }
 
 // Place resource dependent work: its early dates, its remaining dates where
@@ -3028,7 +3038,13 @@ function computeCPMHours(activities, relationships, o) {
         }
         let ls;
         if (n.asg.length) {
-            [ls, lf] = _hrRsrcBackward(n.asg, cal, lf, lsBound, leadAt);
+            const rb = _hrRsrcBackward(n.asg, cal, lf, lsBound, leadAt);
+            ls = rb[0];
+            lf = rb[1];
+            // LC for a lag's bound (RB, H15, 18-Oct-2026): where it binds and no
+            // activity working time separates its close from the late start, P6
+            // prints the close (ZZ-CPP-SBNA, -SBNC; H15-10 A1070)
+            if (rb[2] !== null && ls >= rb[2] && cal.between(rb[2], ls) === 0) ls = rb[2];
             // LC on resource dependent work (H10, 17-Oct-2026): where no
             // activity working time separates the instant a lead lands on
             // (at the activity calendar's close before it, off working

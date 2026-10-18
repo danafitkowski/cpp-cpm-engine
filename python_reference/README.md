@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  e7517b05fd4c27e53fbb7403c90b06b395f1988da05a97261b69615baf917afc
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  1666555d75fdad65770b1f4f02754c4adf4c9f2500870a87d51bd595f894584a
+cpm_hours.py    SHA-256:  d3587b449c93c23f2e77e090caa4d6ae8ecc7c68ad18cdf3c4935ace1b4d344a
 
 (v2.10.8 candidate, unreleased, 2026-10-17 - cpm.py bumped from a1a343c1...:
 ENGINE_VERSION reads 2.10.8. cpm_hours.py bumped from
@@ -261,7 +261,14 @@ validation/p6-probes/h13-followups-2026-10-17. Then cpm_hours.py from
 completed successor bounds the As Late As Possible slide as it bounds free
 float (FC), at the date carried into it, and is not an open end (AC);
 measured on six clones of H14-11 (ZZ-CPP-ALCA..ALCF), 144 of 144 rows,
-validation/p6-probes/h14-followups-2026-10-17.
+validation/p6-probes/h14-followups-2026-10-17. Then cpm_hours.py from
+1666555d..., for the row held-out set H15 left: on resource dependent
+work an SS / SF bound off the activity calendar's working time first falls
+back to that calendar's close before it, each assignment taking its own
+next opening from there, and where it binds and no activity working time
+separates that close from the late start, the late start prints at the
+close (RB); measured on seven clones of H15-10 (ZZ-CPP-SBNA..SBNG, -SBNI),
+203 of 203 rows, validation/p6-probes/h15-followups-2026-10-18.
 cpm_minutes.py unchanged.)
 
 (v2.10.7 schedules dated before 2020 and the two situations H6 left

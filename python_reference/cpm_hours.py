@@ -210,6 +210,17 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
             b = w if b is None else min(b, w)
         if first is None or b is None or b > first:
             ls_bound_in = lead_at = None
+    # RB (H15, 18-Oct-2026): a lag's bound off the activity calendar's working
+    # time first falls back to that calendar's close before it, as on timed
+    # work; each assignment then takes its own next opening from there (RG).
+    # The caller prints the late start at that close where no activity working
+    # time separates the two (LC). An assignment working in the gap starts
+    # before the close and runs to it (ZZ-CPP-SBNA..SBNI A1070: Tue 07:00
+    # before an 08:00 opening is Mon 17:00; H15-10 A1070)
+    b_act = None
+    if ls_bound_in is not None:
+        b_act = (ls_bound_in if (act_cal.is_finish(ls_bound_in) or act_cal.is_start(ls_bound_in))
+                 else act_cal.prev_work_end(ls_bound_in))
     bound = False
     for g in asg:
         gc = g['cal']
@@ -222,7 +233,7 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
         # time the bound moves on to its next opening, not back to the close
         # before (ZZ-CPP-SSNA..SSNI A1130, whose resource has the bound's day
         # off; H13-09 A1130)
-        ls_bound = gc.next_work(ls_bound_in) if ls_bound_in is not None else None
+        ls_bound = gc.next_work(b_act) if b_act is not None else None
         if lead_at is not None:
             w = gc.next_work(lead_at)
             ls_bound = w if ls_bound is None else min(ls_bound, w)
@@ -262,7 +273,7 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
             fins[i] = g['cal'].prev_work_end(lf_all)
             s = g['cal'].sub(fins[i], g['rem'])
             starts[i] = g['cal'].sub(s, g['lag']) if g['lag'] else s
-    return min(starts), max(fins)
+    return min(starts), max(fins), b_act
 
 
 def _rsrc_place(n, cal, start_req, finish_req, xf=None):
@@ -744,7 +755,12 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         to_lead(at)
                     ls_bound = at if ls_bound is None else min(ls_bound, at)
         if n['asg']:
-            ls, lf = _rsrc_backward(n['asg'], cal, lf, ls_bound, lead_at)
+            ls, lf, b_act = _rsrc_backward(n['asg'], cal, lf, ls_bound, lead_at)
+            # LC for a lag's bound (RB, H15, 18-Oct-2026): where it binds and no
+            # activity working time separates its close from the late start, P6
+            # prints the close (ZZ-CPP-SBNA, -SBNC; H15-10 A1070)
+            if b_act is not None and ls >= b_act and cal.between(b_act, ls) == 0:
+                ls = b_act
             # LC on resource dependent work (H10, 17-Oct-2026): where no
             # activity working time separates the instant a lead lands on (at
             # the activity calendar's close before it, off working time) from
@@ -898,7 +914,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         if n['asg']:
             # RD: the assignments finish by the bound on their own calendars,
             # as on the backward pass (ZZ-CPP-RSRC H1)
-            new_es, new_ef = _rsrc_backward(n['asg'], cal, ef_b, None)
+            new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)
             if new_es > cur:
                 n['restart' if n['started'] else 'es'], n['ef'] = new_es, new_ef
                 n.pop('rem_dates', None)
