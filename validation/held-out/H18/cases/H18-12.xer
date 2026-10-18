@@ -1,0 +1,146 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	CURRTYPE
+%F	curr_id	decimal_digit_cnt	curr_symbol	decimal_symbol	digit_group_symbol	pos_curr_fmt_type	neg_curr_fmt_type	curr_type	curr_short_name	group_digit_cnt	base_exch_rate
+%R	1	2	$	.	,	#1.1	(#1.1)	US Dollar	USD	3	1
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9112	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	H18-12					91120		1000	10	10	0	500		0	0	2026-06-08 00:00	2026-05-18 08:00	2026-07-31 17:00					DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	91120	N	H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00	9112			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()((0||0(d|46174)())(0||1(d|46251)())(0||2(d|46262)())(0||3(d|46276)())))))
+%R	91121	N	H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00	9112			CA_Project	8	42	181	2184	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||6()((0||0(s|07:00|f|11:00)())))(0||7()())))(0||Exceptions()((0||0(d|46177)())(0||1(d|46247)())(0||2(d|46307)())(0||3(d|46325)())(0||4(d|46339)())))))
+%R	91125	N	H18-12-R1 Mon-Sat 08:00-16:00				CA_Base	8	48	206	2496	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()((0||0(s|08:00|f|16:00)())))(0||7()((0||0(s|08:00|f|16:00)())))))(0||Exceptions()((0||0(d|46233)())(0||1(d|46253)())(0||2(d|46290)())(0||3(d|46294)())))))
+%R	91126	N	H18-12-R2 Every day 06:00-18:00				CA_Base	12	84	361	4368	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|06:00|f|18:00)())))(0||2()((0||0(s|06:00|f|18:00)())))(0||3()((0||0(s|06:00|f|18:00)())))(0||4()((0||0(s|06:00|f|18:00)())))(0||5()((0||0(s|06:00|f|18:00)())))(0||6()((0||0(s|06:00|f|18:00)())))(0||7()((0||0(s|06:00|f|18:00)())))))(0||Exceptions()((0||0(d|46174)())(0||1(d|46180)())(0||2(d|46206)())(0||3(d|46213)())(0||4(d|46231)())(0||5(d|46235)())(0||6(d|46245)())(0||7(d|46250)())(0||8(d|46257)())))))
+%R	91127	N	H18-12-R3 Mon-Thu 07:00-12:00 and 12:30-17:30				CA_Base	10	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||6()())(0||7()())))(0||Exceptions()((0||0(d|46160)())(0||1(d|46170)())(0||2(d|46174)())(0||3(d|46191)())(0||4(d|46212)())(0||5(d|46244)())(0||6(d|46252)())(0||7(d|46260)())(0||8(d|46281)())))))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109112	9112	SD_None	N	Y	N	N	FT_Start	rcal_Predecessor	Y	Y	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	91120	9112		1	1	Y	N	WS_Open	H18-12	Held-out P6 comparison case H18-12 (synthetic)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	RSRC
+%F	rsrc_id	parent_rsrc_id	clndr_id	role_id	shift_id	user_id	pobs_id	guid	rsrc_seq_num	email_addr	employee_code	office_phone	other_phone	rsrc_name	rsrc_short_name	rsrc_title_name	def_qty_per_hr	cost_qty_type	ot_factor	active_flag	auto_compute_act_flag	def_cost_qty_link_flag	ot_flag	curr_id	unit_id	rsrc_type	location_id	rsrc_notes	load_tasks_flag	level_flag	last_checksum
+%R	91121		91125					oFoCzzo+qli/jpvmvkk82w	1					H18-12-R1 synthetic crew	H18-12-R1		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	91122		91126					wRUmMGMSvWDkKIb1F8LSOA	2					H18-12-R2 synthetic crew	H18-12-R2		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	91123		91127					ELCe6IfNz0LjWT3pH16ovw	3					H18-12-R3 synthetic crew	H18-12-R3		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9112000	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	A1000	Activity A1000, 0 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	0	0	0	0		2026-05-18 08:00	2026-05-18 08:00								2026-05-18 08:00					PT_Normal										0	0					admin	admin		
+%R	9112001	9112	91120	91121	75	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	A1010	Activity A1010, 8 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				2	0	0	0	8	0	0	0		2026-05-18 07:00									2026-05-18 07:00					PT_Normal										0	0					admin	admin		
+%R	9112002	9112	91120	91120	18	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	A1020	Activity A1020, 80 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				66	0	0	0	80	0	0	0		2026-05-18 08:00									2026-05-18 08:00					PT_Normal										0	0					admin	admin		
+%R	9112003	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1030	Activity A1030, 16 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	16	0	0	0		2026-05-18 08:00	2026-05-19 17:00								2026-05-18 08:00					PT_Normal										0	0					admin	admin		
+%R	9112004	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1040	Activity A1040, 56 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	56	0	0	0		2026-05-18 08:00	2026-05-26 17:00								2026-05-18 08:00					PT_Normal										0	0					admin	admin		
+%R	9112005	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1050	Activity A1050, 16 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	16	0	0	0		2026-05-18 08:00	2026-05-19 17:00								2026-05-18 08:00					PT_Normal										0	0					admin	admin		
+%R	9112006	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1060	Activity A1060, 12 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	12	0	0	0		2026-05-19 13:00	2026-05-20 17:00								2026-05-19 13:00					PT_Normal										0	0					admin	admin		
+%R	9112007	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1070	Activity A1070, 56 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	56	0	0	0		2026-05-18 08:00	2026-05-26 17:00								2026-05-18 08:00					PT_Normal										0	0					admin	admin		
+%R	9112008	9112	91120	91121	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1080	Activity A1080, 4 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	4	0	0	0		2026-06-01 07:00	2026-06-01 12:00								2026-06-01 07:00					PT_Normal										0	0					admin	admin		
+%R	9112009	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1090	Activity A1090, 12 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	12	0	0	0		2026-06-02 08:00	2026-06-03 12:00								2026-06-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9112010	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1100	Activity A1100, 80 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				80	0	0	0	80	0	0	0	2026-06-08 08:00										2026-06-08 08:00				CS_MSO	PT_Normal										0	0					admin	admin		
+%R	9112011	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1110	Activity A1110, 24 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	24	0	0	0		2026-05-18 13:00	2026-05-22 17:00								2026-05-18 13:00					PT_Normal										0	0					admin	admin		
+%R	9112012	9112	91120	91120	43	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	A1120	Activity A1120, 120 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				69	0	0	0	120	0	0	0		2026-05-26 08:00									2026-05-26 08:00					PT_Normal										0	0					admin	admin		
+%R	9112013	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1130	Activity A1130, 40 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	40	0	0	0		2026-05-29 13:00	2026-06-05 12:00								2026-05-29 13:00					PT_Normal										0	0					admin	admin		
+%R	9112014	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1140	Activity A1140 (resource dependent), 8 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00	91121			8	0	16	16	8	0	0	0											2026-06-22 08:00					PT_Normal										0	0					admin	admin		
+%R	9112015	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1150	Activity A1150 (resource dependent), 4 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00	91122			4	0	6	6	4	0	0	0											2026-06-12 08:00					PT_Normal										0	0					admin	admin		
+%R	9112016	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1160	Activity A1160, 16 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				16	0	0	0	16	0	0	0											2026-06-03 08:00					PT_Normal										0	0					admin	admin		
+%R	9112017	9112	91120	91121	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1170	Activity A1170, 32 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	32	0	0	0		2026-06-01 07:00	2026-06-05 11:00								2026-06-01 07:00					PT_Normal										0	0					admin	admin		
+%R	9112018	9112	91120	91121	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1180	Activity A1180, 8 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	8	0	0	0		2026-06-05 07:00	2026-06-05 11:00								2026-06-05 07:00					PT_Normal										0	0					admin	admin		
+%R	9112019	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1190	Activity A1190, 32 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	32	0	0	0		2026-05-25 08:00	2026-05-28 12:00								2026-05-25 08:00					PT_Normal										0	0					admin	admin		
+%R	9112020	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1200	Activity A1200, 12 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				12	0	0	0	12	0	0	0											2026-06-24 08:00					PT_Normal										0	0					admin	admin		
+%R	9112021	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1210	Activity A1210, 12 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				12	0	0	0	12	0	0	0											2026-06-22 08:00					PT_Normal										0	0					admin	admin		
+%R	9112022	9112	91120	91121	8	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	A1220	Activity A1220, 12 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				11	0	0	0	12	0	0	0		2026-05-25 07:00									2026-05-25 07:00					PT_Normal										0	0					admin	admin		
+%R	9112023	9112	91120	91120	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1230	Activity A1230, 80 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	80	0	0	0		2026-05-25 08:00	2026-06-05 12:00								2026-05-25 08:00					PT_Normal										0	0					admin	admin		
+%R	9112024	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1240	Activity A1240, 24 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				24	0	0	0	24	0	0	0											2026-06-19 08:00					PT_Normal										0	0					admin	admin		
+%R	9112025	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1250	Activity A1250, 32 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				32	0	0	0	32	0	0	0											2026-06-23 13:00					PT_Normal										0	0					admin	admin		
+%R	9112026	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1260	Activity A1260, 8 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				8	0	0	0	8	0	0	0											2026-07-03 08:00					PT_Normal										0	0					admin	admin		
+%R	9112027	9112	91120	91121	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1270	Activity A1270, 24 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				24	0	0	0	24	0	0	0											2026-07-08 07:00					PT_Normal										0	0					admin	admin		
+%R	9112028	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1280	Activity A1280, 32 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				32	0	0	0	32	0	0	0											2026-07-02 08:00					PT_Normal										0	0					admin	admin		
+%R	9112029	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1290	Activity A1290, 80 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				80	0	0	0	80	0	0	0											2026-06-15 08:00					PT_Normal										0	0					admin	admin		
+%R	9112030	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1300	Activity A1300 (resource dependent), 40 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				40	0	0	0	40	0	0	0	2026-07-01 17:00										2026-06-29 08:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9112031	9112	91120	91121	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1310	Activity A1310 (resource dependent), 24 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00	91121			24	0	48	48	24	0	0	0											2026-07-06 07:00					PT_Normal										0	0					admin	admin		
+%R	9112032	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1320	Activity A1320, 80 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				80	0	0	0	80	0	0	0											2026-07-08 08:00					PT_Normal										0	0					admin	admin		
+%R	9112033	9112	91120	91121	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1330	Activity A1330, 80 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				80	0	0	0	80	0	0	0											2026-07-08 07:00					PT_Normal										0	0					admin	admin		
+%R	9112034	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1340	Activity A1340, 4 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				4	0	0	0	4	0	0	0											2026-07-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9112035	9112	91120	91121	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1350	Activity A1350, 56 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				56	0	0	0	56	0	0	0											2026-07-22 07:00					PT_Normal										0	0					admin	admin		
+%R	9112036	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1360	Activity A1360, 12 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				12	0	0	0	12	0	0	0											2026-07-20 08:00					PT_Normal										0	0					admin	admin		
+%R	9112037	9112	91120	91121	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1370	Activity A1370, 80 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				80	0	0	0	80	0	0	0											2026-06-16 07:00					PT_Normal										0	0					admin	admin		
+%R	9112038	9112	91120	91120	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1380	Activity A1380, 40 h on H18-12 Mon-Fri 08:00-12:00 and 13:00-17:00				40	0	0	0	40	0	0	0											2026-07-13 08:00					PT_Normal										0	0					admin	admin		
+%R	9112039	9112	91120	91121	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1390	Activity A1390, 0 h on H18-12 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	0	0	0	0											2026-07-30 07:00					PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9112500	9112001	9112000	9112	9112	PR_SS	0				
+%R	9112501	9112002	9112000	9112	9112	PR_FS	0				
+%R	9112502	9112002	9112001	9112	9112	PR_FS	0				
+%R	9112503	9112003	9112000	9112	9112	PR_FS	0				
+%R	9112504	9112004	9112000	9112	9112	PR_SS	0				
+%R	9112505	9112005	9112003	9112	9112	PR_FS	0				
+%R	9112506	9112006	9112000	9112	9112	PR_FS	0				
+%R	9112507	9112006	9112005	9112	9112	PR_FF	0				
+%R	9112508	9112007	9112001	9112	9112	PR_FS	0				
+%R	9112509	9112008	9112003	9112	9112	PR_FS	24				
+%R	9112510	9112008	9112002	9112	9112	PR_FS	0				
+%R	9112511	9112009	9112008	9112	9112	PR_FS	0				
+%R	9112512	9112009	9112006	9112	9112	PR_FS	0				
+%R	9112513	9112010	9112002	9112	9112	PR_FS	40				
+%R	9112514	9112011	9112007	9112	9112	PR_SS	0				
+%R	9112515	9112011	9112003	9112	9112	PR_FS	0				
+%R	9112516	9112012	9112011	9112	9112	PR_FS	0				
+%R	9112517	9112012	9112005	9112	9112	PR_FS	0				
+%R	9112518	9112012	9112004	9112	9112	PR_SS	24				
+%R	9112519	9112013	9112012	9112	9112	PR_SS	0				
+%R	9112520	9112013	9112007	9112	9112	PR_FS	0				
+%R	9112521	9112014	9112010	9112	9112	PR_FS	4				
+%R	9112522	9112014	9112012	9112	9112	PR_FS	0				
+%R	9112523	9112015	9112012	9112	9112	PR_FS	-8				
+%R	9112524	9112015	9112007	9112	9112	PR_FS	0				
+%R	9112525	9112016	9112009	9112	9112	PR_FS	0				
+%R	9112526	9112016	9112011	9112	9112	PR_FS	0				
+%R	9112527	9112017	9112016	9112	9112	PR_FF	-8				
+%R	9112528	9112018	9112016	9112	9112	PR_FS	0				
+%R	9112529	9112019	9112011	9112	9112	PR_FS	0				
+%R	9112530	9112020	9112017	9112	9112	PR_FF	0				
+%R	9112531	9112020	9112014	9112	9112	PR_FS	4				
+%R	9112532	9112021	9112014	9112	9112	PR_SS	0				
+%R	9112533	9112021	9112013	9112	9112	PR_FF	0				
+%R	9112534	9112022	9112019	9112	9112	PR_SS	0				
+%R	9112535	9112023	9112019	9112	9112	PR_SS	-16				
+%R	9112536	9112024	9112021	9112	9112	PR_SS	-16				
+%R	9112537	9112024	9112018	9112	9112	PR_FS	8				
+%R	9112538	9112025	9112022	9112	9112	PR_FS	0				
+%R	9112539	9112025	9112021	9112	9112	PR_FS	-4				
+%R	9112540	9112026	9112020	9112	9112	PR_FS	40				
+%R	9112541	9112026	9112024	9112	9112	PR_FS	0				
+%R	9112542	9112027	9112024	9112	9112	PR_FS	0				
+%R	9112543	9112027	9112019	9112	9112	PR_SS	0				
+%R	9112544	9112027	9112026	9112	9112	PR_FF	40				
+%R	9112545	9112028	9112027	9112	9112	PR_SF	0				
+%R	9112546	9112029	9112021	9112	9112	PR_SF	24				
+%R	9112547	9112029	9112025	9112	9112	PR_FF	0				
+%R	9112548	9112030	9112025	9112	9112	PR_FS	0				
+%R	9112549	9112030	9112029	9112	9112	PR_SF	0				
+%R	9112550	9112031	9112023	9112	9112	PR_FS	0				
+%R	9112551	9112031	9112026	9112	9112	PR_FS	0				
+%R	9112552	9112032	9112027	9112	9112	PR_SS	0				
+%R	9112553	9112032	9112030	9112	9112	PR_FS	0				
+%R	9112554	9112033	9112025	9112	9112	PR_FF	8				
+%R	9112555	9112033	9112032	9112	9112	PR_SS	0				
+%R	9112556	9112034	9112030	9112	9112	PR_FS	0				
+%R	9112557	9112034	9112031	9112	9112	PR_SS	16				
+%R	9112558	9112035	9112032	9112	9112	PR_FS	0				
+%R	9112559	9112036	9112032	9112	9112	PR_FF	0				
+%R	9112560	9112036	9112033	9112	9112	PR_FF	8				
+%R	9112561	9112036	9112029	9112	9112	PR_FS	0				
+%R	9112562	9112037	9112029	9112	9112	PR_FF	0				
+%R	9112563	9112038	9112036	9112	9112	PR_SF	0				
+%R	9112564	9112038	9112030	9112	9112	PR_SF	0				
+%R	9112565	9112039	9112015	9112	9112	PR_FS	0				
+%R	9112566	9112039	9112028	9112	9112	PR_FS	0				
+%R	9112567	9112039	9112035	9112	9112	PR_FS	-8				
+%R	9112568	9112039	9112037	9112	9112	PR_FF	16				
+%R	9112569	9112039	9112038	9112	9112	PR_FS	4				
+%T	TASKRSRC
+%F	taskrsrc_id	task_id	proj_id	cost_qty_link_flag	role_id	acct_id	rsrc_id	pobs_id	skill_level	remain_qty	target_qty	remain_qty_per_hr	target_lag_drtn_hr_cnt	target_qty_per_hr	act_ot_qty	act_reg_qty	relag_drtn_hr_cnt	ot_factor	cost_per_qty	target_cost	act_reg_cost	act_ot_cost	remain_cost	act_start_date	act_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	rollup_dates_flag	target_crv	remain_crv	actual_crv	ts_pend_act_end_flag	guid	rate_type	act_this_per_cost	act_this_per_qty	curv_id	rsrc_type	cost_per_qty_source_type	create_user	create_date	has_rsrchours	taskrsrc_sum_id
+%R	9112800	9112014	9112	Y			91121			16	16	2	0	2	0	0	0		0	0	0	0	0					2026-06-22 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9112801	9112015	9112	Y			91122			4	4	1	0	1	0	0	0		0	0	0	0	0					2026-06-12 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9112802	9112015	9112	Y			91121			2	2	0.5	0	0.5	0	0	0		0	0	0	0	0					2026-06-12 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9112803	9112031	9112	Y			91121			48	48	2	0	2	0	0	0		0	0	0	0	0					2026-07-06 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%E
