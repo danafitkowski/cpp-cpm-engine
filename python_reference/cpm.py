@@ -2295,7 +2295,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             open-ended activities critical"). When True, unfinished work with
             no successor takes no later finish than its own early finish, so
             its total float is at most 0; its free float is unchanged (OC,
-            v2.10.11). Default False, as P6's is.
+            v2.10.11). Under retained logic completed work with no successor
+            is an open end too and hands back the date it carries; a successor
+            that is level of effort or a WBS summary (a relationship to one,
+            or the activity's successors_left_out count) makes work not
+            open-ended. Default False, as P6's is.
         use_expected_finish: P6 SCHEDOPTIONS sched_use_expect_end_flag
             ("Use Expected Finish Dates"). When True, an unfinished activity
             carrying ``expected_finish`` (P6 TASK.expect_end_date as written,
