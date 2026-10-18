@@ -3713,6 +3713,60 @@ compareFixture('F182 - OC: the same network under progress override and no Must 
     relationship_lag_calendar: 'rcal_Predecessor', schedule_mode: 'progress_override', open_critical: true,
 });
 
+// OC (v2.10.11, P6 probes ZZ-CPP-OER / -OEP / -OEL): under retained logic completed work with no successor at all is
+// an open end too, and hands back the date it carries (E1, whose only successor E1C is complete); one that runs into
+// FIN hands back FIN's (E1B). Work whose only successor is left out of the network is not open-ended: linked here to
+// a level of effort (E2 into its start, E2C into its finish) or a WBS summary (E3), or carrying a converter's count of
+// such links (E2B, successors_left_out). An As Late As Possible open end keeps its slide (E7).
+const oeDone = { actual_start: '2026-12-03 08:00', actual_finish: '2026-12-04 17:00', is_complete: true,
+    remaining_duration: 0 };
+const oeActs = (A) => [
+    A('A1', 16), A('A2', 40), A('FIN', 0, { task_type: 'TT_FinMile' }), A('Z', 8),
+    A('E1', 8), A('E1C', 16, oeDone), A('E1B', 8), A('E1BC', 16, oeDone),
+    A('E2', 8), A('L2', 40, { task_type: 'TT_LOE' }), A('E2B', 8, { successors_left_out: 1 }),
+    A('E2C', 8), A('L2C', 32, { task_type: 'TT_LOE' }), A('E3', 8), A('W3', 72, { task_type: 'TT_WBS' }),
+    A('E7', 8, { constraint: { type: 'CS_ALAP' } })];
+const oeRels = (R) => [R('A1', 'A2'), R('A2', 'FIN'), R('A2', 'Z'), R('A1', 'E1'), R('E1', 'E1C'), R('A1', 'E1B'),
+    R('E1B', 'E1BC'), R('E1BC', 'FIN'), R('A1', 'E2'), R('E2', 'L2', 'SS'), R('L2', 'FIN', 'FF'), R('A1', 'E2B'),
+    R('A1', 'E2C'), R('E2C', 'L2C', 'FF'), R('L2C', 'FIN', 'FF'), R('A1', 'E3'), R('E3', 'W3'), R('A1', 'E7')];
+compareFixture('F183 - OC: completed work with no successor is an open end under retained logic; a level of effort or WBS summary successor makes work not open-ended, in hours', {
+    activities: oeActs(hA), relationships: oeRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', open_critical: true,
+}, { hours: true });
+compareFixture('F184 - OC: the same network under retained logic, whole days', {
+    activities: oeActs(dA), relationships: oeRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', open_critical: true,
+});
+
+// XC (v2.10.11, P6 probes ZZ-CPP-XCR / -XCO): an expected finish in force on work not yet started drops the early side
+// of Finish On or After (N5), Finish On (N7) and Mandatory Finish (N8), as starting the work does; the late side of
+// Finish On and Mandatory Finish stays. N9 carries no constraint.
+const xcN = (A, code, cstr) => A(code, 24, Object.assign({ expected_finish: '2026-12-09 17:00' },
+    cstr ? { constraint: { type: cstr, date: '2026-12-11 17:00' } } : {}));
+const xcActs = (A) => [A('L', 120), A('FIN', 0, { task_type: 'TT_FinMile' }),
+    A('P5', 8), xcN(A, 'N5', 'CS_MEOA'), A('S5', 8), A('P7', 8), xcN(A, 'N7', 'CS_MEO'), A('S7', 8),
+    A('P8', 8), xcN(A, 'N8', 'CS_MANDFIN'), A('S8', 8), A('P9', 8), xcN(A, 'N9', null), A('S9', 8)];
+const xcRels = (R) => [R('L', 'FIN')].concat(...['5', '7', '8', '9'].map((i) =>
+    [R('P' + i, 'N' + i), R('N' + i, 'S' + i), R('S' + i, 'FIN')]));
+compareFixture('F185 - XC: an expected finish drops the early side of a finish constraint on work not yet started, in hours', {
+    activities: xcActs(hA), relationships: xcRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', use_expected_finish: true,
+}, { hours: true });
+compareFixture('F186 - XC: the same, whole days', {
+    activities: xcActs(dA), relationships: xcRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', use_expected_finish: true,
+});
+
+// v2.10.11: the relationship checks both engines raise - a self-loop (dropped), a type that is not FS / SS / FF / SF
+// (read as FS), a lag that is not a number (read as 0) and a link to an activity not in the network (dropped). Until
+// v2.10.11 the Python reference raised none of the four, and a self-loop reached its cycle check.
+compareFixture('F187 - relationship checks: a self-loop, an unknown type, a lag that is not a number, a link to no activity', {
+    activities: [dA('A', 16), dA('B', 8), dA('C', 8)],
+    relationships: [dR('A', 'B'), dR('B', 'B'), { from_code: 'A', to_code: 'C', type: 'XX', lag_days: 0 },
+        { from_code: 'B', to_code: 'C', type: 'FS', lag_days: '5abc' }, dR('C', 'GONE')],
+    data_date: '2026-12-07', cal_map: HCAL,
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

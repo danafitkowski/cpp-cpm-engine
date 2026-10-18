@@ -1,0 +1,30 @@
+{
+ "case": "ZZ-CPP-OEL",
+ "proj_id": 5319,
+ "differences": [
+  "TASK E9 remain_drtn_hr_cnt: xer '16' p6 13.0",
+  "TASKRSRC E9/ZZ-CPP-OEL-RS target_qty_per_hr: xer '1' p6 0.816326530612245"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "E9": {
+    "remain_drtn_hr_cnt": 13.0,
+    "target_drtn_hr_cnt": 40.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "E9",
+    "rsrc_short_name": "ZZ-CPP-OEL-RS",
+    "remain_qty": 16.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.816326530612245,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 24.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

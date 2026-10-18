@@ -46,7 +46,7 @@ function run(text) {
         task_type: k.task_type, expected_finish: k.expected_finish, constraint: k.constraint,
         constraint2: k.constraint2, external_early_start: k.external_early_start,
         external_late_finish: k.external_late_finish, suspend_date: k.suspend_date, resume_date: k.resume_date,
-        resource_assignments: k.resource_assignments,
+        resource_assignments: k.resource_assignments, successors_left_out: k.successors_left_out,
     }, !k.is_complete ? { remaining_hours: k.remaining_hours, remaining_hours_days: k.remaining_hours_days } : {},
     k.assignments ? { assignments: k.assignments } : {},
     k.actual_start ? { actual_start: k.actual_start } : {},

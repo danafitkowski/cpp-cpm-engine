@@ -313,9 +313,13 @@ def _rsrc_place(n, cal, start_req, finish_req, xf=None):
 def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, schedule_mode='retained_logic',
                       lag_calendar='predecessor', project_calendar=None, project_finish=None,
                       ss_lag_from='early_start', use_expected_finish=False, use_external_dates=True,
-                      float_type='FT_FF', open_critical=False):
+                      float_type='FT_FF', open_critical=False, open_critical_linked=None):
     cal_map = cal_map or {}
     cals = {}
+    # OC: work whose successor was left out of this network (level of effort,
+    # WBS summary) is not open-ended (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C,
+    # E3); compute_cpm hands the codes on
+    oc_linked = set(open_critical_linked or ())
 
     def cal_of(cid):
         if cid not in cals:
@@ -603,9 +607,14 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             else:
                 n['es'] = es
             n['ef'] = ef
+        # XC (v2.10.11): an expected finish in force drops the early side of
+        # Finish On or After, Finish On and Mandatory Finish on work not yet
+        # started, as starting the work does; the late side of Finish On and
+        # Mandatory Finish stays (ZZ-CPP-XCR, -XCO N5, N7, N8)
         for k in ('c1', 'c2'):
             cs = n[k]
-            if cs and cs['at'] is not None and cs['type'] in ('FNET', 'FO', 'MS_Finish') and not n['started']:
+            if (cs and cs['at'] is not None and cs['type'] in ('FNET', 'FO', 'MS_Finish') and not n['started']
+                    and not xf_on):
                 fin = cs['at']
                 if n['rem'] == 0:
                     # A zero-length activity sits at the constraint's instant
@@ -672,7 +681,13 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 # project finish, where P6 stores its late dates, and bounds
                 # its predecessors from there through the link and its lag
                 # (ZZ-CPP-H9FF X1-X5, Z2)
-                n['lpt'] = lpt if lpt is not None else seed
+                # OC (v2.10.11): under "Make open-ended activities critical"
+                # one with no successor at all is an open end, and hands back
+                # the date it carries, no later than the project finish
+                # (ZZ-CPP-OER, -OEL E1; under progress override nothing passes
+                # through completed work, -OEP E1)
+                open_end = open_critical and not succs[c] and c not in oc_linked
+                n['lpt'] = lpt if lpt is not None else (min(seed, stamp(n, True)) if open_end else seed)
             continue
         # resource dependent work snaps on each assignment's calendar (RD)
         lf = seed if n['asg'] else (cal.prev_work_end(seed) if n['rem'] > 0 else seed)
@@ -782,8 +797,10 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # their links (ZZ-CPP-OCR, -OCO, -OCS, -OCM: D1, D3, D6, D7, D9, D10,
         # D13-D16, FIN). Work with a start-to-start successor only is not
         # open-ended (D4), nor is work with no predecessor (D2). Free float stays
-        # as it was: it runs to the project's early finish
-        if open_critical and not succs[c]:
+        # as it was: it runs to the project's early finish. A successor that is
+        # level of effort or a WBS summary counts, though it bounds nothing
+        # (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C, E3)
+        if open_critical and not succs[c] and c not in oc_linked:
             lf = min(lf, n['rem_dates'][1] if n.get('rem_dates') else n['ef'])
         if n['asg']:
             ls, lf, b_act = _rsrc_backward(n['asg'], cal, lf, ls_bound, lead_at)

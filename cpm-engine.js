@@ -1846,7 +1846,7 @@ const _FINISH_TYPE_NAMES = { FNET: 'Finish On or After', FO: 'Finish On',
 
 // Disclose a finish constraint whose early side UW dropped, only where it
 // would have moved the finish; Finish On keeps its violation report.
-function _underwayFinishNoop(code, ef, cstr, label, nodeCal, alerts) {
+function _underwayFinishNoop(code, ef, cstr, label, nodeCal, alerts, why) {
     if (!cstr.date) return;
     const cdNum = _constraintFinishNum(cstr, nodeCal, [], code);
     if (cdNum <= 0) return;
@@ -1857,8 +1857,11 @@ function _underwayFinishNoop(code, ef, cstr, label, nodeCal, alerts) {
             severity: 'WARN',
             context: 'constraint-noop',
             message: name + tag + ' ' + cstr.date + ' on ' + code + ' does not move ' +
-                'its finish: the activity is under way, and P6 drops the early ' +
-                'side of a finish constraint once work has started.',
+                (why === 'expected-finish'
+                    ? 'its finish: its expected finish is in force, and P6 drops the early ' +
+                      'side of a finish constraint there, as once work has started.'
+                    : 'its finish: the activity is under way, and P6 drops the early ' +
+                      'side of a finish constraint once work has started.'),
         });
     } else if (cstr.type === 'FO' && ef > cdNum) {
         alerts.push({
@@ -2639,6 +2642,10 @@ function computeCPMHours(activities, relationships, o) {
     // OC: "Make open-ended activities critical" (SCHEDOPTIONS
     // sched_open_critical_flag); off unless the caller hands it on
     const openCritical = !!o.open_critical;
+    // OC: work whose successor was left out of this network (level of effort,
+    // WBS summary) is not open-ended (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C,
+    // E3); computeCPM hands the codes on
+    const ocLinked = new Set(Array.isArray(o.open_critical_linked) ? o.open_critical_linked : []);
     const cals = new Map();
     // Python's `or`: an empty calendar entry falls back as a missing one does
     const present = (x) => ((x && (typeof x !== 'object' || Object.keys(x).length > 0)) ? x : null);
@@ -2918,9 +2925,13 @@ function computeCPMHours(activities, relationships, o) {
             }
             n.ef = ef;
         }
+        // XC (v2.10.11): an expected finish in force drops the early side of
+        // Finish On or After, Finish On and Mandatory Finish on work not yet
+        // started, as starting the work does; the late side of Finish On and
+        // Mandatory Finish stays (ZZ-CPP-XCR, -XCO N5, N7, N8)
         for (const cs of [n.c1, n.c2]) {
             if (cs && cs.at !== null && (cs.type === 'FNET' || cs.type === 'FO' || cs.type === 'MS_Finish') &&
-                    !n.started) {
+                    !n.started && !xfOn) {
                 let fin = cs.at;
                 if (n.rem === 0 && !onWorkingTime(cal, fin)) fin = cal.nextWork(fin);
                 if (cs.type === 'MS_Finish' || fin > n.ef) {
@@ -2984,7 +2995,13 @@ function computeCPMHours(activities, relationships, o) {
                 // project finish, where P6 stores its late dates, and bounds
                 // its predecessors from there through the link and its lag
                 // (ZZ-CPP-H9FF X1-X5, Z2)
-                n.lpt = (lpt !== null) ? lpt : seed;
+                // OC (v2.10.11): under "Make open-ended activities critical"
+                // one with no successor at all is an open end, and hands back
+                // the date it carries, no later than the project finish
+                // (ZZ-CPP-OER, -OEL E1; under progress override nothing passes
+                // through completed work, -OEP E1)
+                const openEnd = openCritical && !succs.get(c).length && !ocLinked.has(c);
+                n.lpt = (lpt !== null) ? lpt : (openEnd ? Math.min(seed, stamp(n, true)) : seed);
             }
             continue;
         }
@@ -3086,8 +3103,10 @@ function computeCPMHours(activities, relationships, o) {
         // follow through their links (ZZ-CPP-OCR, -OCO, -OCS, -OCM: D1, D3,
         // D6, D7, D9, D10, D13-D16, FIN). Work with a start-to-start successor
         // only is not open-ended (D4), nor is work with no predecessor (D2).
-        // Free float stays as it was: it runs to the project's early finish
-        if (openCritical && !succs.get(c).length) {
+        // Free float stays as it was: it runs to the project's early finish.
+        // A successor that is level of effort or a WBS summary counts, though
+        // it bounds nothing (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C, E3)
+        if (openCritical && !succs.get(c).length && !ocLinked.has(c)) {
             lf = Math.min(lf, n.rem_dates ? n.rem_dates[1] : n.ef);
         }
         let ls;
@@ -3534,7 +3553,7 @@ function _hoursPass(activities, relationships, nodes, p) {
             project_calendar: p.projectCalendar, project_finish: p.projectFinish || null,
             ss_lag_from: p.ssLagFrom, use_expected_finish: p.useExpectedFinish,
             use_external_dates: p.useExternalDates, float_type: p.floatType,
-            open_critical: p.openCritical,
+            open_critical: p.openCritical, open_critical_linked: p.openCriticalLinked || [],
         });
     } catch (e) {
         p.alerts.push({
@@ -3712,6 +3731,12 @@ function computeCPM(activities, relationships, opts) {
     const nodes = Object.create(null);
     // v2.9.42 — TT_LOE / TT_WBS activities excluded from the network.
     const excludedByTaskType = [];
+    // OC (v2.10.11) — the work with a successor left out of the network:
+    // linked here to an excluded activity, or carrying parseXER's count of
+    // such links (successors_left_out). P6 counts a successor that is level
+    // of effort or a WBS summary when it decides whether work is open-ended,
+    // though neither bounds it (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C, E3).
+    const _ocLinked = new Set();
     const nodeCodesOrdered = [];
     // v2.9.20 A16-M4 — empty schedule alert. Returning an empty result
     // silently lets downstream consumers compute Δ against an empty
@@ -3796,6 +3821,7 @@ function computeCPM(activities, relationships, opts) {
             });
             continue;
         }
+        if (Number(a.successors_left_out) > 0) _ocLinked.add(code);
         // v2.9.20 A16-L3 — strip ASCII control characters from name field.
         // Activity names with embedded \n / \r / \x00 silently break HTML
         // / CSV / DOCX renderers downstream. INFO when sanitization fires
@@ -4094,6 +4120,8 @@ function computeCPM(activities, relationships, opts) {
     // Adjacency.
     const predMap = Object.create(null);
     const succMap = Object.create(null);
+    // OC (v2.10.11): the work linked to activities left out by task type
+    const _ocExcluded = new Set(excludedByTaskType.map((x) => x.code));
     for (const r of relationships) {
         // v2.9.22 — trim whitespace on relationship endpoints to match the
         // activity-side trim at line ~1251. Activities are keyed by trimmed
@@ -4148,6 +4176,10 @@ function computeCPM(activities, relationships, opts) {
             });
         }
         if (!(fc in nodes) || !(tc in nodes)) {
+            // OC (v2.10.11): P6 counts a successor that is level of effort or
+            // a WBS summary when it decides whether work is open-ended, though
+            // neither bounds it (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C, E3)
+            if ((fc in nodes) && _ocExcluded.has(tc)) _ocLinked.add(fc);
             // Audit T1 fix: emit a non-blocking ALERT so DAUBERT.md's
             // "No silent wrong-answer paths" claim holds for strict mode.
             // Salvage mode logs DANGLING_REL separately; strict mode previously
@@ -5477,10 +5509,15 @@ function computeCPM(activities, relationships, opts) {
         // After, Finish On and Mandatory Finish is dropped (see
         // _UNDERWAY_DROPPED_FINISH_TYPES); Finish On or Before still reports.
         const _underway = hasActualStart && !node.is_complete;
+        // XC (v2.10.11) — so does an expected finish in force on work not yet
+        // started; the late side of Finish On and Mandatory Finish stays (see
+        // the hours pass). Python paired site: the same test in compute_cpm.
+        const _xfDrop = _xf && !hasActualStart && node.task_type !== 'TT_Mile' &&
+            node.task_type !== 'TT_FinMile';
         const _efCstr = [cstr, cstr2].map((_c, _i) => {
-            if (_underway && _c && _UNDERWAY_DROPPED_FINISH_TYPES.indexOf(_c.type) !== -1) {
+            if ((_underway || _xfDrop) && _c && _UNDERWAY_DROPPED_FINISH_TYPES.indexOf(_c.type) !== -1) {
                 _underwayFinishNoop(code, node.ef, _c, _i === 0 ? 'primary' : 'secondary',
-                    nodeCal, alerts);
+                    nodeCal, alerts, _underway ? 'underway' : 'expected-finish');
                 return null;
             }
             if (!hasActualStart && ddNum > 0 && _c && _c.date && (_c.type === 'MS_Finish' || _c.type === 'MFO')) {
@@ -6110,7 +6147,16 @@ function computeCPM(activities, relationships, opts) {
                     }
                     if (_b !== null && _b !== undefined && (_lpt === null || _b < _lpt)) _lpt = _b;
                 }
-                if (_lpt !== null) node.rl_late_passthrough = _lpt;
+                if (_lpt !== null) {
+                    node.rl_late_passthrough = _lpt;
+                } else if (_openCritical && !(succMap[code] || []).some((s) => nodes[s.to_code]) &&
+                        !_ocLinked.has(code)) {
+                    // OC (v2.10.11) — under "Make open-ended activities
+                    // critical" completed work with no successor at all is an
+                    // open end, and hands back the date it carries (see the
+                    // hours pass). Python paired site: the same block.
+                    node.rl_late_passthrough = _stampOf(node);
+                }
             }
             continue;
         }
@@ -6378,7 +6424,8 @@ function computeCPM(activities, relationships, opts) {
         // work with no successor takes no later finish than its own early
         // finish (see the hours pass). Python paired site: the same block in
         // compute_cpm.
-        if (_openCritical && !(succMap[code] || []).some((s) => nodes[s.to_code]) && node.ef < minLF) {
+        if (_openCritical && !(succMap[code] || []).some((s) => nodes[s.to_code]) && !_ocLinked.has(code) &&
+                node.ef < minLF) {
             minLF = node.ef;
             _mlBy = null;
         }
@@ -7215,7 +7262,7 @@ function computeCPM(activities, relationships, opts) {
             opts.sched_calendar_on_relationship_lag || 'successor',
         floatType: _floatType, ssLagFrom: _ssLagFrom, projectFinish: _projectFinishOpt,
         useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates,
-        openCritical: _openCritical, alerts,
+        openCritical: _openCritical, openCriticalLinked: Array.from(_ocLinked), alerts,
     });
     if (_lagCalAlert) {
         // LA (13-Oct-2026): now that the hours pass has run, say which figures
@@ -7624,6 +7671,9 @@ function parseXER(content) {
     // Previously TT_LOE / TT_WBS / fully-completed (remaining<=0) rows were
     // discarded without leaving a trace; now every drop is enumerated below.
     const droppedActivities = [];
+    // OC (v2.10.11) — the TT_LOE / TT_WBS task ids left out, for the count of
+    // successors left out each kept task carries (see the link loop below).
+    const _leftOutIds = new Set();
     let currentTable = '';
     let headers = [];
     // v2.9.49 — the first PROJECT row, for the Must Finish By
@@ -7852,6 +7902,7 @@ function parseXER(content) {
                 }
                 if (_taskType === 'TT_LOE') {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'level-of-effort' });
+                    _leftOutIds.add(taskId);
                     _MC.parseAlerts.push({
                         severity: 'INFO',
                         context: 'task-dropped',
@@ -7860,6 +7911,7 @@ function parseXER(content) {
                     });
                 } else if (_taskType === 'TT_WBS') {
                     droppedActivities.push({ task_code: row.task_code || taskId, task_type: _taskType, reason: 'wbs-summary' });
+                    _leftOutIds.add(taskId);
                     _MC.parseAlerts.push({
                         severity: 'INFO',
                         context: 'task-dropped',
@@ -8186,6 +8238,14 @@ function parseXER(content) {
         const toTask = _MC.tasks[pred.taskId];
         const fromHam = _MC.hammocks[pred.predTaskId];
         const toHam = _MC.hammocks[pred.taskId];
+        // OC (v2.10.11) — a successor left out of the network (level of
+        // effort, WBS summary, hammock) still makes the work not open-ended
+        // under "Make open-ended activities critical" (ZZ-CPP-OER / -OEP /
+        // -OEL E2, E2B, E2C, E3); hand it on to computeCPM as
+        // successors_left_out.
+        if (fromTask && !toTask && (toHam || _leftOutIds.has(pred.taskId))) {
+            fromTask.successors_left_out = (fromTask.successors_left_out || 0) + 1;
+        }
         // Case 1: pred→task (both normal) — feed into normal CPM.
         if (fromTask && toTask) {
             toTask.preds.push(pred);
@@ -11473,17 +11533,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '178 cross-validation fixtures. The harness defines 12315 ' +
+                '183 cross-validation fixtures. The harness defines 12887 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 12315 / 12315" is the whole comparison surface. ' +
+                'reported "Checks: 12887 / 12887" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 12315 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 12887 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 176 of the 178 fixtures: ' +
+                'severity-level alert parity, compared on 181 of the 183 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11522,18 +11582,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '12315 comparisons it defines over 178 fixtures and skips none; every ' +
+                '12887 comparisons it defines over 183 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '178 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '183 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 12315 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 12887 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 176 of the 178 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 181 of the 183 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

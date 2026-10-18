@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.11",
-  "generated_utc": "2026-10-18T21:57:10.167Z",
+  "generated_utc": "2026-10-18T22:48:01.868Z",
   "fixtures": {
-    "total": 178,
-    "passed": 178,
+    "total": 183,
+    "passed": 183,
     "failed": 0
   },
   "checks": {
-    "executed": 12315,
+    "executed": 12887,
     "failed": 0,
-    "passed": 12315,
+    "passed": 12887,
     "skipped": 0,
-    "surface": 12315
+    "surface": 12887
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 176,
-    "project_finish": 176,
-    "critical_codes": 176,
-    "topo_order": 176,
-    "alert_count": 176,
-    "alert_severity_counts": 176,
-    "node <id>": 11217,
+    "project_finish_num": 181,
+    "project_finish": 181,
+    "critical_codes": 181,
+    "topo_order": 181,
+    "alert_count": 181,
+    "alert_severity_counts": 181,
+    "node <id>": 11757,
     "threw (both engines)": 2,
-    "hours": 40
+    "hours": 42
   },
   "rows": [
     {
@@ -1450,6 +1450,46 @@
       "id": "F182",
       "name": "F182 - OC: the same network under progress override and no Must Finish By, whole days",
       "checks": 132,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F183",
+      "name": "F183 - OC: completed work with no successor is an open end under retained logic; a level of effort or WBS summary successor makes work not open-ended, in hours",
+      "checks": 137,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F184",
+      "name": "F184 - OC: the same network under retained logic, whole days",
+      "checks": 123,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F185",
+      "name": "F185 - XC: an expected finish drops the early side of a finish constraint on work not yet started, in hours",
+      "checks": 147,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F186",
+      "name": "F186 - XC: the same, whole days",
+      "checks": 132,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F187",
+      "name": "F187 - relationship checks: a self-loop, an unknown type, a lag that is not a number, a link to no activity",
+      "checks": 33,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

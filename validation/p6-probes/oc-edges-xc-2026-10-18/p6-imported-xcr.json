@@ -1,0 +1,9 @@
+{
+ "case": "ZZ-CPP-XCR",
+ "proj_id": 5320,
+ "differences": [],
+ "resource_dependent": {
+  "tasks": {},
+  "assignments": []
+ }
+}

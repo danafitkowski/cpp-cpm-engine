@@ -97,6 +97,8 @@ The rules these give:
 | XL | An expected finish does not apply to As Late As Possible work. | ZZ-CPP-XAR and -XAO: X1 to X4, X8 (H20-11 A1130's shape: ZZ-CPP-XAO X1) |
 | OC | Under "Make open-ended activities critical", an unfinished activity with no successor takes the earlier of its late finish and its own early finish as its late finish. | ZZ-CPP-OCR, -OCO, -OCS and -OCM |
 
+The edges of both rules were measured next, in [`../oc-edges-xc-2026-10-18/`](../oc-edges-xc-2026-10-18/): completed work with no successor, successors that are level of effort or a WBS summary, and an expected finish against every other constraint type.
+
 ## The engine
 
 | Engine | Probe rows matching P6 on the four dates and both floats |

@@ -70,6 +70,7 @@ field (50 ff_signed, 50 ff_signed_working_days on completed activities).
 validation/crossval-summary.json carries the figures of the latest run. See
 DAUBERT.md §3 for verification methodology.
 """
+import json
 import math
 import re
 from collections import defaultdict, deque
@@ -85,6 +86,22 @@ EPOCH_YEAR = 1900
 EPOCH_MONTH = 1
 EPOCH_DAY = 1
 _VALID_REL_TYPES = ('FS', 'SS', 'FF', 'SF')
+# v2.10.11 — the JS engine's _strictParseFloat: a number as it is; a string only
+# when the whole of it is a number ('5abc' is not); anything else NaN.
+_STRICT_FLOAT_RE = re.compile(r'^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$')
+
+
+def _strict_parse_float(x):
+    if x is None or x == '' or isinstance(x, bool):
+        return float('nan')
+    if isinstance(x, (int, float)):
+        return float(x)
+    if not isinstance(x, str):
+        return float('nan')
+    t = x.strip()
+    if not t or not _STRICT_FLOAT_RE.match(t):
+        return float('nan')
+    return float(t)
 
 
 # v2.9.14 F3 — Banker's-rounding parity helpers. Python's built-in `round()` is
@@ -1639,7 +1656,7 @@ _FINISH_TYPE_NAMES = {'FNET': 'Finish On or After', 'FO': 'Finish On',
                       'MS_Finish': 'Mandatory Finish', 'MFO': 'Mandatory Finish'}
 
 
-def _underway_finish_noop(code, ef, cstr, label, node_cal, alerts):
+def _underway_finish_noop(code, ef, cstr, label, node_cal, alerts, why='underway'):
     """Disclose a finish constraint whose early side UW dropped, only where
     it would have moved the finish; Finish On keeps its violation report."""
     if not cstr.get('date'):
@@ -1654,6 +1671,10 @@ def _underway_finish_noop(code, ef, cstr, label, node_cal, alerts):
             'severity': 'WARN',
             'context': 'constraint-noop',
             'message': (
+                f'{name}{tag} {cstr["date"]} on {code} does not move its '
+                f'finish: its expected finish is in force, and P6 drops the early '
+                f'side of a finish constraint there, as once work has started.'
+                if why == 'expected-finish' else
                 f'{name}{tag} {cstr["date"]} on {code} does not move its '
                 f'finish: the activity is under way, and P6 drops the early '
                 f'side of a finish constraint once work has started.'
@@ -2055,7 +2076,7 @@ def _hours_sibling(name):
 
 def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project_calendar, schedule_mode,
                 relationship_lag_calendar, float_type, ss_lag_from, project_finish, use_expected_finish,
-                use_external_dates, alerts, open_critical=False):
+                use_external_dates, alerts, open_critical=False, open_critical_linked=None):
     """Schedule the network in minutes (cpm_hours) and attach the instants to `nodes` (see HR above)."""
     by_code = {}
     for a in activities or []:
@@ -2169,7 +2190,8 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             acts, rels, data_date=data_date, cal_map=cal_map, schedule_mode=schedule_mode,
             lag_calendar=lag_cal, project_calendar=project_calendar, project_finish=project_finish or None,
             ss_lag_from=ss_lag_from, use_expected_finish=use_expected_finish,
-            use_external_dates=use_external_dates, float_type=float_type, open_critical=open_critical)
+            use_external_dates=use_external_dates, float_type=float_type, open_critical=open_critical,
+            open_critical_linked=open_critical_linked)
     except Exception as e:  # noqa: BLE001 - the day result stands whatever happens here
         alerts.append({'severity': 'WARN', 'context': 'hours-engine-error',
                        'message': ('The hours and minutes pass did not complete (%s); the dates are '
@@ -2360,6 +2382,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # v2.9.42 PAIRED FIX — TT_LOE / TT_WBS activities excluded from the network.
     # Mirrors cpm-engine.js Section C `excludedByTaskType`.
     excluded_by_task_type = []
+    # OC (v2.10.11) — the work with a successor left out of the network:
+    # linked here to an excluded activity, or carrying the converter's count of
+    # such links (successors_left_out). P6 counts a successor that is level of
+    # effort or a WBS summary when it decides whether work is open-ended, though
+    # neither bounds it (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C, E3). JS paired
+    # site: _ocLinked.
+    _oc_linked = set()
     for a in activities:
         if a is None:
             continue
@@ -2401,6 +2430,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 ),
             })
             continue
+        try:
+            if float(a.get('successors_left_out') or 0) > 0:
+                _oc_linked.add(code)
+        except (TypeError, ValueError):
+            pass
         dur_raw = a.get('duration_days')
         try:
             dur = float(dur_raw) if dur_raw is not None else 0.0
@@ -2583,14 +2617,52 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
 
     pred_map = defaultdict(list)
     succ_map = defaultdict(list)
+    _oc_excluded = {x['code'] for x in excluded_by_task_type}
     for r in relationships:
         fc = r.get('from_code', '')
         tc = r.get('to_code', '')
+        # v2.10.11 — the JS engine's four relationship alerts, raised here too
+        # (self-loop, invalid-rel-type, lag-non-finite, dangling-rel): until
+        # then this loop dropped or coerced each case silently, and a
+        # self-loop reached the cycle check. JS paired site: the adjacency
+        # loop of computeCPM.
+        if fc and tc and fc == tc:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'self-loop',
+                'message': ('Relationship has from_code === to_code (%s); self-loop dropped. Verify the '
+                            'source XER does not have an accidental self-reference on this activity.' % fc),
+            })
+            continue
         rtype = (r.get('type') or 'FS').upper()
         if rtype not in _VALID_REL_TYPES:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'invalid-rel-type',
+                'message': ('Relationship %s->%s has type=%s which is not one of %s. Coerced to FS.'
+                            % (fc, tc, json.dumps(r.get('type')), ', '.join(_VALID_REL_TYPES))),
+            })
             rtype = 'FS'
-        lag = float(r.get('lag_days', 0) or 0)
+        _lag_raw = _strict_parse_float(r.get('lag_days'))
+        lag = 0.0
+        if math.isfinite(_lag_raw):
+            lag = _lag_raw
+        elif r.get('lag_days') is not None and r.get('lag_days') != '':
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'lag-non-finite',
+                'message': ('Relationship %s->%s %s has non-finite lag_days=%s; coerced to 0. Verify the '
+                            'source XER row.' % (fc, tc, rtype, json.dumps(r.get('lag_days')))),
+            })
         if fc not in nodes or tc not in nodes:
+            # OC (v2.10.11): a successor left out by task type still counts
+            if fc in nodes and tc in _oc_excluded:
+                _oc_linked.add(fc)
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'dangling-rel',
+                'message': 'Dropped relationship %s->%s %s: endpoint(s) not in node set' % (fc, tc, rtype),
+            })
             continue
         rec = {'from_code': fc, 'to_code': tc, 'type': rtype, 'lag_days': lag}
         pred_map[tc].append(rec)
@@ -3728,9 +3800,15 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # After, Finish On and Mandatory Finish is dropped (see
         # _UNDERWAY_DROPPED_FINISH_TYPES); Finish On or Before still reports.
         _underway = has_actual_start and not node['is_complete']
+        # XC (v2.10.11) — so does an expected finish in force on work not yet
+        # started; the late side of Finish On and Mandatory Finish stays (see
+        # cpm_hours). JS paired site: the same test in computeCPM.
+        _xf_drop = (_xf and not has_actual_start
+                    and node.get('task_type') not in ('TT_Mile', 'TT_FinMile'))
         for _c, _lab in ((cstr, 'primary'), (cstr2, 'secondary')):
-            if _underway and _c and _c.get('type') in _UNDERWAY_DROPPED_FINISH_TYPES:
-                _underway_finish_noop(code, node['ef'], _c, _lab, node_cal, alerts)
+            if (_underway or _xf_drop) and _c and _c.get('type') in _UNDERWAY_DROPPED_FINISH_TYPES:
+                _underway_finish_noop(code, node['ef'], _c, _lab, node_cal, alerts,
+                                      'underway' if _underway else 'expected-finish')
                 continue
             if (not has_actual_start and dd_num > 0 and _c and _c.get('date')
                     and _c.get('type') in ('MS_Finish', 'MFO')):
@@ -4254,6 +4332,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         _lpt = _b
                 if _lpt is not None:
                     node['rl_late_passthrough'] = _lpt
+                elif (open_critical and not any(nodes.get(s['to_code']) for s in succ_map.get(code, []))
+                        and code not in _oc_linked):
+                    # OC (v2.10.11) — under "Make open-ended activities
+                    # critical" completed work with no successor at all is an
+                    # open end, and hands back the date it carries (see
+                    # cpm_hours). JS paired site: the same block.
+                    node['rl_late_passthrough'] = _stamp_of(node)
             continue
         node_cal = _cal_for(node)
         succs = succ_map.get(code, [])
@@ -4452,7 +4537,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # OC (v2.10.11) — "Make open-ended activities critical": unfinished work
         # with no successor takes no later finish than its own early finish
         # (see cpm_hours). JS paired site: the same block in computeCPM.
-        if open_critical and not any(nodes.get(s['to_code']) for s in succs) and node['ef'] < min_lf:
+        if (open_critical and not any(nodes.get(s['to_code']) for s in succs) and code not in _oc_linked
+                and node['ef'] < min_lf):
             min_lf = node['ef']
             _ml_by = None
 
@@ -5142,7 +5228,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         relationship_lag_calendar=relationship_lag_calendar, float_type=_float_type,
         ss_lag_from=_ss_lag_from, project_finish=project_finish,
         use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts,
-        open_critical=open_critical)
+        open_critical=open_critical, open_critical_linked=sorted(_oc_linked))
     if _lag_cal_alert is not None:
         # LA (13-Oct-2026): now that the hours pass has run, say which figures
         # walk the lag as P6 does. JS paired site after the _hoursPass call.

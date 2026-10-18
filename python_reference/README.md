@@ -200,9 +200,9 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  be78ccb6eead70da35b234f27dda3128f0140a674f6e07379c79bbcd00196bb2
+cpm.py          SHA-256:  a94fb8621a46a917a0d76f5ebc5ad673fbbb93e0deb8b1699577bcc825f5d557
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  a781441653fadb975624e8360f07f39db00470691f2d2d18092b1b25e148367a
+cpm_hours.py    SHA-256:  45d50a3c83850ae29c5e24d0fc44d3eeca0b785d3952d291ffd03220f7703f38
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -215,7 +215,20 @@ cpm_hours.py bumped from fa97fec2...: the hours pass does the same
 ZZ-CPP-XAR, -XAO and -XAN and ZZ-CPP-OCN to -OCM
 (validation/p6-probes/oc-xa-2026-10-18), after held-out case H20-11
 A1130 and a check of every scheduling option. The harness gains 4
-fixtures (F179-F182): 178 fixtures, 12315 of 12315 executed.)
+fixtures (F179-F182): 178 fixtures, 12315 of 12315 executed. Then, from
+be78ccb6... and a7814416...: under retained logic completed work with no
+successor is an open end too and hands back the date it carries; a
+successor that is level of effort or a WBS summary makes work not
+open-ended (a relationship to one handed to compute_cpm, or the
+activity's successors_left_out count) and bounds nothing; and an
+expected finish in force on work not yet started drops the early side
+of Finish On or After, Finish On and Mandatory Finish (XC), measured on
+the P6 probes ZZ-CPP-OER, -OEP, -OEL, -XCR and -XCO
+(validation/p6-probes/oc-edges-xc-2026-10-18). compute_cpm also raises
+the JS engine's four relationship alerts (self-loop, invalid-rel-type,
+lag-non-finite, dangling-rel), where it had dropped or coerced each case
+silently and a self-loop reached the cycle check. The harness gains 5
+fixtures (F183-F187): 183 fixtures, 12887 of 12887 executed.)
 
 (v2.10.10 candidate, unreleased, 2026-10-18 - cpm.py bumped from f3503896...:
 ENGINE_VERSION reads 2.10.10; nothing else. cpm_hours.py bumped from
@@ -757,15 +770,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 296772
-  sha-256:  be78ccb6eead70da35b234f27dda3128f0140a674f6e07379c79bbcd00196bb2
+  bytes: 301397
+  sha-256:  a94fb8621a46a917a0d76f5ebc5ad673fbbb93e0deb8b1699577bcc825f5d557
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 178 passed, 0 failed
-  Checks:   12315 / 12315 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 183 passed, 0 failed
+  Checks:   12887 / 12887 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 
