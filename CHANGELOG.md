@@ -12,6 +12,136 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.8 - 2026-10-18 - Resource dependent work, suspended work under progress override, completed successors and mandatory constraints under negative float: the situations held-out sets H8 to H15 left
+
+**Computed values move (Class A): engine math changed.** Seventeen changes, with the Python reference
+(`python_reference/cpm_hours.py`, and `cpm.py` for RO and MC) changed in step. Fifteen are in the hours pass only;
+RO and MC are in the whole-day pass too. Each was measured on synthetic P6 probe projects in Primavera P6
+Professional 23.12.1 before it went in.
+
+Resource dependent work (`TT_Rsrc` with its assignments):
+
+- **Work under way takes P6's remaining dates (RU).** The rule that starts the remaining work at the activity
+  calendar's next opening, where the resource's calendar puts the early start off it, now applies to work under way
+  as it did to work not started. The printed restart is the remaining start (H8-11 A1040; ZZ-CPP-RDU, -RDU2).
+- **Free float runs to a successor's remaining dates (RF)** where they differ from its early ones: the remaining start
+  for finish-to-start and start-to-start links, the remaining finish for finish-to-finish and start-to-finish.
+- **A finish requirement (RQ).** Under a finish-to-finish or start-to-finish requirement, the requirement first moves
+  to the activity calendar's next opening if it falls off that calendar's working time (one at a close stays). Each
+  assignment reaches it at its resource's last close at or before that point, starting its work that much earlier on
+  its own calendar. The activity starts where the first of its assignments would, at the activity calendar's next
+  opening, and every assignment runs from that one start on its own calendar. Where the requirement sets the start and
+  no activity working time separates the finish from it, the finish prints as the activity calendar's next opening.
+  This replaces the 13-October rule that walked the work back on the activity calendar; its 126 probe rows still
+  match (H9-09 A1230, H10-04 A1040; ZZ-CPP-RDSF S1-S10, ZZ-CPP-RD2F).
+- **A finish requirement after an expected finish (RX).** Under Use Expected Finish Dates, an FF or SF requirement later
+  than the expected finish places the work as RQ does, against the requirement, and the expected finish re-sizes
+  nothing. One at or before it leaves the 13-October rule (XR) to re-size each assignment to the expected finish
+  (H12-06 A1210; ZZ-CPP-RDXP, -RDXR).
+- **A start-to-start or start-to-finish bound (RL, RW).** With two or more assignments, the latest finish the bound
+  gives any of them is the activity's late finish, and every assignment runs back from there (H9-08 A1050). A lead
+  bounds each assignment at its own calendar's next opening at or after the instant the lead lands on, not at the lag
+  calendar's (H10-08 A1240). Where no activity working time separates that instant from the late start, the late start
+  prints as the instant (LC, as for timed work since v2.10.4; ZZ-CPP-RD2L).
+- **A bound held against the activity (RA).** A start-to-start or start-to-finish bound, a lag's or a lead's, is held
+  against the activity's late start, the earliest of its assignments' own. Where that start meets it, no assignment
+  takes it, not even one whose own late start is later, and the late finish is the later assignment's (H12-11 A1160;
+  ZZ-CPP-RD2S). Off an assignment's working time such a bound, a lag's as a lead's, moves on to that assignment's
+  next opening, not back to the close before (RG; H13-09 A1130, whose resource has the bound's day off; ZZ-CPP-SSNA to
+  -SSNI). Off the activity calendar's working time the bound first falls back to that calendar's close before it, and
+  the assignments take their next openings from there; where the bound binds and no activity working time separates
+  that close from the late start, the late start prints at the close (RB; H15-10 A1070, a bound at Tue 07:00 before an
+  08:00 opening, printed Mon 17:00; ZZ-CPP-SBNA to -SBNG and -SBNI).
+- **An assignment with no work left (RZ)** sits at its resource's next opening at or after the activity's start and
+  holds the early finish from there. A finish requirement moves it only where no assignment has work left (H13-06
+  A1230; ZZ-CPP-RDZA to -RDZD).
+- **Total float (RT).** Under Start Float, start float runs to the late finish less the remaining span on the activity
+  calendar, and so equals finish float. Under the smaller-float option the same holds for work under way under
+  progress override. Under retained logic, work under way keeps the start float its own late start gives, and so does
+  work not started (H9-01 A1280, H11-07 A1260, HW-07; ZZ-CPP-RDTF, -RDTR, -RDTS).
+
+Mandatory constraints:
+
+- **The Must Finish By caps a mandatory pin (MC).** A Mandatory Start or Mandatory Finish on work not started still
+  sets its own late date whatever its successors need, but the project's late finish caps it: where the pin would put
+  the late finish after the Must Finish By, the late finish is the one the Must Finish By gives and the float goes
+  negative, as P6 shows it. Its predecessors take their late dates from there. Both passes (H12-09 A1330;
+  ZZ-CPP-MSNP, -MSNR).
+
+Suspended work and completed work:
+
+- **A resume date under progress override (RO).** A resume date after the data date now holds the restart of work
+  under way under progress override, as it already did under retained logic: snapped to the next opening off working
+  time, kept mid-shift. A completed activity's resume date holds nothing under progress override. The WARN
+  `resume-date-not-applied`, which said the date was not applied there, is retired (27 of H9's 33 differences;
+  ZZ-CPP-PORS).
+- **Free float into a completed successor (FC)** runs to the date carried into it, as P6 stores that date, without
+  first moving it to the predecessor's next opening (H9-11 A1040; ZZ-CPP-H9FF).
+- **A completed successor that passes back no date (CL)** sits at the project finish on the late side, where P6
+  stores its late dates. Its predecessors' late dates come back from there through the link and its lag
+  (ZZ-CPP-H9FF).
+- **As Late As Possible work before a completed successor (AC).** Under retained logic a completed successor now
+  bounds the As Late As Possible slide as it bounds free float (FC), at the date carried into it. Until now the slide
+  passed over it, so work whose successors were all complete read as an open end and slid to the project's early
+  finish (H14-11 A1010, a month late; ZZ-CPP-ALCA to -ALCF). Under progress override the slide passes over a completed
+  successor, as free float does.
+
+**Verified.**
+- **Held-out set H16,** drawn after the engine was frozen and scored once on these bytes: **217 of 217** unfinished
+  activities match P6 on all seven fields, all 12 cases clean
+  ([`validation/held-out/H16/RESULT.md`](validation/held-out/H16/RESULT.md)). v2.10.7 gives 136 of 217 on the same
+  cases: 81 activities moved onto P6 and none away (RO decided 50, RQ 20, RT 8, RU and RF 3).
+- **Held-out sets H8 to H15** found the situations this release settles. H8 scored v2.10.7 at 247 of 248; H9 to H15
+  each scored a candidate of this release once: 247 of 280, 236 of 238, 230 of 231, 274 of 279, 255 of 259, 197 of 198
+  and 216 of 217. Every difference was measured on P6 probe projects and settled by a rule above, so those sets are
+  fitted for these bytes. H15's one difference was a row v2.10.7 had right and RG had moved; RB restores it. On these
+  bytes H1 to H16 match P6 on all 3,741 unfinished activities.
+- **The probes:** 41 synthetic P6 probe projects, 949 rows, every one matching P6 on the four dates and both floats;
+  v2.10.7 matches 517. The probes are fitted, not held out. The earlier probe sets (1,471 rows) and the Larchmere
+  capture (4,608 comparisons) still match.
+- **Against P6, through CPP's converters and this engine** (the measuring machine's P6 database, 517 projects, 100,667
+  unfinished activities): 912 rows moved against v2.10.7, all onto P6, all in synthetic projects: 36 P6 probe
+  projects, 67 held-out cases of H8 to H16 and three cases of the HW smoke set (H8 PROTOCOL.md); none moved elsewhere.
+  100,665 match P6 on all four dates and both floats (v2.10.7: 99,753).
+- **JS against Python** on the database (517 projects, 180,109 activities): every field equal.
+- **XER census on the measuring machine:** of 886 distinct XER files (882 readable), 89 move, every one synthetic: 56
+  held-out cases, 31 P6 probes, and one test-fixture pair where a Mandatory Start's late finish passes the Must Finish
+  By (MC). No real export moves.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.7, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values; the capture cases read 256 of 256 at each data date.
+- **JS unit suite:** 1,498 checks green, as in v2.10.7. The new rules are pinned by the P6 probe replays
+  (`npm run test:p6-comparison`).
+- **Cross-validation:** 170 fixtures, 11390 of 11390 executed, 0 skipped, 0 failures; alert parity on 168 of 170
+  (the other 2 must throw). F173 and F174 hand both engines a resume date under progress override (RO).
+- **Coverage,** re-measured on these bytes: 94.63% statements, 83.35% branches, 96.87% functions.
+
+**Who is affected.**
+- Schedules with resource dependent activities: work under way, work under a finish-to-finish or start-to-finish
+  requirement or a start-to-start or start-to-finish bound or lead, work with two or more assignments, and the total
+  float of such work under Start Float or under progress override.
+- Schedules with resource dependent work carrying an expected finish and a later finish-to-finish or start-to-finish
+  requirement.
+- Schedules with a Must Finish By earlier than a Mandatory Start or Mandatory Finish allows.
+- Schedules with resource dependent work carrying an assignment with no work left, or a start-to-start or
+  start-to-finish bound that lands on a day one of its resources does not work.
+- Schedules under progress override with suspended work that resumes after the data date.
+- Schedules under retained logic where an unfinished activity links, with a lag or across calendars, into a completed
+  successor, or As Late As Possible work links into one.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). A deliverable issued on an earlier version is
+re-run under §12.2 where its schedule carries any of these situations.
+
+**Not claimed.**
+- FC, RW, LC on resource dependent work, RX, MC, RA, RZ, AC and RB were each decided by no activity of the held-out
+  sets drawn after them. Each rests on its P6 probes and the held-out case it was fitted to. RO, RQ and RT decided many
+  activities in H11 to H16, and RU, RF, RL, CL and RG a few.
+- RB is measured where the bound falls before the activity calendar opens (SBNA to SBNI). A bound in a break between
+  two working periods of one day is not measured.
+- The whole-day pass cannot place work that starts or ends part-way through a day. Where RO now holds a restart at a
+  mid-day resume date under progress override, that pass starts the work on the next day (H15-07).
+
+---
+
 ## v2.10.7 - 2026-10-16 - Schedules dated before 2020 in the whole-day pass, and the two situations held-out set H6 left
 
 **Computed values move (Class A): engine math changed.** Three changes, in both passes where they apply, with the
