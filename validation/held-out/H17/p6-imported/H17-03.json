@@ -1,0 +1,86 @@
+{
+ "case": "H17-03",
+ "proj_id": 5256,
+ "differences": [
+  "TASK A1130 remain_drtn_hr_cnt: xer '40' p6 10.5",
+  "TASK A1130 target_drtn_hr_cnt: xer '40' p6 10.5",
+  "TASK A1270 remain_drtn_hr_cnt: xer '12' p6 0.0",
+  "TASK A1270 target_drtn_hr_cnt: xer '12' p6 0.0",
+  "TASK A1290 remain_drtn_hr_cnt: xer '40' p6 9.0",
+  "TASK A1290 target_drtn_hr_cnt: xer '40' p6 9.0",
+  "TASKRSRC A1130/H17-03-R2 remain_qty_per_hr: xer '2' p6 8.0",
+  "TASKRSRC A1130/H17-03-R2 target_qty_per_hr: xer '2' p6 8.0",
+  "TASKRSRC A1130/H17-03-R1 remain_qty_per_hr: xer '1' p6 16.0",
+  "TASKRSRC A1130/H17-03-R1 target_qty_per_hr: xer '1' p6 16.0",
+  "TASKRSRC A1270/H17-03-R2 remain_qty: xer '12' p6 0.0",
+  "TASKRSRC A1270/H17-03-R2 target_qty: xer '12' p6 0.0",
+  "TASKRSRC A1290/H17-03-R2 remain_qty_per_hr: xer '2' p6 9.41176470588235",
+  "TASKRSRC A1290/H17-03-R2 target_qty_per_hr: xer '2' p6 9.41176470588235"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1130": {
+    "remain_drtn_hr_cnt": 10.5,
+    "target_drtn_hr_cnt": 10.5
+   },
+   "A1270": {
+    "remain_drtn_hr_cnt": 0.0,
+    "target_drtn_hr_cnt": 0.0
+   },
+   "A1290": {
+    "remain_drtn_hr_cnt": 9.0,
+    "target_drtn_hr_cnt": 9.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1130",
+    "rsrc_short_name": "H17-03-R1",
+    "remain_qty": 32.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 16.0,
+    "target_qty_per_hr": 16.0,
+    "target_lag_drtn_hr_cnt": 8.0,
+    "relag_drtn_hr_cnt": 8.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1130",
+    "rsrc_short_name": "H17-03-R2",
+    "remain_qty": 80.0,
+    "target_qty": 80.0,
+    "remain_qty_per_hr": 8.0,
+    "target_qty_per_hr": 8.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1270",
+    "rsrc_short_name": "H17-03-R2",
+    "remain_qty": 0.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1290",
+    "rsrc_short_name": "H17-03-R2",
+    "remain_qty": 80.0,
+    "target_qty": 80.0,
+    "remain_qty_per_hr": 9.41176470588235,
+    "target_qty_per_hr": 9.41176470588235,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
