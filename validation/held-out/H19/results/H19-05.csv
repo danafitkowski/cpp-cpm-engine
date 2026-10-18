@@ -1,0 +1,43 @@
+case,task_code,field,engine,p6,match
+H19-05,A1010,early_start,2017-05-30 08:00,2017-05-30 08:00,Y
+H19-05,A1010,early_finish,2017-05-30 12:00,2017-05-30 12:00,Y
+H19-05,A1010,late_start,2017-06-15 11:30,2017-06-15 11:30,Y
+H19-05,A1010,late_finish,2017-06-15 16:00,2017-06-15 16:00,Y
+H19-05,A1010,total_float_hr,116,116,Y
+H19-05,A1010,free_float_hr,0,0,Y
+H19-05,A1010,critical,false,false,Y
+H19-05,A1040,early_start,2017-05-30 08:00,2017-05-30 08:00,Y
+H19-05,A1040,early_finish,2017-05-30 13:30,2017-05-30 13:30,Y
+H19-05,A1040,late_start,2017-05-23 10:30,2017-05-23 10:30,Y
+H19-05,A1040,late_finish,2017-05-23 16:00,2017-05-23 16:00,Y
+H19-05,A1040,total_float_hr,-45.5,-45.5,Y
+H19-05,A1040,free_float_hr,0,0,Y
+H19-05,A1040,critical,true,true,Y
+H19-05,A1080,early_start,2017-05-29 12:30,2017-05-29 12:30,Y
+H19-05,A1080,early_finish,2017-05-30 07:00,2017-05-30 07:00,Y
+H19-05,A1080,late_start,2017-06-08 12:30,2017-06-08 12:30,Y
+H19-05,A1080,late_finish,2017-06-08 17:30,2017-06-08 17:30,Y
+H19-05,A1080,total_float_hr,70,70,Y
+H19-05,A1080,free_float_hr,1,1,Y
+H19-05,A1080,critical,false,false,Y
+H19-05,A1090,early_start,2017-05-30 08:00,2017-05-30 08:00,Y
+H19-05,A1090,early_finish,2017-06-06 08:00,2017-06-06 08:00,Y
+H19-05,A1090,late_start,2017-06-01 16:00,2017-06-01 16:00,Y
+H19-05,A1090,late_finish,2017-06-08 16:00,2017-06-08 16:00,Y
+H19-05,A1090,total_float_hr,24,24,Y
+H19-05,A1090,free_float_hr,0,0,Y
+H19-05,A1090,critical,false,false,Y
+H19-05,A1140,early_start,2017-06-06 08:00,2017-06-06 08:00,Y
+H19-05,A1140,early_finish,2017-06-12 08:00,2017-06-12 08:00,Y
+H19-05,A1140,late_start,2017-06-08 16:00,2017-06-08 16:00,Y
+H19-05,A1140,late_finish,2017-06-15 16:00,2017-06-15 16:00,Y
+H19-05,A1140,total_float_hr,38,38,Y
+H19-05,A1140,free_float_hr,0,0,Y
+H19-05,A1140,critical,false,false,Y
+H19-05,A1150,early_start,2017-06-12 08:00,2017-06-12 08:00,Y
+H19-05,A1150,early_finish,2017-06-12 08:00,2017-06-12 08:00,Y
+H19-05,A1150,late_start,2017-06-15 16:00,2017-06-15 16:00,Y
+H19-05,A1150,late_finish,2017-06-15 16:00,2017-06-15 16:00,Y
+H19-05,A1150,total_float_hr,37.5,37.5,Y
+H19-05,A1150,free_float_hr,0,0,Y
+H19-05,A1150,critical,false,false,Y
