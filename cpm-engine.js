@@ -2960,7 +2960,7 @@ function computeCPMHours(activities, relationships, o) {
                     if (bnd === undefined || bnd === null) continue;
                     const lc = lagCal(n, s);
                     const actual = (r.type === 'FS' || r.type === 'FF') ? n.af : (n.as !== null ? n.as : n.af);
-                    const rl = unexpired(actual, r.lag, lc, (r.type === 'SS' || r.type === 'SF') ? n : null);
+                    const rl = unexpired(actual, r.lag, lc);
                     if (rl) bnd = lc.sub(bnd, rl);
                     lpt = (lpt === null) ? bnd : Math.min(lpt, bnd);
                 }
@@ -3009,8 +3009,10 @@ function computeCPMHours(activities, relationships, o) {
             }
             const lc = lagCal(n, s);
             let lag = r.lag;
-            // SU: the same elapsed count as the forward pass, the suspension left out
-            if ((r.type === 'SS' || r.type === 'SF') && n.started && (retained || po)) lag = unexpired(n.as, lag, lc, n);
+            // SU (18-Oct-2026): the backward pass counts the whole elapsed time,
+            // the suspension included, as P6 does (held-out H13-03 A1130; H13-10 A1070, A1120, A1200), where
+            // the forward drive, free float and the ALAP slide leave it out
+            if ((r.type === 'SS' || r.type === 'SF') && n.started && (retained || po)) lag = unexpired(n.as, lag, lc);
             if (r.type === 'FS' || r.type === 'FF') {
                 const v = lagBwd(r.type === 'FS' ? sLs : sLf, lag, lc);
                 if (timed) linkLf.push(v);
@@ -4440,6 +4442,14 @@ function computeCPM(activities, relationships, opts) {
 
     function _startedLagLeft(pnode, lag, lagCal) {
         return _unexpiredLag(pnode.as_instant || 0, lag, lagCal, ddNum, pnode);
+    }
+
+    function _startedLagLeftBack(pnode, lag, lagCal) {
+        // SU: the backward pass counts the whole elapsed time off work under
+        // way, the suspension included, as P6 does (held-out H13-03 A1130; H13-10 A1070, A1120, A1200);
+        // the forward drive, free float and the ALAP slide leave it out.
+        // Python paired site: _started_lag_left_back.
+        return _unexpiredLag(pnode.as_instant || 0, lag, lagCal, ddNum);
     }
 
     // SSL measured (P6 probe 2026-09-23) — the INSTANT an SS link off a
@@ -6052,8 +6062,7 @@ function computeCPM(activities, relationships, opts) {
                         // (silent: the forward walk of the same link already
                         // disclosed any missing calendar)
                         const _sCal = lagCalFor(node, snode);
-                        const _rl = _unexpiredLag(_doneActual(node, s.type), s.lag_days, _sCal, ddNum,
-                            (s.type === 'SS' || s.type === 'SF') ? node : null);
+                        const _rl = _unexpiredLag(_doneActual(node, s.type), s.lag_days, _sCal, ddNum);
                         if (_rl) {
                             _b = _lagBackFromInstant(_b, _rl, _sCal, [],
                                 'backward unexpired lag ' + code + '->' + snode.code);
@@ -6170,7 +6179,7 @@ function computeCPM(activities, relationships, opts) {
                     // SSL backward — mirror the forward rule: off a started
                     // predecessor only the unused part of the lag separates
                     // its late restart from the successor's late start.
-                    const _ssLag = _ssOffStarted(node) ? _startedLagLeft(node, lag, sCal) : lag;
+                    const _ssLag = _ssOffStarted(node) ? _startedLagLeftBack(node, lag, sCal) : lag;
                     const _inst = _lagBackFromInstant(_sLS, _ssLag, sCal, alerts, _ctx);
                     lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else if (s.type === 'FF') {
@@ -6182,7 +6191,7 @@ function computeCPM(activities, relationships, opts) {
                     const _ctx = 'backward SF lag ' + code + '->' + snode.code;
                     if (_sLFInst === null) _sLFInst = _lfInstantOf(snode);
                     // SSL backward — as SS.
-                    const _sfLag = _ssOffStarted(node) ? _startedLagLeft(node, lag, sCal) : lag;
+                    const _sfLag = _ssOffStarted(node) ? _startedLagLeftBack(node, lag, sCal) : lag;
                     const _inst = _lagBackFromInstant(_sLFInst, _sfLag, sCal, alerts, _ctx);
                     lsBound = _snapBwd(_inst, nodeCal, alerts, _ctx);
                 } else {
@@ -6192,7 +6201,7 @@ function computeCPM(activities, relationships, opts) {
                 }
                 if (_mlWant) {
                     const _lagMd = (s.type === 'SS' || s.type === 'SF')
-                        ? (_ssOffStarted(node) ? _startedLagLeft(node, lag, sCal) : lag) : lag;
+                        ? (_ssOffStarted(node) ? _startedLagLeftBack(node, lag, sCal) : lag) : lag;
                     _mlc.push(_mdLate(snode, s.type, _sLS, _sLFInst, _lagMd, sCal,
                         lsBound !== null ? lsBound : drive));
                 }
@@ -11409,17 +11418,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '170 cross-validation fixtures. The harness defines 11390 ' +
+                '172 cross-validation fixtures. The harness defines 11612 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 11390 / 11390" is the whole comparison surface. ' +
+                'reported "Checks: 11612 / 11612" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 11390 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 11612 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 168 of the 170 fixtures: ' +
+                'severity-level alert parity, compared on 170 of the 172 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11458,18 +11467,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '11390 comparisons it defines over 170 fixtures and skips none; every ' +
+                '11612 comparisons it defines over 172 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '170 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '172 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 11390 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 11612 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 168 of the 170 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 170 of the 172 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

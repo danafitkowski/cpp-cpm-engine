@@ -200,19 +200,21 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  a394f218855d8b68e7a49a5a0a8cda40ade5e093cf2e46ff82c99f564ff310d0
+cpm.py          SHA-256:  f3503896f412b36b48d9572f678e4ca8491cdf83f65937282eae8a4d9f6607d4
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  c481d3dd1f0070ecfd772b84f665ba1dae3d2014872f7d9ef832a69c386b551f
+cpm_hours.py    SHA-256:  b5b96203372a06f479c1cb3ed1ee366ac902f005e0baa5eaaea48792e3399b3e
 
 (v2.10.9 candidate, unreleased, 2026-10-18 - cpm.py bumped from e7517b05...:
 ENGINE_VERSION reads 2.10.9; the whole-day pass leaves the days a
-predecessor sat suspended out of the elapsed part of an SS or SF lag
-(_unexpired_lag with _suspension_window). cpm_hours.py bumped from
-d3587b44...: the hours pass does the same off a completed predecessor,
-in the backward pass and in the late dates completed work passes back
-(SU), each measured on the P6 probes ZZ-CPP-SPLR, -SPLO and -SPLN
-(validation/p6-probes/susp-lag-rb-break-2026-10-18). The harness gains 2
-fixtures (F175-F176): 172 fixtures, 11612 of 11612 executed.)
+predecessor sat suspended out of the elapsed part of an SS or SF lag on
+the forward drive, free float and the ALAP slide (_unexpired_lag with
+_suspension_window), as the hours pass does. cpm_hours.py bumped from
+d3587b44...: the hours pass does the same off a completed predecessor
+(SU), measured on the P6 probes ZZ-CPP-SPLR, -SPLO and -SPLN
+(validation/p6-probes/susp-lag-rb-break-2026-10-18). The backward pass
+counts the whole elapsed time in both passes, as P6 does (held-out
+H13-03, H13-10). The harness gains 2 fixtures (F175-F176): 172 fixtures,
+11612 of 11612 executed.)
 
 (v2.10.8 candidate, unreleased, 2026-10-17 - cpm.py bumped from a1a343c1...:
 ENGINE_VERSION reads 2.10.8. cpm_hours.py bumped from
@@ -725,8 +727,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 295219
-  sha-256:  a394f218855d8b68e7a49a5a0a8cda40ade5e093cf2e46ff82c99f564ff310d0
+  bytes: 295576
+  sha-256:  f3503896f412b36b48d9572f678e4ca8491cdf83f65937282eae8a4d9f6607d4
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

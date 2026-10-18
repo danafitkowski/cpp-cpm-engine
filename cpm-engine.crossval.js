@@ -3575,9 +3575,10 @@ compareFixture('F174 - RO: the same, whole days', {
     schedule_mode: 'progress_override', relationship_lag_calendar: 'rcal_Predecessor',
 });
 
-// SU (v2.10.9, P6 probes ZZ-CPP-SPLR / -SPLO / -SPLN): off a suspended predecessor only the working time outside the
-// suspension counts as elapsed - work under way or complete, the resume date after or before the data date or
-// missing, SS and SF - in both passes, forward and backward; the Must Finish By makes P1's start-to-start bound bind.
+// SU (v2.10.9, P6 probes ZZ-CPP-SPLR / -SPLO / -SPLN): off a suspended predecessor the forward drive counts only the
+// working time outside the suspension as elapsed - work under way or complete, the resume date after or before the
+// data date or missing, SS and SF - in both passes; the backward pass counts the whole elapsed time, as P6 does
+// (held-out H13-03, H13-10). The Must Finish By puts the late side under test.
 const suSince = '2026-11-30 08:00';
 const suActs = (A) => [
     A('P1', 8, { actual_start: suSince, remaining_duration: 1, suspend_date: '2026-12-03 17:00',

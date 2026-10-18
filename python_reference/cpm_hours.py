@@ -648,7 +648,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         continue
                     lc = lag_cal(n, s)
                     actual = n['af'] if r['type'] in ('FS', 'FF') else (n['as'] if n['as'] is not None else n['af'])
-                    rl = unexpired(actual, r['lag'], lc, n if r['type'] in ('SS', 'SF') else None)
+                    rl = unexpired(actual, r['lag'], lc)
                     if rl:
                         bnd = lc.sub(bnd, rl)
                     lpt = bnd if lpt is None else min(lpt, bnd)
@@ -697,8 +697,10 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             lc = lag_cal(n, s)
             lag = r['lag']
             if r['type'] in ('SS', 'SF') and n['started'] and (retained or po):
-                # SU: the same elapsed count as the forward pass, the suspension left out
-                lag = unexpired(n['as'], lag, lc, n)
+                # SU (18-Oct-2026): the backward pass counts the whole elapsed time, the suspension included,
+                # as P6 does (held-out H13-03 A1130; H13-10 A1070, A1120, A1200), where the forward drive, free float and
+                # the ALAP slide leave it out
+                lag = unexpired(n['as'], lag, lc)
             if r['type'] in ('FS', 'FF'):
                 v = lag_bwd(s_ls if r['type'] == 'FS' else s_lf, lag, lc)
                 if timed:

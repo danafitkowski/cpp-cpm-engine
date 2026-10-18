@@ -90,9 +90,12 @@ RB holds inside the day as it does before the calendar opens. A bound in the bre
 | v2.10.8 | 89 of 92: S8 in all three lag projects |
 | This candidate (SU) | 92 of 92 |
 
+On the same bytes held-out sets H1 to H16 match P6 on all 3,741 unfinished activities, as they do on v2.10.8.
+
 One rule was taken from these answers, **SU**, in both ports (`cpm-engine.js`, `python_reference/cpm_hours.py` and `python_reference/cpm.py`):
-- **Hours pass.** The forward drive off a completed predecessor that was suspended leaves the suspension out of the elapsed count (S8). So do the backward pass's start-to-start and start-to-finish bounds off work under way, and the late dates a completed activity passes back. Both had used the whole elapsed count. P6's backward pass lays the same unexpired lag as its forward pass (the 23-Sep-2026 SSL probes), so the two now count alike. The forward drive off work under way, its free float and the As Late As Possible slide already left the suspension out.
-- **Whole-day pass.** The elapsed working days leave out the days the predecessor sat suspended (`_unexpiredLag` / `_unexpired_lag`, with `_suspensionWindow` / `_suspension_window`), so both passes count the same lag. The whole-day pass reads a suspension at 17:00 as starting the next day, as it reads every date.
+- **Hours pass.** The forward drive off a completed predecessor that was suspended leaves the suspension out of the elapsed count (S8). The forward drive off work under way, its free float and the As Late As Possible slide already left it out.
+- **Whole-day pass.** The elapsed working days leave out the days the predecessor sat suspended on the same three counts (`_unexpiredLag` / `_unexpired_lag`, with `_suspensionWindow` / `_suspension_window`), so both passes count the same lag. The whole-day pass reads a suspension at 17:00 as starting the next day, as it reads every date.
+- **The backward pass is unchanged:** its start-to-start and start-to-finish bounds off work under way count the whole elapsed time, the suspension included. P6 does: an earlier draft of this rule left the suspension out there too, and moved four late dates in held-out cases H13-03 (retained logic) and H13-10 (progress override) away from P6's own F9, where the released engine has them right. The probes here cannot show it, since no bound off a suspended predecessor binds in them.
 
 RB is unchanged: the probes confirm it in a midday break.
 

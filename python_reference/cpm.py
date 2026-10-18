@@ -2822,6 +2822,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     def _started_lag_left(pnode, lag, lag_cal):
         return _unexpired_lag(pnode.get('as_instant') or 0, lag, lag_cal, dd_num, pnode)
 
+    def _started_lag_left_back(pnode, lag, lag_cal):
+        # SU: the backward pass counts the whole elapsed time off work under
+        # way, the suspension included, as P6 does (held-out H13-03 A1130; H13-10 A1070, A1120, A1200);
+        # the forward drive, free float and the ALAP slide leave it out.
+        # JS paired site: _startedLagLeftBack.
+        return _unexpired_lag(pnode.get('as_instant') or 0, lag, lag_cal, dd_num)
+
     # SSL measured (P6 probe 2026-09-23) — the INSTANT an SS link off a
     # started predecessor is laid from. Under P6's "Calculate start-to-start
     # lag from: Early Start" (the default) it is the restart. Under "Actual
@@ -4228,8 +4235,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         # disclosed any missing calendar)
                         _s_cal = _lag_cal_for(node, snode)
                         _rl = _unexpired_lag(_done_actual(node, s['type']), s['lag_days'],
-                                             _s_cal, dd_num,
-                                             node if s['type'] in ('SS', 'SF') else None)
+                                             _s_cal, dd_num)
                         if _rl:
                             _b = _lag_back_from_instant(
                                 _b, _rl, _s_cal, alerts=[],
@@ -4325,7 +4331,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     # SSL backward — mirror the forward rule: off a started
                     # predecessor only the unused part of the lag separates
                     # its late restart from the successor's late start.
-                    _ss_lag = (_started_lag_left(node, lag, s_cal)
+                    _ss_lag = (_started_lag_left_back(node, lag, s_cal)
                                if _ss_off_started(node) else lag)
                     _inst = _lag_back_from_instant(_s_ls, _ss_lag, s_cal,
                                                    alerts=alerts, ctx=_ctx)
@@ -4342,7 +4348,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     if _s_lf_inst is None:
                         _s_lf_inst = _lf_instant_of(snode)
                     # SSL backward — as SS.
-                    _sf_lag = (_started_lag_left(node, lag, s_cal)
+                    _sf_lag = (_started_lag_left_back(node, lag, s_cal)
                                if _ss_off_started(node) else lag)
                     _inst = _lag_back_from_instant(_s_lf_inst, _sf_lag, s_cal,
                                                    alerts=alerts, ctx=_ctx)
