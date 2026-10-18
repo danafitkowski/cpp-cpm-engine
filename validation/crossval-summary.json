@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.10",
-  "generated_utc": "2026-10-18T18:49:43.419Z",
+  "engine_version": "2.10.11",
+  "generated_utc": "2026-10-18T21:57:10.167Z",
   "fixtures": {
-    "total": 174,
-    "passed": 174,
+    "total": 178,
+    "passed": 178,
     "failed": 0
   },
   "checks": {
-    "executed": 11776,
+    "executed": 12315,
     "failed": 0,
-    "passed": 11776,
+    "passed": 12315,
     "skipped": 0,
-    "surface": 11776
+    "surface": 12315
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 172,
-    "project_finish": 172,
-    "critical_codes": 172,
-    "topo_order": 172,
-    "alert_count": 172,
-    "alert_severity_counts": 172,
-    "node <id>": 10704,
+    "project_finish_num": 176,
+    "project_finish": 176,
+    "critical_codes": 176,
+    "topo_order": 176,
+    "alert_count": 176,
+    "alert_severity_counts": 176,
+    "node <id>": 11217,
     "threw (both engines)": 2,
-    "hours": 38
+    "hours": 40
   },
   "rows": [
     {
@@ -1418,6 +1418,38 @@
       "id": "F178",
       "name": "F178 - RL: no bound taken, an assignment with no work beside one with work leaves the late finish where the work ends, in hours",
       "checks": 37,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F179",
+      "name": "F179 - XL: no expected finish on As Late As Possible work, under way or not; it still applies with no constraint and with another one, in hours",
+      "checks": 137,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F180",
+      "name": "F180 - XL: the same, whole days",
+      "checks": 123,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F181",
+      "name": "F181 - OC: open-ended work takes no later finish than its early finish, a Must Finish By still capping it, in hours",
+      "checks": 147,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F182",
+      "name": "F182 - OC: the same network under progress override and no Must Finish By, whole days",
+      "checks": 132,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

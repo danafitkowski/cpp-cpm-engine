@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.10';
+const ENGINE_VERSION = '2.10.11';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2636,6 +2636,9 @@ function computeCPMHours(activities, relationships, o) {
     const useExpectedFinish = !!o.use_expected_finish;
     const useExternalDates = (o.use_external_dates === undefined) ? true : !!o.use_external_dates;
     const floatType = o.float_type || 'FT_FF';
+    // OC: "Make open-ended activities critical" (SCHEDOPTIONS
+    // sched_open_critical_flag); off unless the caller hands it on
+    const openCritical = !!o.open_critical;
     const cals = new Map();
     // Python's `or`: an empty calendar entry falls back as a missing one does
     const present = (x) => ((x && (typeof x !== 'object' || Object.keys(x).length > 0)) ? x : null);
@@ -2675,7 +2678,13 @@ function computeCPMHours(activities, relationships, o) {
         n.rf = (a.suspend_date && rd !== null && rd > dd) ? rd : null;
         n.ext_es = useExternalDates ? _hrInst(a.external_early_start) : null;
         n.ext_lf = useExternalDates ? _hrInst(a.external_late_finish) : null;
-        n.xf = (useExpectedFinish && !n.complete) ? _hrInst(a.expected_finish) : null;
+        // XL (H20, 18-Oct-2026): P6 does not apply an expected finish to As
+        // Late As Possible work, under way or not, task or resource dependent,
+        // under either option; it keeps the stored remaining duration
+        // (ZZ-CPP-XAR / -XAO X1-X4, X8; H20-11 A1130). Another constraint
+        // leaves it applied (X6 Start On or After, X7 Finish On or Before)
+        const xfAlap = (n.c1 && n.c1.type === 'ALAP') || (n.c2 && n.c2.type === 'ALAP');
+        n.xf = (useExpectedFinish && !n.complete && !xfAlap) ? _hrInst(a.expected_finish) : null;
         n.assigned = Math.trunc(Number(a.resource_assignments || 0)) || 0;
         // RD: a resource dependent activity's driving assignments, each on its
         // resource's calendar (the activity's when that is not in the map)
@@ -3069,6 +3078,17 @@ function computeCPMHours(activities, relationships, o) {
                 if (timed) toLead(at);
                 lsBound = (lsBound === null) ? at : Math.min(lsBound, at);
             }
+        }
+        // OC (H20 follow-up, 18-Oct-2026): under "Make open-ended activities
+        // critical" unfinished work with no successor takes no later finish
+        // than its own early finish, so its total float is at most 0; a Must
+        // Finish By before that finish still caps it, and its predecessors
+        // follow through their links (ZZ-CPP-OCR, -OCO, -OCS, -OCM: D1, D3,
+        // D6, D7, D9, D10, D13-D16, FIN). Work with a start-to-start successor
+        // only is not open-ended (D4), nor is work with no predecessor (D2).
+        // Free float stays as it was: it runs to the project's early finish
+        if (openCritical && !succs.get(c).length) {
+            lf = Math.min(lf, n.rem_dates ? n.rem_dates[1] : n.ef);
         }
         let ls;
         if (n.asg.length) {
@@ -3514,6 +3534,7 @@ function _hoursPass(activities, relationships, nodes, p) {
             project_calendar: p.projectCalendar, project_finish: p.projectFinish || null,
             ss_lag_from: p.ssLagFrom, use_expected_finish: p.useExpectedFinish,
             use_external_dates: p.useExternalDates, float_type: p.floatType,
+            open_critical: p.openCritical,
         });
     } catch (e) {
         p.alerts.push({
@@ -4319,6 +4340,13 @@ function computeCPM(activities, relationships, opts) {
         : opts.use_expected_finish;
     const _useExpectedFinish = _xfOpt === true || _xfOpt === 'Y';
 
+    // OC (v2.10.11) — P6 SCHEDOPTIONS sched_open_critical_flag, "Make
+    // open-ended activities critical" (opts.openCritical; aliases
+    // open_critical and the raw flag 'Y'). Default off, as P6's is. Python
+    // paired site: the open_critical parameter of compute_cpm.
+    const _ocOpt = (opts.openCritical !== undefined) ? opts.openCritical : opts.open_critical;
+    const _openCritical = _ocOpt === true || _ocOpt === 'Y';
+
     // The calendar a lag between predNode and succNode is walked on.
     function lagCalFor(predNode, succNode) {
         return (_lagCalMode === 'successor') ? calFor(succNode) : calFor(predNode);
@@ -4808,7 +4836,12 @@ function computeCPM(activities, relationships, opts) {
         // XF (v2.9.52) — an expected finish in force on this activity (see
         // _expectedFinishNum): FF / SF predecessors drive neither its start
         // nor its restart; the latest finish they ask for is kept as a floor.
-        const _xf = !!(_useExpectedFinish && node.expected_finish && !node.is_complete);
+        // XL (v2.10.11) — not on As Late As Possible work: P6 keeps its stored
+        // remaining duration there (see the hours pass). Python paired site:
+        // the same test in compute_cpm.
+        const _xfAlap = (node.constraint && node.constraint.type === 'ALAP') ||
+            (node.constraint2 && node.constraint2.type === 'ALAP');
+        const _xf = !!(_useExpectedFinish && node.expected_finish && !node.is_complete && !_xfAlap);
         let _xfFloor = 0;
         let _xfFloorPred = null;
         // Under progress override FS / SS logic does not reach work already
@@ -6341,6 +6374,14 @@ function computeCPM(activities, relationships, opts) {
                 _mlBy = 'ext';
             }
         }
+        // OC (v2.10.11) — "Make open-ended activities critical": unfinished
+        // work with no successor takes no later finish than its own early
+        // finish (see the hours pass). Python paired site: the same block in
+        // compute_cpm.
+        if (_openCritical && !(succMap[code] || []).some((s) => nodes[s.to_code]) && node.ef < minLF) {
+            minLF = node.ef;
+            _mlBy = null;
+        }
 
         node.lf = minLF;
         node.ls = _retreatWithAlerts(node.lf, node.duration_days, nodeCal, alerts,
@@ -7173,7 +7214,8 @@ function computeCPM(activities, relationships, opts) {
         relationshipLagCalendar: opts.relationshipLagCalendar || opts.relationship_lag_calendar ||
             opts.sched_calendar_on_relationship_lag || 'successor',
         floatType: _floatType, ssLagFrom: _ssLagFrom, projectFinish: _projectFinishOpt,
-        useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates, alerts,
+        useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates,
+        openCritical: _openCritical, alerts,
     });
     if (_lagCalAlert) {
         // LA (13-Oct-2026): now that the hours pass has run, say which figures
@@ -8289,6 +8331,12 @@ function parseXER(content) {
         // (sched_outer_depend_type), to hand computeCPM as
         // opts.useExternalDates: off only under SD_None; SD_Both, a blank
         // field or a missing table is P6's default, on (measured 11-Oct-2026).
+        // OC (v2.10.11) — "Make open-ended activities critical"
+        // (sched_open_critical_flag), to hand computeCPM as opts.openCritical:
+        // on only where the file says Y; a blank flag or a missing table is
+        // P6's default, off.
+        sched_open_critical_flag: String(_MC.schedOptions.sched_open_critical_flag || '').trim(),
+        open_critical: String(_MC.schedOptions.sched_open_critical_flag || '').trim() === 'Y',
         use_external_dates: String(_MC.schedOptions.sched_outer_depend_type || '').trim() !== 'SD_None',
         use_external_dates_source: !_soPresent
             ? 'SCHEDOPTIONS table absent; P6 default (relationships to other projects not ignored, SD_Both)'
@@ -11425,17 +11473,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '174 cross-validation fixtures. The harness defines 11776 ' +
+                '178 cross-validation fixtures. The harness defines 12315 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 11776 / 11776" is the whole comparison surface. ' +
+                'reported "Checks: 12315 / 12315" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 11776 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 12315 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 172 of the 174 fixtures: ' +
+                'severity-level alert parity, compared on 176 of the 178 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11474,18 +11522,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '11776 comparisons it defines over 174 fixtures and skips none; every ' +
+                '12315 comparisons it defines over 178 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '174 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '178 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 11776 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 12315 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 172 of the 174 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 176 of the 178 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

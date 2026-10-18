@@ -121,6 +121,7 @@ try:
         use_expected_finish=payload.get('use_expected_finish', False),
         float_type=payload.get('float_type', 'FT_FF'),
         use_external_dates=payload.get('use_external_dates', True),
+        open_critical=payload.get('open_critical', False),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -210,7 +211,8 @@ function runJS(payload) {
               projectFinish: payload.project_finish || '',
               useExpectedFinish: payload.use_expected_finish === true,
               floatType: payload.float_type || 'FT_FF',
-              useExternalDates: payload.use_external_dates !== false }
+              useExternalDates: payload.use_external_dates !== false,
+              openCritical: payload.open_critical === true }
         );
     } catch (e) {
         return {
@@ -3662,6 +3664,54 @@ compareFixture('F178 - RL: no bound taken, an assignment with no work beside one
     data_date: '2026-12-07 08:00', cal_map: RLCAL, relationship_lag_calendar: 'rcal_Predecessor',
     project_finish: '2026-12-11 17:00',
 }, { hours: true });
+
+// XL (v2.10.11, P6 probes ZZ-CPP-XAR / -XAO, held-out H20-11 A1130): an expected finish does not apply to As Late As
+// Possible work, under way (shortening X1, lengthening X2) or not started (X3); it still applies with no constraint (X5)
+// and with another constraint (X6, Start On or After before the data date). A long chain L keeps every other chain
+// floating.
+const xlSince = '2026-12-01 08:00';
+const xlActs = (A) => [
+    A('L', 120), A('FIN', 0, { task_type: 'TT_FinMile' }),
+    A('X1', 40, { actual_start: xlSince, remaining_duration: 5, expected_finish: '2026-12-09 17:00',
+        constraint: { type: 'CS_ALAP' } }), A('S1', 8),
+    A('X2', 16, { actual_start: xlSince, remaining_duration: 2, expected_finish: '2026-12-11 17:00',
+        constraint: { type: 'CS_ALAP' } }), A('S2', 8),
+    A('P3', 8), A('X3', 16, { expected_finish: '2026-12-11 17:00', constraint: { type: 'CS_ALAP' } }), A('S3', 8),
+    A('X5', 40, { actual_start: xlSince, remaining_duration: 5, expected_finish: '2026-12-09 17:00' }), A('S5', 8),
+    A('X6', 40, { actual_start: xlSince, remaining_duration: 5, expected_finish: '2026-12-09 17:00',
+        constraint: { type: 'CS_MSOA', date: '2026-11-30 08:00' } }), A('S6', 8)];
+const xlRels = (R) => [R('L', 'FIN'), R('X1', 'S1'), R('X2', 'S2'), R('P3', 'X3'), R('X3', 'S3'), R('X5', 'S5'),
+    R('X6', 'S6'), R('S1', 'FIN'), R('S2', 'FIN'), R('S3', 'FIN'), R('S5', 'FIN'), R('S6', 'FIN')];
+compareFixture('F179 - XL: no expected finish on As Late As Possible work, under way or not; it still applies with no constraint and with another one, in hours', {
+    activities: xlActs(hA), relationships: xlRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', use_expected_finish: true,
+}, { hours: true });
+compareFixture('F180 - XL: the same, whole days', {
+    activities: xlActs(dA), relationships: xlRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', use_expected_finish: true,
+});
+
+// OC (v2.10.11, P6 probes ZZ-CPP-OCR / -OCO / -OCS / -OCM): under "Make open-ended activities critical" unfinished work
+// with no successor (D1, D3, D6, D7, D14, D15, D16, FIN) takes no later finish than its own early finish, its
+// predecessors following (D13); a start-to-start successor only (D4) or no predecessor (D2) is not open-ended. With a
+// Must Finish By before an open end's finish (D16, FIN) the Must Finish By still caps it.
+const ocActs = (A) => [
+    A('A1', 16), A('A2', 40), A('FIN', 0, { task_type: 'TT_FinMile' }),
+    A('D1', 8), A('D13', 8), A('D14', 8), A('D2', 8), A('D3', 8), A('D4', 8), A('D5', 8),
+    A('D6', 0, { task_type: 'TT_Mile' }),
+    A('D7', 16, { actual_start: '2026-12-03 08:00', remaining_duration: 2 }),
+    A('D15', 8, { actual_start: '2026-12-04 08:00', remaining_duration: 1 }), A('D16', 8)];
+const ocRels = (R) => [R('A1', 'A2'), R('A2', 'FIN'), R('A1', 'D1'), R('A1', 'D13'), R('D13', 'D14'), R('D2', 'A2'),
+    R('A1', 'D4'), R('D4', 'D5', 'SS'), R('D5', 'FIN'), R('A1', 'D6'), R('A1', 'D15'), R('A2', 'D16')];
+compareFixture('F181 - OC: open-ended work takes no later finish than its early finish, a Must Finish By still capping it, in hours', {
+    activities: ocActs(hA), relationships: ocRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', project_finish: '2026-12-14 17:00', float_type: 'FT_Min',
+    open_critical: true,
+}, { hours: true });
+compareFixture('F182 - OC: the same network under progress override and no Must Finish By, whole days', {
+    activities: ocActs(dA), relationships: ocRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', schedule_mode: 'progress_override', open_critical: true,
+});
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +

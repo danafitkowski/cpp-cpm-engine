@@ -1,0 +1,30 @@
+{
+ "case": "ZZ-CPP-OCS",
+ "proj_id": 5312,
+ "differences": [
+  "TASKRSRC D10/ZZ-CPP-OCS-RS remain_qty_per_hr: xer '1' p6 0.888888888888889",
+  "TASKRSRC D10/ZZ-CPP-OCS-RS target_qty_per_hr: xer '1' p6 0.888888888888889"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "D10": {
+    "remain_drtn_hr_cnt": 8.0,
+    "target_drtn_hr_cnt": 8.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "D10",
+    "rsrc_short_name": "ZZ-CPP-OCS-RS",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 0.888888888888889,
+    "target_qty_per_hr": 0.888888888888889,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

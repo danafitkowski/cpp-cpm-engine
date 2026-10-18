@@ -200,9 +200,22 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  9fab4c0b8311683b7e95de9933ebb6aa2021b782fb9628ac1a25dc799ee44580
+cpm.py          SHA-256:  be78ccb6eead70da35b234f27dda3128f0140a674f6e07379c79bbcd00196bb2
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  fa97fec27ba1dd85b684608f8010b1c1f88df59f125d7d33f5853724ededfc4f
+cpm_hours.py    SHA-256:  a781441653fadb975624e8360f07f39db00470691f2d2d18092b1b25e148367a
+
+(v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
+ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
+finish off As Late As Possible work (XL), and under "Make open-ended
+activities critical" (compute_cpm's new open_critical parameter, off by
+default) an unfinished activity with no successor takes the earlier of
+its late finish and its own early finish as its late finish (OC).
+cpm_hours.py bumped from fa97fec2...: the hours pass does the same
+(compute_cpm_hours, open_critical). Both measured on the P6 probes
+ZZ-CPP-XAR, -XAO and -XAN and ZZ-CPP-OCN to -OCM
+(validation/p6-probes/oc-xa-2026-10-18), after held-out case H20-11
+A1130 and a check of every scheduling option. The harness gains 4
+fixtures (F179-F182): 178 fixtures, 12315 of 12315 executed.)
 
 (v2.10.10 candidate, unreleased, 2026-10-18 - cpm.py bumped from f3503896...:
 ENGINE_VERSION reads 2.10.10; nothing else. cpm_hours.py bumped from
@@ -744,15 +757,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 295577
-  sha-256:  9fab4c0b8311683b7e95de9933ebb6aa2021b782fb9628ac1a25dc799ee44580
+  bytes: 296772
+  sha-256:  be78ccb6eead70da35b234f27dda3128f0140a674f6e07379c79bbcd00196bb2
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 174 passed, 0 failed
-  Checks:   11776 / 11776 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 178 passed, 0 failed
+  Checks:   12315 / 12315 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

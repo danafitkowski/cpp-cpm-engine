@@ -140,7 +140,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.10'
+ENGINE_VERSION = '2.10.11'
 
 
 # =============================================================================
@@ -2055,7 +2055,7 @@ def _hours_sibling(name):
 
 def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project_calendar, schedule_mode,
                 relationship_lag_calendar, float_type, ss_lag_from, project_finish, use_expected_finish,
-                use_external_dates, alerts):
+                use_external_dates, alerts, open_critical=False):
     """Schedule the network in minutes (cpm_hours) and attach the instants to `nodes` (see HR above)."""
     by_code = {}
     for a in activities or []:
@@ -2169,7 +2169,7 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             acts, rels, data_date=data_date, cal_map=cal_map, schedule_mode=schedule_mode,
             lag_calendar=lag_cal, project_calendar=project_calendar, project_finish=project_finish or None,
             ss_lag_from=ss_lag_from, use_expected_finish=use_expected_finish,
-            use_external_dates=use_external_dates, float_type=float_type)
+            use_external_dates=use_external_dates, float_type=float_type, open_critical=open_critical)
     except Exception as e:  # noqa: BLE001 - the day result stands whatever happens here
         alerts.append({'severity': 'WARN', 'context': 'hours-engine-error',
                        'message': ('The hours and minutes pass did not complete (%s); the dates are '
@@ -2230,7 +2230,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 relationship_lag_calendar='successor',
                 float_type='FT_FF', ss_lag_from='early_start',
                 project_finish='', use_expected_finish=False,
-                use_external_dates=True):
+                use_external_dates=True, open_critical=False):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -2269,6 +2269,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             When set, every late date is seeded from it on each activity's
             own calendar instead of from the early finish (v2.9.49); the
             reported project finish stays the early finish.
+        open_critical: P6 SCHEDOPTIONS sched_open_critical_flag ("Make
+            open-ended activities critical"). When True, unfinished work with
+            no successor takes no later finish than its own early finish, so
+            its total float is at most 0; its free float is unchanged (OC,
+            v2.10.11). Default False, as P6's is.
         use_expected_finish: P6 SCHEDOPTIONS sched_use_expect_end_flag
             ("Use Expected Finish Dates"). When True, an unfinished activity
             carrying ``expected_finish`` (P6 TASK.expect_end_date as written,
@@ -3139,8 +3144,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # XF (v2.9.52) — an expected finish in force on this activity (see
         # _expected_finish_num): FF / SF predecessors drive neither its start
         # nor its restart; the latest finish they ask for is kept as a floor.
+        # XL (v2.10.11) — not on As Late As Possible work: P6 keeps its stored
+        # remaining duration there (see cpm_hours). JS paired site: the same
+        # test in computeCPM.
+        _xf_alap = any(_c and _c.get('type') == 'ALAP'
+                       for _c in (node.get('constraint'), node.get('constraint2')))
         _xf = bool(use_expected_finish and node.get('expected_finish')
-                   and not node['is_complete'])
+                   and not node['is_complete'] and not _xf_alap)
         _xf_floor = 0
         _xf_floor_pred = None
         # Under progress override FS / SS logic does not reach work already
@@ -4439,6 +4449,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 })
                 min_lf = _ext_lf_num
                 _ml_by = 'ext'
+        # OC (v2.10.11) — "Make open-ended activities critical": unfinished work
+        # with no successor takes no later finish than its own early finish
+        # (see cpm_hours). JS paired site: the same block in computeCPM.
+        if open_critical and not any(nodes.get(s['to_code']) for s in succs) and node['ef'] < min_lf:
+            min_lf = node['ef']
+            _ml_by = None
 
         node['lf'] = min_lf
         node['ls'] = _retreat_workdays(
@@ -5125,7 +5141,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         project_calendar=project_calendar, schedule_mode=schedule_mode,
         relationship_lag_calendar=relationship_lag_calendar, float_type=_float_type,
         ss_lag_from=_ss_lag_from, project_finish=project_finish,
-        use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts)
+        use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts,
+        open_critical=open_critical)
     if _lag_cal_alert is not None:
         # LA (13-Oct-2026): now that the hours pass has run, say which figures
         # walk the lag as P6 does. JS paired site after the _hoursPass call.

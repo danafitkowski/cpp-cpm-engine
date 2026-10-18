@@ -1,0 +1,73 @@
+ERMHDR	23.12	2026-10-18	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	CURRTYPE
+%F	curr_id	decimal_digit_cnt	curr_symbol	decimal_symbol	digit_group_symbol	pos_curr_fmt_type	neg_curr_fmt_type	curr_type	curr_short_name	group_digit_cnt	base_exch_rate
+%R	1	2	$	.	,	#1.1	(#1.1)	US Dollar	USD	3	1
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9433	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	ZZ-CPP-XAN					94331		1000	10	10	0	500		0	0	2026-12-07 08:00	2026-12-01 08:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	94331	N	ZZ-CPP-XAN W Mon-Fri 08:00-12:00 and 13:00-17:00	9433			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	94332	N	ZZ-CPP-XAN-RW Mon-Fri 08:00-12:00 and 13:00-17:00				CA_Base	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109433	9433	SD_Both	N	Y	Y	N	FT_FF	rcal_Predecessor	N	N	0	N	5	25	N	Y	Y	Y	N	Y	10	Y		
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	94330	9433		1	1	Y	N	WS_Open	ZZ-CPP-XAN	ZZ-CPP-XAN expected finish on As Late As Possible work probe (synthetic)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	RSRC
+%F	rsrc_id	parent_rsrc_id	clndr_id	role_id	shift_id	user_id	pobs_id	guid	rsrc_seq_num	email_addr	employee_code	office_phone	other_phone	rsrc_name	rsrc_short_name	rsrc_title_name	def_qty_per_hr	cost_qty_type	ot_factor	active_flag	auto_compute_act_flag	def_cost_qty_link_flag	ot_flag	curr_id	unit_id	rsrc_type	location_id	rsrc_notes	load_tasks_flag	level_flag	last_checksum
+%R	94331		94332					WoeEd3RA2bkQBwQE/ssIyg	1					ZZ-CPP-XAN-RW synthetic crew	ZZ-CPP-XAN-RW		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9433000	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	L	ZZ-CPP-XAN L				120	0	0	0	120	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433001	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	FIN	ZZ-CPP-XAN FIN				0	0	0	0	0	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433002	9433	94330	94331	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	X1	ZZ-CPP-XAN X1				40	0	0	0	80	0	0	0		2026-12-01 08:00				2026-12-09 17:00					2026-12-01 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9433003	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S1	ZZ-CPP-XAN S1				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433004	9433	94330	94331	60	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	X2	ZZ-CPP-XAN X2				16	0	0	0	40	0	0	0		2026-12-01 08:00				2026-12-11 17:00					2026-12-01 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9433005	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S2	ZZ-CPP-XAN S2				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433006	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P3	ZZ-CPP-XAN P3				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433007	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X3	ZZ-CPP-XAN X3				16	0	0	0	16	0	0	0						2026-12-11 17:00					2026-12-07 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9433008	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S3	ZZ-CPP-XAN S3				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433009	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P4	ZZ-CPP-XAN P4				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433010	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X4	ZZ-CPP-XAN X4				24	0	0	0	24	0	0	0						2026-12-08 17:00					2026-12-07 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9433011	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S4	ZZ-CPP-XAN S4				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433012	9433	94330	94331	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	X5	ZZ-CPP-XAN X5				40	0	0	0	80	0	0	0		2026-12-01 08:00				2026-12-09 17:00					2026-12-01 08:00					PT_Normal										0	0					admin	admin		
+%R	9433013	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S5	ZZ-CPP-XAN S5				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433014	9433	94330	94331	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	X6	ZZ-CPP-XAN X6				40	0	0	0	80	0	0	0	2026-11-30 08:00	2026-12-01 08:00				2026-12-09 17:00					2026-12-01 08:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9433015	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S6	ZZ-CPP-XAN S6				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433016	9433	94330	94331	50	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	X7	ZZ-CPP-XAN X7				40	0	0	0	80	0	0	0	2026-12-18 17:00	2026-12-01 08:00				2026-12-09 17:00					2026-12-01 08:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9433017	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S7	ZZ-CPP-XAN S7				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433018	9433	94330	94331	50	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_Active	X8	ZZ-CPP-XAN X8	94331			40	40	40	80	80	0	0	0		2026-12-01 08:00				2026-12-09 17:00					2026-12-01 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9433019	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S8	ZZ-CPP-XAN S8				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433020	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	P10	ZZ-CPP-XAN P10				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%R	9433021	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	X10	ZZ-CPP-XAN X10				16	0	0	0	16	0	0	0						2026-12-09 17:00					2026-12-07 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9433022	9433	94330	94331	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	S10	ZZ-CPP-XAN S10				8	0	0	0	8	0	0	0											2026-12-07 08:00					PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9433500	9433001	9433000	9433	9433	PR_FS	0				
+%R	9433501	9433003	9433002	9433	9433	PR_FS	0				
+%R	9433502	9433001	9433003	9433	9433	PR_FS	0				
+%R	9433503	9433005	9433004	9433	9433	PR_FS	0				
+%R	9433504	9433001	9433005	9433	9433	PR_FS	0				
+%R	9433505	9433008	9433007	9433	9433	PR_FS	0				
+%R	9433506	9433001	9433008	9433	9433	PR_FS	0				
+%R	9433507	9433011	9433010	9433	9433	PR_FS	0				
+%R	9433508	9433001	9433011	9433	9433	PR_FS	0				
+%R	9433509	9433013	9433012	9433	9433	PR_FS	0				
+%R	9433510	9433001	9433013	9433	9433	PR_FS	0				
+%R	9433511	9433015	9433014	9433	9433	PR_FS	0				
+%R	9433512	9433001	9433015	9433	9433	PR_FS	0				
+%R	9433513	9433017	9433016	9433	9433	PR_FS	0				
+%R	9433514	9433001	9433017	9433	9433	PR_FS	0				
+%R	9433515	9433019	9433018	9433	9433	PR_FS	0				
+%R	9433516	9433001	9433019	9433	9433	PR_FS	0				
+%R	9433517	9433022	9433021	9433	9433	PR_FS	0				
+%R	9433518	9433001	9433022	9433	9433	PR_FS	0				
+%R	9433519	9433007	9433006	9433	9433	PR_FS	0				
+%R	9433520	9433010	9433009	9433	9433	PR_FS	0				
+%R	9433521	9433021	9433020	9433	9433	PR_FS	0				
+%T	TASKRSRC
+%F	taskrsrc_id	task_id	proj_id	cost_qty_link_flag	role_id	acct_id	rsrc_id	pobs_id	skill_level	remain_qty	target_qty	remain_qty_per_hr	target_lag_drtn_hr_cnt	target_qty_per_hr	act_ot_qty	act_reg_qty	relag_drtn_hr_cnt	ot_factor	cost_per_qty	target_cost	act_reg_cost	act_ot_cost	remain_cost	act_start_date	act_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	rollup_dates_flag	target_crv	remain_crv	actual_crv	ts_pend_act_end_flag	guid	rate_type	act_this_per_cost	act_this_per_qty	curv_id	rsrc_type	cost_per_qty_source_type	create_user	create_date	has_rsrchours	taskrsrc_sum_id
+%R	9433800	9433018	9433	Y			94331			40	80	1	0	1	0	40	0		0	0	0	0	0	2026-12-01 08:00				2026-12-01 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%E

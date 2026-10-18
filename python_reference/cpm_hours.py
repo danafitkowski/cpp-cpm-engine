@@ -313,7 +313,7 @@ def _rsrc_place(n, cal, start_req, finish_req, xf=None):
 def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, schedule_mode='retained_logic',
                       lag_calendar='predecessor', project_calendar=None, project_finish=None,
                       ss_lag_from='early_start', use_expected_finish=False, use_external_dates=True,
-                      float_type='FT_FF'):
+                      float_type='FT_FF', open_critical=False):
     cal_map = cal_map or {}
     cals = {}
 
@@ -354,7 +354,14 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         n['ext_es'] = _inst(a.get('external_early_start')) if use_external_dates else None
         n['ext_lf'] = _inst(a.get('external_late_finish')) if use_external_dates else None
         # XF (v2.9.52/53): the expected finish re-sizes the remaining work.
-        n['xf'] = (_inst(a.get('expected_finish')) if use_expected_finish and not n['complete'] else None)
+        # XL (H20, 18-Oct-2026): not on As Late As Possible work, under way or
+        # not, task or resource dependent, under either option: P6 keeps the
+        # stored remaining duration (ZZ-CPP-XAR / -XAO X1-X4, X8; H20-11 A1130).
+        # Another constraint leaves it applied (X6 Start On or After, X7 Finish
+        # On or Before)
+        xf_alap = any(cs and cs['type'] == 'ALAP' for cs in (n['c1'], n['c2']))
+        n['xf'] = (_inst(a.get('expected_finish'))
+                   if use_expected_finish and not n['complete'] and not xf_alap else None)
         n['assigned'] = int(a.get('resource_assignments') or 0)
         # RD (13-Oct-2026): a resource dependent activity's driving assignments,
         # each on its resource's calendar (the activity's when that is not in
@@ -768,6 +775,16 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     if timed:
                         to_lead(at)
                     ls_bound = at if ls_bound is None else min(ls_bound, at)
+        # OC (H20 follow-up, 18-Oct-2026): under "Make open-ended activities
+        # critical" unfinished work with no successor takes no later finish than
+        # its own early finish, so its total float is at most 0; a Must Finish By
+        # before that finish still caps it, and its predecessors follow through
+        # their links (ZZ-CPP-OCR, -OCO, -OCS, -OCM: D1, D3, D6, D7, D9, D10,
+        # D13-D16, FIN). Work with a start-to-start successor only is not
+        # open-ended (D4), nor is work with no predecessor (D2). Free float stays
+        # as it was: it runs to the project's early finish
+        if open_critical and not succs[c]:
+            lf = min(lf, n['rem_dates'][1] if n.get('rem_dates') else n['ef'])
         if n['asg']:
             ls, lf, b_act = _rsrc_backward(n['asg'], cal, lf, ls_bound, lead_at)
             # LC for a lag's bound (RB, H15, 18-Oct-2026): where it binds and no
