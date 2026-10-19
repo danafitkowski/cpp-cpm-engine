@@ -1,0 +1,80 @@
+{
+ "case": "H21-06",
+ "proj_id": 5327,
+ "differences": [
+  "TASK A1060 remain_drtn_hr_cnt: xer '2' p6 25.0",
+  "TASK A1060 target_drtn_hr_cnt: xer '4' p6 8.0",
+  "TASK A1070 remain_drtn_hr_cnt: xer '28' p6 157.0",
+  "TASK A1070 target_drtn_hr_cnt: xer '56' p6 55.0",
+  "TASKRSRC A1060/H21-06-R1 target_qty: xer '4' p6 0.0",
+  "TASKRSRC A1060/H21-06-R3 target_qty: xer '4' p6 0.0",
+  "TASKRSRC A1070/H21-06-R1 target_qty_per_hr: xer '0.5' p6 2.0",
+  "TASKRSRC A1070/H21-06-R2 target_qty_per_hr: xer '1' p6 2.43478260869565"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1020": {
+    "remain_drtn_hr_cnt": 18.0,
+    "target_drtn_hr_cnt": 56.0
+   },
+   "A1060": {
+    "remain_drtn_hr_cnt": 25.0,
+    "target_drtn_hr_cnt": 8.0
+   },
+   "A1070": {
+    "remain_drtn_hr_cnt": 157.0,
+    "target_drtn_hr_cnt": 55.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1060",
+    "rsrc_short_name": "H21-06-R1",
+    "remain_qty": 2.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 2.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1060",
+    "rsrc_short_name": "H21-06-R3",
+    "remain_qty": 2.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 2.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1070",
+    "rsrc_short_name": "H21-06-R1",
+    "remain_qty": 14.0,
+    "target_qty": 28.0,
+    "remain_qty_per_hr": 0.5,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 14.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1070",
+    "rsrc_short_name": "H21-06-R2",
+    "remain_qty": 28.0,
+    "target_qty": 56.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 2.43478260869565,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 28.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
