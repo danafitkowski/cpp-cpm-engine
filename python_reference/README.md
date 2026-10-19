@@ -200,9 +200,29 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  a6bdc8dd9b8289031dc26a2da499f1f58dcf4d71a1e12111f2498983b8b5e258
+cpm.py          SHA-256:  109cae84f4026a05ff1cb3a61c6692700a5fa6ee79967a46a5b3d40b08f73f7d
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  45d50a3c83850ae29c5e24d0fc44d3eeca0b785d3952d291ffd03220f7703f38
+cpm_hours.py    SHA-256:  036ab3593f02de6350c568af6e89b53b09092d9f007e4700b0c7a51cc777eeb6
+
+(v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
+ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
+expected finish in force on work not yet started lifts the Mandatory
+Finish pin: the date caps the late finish as a Finish On or Before does
+(XP). It also drops the early side of a finish constraint on a finish
+milestone (XC). A milestone with an expected finish keeps zero duration
+and sits no earlier than it, where the whole-day pass had stretched it
+to the expected finish as a multi-day activity. And the JS engine's
+v2.9.16 constraint-priority rules, which the reference lacked: a soft
+secondary constraint no longer tightens the late finish below a primary
+mandatory pin, a mandatory secondary restores its pin over a soft
+primary (F5-C), and each Finish On or Before and Mandatory Finish is
+re-checked after both finish clamps (F5-A). cpm_hours.py bumped from
+45d50a3c...: XP and XC in the hours pass, and resource dependent work
+takes the mandatory pin, its assignments running back from the pinned
+late finish (MR). Measured on the P6 probes ZZ-CPP-XMR, -XMO, -XMN,
+-XNR and -XNN (validation/p6-probes/xf-mandatory-2026-10-18), after
+held-out case H22-06 A1120. The harness gains 6 fixtures (F188-F193):
+189 fixtures, 14560 of 14560 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -770,15 +790,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 301703
-  sha-256:  a6bdc8dd9b8289031dc26a2da499f1f58dcf4d71a1e12111f2498983b8b5e258
+  bytes: 308467
+  sha-256:  109cae84f4026a05ff1cb3a61c6692700a5fa6ee79967a46a5b3d40b08f73f7d
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 183 passed, 0 failed
-  Checks:   12887 / 12887 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 189 passed, 0 failed
+  Checks:   14560 / 14560 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

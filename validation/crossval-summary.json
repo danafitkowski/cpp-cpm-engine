@@ -1,17 +1,17 @@
 {
-  "engine_version": "2.10.11",
-  "generated_utc": "2026-10-18T22:48:01.868Z",
+  "engine_version": "2.10.12",
+  "generated_utc": "2026-10-19T04:02:41.818Z",
   "fixtures": {
-    "total": 183,
-    "passed": 183,
+    "total": 189,
+    "passed": 189,
     "failed": 0
   },
   "checks": {
-    "executed": 12887,
+    "executed": 14560,
     "failed": 0,
-    "passed": 12887,
+    "passed": 14560,
     "skipped": 0,
-    "surface": 12887
+    "surface": 14560
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 181,
-    "project_finish": 181,
-    "critical_codes": 181,
-    "topo_order": 181,
-    "alert_count": 181,
-    "alert_severity_counts": 181,
-    "node <id>": 11757,
+    "project_finish_num": 187,
+    "project_finish": 187,
+    "critical_codes": 187,
+    "topo_order": 187,
+    "alert_count": 187,
+    "alert_severity_counts": 187,
+    "node <id>": 13391,
     "threw (both engines)": 2,
-    "hours": 42
+    "hours": 45
   },
   "rows": [
     {
@@ -1490,6 +1490,54 @@
       "id": "F187",
       "name": "F187 - relationship checks: a self-loop, an unknown type, a lag that is not a number, a link to no activity",
       "checks": 33,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F188",
+      "name": "F188 - XP, MR and XC on finish milestones: a Mandatory Finish under an expected finish caps the late finish; resource dependent work takes the mandatory pin, in hours",
+      "checks": 297,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F189",
+      "name": "F189 - XP, MR and XC on finish milestones: the same, whole days (a milestone with an expected finish keeps zero duration)",
+      "checks": 267,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F190",
+      "name": "F190 - XP and MR: the same network with \"Use Expected Finish Dates\" off, every mandatory date a pin, in hours",
+      "checks": 297,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F191",
+      "name": "F191 - XP and MR: the same with the option off, whole days",
+      "checks": 267,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F192",
+      "name": "F192 - a mandatory date beside a second constraint: the mandatory pin holds the late dates, whole days",
+      "checks": 258,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F193",
+      "name": "F193 - a mandatory date beside a second constraint, in hours",
+      "checks": 287,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

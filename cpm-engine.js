@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.11';
+const ENGINE_VERSION = '2.10.12';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -2928,10 +2928,16 @@ function computeCPMHours(activities, relationships, o) {
         // XC (v2.10.11): an expected finish in force drops the early side of
         // Finish On or After, Finish On and Mandatory Finish on work not yet
         // started, as starting the work does; the late side of Finish On and
-        // Mandatory Finish stays (ZZ-CPP-XCR, -XCO N5, N7, N8)
+        // Mandatory Finish stays (ZZ-CPP-XCR, -XCO N5, N7, N8). On a finish
+        // milestone too (H22 follow-up, 18-Oct-2026): it sits at its expected
+        // finish (ZZ-CPP-XMR / -XMO M9, ZZ-CPP-XNR F1-F3; the control F4).
+        // A start milestone is left as it was: it applies no Finish On or After
+        // or Finish On (MC), and P6's import cannot carry a Mandatory Finish on
+        // one (ZZ-CPP-H3S-M S3)
+        const xfFin = n.xf !== null && tt !== 'TT_Mile';
         for (const cs of [n.c1, n.c2]) {
             if (cs && cs.at !== null && (cs.type === 'FNET' || cs.type === 'FO' || cs.type === 'MS_Finish') &&
-                    !n.started && !xfOn) {
+                    !n.started && !xfFin) {
                 let fin = cs.at;
                 if (n.rem === 0 && !onWorkingTime(cal, fin)) fin = cal.nextWork(fin);
                 if (cs.type === 'MS_Finish' || fin > n.ef) {
@@ -3159,14 +3165,27 @@ function computeCPMHours(activities, relationships, o) {
         // A1040). A Start On or Before or a Start On keeps the earlier bound
         // (M4, M5, M9). With both a Mandatory Start and a Mandatory Finish the
         // earlier of the two sets it (P6's own F9 of a real export carrying
-        // both on 1,090 activities and no links, 14-Oct-2026). Resource
-        // dependent work is left as it was (not probed)
-        if (!n.started && !n.asg.length) {
+        // both on 1,090 activities and no links, 14-Oct-2026).
+        // XP (H22, 18-Oct-2026): an expected finish in force lifts the
+        // Mandatory Finish pin on a task, resource dependent work or a finish
+        // milestone. The date then caps the late finish, as a Finish On does,
+        // and a successor that needs an earlier finish gets it (H22-06 A1120;
+        // ZZ-CPP-XMR / -XMO M1, M3, M9, M11, CC; ZZ-CPP-XNR F3, R4; the late
+        // finish the same either way on M4). A Mandatory Start keeps its pin
+        // (M5, ZZ-CPP-XNR G1, R2). A start milestone is left as it was (see
+        // XC above).
+        // MR (H22 follow-up, 18-Oct-2026): resource dependent work is pinned
+        // too, its assignments running back from the pinned late finish
+        // (ZZ-CPP-XMN M10, ZZ-CPP-XNR R1-R3, ZZ-CPP-XNN R1-R4, each resource
+        // on the activity's own calendar hours)
+        if (!n.started) {
             const tt = n.task_type || 'TT_Task';
             const zero = (at) => ((tt === 'TT_Mile' && cal.isStart(at)) ? at : cal.prevWorkEnd(at));
+            const xfLift = n.xf !== null && tt !== 'TT_Mile';
             let pin = null;
             for (const cs of [n.c1, n.c2]) {
                 if (!cs || cs.at === null || (cs.type !== 'MS_Start' && cs.type !== 'MS_Finish')) continue;
+                if (cs.type === 'MS_Finish' && xfLift) continue;
                 let p;
                 if (n.rem <= 0) {
                     const z = zero(cs.at);
@@ -3190,6 +3209,10 @@ function computeCPMHours(activities, relationships, o) {
             if (pin !== null) {
                 const cap = n.rem > 0 ? cal.prevWorkEnd(seed) : zero(seed);
                 if (pin[1] > cap) pin = n.rem > 0 ? [cal.sub(cap, n.rem), cap] : [cap, cap];
+                if (n.asg.length) {
+                    const rb = _hrRsrcBackward(n.asg, cal, pin[1], null, null);
+                    pin = [rb[0], rb[1]];
+                }
                 [ls, lf] = pin;
             }
         }
@@ -4874,11 +4897,16 @@ function computeCPM(activities, relationships, opts) {
         const _xfAlap = (node.constraint && node.constraint.type === 'ALAP') ||
             (node.constraint2 && node.constraint2.type === 'ALAP');
         const _xf = !!(_useExpectedFinish && node.expected_finish && !node.is_complete && !_xfAlap);
+        // XM (H3, 14-Oct-2026) — a milestone's expected finish re-sizes
+        // nothing: the milestone sits no earlier than it (see below), and its
+        // FF / SF predecessors drive it as usual, as in the hours pass.
+        const _xfMile = node.task_type === 'TT_Mile' || node.task_type === 'TT_FinMile';
+        const _xfRes = _xf && !_xfMile;
         let _xfFloor = 0;
         let _xfFloorPred = null;
         // Under progress override FS / SS logic does not reach work already
         // under way (its restart is the data date), so it does not count.
-        const _xfStartPred = _xf && !(_scheduleMode === 'progress_override' &&
+        const _xfStartPred = _xfRes && !(_scheduleMode === 'progress_override' &&
             dateToNum(node.actual_start || '') > 0) &&
             preds.some(p => p.type !== 'FF' && p.type !== 'SF' && nodes[p.from_code]);
         for (const p of preds) {
@@ -5010,7 +5038,7 @@ function computeCPM(activities, relationships, opts) {
                     _mdLink(pnode, p.type, lag, lagCal, _viaPt, _ptInst, _msWant)));
             }
             if (_viaPt) _ptVia.add(pnode.code);
-            if (_xf && thisAnchorEF !== null) {
+            if (_xfRes && thisAnchorEF !== null) {
                 if (thisAnchorEF > _xfFloor) {
                     _xfFloor = thisAnchorEF;
                     _xfFloorPred = { code: pnode.code, type: p.type, lag_days: lag };
@@ -5417,7 +5445,7 @@ function computeCPM(activities, relationships, opts) {
         // assignments; one with an assignment keeps its remaining duration
         // (see _expectedFinishLeavesWork), and FF / SF logic then moves it as
         // usual.
-        if (_xf && (!hasActualStart || _hasRem)) {
+        if (_xfRes && (!hasActualStart || _hasRem)) {
             const _xfStart = hasActualStart ? node.restart : node.es;
             const _xfWas = hasActualStart ? _remRaw : node.duration_days;
             const _xfNum = _expectedFinishNum(node.expected_finish, nodeCal, alerts,
@@ -5500,6 +5528,45 @@ function computeCPM(activities, relationships, opts) {
                 });
             }
         }
+        // XM (H3, 14-Oct-2026) — under "Use Expected Finish Dates" a milestone
+        // with an expected finish sits no earlier than it, and its duration
+        // stays zero (see the hours pass; ZZ-CPP-H3S-X X1-X19). Through v2.10.11
+        // this pass stretched it to the expected finish as a multi-day
+        // activity. Python paired site: the same block in compute_cpm.
+        let _xfMileHeld = null;
+        if (_xf && _xfMile && !hasActualStart) {
+            const _xfNum = _expectedFinishNum(node.expected_finish, nodeCal, alerts,
+                'expected finish ' + code);
+            if (_xfNum > node.es) {
+                node.es = _xfNum;
+                node.ef = _xfNum;
+                drivingPred = {
+                    type: 'CONSTRAINT',
+                    constraint_type: 'EXPECTED_FINISH',
+                    date: node.expected_finish,
+                };
+                finishAnchorEF = null;
+                alerts.push({
+                    severity: 'INFO',
+                    context: 'expected-finish-applied',
+                    message: code + ': the milestone sits at its expected finish ' +
+                        node.expected_finish + ' (P6 "Use Expected Finish Dates": a ' +
+                        'milestone sits no earlier than its expected finish).',
+                });
+            }
+            if (_xfNum >= node.es) {
+                _xfMileHeld = {
+                    date: node.expected_finish,
+                    time_minutes: _constraintTimeMinutes(node.expected_finish),
+                };
+            }
+            node.expected_finish_applied = {
+                expected_finish: node.expected_finish,
+                applied: true,
+                was_days: 0,
+                now_days: 0,
+            };
+        }
 
         // Forward-pass EF-side constraint clamps (FNET, FNLT, MS_Finish, MFO).
         // v2.9.12 T3.20 — pass node.es so the helper guarantees EF >= ES.
@@ -5511,9 +5578,10 @@ function computeCPM(activities, relationships, opts) {
         const _underway = hasActualStart && !node.is_complete;
         // XC (v2.10.11) — so does an expected finish in force on work not yet
         // started; the late side of Finish On and Mandatory Finish stays (see
-        // the hours pass). Python paired site: the same test in compute_cpm.
-        const _xfDrop = _xf && !hasActualStart && node.task_type !== 'TT_Mile' &&
-            node.task_type !== 'TT_FinMile';
+        // the hours pass). On a finish milestone too (H22 follow-up); a start
+        // milestone is left as it was. Python paired site: the same test in
+        // compute_cpm.
+        const _xfDrop = _xf && !hasActualStart && node.task_type !== 'TT_Mile';
         const _efCstr = [cstr, cstr2].map((_c, _i) => {
             if ((_underway || _xfDrop) && _c && _UNDERWAY_DROPPED_FINISH_TYPES.indexOf(_c.type) !== -1) {
                 _underwayFinishNoop(code, node.ef, _c, _i === 0 ? 'primary' : 'secondary',
@@ -5742,20 +5810,25 @@ function computeCPM(activities, relationships, opts) {
                 // successors start Saturday); On or After at Sunday 17:00 ->
                 // Monday 08:00 (P6 23.12's own F9). Python paired site: the
                 // same block.
+                // XM (H3) — so does an expected finish holding it (above).
                 let _mdCand = null;
-                if (_mfcHeld && nodeCal) {
-                    const _cd = dateToNum(_mfcHeld.date);
+                for (const _held of [_mfcHeld, _xfMileHeld]) {
+                    if (!_held || !nodeCal) continue;
+                    const _cd = dateToNum(_held.date);
                     let _mi;
                     if (_snapFwd(_cd, nodeCal, [], code) !== _cd) {
                         _mi = node.ef;
                     } else {
-                        const _ctod = (_mfcHeld.time_minutes === undefined || _mfcHeld.time_minutes === null)
-                            ? null : _mfcHeld.time_minutes;
+                        const _ctod = (_held.time_minutes === undefined || _held.time_minutes === null)
+                            ? null : _held.time_minutes;
                         const _cclose = _calendarDayClose(_cd, nodeCal);
                         _mi = (_ctod !== null && _cclose !== null && _ctod >= _cclose) ? _cd + 1 : _cd;
                     }
                     if (_best === null || _mi > _best) _best = _mi;
-                    _mdCand = [_mi, (_snapFwd(_cd, nodeCal, [], code) !== _cd) || _mi === _cd];
+                    const _c = [_mi, (_snapFwd(_cd, nodeCal, [], code) !== _cd) || _mi === _cd];
+                    if (_mdCand === null || _c[0] > _mdCand[0] || (_c[0] === _mdCand[0] && _c[1] && !_mdCand[1])) {
+                        _mdCand = _c;
+                    }
                 }
                 if (_best !== null) {
                     node.ef_instant = _best;
@@ -6337,8 +6410,18 @@ function computeCPM(activities, relationships, opts) {
         // MC (H3): nor, on a milestone, a constraint of its other end
         const _uwDrop = c => (c && _msOtherEnd(node.task_type, c.type)) ||
             (_uwBack && c && (_uwAll || _UNDERWAY_DROPPED_LATE_TYPES.indexOf(c.type) !== -1));
-        const cstr = _uwDrop(node.constraint) ? null : node.constraint;
-        const cstr2 = _uwDrop(node.constraint2) ? null : node.constraint2;
+        // XP (H22, 18-Oct-2026) — an expected finish in force on work not yet
+        // started lifts the Mandatory Finish pin: its date caps the late
+        // finish as a Finish On or Before does (see the hours pass). A start
+        // milestone is left as it was. Python paired site: the same block in
+        // compute_cpm.
+        const _xpLift = _useExpectedFinish && !!node.expected_finish && !node.is_complete &&
+            !node.actual_start && node.task_type !== 'TT_Mile' &&
+            ![node.constraint, node.constraint2].some(c => c && c.type === 'ALAP');
+        const _xpCap = c => ((_xpLift && c && (c.type === 'MS_Finish' || c.type === 'MFO'))
+            ? Object.assign({}, c, { type: 'FNLT' }) : c);
+        const cstr = _xpCap(_uwDrop(node.constraint) ? null : node.constraint);
+        const cstr2 = _xpCap(_uwDrop(node.constraint2) ? null : node.constraint2);
         // v2.9.16 F5-C — soft secondary cannot tighten LF below a primary
         // mandatory pin. Capture the LF that a primary mandatory (MS_Start /
         // SO / MS_Finish / MFO) would have set, then refuse to let the
@@ -11533,17 +11616,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '183 cross-validation fixtures. The harness defines 12887 ' +
+                '189 cross-validation fixtures. The harness defines 14560 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 12887 / 12887" is the whole comparison surface. ' +
+                'reported "Checks: 14560 / 14560" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 12887 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 14560 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 181 of the 183 fixtures: ' +
+                'severity-level alert parity, compared on 187 of the 189 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11582,18 +11665,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '12887 comparisons it defines over 183 fixtures and skips none; every ' +
+                '14560 comparisons it defines over 189 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '183 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '189 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 12887 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 14560 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 181 of the 183 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 187 of the 189 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

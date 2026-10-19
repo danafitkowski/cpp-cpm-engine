@@ -157,7 +157,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.11'
+ENGINE_VERSION = '2.10.12'
 
 
 # =============================================================================
@@ -3227,11 +3227,16 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                        for _c in (node.get('constraint'), node.get('constraint2')))
         _xf = bool(use_expected_finish and node.get('expected_finish')
                    and not node['is_complete'] and not _xf_alap)
+        # XM (H3, 14-Oct-2026) — a milestone's expected finish re-sizes
+        # nothing: the milestone sits no earlier than it (see below), and its
+        # FF / SF predecessors drive it as usual, as in cpm_hours.
+        _xf_mile = node.get('task_type') in ('TT_Mile', 'TT_FinMile')
+        _xf_res = _xf and not _xf_mile
         _xf_floor = 0
         _xf_floor_pred = None
         # Under progress override FS / SS logic does not reach work already
         # under way (its restart is the data date), so it does not count.
-        _xf_start_pred = _xf and not (
+        _xf_start_pred = _xf_res and not (
             schedule_mode == 'progress_override'
             and date_to_num(node['actual_start'] or '') > 0) and any(
             p['type'] not in ('FF', 'SF') and p['from_code'] in nodes
@@ -3375,7 +3380,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     pnode, t, (_lag_here if t == 'SS' else lag), lag_cal, _via_pt, _pt_inst, _ms_want))
             if _via_pt:
                 _pt_via.add(pnode['code'])
-            if _xf and this_anchor_ef is not None:
+            if _xf_res and this_anchor_ef is not None:
                 if this_anchor_ef > _xf_floor:
                     _xf_floor = this_anchor_ef
                     _xf_floor_pred = {
@@ -3704,7 +3709,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # assignment keeps its remaining duration (see
         # _expected_finish_leaves_work), and FF / SF logic then moves it as
         # usual.
-        if _xf and (not has_actual_start or _rem_provided):
+        if _xf_res and (not has_actual_start or _rem_provided):
             _xf_start = node['restart'] if has_actual_start else node['es']
             _xf_was = _rem_dur if has_actual_start else node['duration_days']
             _xf_num = _expected_finish_num(
@@ -3794,6 +3799,45 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         f'Expected Finish Dates").'
                     ),
                 })
+        # XM (H3, 14-Oct-2026) — under "Use Expected Finish Dates" a milestone
+        # with an expected finish sits no earlier than it, and its duration
+        # stays zero (see cpm_hours; ZZ-CPP-H3S-X X1-X19). Through v2.10.11 this
+        # pass stretched it to the expected finish as a multi-day activity. JS
+        # paired site: the same block in computeCPM.
+        _xf_mile_held = None
+        if _xf and _xf_mile and not has_actual_start:
+            _xf_num = _expected_finish_num(
+                node['expected_finish'], node_cal, alerts=alerts,
+                ctx=f'expected finish {code}')
+            if _xf_num > node['es']:
+                node['es'] = _xf_num
+                node['ef'] = _xf_num
+                driving_pred = {
+                    'type': 'CONSTRAINT',
+                    'constraint_type': 'EXPECTED_FINISH',
+                    'date': node['expected_finish'],
+                }
+                finish_anchor_ef = None
+                alerts.append({
+                    'severity': 'INFO',
+                    'context': 'expected-finish-applied',
+                    'message': (
+                        f'{code}: the milestone sits at its expected finish '
+                        f'{node["expected_finish"]} (P6 "Use Expected Finish Dates": a '
+                        f'milestone sits no earlier than its expected finish).'
+                    ),
+                })
+            if _xf_num >= node['es']:
+                _xf_mile_held = {
+                    'date': node['expected_finish'],
+                    'time_minutes': _constraint_time_minutes(node['expected_finish']),
+                }
+            node['expected_finish_applied'] = {
+                'expected_finish': node['expected_finish'],
+                'applied': True,
+                'was_days': 0,
+                'now_days': 0,
+            }
 
         # Forward-pass EF-side clamps (FNET, FNLT, MS_Finish, MFO).
         # v2.9.14 F5 Bug E backport — pass node['es'] so the helper guarantees
@@ -3806,9 +3850,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         _underway = has_actual_start and not node['is_complete']
         # XC (v2.10.11) — so does an expected finish in force on work not yet
         # started; the late side of Finish On and Mandatory Finish stays (see
-        # cpm_hours). JS paired site: the same test in computeCPM.
-        _xf_drop = (_xf and not has_actual_start
-                    and node.get('task_type') not in ('TT_Mile', 'TT_FinMile'))
+        # cpm_hours). On a finish milestone too (H22 follow-up); a start
+        # milestone is left as it was. JS paired site: the same test in
+        # computeCPM.
+        _xf_drop = _xf and not has_actual_start and node.get('task_type') != 'TT_Mile'
+        _ef_applied = []
         for _c, _lab in ((cstr, 'primary'), (cstr2, 'secondary')):
             if (_underway or _xf_drop) and _c and _c.get('type') in _UNDERWAY_DROPPED_FINISH_TYPES:
                 _underway_finish_noop(code, node['ef'], _c, _lab, node_cal, alerts,
@@ -3839,6 +3885,32 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     continue
             node['ef'] = _apply_forward_ef_constraint(
                 code, node['ef'], _c, _lab, alerts, node['es'], node_cal)
+            _ef_applied.append((_c, _lab))
+        # v2.9.16 F5-A — after BOTH EF constraints applied, re-check FNLT /
+        # MS_Finish / MFO deadlines on either slot: a soft FNET on the
+        # secondary can push EF past a primary FNLT's deadline, and the
+        # single-call check only alerts on its own pass. Through v2.10.11 the
+        # Python reference raised none of these. JS paired site:
+        # _checkFinalEFDeadline in computeCPM.
+        for _c, _lab in _ef_applied:
+            if not _c:
+                continue
+            if _c.get('type') in _FINISH_CLAMP_TYPES:
+                _cd = _constraint_finish_num(_c, node_cal, alerts=[], ctx=code)
+            else:
+                _cd = date_to_num(_c['date']) if _c.get('date') else 0
+            if _cd <= 0:
+                continue
+            if _c.get('type') in ('FNLT', 'MS_Finish', 'MFO') and node['ef'] > _cd:
+                _msg = f"{_c['type']}{' (secondary)' if _lab == 'secondary' else ''} on {code}"
+                if not any(a.get('context') == 'constraint-violated'
+                           and (a.get('message') or '').startswith(_msg) for a in alerts):
+                    alerts.append({
+                        'severity': 'ALERT',
+                        'context': 'constraint-violated',
+                        'message': (f"{_msg} violated by subsequent constraint: final EF="
+                                    f"{num_to_date(node['ef'])} is after constraint date {_c['date']}"),
+                    })
 
         # v2.9.42 PAIRED FIX — in-progress work with no remaining_duration.
         # The retained-logic restart above applies ONLY when remaining_duration
@@ -3990,19 +4062,23 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 # (the engine had left the instant at the boundary, the
                 # Monday opening); On or After at Sunday 17:00 -> Monday
                 # 08:00. A time inside the day stays on that day.
-                if _mfc and node_cal:
-                    _cd = date_to_num(_mfc['date'])
+                # XM (H3) — so does an expected finish holding it (above).
+                for _held in (_mfc, _xf_mile_held):
+                    if not (_held and node_cal):
+                        continue
+                    _cd = date_to_num(_held['date'])
                     if _snap_fwd(_cd, node_cal, alerts=[], ctx=code) != _cd:
                         _ci = node['ef']            # the next working opening
                         _ci_open = True
                     else:
-                        _ctod = _mfc.get('time_minutes')
+                        _ctod = _held.get('time_minutes')
                         _cclose = _calendar_day_close(_cd, node_cal)
                         _ci_open = not (_ctod is not None and _cclose is not None
                                         and _ctod >= _cclose)
                         _ci = _cd if _ci_open else _cd + 1
                     _cands.append(_ci)
-                    _md_cand = (_ci, _ci_open)
+                    if _md_cand is None or (_ci, _ci_open) > _md_cand:
+                        _md_cand = (_ci, _ci_open)
                 if _cands:
                     node['ef_instant'] = max(_cands)
                 elif dd_num > 0 and node['ef'] == _snap_fwd(
@@ -4501,20 +4577,62 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # milestone, a constraint of its other end.
         cstr = _ms_applied(node, 'constraint')
         cstr2 = _ms_applied(node, 'constraint2')
+        # XP (H22, 18-Oct-2026) — an expected finish in force on work not yet
+        # started lifts the Mandatory Finish pin: its date caps the late finish
+        # as a Finish On or Before does (see cpm_hours). A start milestone is
+        # left as it was. JS paired site: the same block in computeCPM.
+        _xp_lift = bool(use_expected_finish and node.get('expected_finish') and not node['is_complete']
+                        and not node.get('actual_start') and node.get('task_type') != 'TT_Mile'
+                        and not any(_c and _c.get('type') == 'ALAP'
+                                    for _c in (node.get('constraint'), node.get('constraint2'))))
+        if _xp_lift:
+            cstr, cstr2 = [dict(_c, type='FNLT') if (_c and _c.get('type') in ('MS_Finish', 'MFO')) else _c
+                           for _c in (cstr, cstr2)]
         # UW (v2.9.52) — Mandatory Finish is dropped from the backward pass
         # too once the activity is under way (late finish = the project end
         # on the measured case); Finish On / Finish On or Before still cap LF.
         _uw_back = bool(node.get('actual_start')) and not node['is_complete']
         _uw_all = _uw_back and any(_c and _c.get('type') in _UNDERWAY_LATE_DROP_ALL for _c in (cstr, cstr2))
+        cstr, cstr2 = [None if (_uw_back and _c and (_uw_all or _c.get('type') in _UNDERWAY_DROPPED_LATE_TYPES))
+                       else _c for _c in (cstr, cstr2)]
         _ml_by = None
         for _c in (cstr, cstr2):
-            if _uw_back and _c and (_uw_all or _c.get('type') in _UNDERWAY_DROPPED_LATE_TYPES):
-                continue
             _ml_prev = min_lf
             min_lf = _apply_backward_lf_constraint(
                 code, min_lf, _c, node_cal, node['duration_days'], alerts)
             if min_lf != _ml_prev:
                 _ml_by = _c
+        # v2.9.16 F5-C — a soft secondary cannot tighten LF below a primary
+        # mandatory pin, and a mandatory secondary restores its pin over a soft
+        # primary; with both mandatory the earlier pin holds (MP, H4). Through
+        # v2.10.11 the Python reference let the soft one win. JS paired site:
+        # the same block in computeCPM.
+        _is_mand = lambda _c: bool(_c) and _c.get('type') in ('MS_Start', 'MS_Finish', 'MFO')
+        if _is_mand(cstr) and not _is_mand(cstr2):
+            _pin_lf = _apply_backward_lf_constraint(
+                code, float('inf'), cstr, node_cal, node['duration_days'], [])
+            if _pin_lf != float('inf') and min_lf < _pin_lf:
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'constraint-priority-override',
+                    'message': (f"Secondary {cstr2['type'] if cstr2 else ''} on {code} attempted to tighten "
+                                f"LF below primary mandatory {cstr['type']} pin ({cstr['date']}); "
+                                f"secondary suppressed."),
+                })
+                min_lf = _pin_lf
+                _ml_by = cstr
+        if _is_mand(cstr2) and not _is_mand(cstr):
+            _pin_lf = _apply_backward_lf_constraint(
+                code, float('inf'), cstr2, node_cal, node['duration_days'], [])
+            if _pin_lf != float('inf') and min_lf != _pin_lf:
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'constraint-priority-override',
+                    'message': (f"Mandatory secondary {cstr2['type']} on {code} restored LF to "
+                                f"{cstr2['date']} over soft primary."),
+                })
+                min_lf = _pin_lf
+                _ml_by = cstr2
         # MC (H12, 17-Oct-2026) — the project's late finish still caps a
         # mandatory pin: where the pin would put the late finish after the
         # seed (the Must Finish By), P6 keeps the seed, so the float goes

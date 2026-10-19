@@ -610,11 +610,17 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # XC (v2.10.11): an expected finish in force drops the early side of
         # Finish On or After, Finish On and Mandatory Finish on work not yet
         # started, as starting the work does; the late side of Finish On and
-        # Mandatory Finish stays (ZZ-CPP-XCR, -XCO N5, N7, N8)
+        # Mandatory Finish stays (ZZ-CPP-XCR, -XCO N5, N7, N8). On a finish
+        # milestone too (H22 follow-up, 18-Oct-2026): it sits at its expected
+        # finish (ZZ-CPP-XMR / -XMO M9, ZZ-CPP-XNR F1-F3; the control F4). A
+        # start milestone is left as it was: it applies no Finish On or After or
+        # Finish On (MC), and P6's import cannot carry a Mandatory Finish on one
+        # (ZZ-CPP-H3S-M S3)
+        xf_fin = n['xf'] is not None and tt != 'TT_Mile'
         for k in ('c1', 'c2'):
             cs = n[k]
             if (cs and cs['at'] is not None and cs['type'] in ('FNET', 'FO', 'MS_Finish') and not n['started']
-                    and not xf_on):
+                    and not xf_fin):
                 fin = cs['at']
                 if n['rem'] == 0:
                     # A zero-length activity sits at the constraint's instant
@@ -855,14 +861,28 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # A1040). A Start On or Before or a Start On keeps the earlier bound
         # (M4, M5, M9). With both a Mandatory Start and a Mandatory Finish the
         # earlier of the two sets it (P6's own F9 of a real export carrying both
-        # on 1,090 activities and no links, 14-Oct-2026). Resource dependent
-        # work is left as it was (not probed).
-        if not n['started'] and not n['asg']:
+        # on 1,090 activities and no links, 14-Oct-2026).
+        # XP (H22, 18-Oct-2026): an expected finish in force lifts the
+        # Mandatory Finish pin on a task, resource dependent work or a finish
+        # milestone. The date then caps the late finish, as a Finish On does,
+        # and a successor that needs an earlier finish gets it (H22-06 A1120;
+        # ZZ-CPP-XMR / -XMO M1, M3, M9, M11, CC; ZZ-CPP-XNR F3, R4; the late
+        # finish the same either way on M4). A Mandatory Start keeps its pin
+        # (M5, ZZ-CPP-XNR G1, R2). A start milestone is left as it was (see XC
+        # above).
+        # MR (H22 follow-up, 18-Oct-2026): resource dependent work is pinned
+        # too, its assignments running back from the pinned late finish
+        # (ZZ-CPP-XMN M10, ZZ-CPP-XNR R1-R3, ZZ-CPP-XNN R1-R4, each resource on
+        # the activity's own calendar hours).
+        if not n['started']:
             tt = n.get('task_type') or 'TT_Task'
+            xf_lift = n['xf'] is not None and tt != 'TT_Mile'
             pin = None
             for k in ('c1', 'c2'):
                 cs = n[k]
                 if not cs or cs['at'] is None or cs['type'] not in ('MS_Start', 'MS_Finish'):
+                    continue
+                if cs['type'] == 'MS_Finish' and xf_lift:
                     continue
                 if n['rem'] <= 0:
                     z = cs['at'] if (tt == 'TT_Mile' and cal.is_start(cs['at'])) else cal.prev_work_end(cs['at'])
@@ -888,6 +908,9 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     cap = seed if (tt == 'TT_Mile' and cal.is_start(seed)) else cal.prev_work_end(seed)
                 if pin[1] > cap:
                     pin = (cal.sub(cap, n['rem']), cap) if n['rem'] > 0 else (cap, cap)
+                if n['asg']:
+                    rb = _rsrc_backward(n['asg'], cal, pin[1], None)
+                    pin = (rb[0], rb[1])
                 ls, lf = pin
         n['lf'] = lf
         if n['started']:

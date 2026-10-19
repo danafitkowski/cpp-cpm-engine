@@ -3767,6 +3767,78 @@ compareFixture('F187 - relationship checks: a self-loop, an unknown type, a lag 
     data_date: '2026-12-07', cal_map: HCAL,
 });
 
+// XP, MR and XC's finish-milestone edge (v2.10.12, P6 probes ZZ-CPP-XMR / -XMO / -XMN / -XNR / -XNN, held-out
+// H22-06 A1120): under an expected finish in force on work not yet started, a Mandatory Finish caps the late finish
+// instead of pinning it, on a task (M1), a finish milestone (M9) and resource dependent work (R4); a Mandatory Start
+// keeps its pin (M5, G1); a finish milestone drops the early side of Finish On or After (F1) and Mandatory Finish
+// (M9) and sits at its expected finish; resource dependent work takes the mandatory pin (R1, R3; with the option off
+// R4 too). CB -> CC -> CD is H22-06's chain. Each successor S* needs its predecessor earlier than its constraint.
+const xpDate = (d) => '2026-12-' + d;
+const xpR = (A, code, h, extra) => A(code, h, Object.assign({ task_type: 'TT_Rsrc', resource_assignments: 1,
+    assignments: [{ clndr_id: 'MF', remaining_hours: h, lag_hours: 0, driving: true }] }, extra));
+const xpMF = (d, xf) => Object.assign({ constraint: { type: 'CS_MANDFIN', date: xpDate(d) + ' 17:00' } },
+    xf ? { expected_finish: xpDate(xf) + ' 17:00' } : {});
+const xpS = (A, code, d) => A(code, 8, { constraint: { type: 'CS_MEOB', date: xpDate(d) + ' 17:00' } });
+const xpActs = (A) => [A('L', 120), A('FIN', 0, { task_type: 'TT_FinMile' }),
+    A('P1', 8), A('M1', 24, xpMF(14, '09')), xpS(A, 'S1', 11),
+    A('P9', 8), A('M9', 0, Object.assign({ task_type: 'TT_FinMile' }, xpMF(14, '09'))), xpS(A, 'S9', 11),
+    A('PF1', 8), A('F1', 0, { task_type: 'TT_FinMile', expected_finish: xpDate('09') + ' 17:00',
+        constraint: { type: 'CS_MEOA', date: xpDate(14) + ' 17:00' } }), xpS(A, 'SF1', 11),
+    A('P5', 8), A('M5', 24, { constraint: { type: 'CS_MANDSTART', date: xpDate('09') + ' 08:00' },
+        expected_finish: xpDate(10) + ' 17:00' }), xpS(A, 'S5', 10),
+    A('PG1', 8), A('G1', 0, { task_type: 'TT_Mile', expected_finish: xpDate('09') + ' 17:00',
+        constraint: { type: 'CS_MANDSTART', date: xpDate(14) + ' 08:00' } }), xpS(A, 'SG1', 11),
+    A('PR1', 8), xpR(A, 'R1', 24, { constraint: { type: 'CS_MANDSTART', date: xpDate('09') + ' 08:00' } }),
+    xpS(A, 'SR1', 10),
+    A('PR3', 8), xpR(A, 'R3', 24, xpMF(14)), xpS(A, 'SR3', 11),
+    A('PR4', 8), xpR(A, 'R4', 24, xpMF(14, 11)), xpS(A, 'SR4', 11),
+    A('CB', 16, { constraint: { type: 'CS_MEOA', date: xpDate(11) + ' 17:00' }, expected_finish: xpDate(15) + ' 17:00' }),
+    A('CC', 8, xpMF(17, 16)), xpS(A, 'CD', 17)];
+const xpRels = (R) => [R('L', 'FIN'), R('CB', 'CC'), R('CC', 'CD'), R('CD', 'FIN')].concat(...['1', '9', 'F1', '5',
+    'G1', 'R1', 'R3', 'R4'].map((i) => {
+    const m = /^[FGR]/.test(i) ? i : 'M' + i;
+    return [R('P' + i, m), R(m, 'S' + i), R('S' + i, 'FIN')];
+}));
+compareFixture('F188 - XP, MR and XC on finish milestones: a Mandatory Finish under an expected finish caps the late finish; resource dependent work takes the mandatory pin, in hours', {
+    activities: xpActs(hA), relationships: xpRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', use_expected_finish: true,
+}, { hours: true });
+compareFixture('F189 - XP, MR and XC on finish milestones: the same, whole days (a milestone with an expected finish keeps zero duration)', {
+    activities: xpActs(dA), relationships: xpRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', use_expected_finish: true,
+});
+compareFixture('F190 - XP and MR: the same network with "Use Expected Finish Dates" off, every mandatory date a pin, in hours', {
+    activities: xpActs(hA), relationships: xpRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F191 - XP and MR: the same with the option off, whole days', {
+    activities: xpActs(dA), relationships: xpRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+
+// v2.10.12: a mandatory date beside a second constraint. The JS engine's whole-day pass has, since v2.9.16, kept a
+// primary mandatory pin against a soft secondary that would tighten the late finish, restored a mandatory secondary's
+// pin over a soft primary (F5-C), and re-checked each Finish On or Before and Mandatory Finish after both finish
+// clamps (F5-A). Through v2.10.11 the Python reference did neither: the soft constraint won its late dates and the
+// alerts were missing. The hours pass already agreed.
+const prPairs = [['CS_MANDFIN', '18', 'CS_MEOB', '11'], ['CS_MEOB', '11', 'CS_MANDFIN', '18'],
+    ['CS_MANDSTART', '16', 'CS_MSOB', '09'], ['CS_MSOB', '09', 'CS_MANDSTART', '16'],
+    ['CS_MANDSTART', '16', 'CS_MEOB', '11'], ['CS_MANDFIN', '18', 'CS_MEO', '11'],
+    ['CS_MANDSTART', '16', 'CS_MANDFIN', '11'], ['CS_MANDFIN', '11', 'CS_MANDSTART', '16'],
+    ['CS_MSOA', '08', 'CS_MANDFIN', '18']];
+const prActs = (A, hrs) => [A('Z', 160)].concat(...prPairs.map((q, i) => [A('A' + i, 8),
+    A('B' + i, 24, { constraint: { type: q[0], date: xpDate(q[1]) + (hrs ? (/START|MSO/.test(q[0]) ? ' 08:00' : ' 17:00') : '') },
+        constraint2: { type: q[2], date: xpDate(q[3]) + (hrs ? (/START|MSO/.test(q[2]) ? ' 08:00' : ' 17:00') : '') } }),
+    A('C' + i, 8)]));
+const prRels = (R) => [].concat(...prPairs.map((q, i) => [R('A' + i, 'B' + i), R('B' + i, 'C' + i)]));
+compareFixture('F192 - a mandatory date beside a second constraint: the mandatory pin holds the late dates, whole days', {
+    activities: prActs(dA, false), relationships: prRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+});
+compareFixture('F193 - a mandatory date beside a second constraint, in hours', {
+    activities: prActs(hA, true), relationships: prRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +
