@@ -12,6 +12,118 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.11 - 2026-10-18 - "Make open-ended activities critical"; no expected finish on As Late As Possible work; an expected finish against a finish constraint on work not yet started
+
+**Computed values move (Class A): engine math changed.** Three rules in both engines, each measured on synthetic P6
+probe projects in Primavera P6 Professional 23.12.1 before it went in. Held-out set H20 found the first (XL). A check
+of every P6 scheduling option after H20 found the second (OC): an option the engine had never read. The probes that
+measured its edges measured the third (XC). Held-out set H21, drawn after all three and the first set to draw the
+open-ended option, scored these bytes clean.
+
+- **"Make open-ended activities critical" (OC).** P6's SCHEDOPTIONS `sched_open_critical_flag`. Under it, unfinished
+  work with no successor takes the earlier of its late finish and its own early finish as its late finish. So its
+  total float is zero or less, and it prints critical. A Must Finish By still caps it, its predecessors follow through
+  the backward pass, and free float does not change.
+  - Under retained logic, completed work with no successor is an open end too, and hands back the date it carries.
+  - A successor that is level of effort or a WBS summary makes work not open-ended, and bounds nothing. One linked
+    start-to-start, finish-to-finish or start-to-finish counts as any successor does.
+  - An As Late As Possible open end slides to the project's early finish, and its late finish is capped at the early
+    finish it had before the slide.
+  - `parseXER` returns the option as `open_critical`, and hands each activity's count of the successors it leaves out
+    of the network (level of effort, WBS summary) on as `successors_left_out`. `computeCPM` takes
+    `opts.openCritical` (Python `open_critical=`). It is off unless handed on, as P6's is.
+
+  Through v2.10.10 the engine never read the option: such work printed the project's late finish and the float that
+  follows from it, where P6 prints zero or less. Measured on ZZ-CPP-OCN to -OCM (the option off; on under retained
+  logic, progress override, start float, and the smaller float with a Must Finish By) and ZZ-CPP-OER, -OEP and -OEL
+  (its edges).
+- **No expected finish on As Late As Possible work (XL).** Under "Use Expected Finish Dates", P6 does not apply an
+  expected finish to As Late As Possible work, under way or not: the work keeps its stored remaining duration. P6
+  still applies it with no constraint and with any other. Through v2.10.10 the engine re-sized such work's remaining
+  duration to the expected finish. Held-out case H20-11 A1130 found it (P6 96 h left, the engine 80 h); measured on
+  ZZ-CPP-XAR, -XAO and -XAN.
+- **An expected finish against a finish constraint on work not yet started (XC).** An expected finish in force on
+  work not yet started (not a milestone) drops the early side of Finish On or After, Finish On and Mandatory Finish,
+  as starting the work already did (v2.9.52). The late side of Finish On and Mandatory Finish stays. Through v2.10.10
+  the constraint's early side still held such work's early finish. Measured on ZZ-CPP-XCR and -XCO. They also
+  measured work not yet started behind a finish-to-finish or start-to-finish predecessor with an expected finish, a
+  shape DAUBERT.md listed as not measured: P6 does what the engine's rule for started work does.
+- **The Python reference's relationship checks.** `python_reference/cpm.py` now raises the four relationship alerts
+  the JS engine raises, which it had dropped silently: a self-loop, an unknown relationship type, a lag that is not a
+  number, and a relationship to no activity. No value moves; fixture F187 pins them.
+
+**Verified.**
+- **Held-out set H20** scored the released v2.10.10 once at 195 of 198 unfinished activities on all seven fields
+  ([`validation/held-out/H20/RESULT.md`](validation/held-out/H20/RESULT.md)). Its three differences are one: H20-11
+  A1130, an expected finish on As Late As Possible work, and the two activities it drives. v2.10.9, diagnosed after
+  the score, gives the same 195. H20 is now fitted: 198 of 198 on these bytes.
+- **Held-out set H21,** drawn after all three rules from a drand round named before it was published, scored these
+  bytes once: 205 of 205 unfinished activities on all seven fields, all 12 cases clean
+  ([`validation/held-out/H21/RESULT.md`](validation/held-out/H21/RESULT.md)).
+  - It is the first set to draw "Make open-ended activities critical": nine cases run under it, with 148 unfinished
+    activities, 20 of them open ends.
+  - v2.10.10, diagnosed after the score, gives 190. 15 activities moved onto P6 and none away, all under the option.
+  - The production Python engine, on H21's projects in P6's database, matches P6 on all 205 and this engine on all
+    291 activities.
+  - The draw gave XL, XC and two of OC's edges nothing to decide: open ends under way or As Late As Possible, and
+    successors that are level of effort or a WBS summary.
+- **Held-out sets H1 to H20,** re-scored on these bytes: all 4,571 unfinished activities match P6 on all seven fields.
+  The whole-day pass is unchanged on every activity of H6 to H20.
+- **The probes:** 13 synthetic P6 probe projects, 328 rows, every one matching P6 on the four dates and both floats;
+  v2.10.10 matches 199 ([`validation/p6-probes/oc-xa-2026-10-18/`](validation/p6-probes/oc-xa-2026-10-18/),
+  [`validation/p6-probes/oc-edges-xc-2026-10-18/`](validation/p6-probes/oc-edges-xc-2026-10-18/)). The probes are
+  fitted, not held out. The earlier probe sets (2,680 rows) and the Larchmere capture (4,608 comparisons) still match.
+- **Against P6, through CPP's converters and the Python engine** (the measuring machine's P6 database,
+  602 projects, 102,290 unfinished activities): 147 rows moved against v2.10.10, all onto P6: 3 in held-out case H20-11 (XL), 15 in four H21 cases under the open-ended option (OC), and 129 in 11 of the probe projects; none moved elsewhere. 102,288 match P6 on all four
+  dates and both floats (v2.10.10: 102,141).
+- **CPP's analysis tools hand the engine the float type and the open-ended option.** Until this release the
+  converters CPP's Python analysis tools compute with handed the engine neither. So the tools printed finish float on
+  schedules P6 computes with start float or the smaller of the two. On the measuring machine's P6 database
+  (302 such projects, 59,314 unfinished activities), handing on the float type moves 49 total
+  float values onto P6 and none away, and 1 critical flag onto P6 and none away.
+- **JS against Python** on the database (602 projects, 182,343 activities): every field equal. Through
+  the production converter on 7,000 schedules drawn as H21 was (197,835 activities), one in seven before 2020, with
+  some assignments emptied and some durations re-sized as P6's import does: every field equal.
+- **A scope audit of the JS engine:** the same nine block-scoped declarations shadow a name of their function's
+  enclosing scope as in v2.10.10. The three rules add none.
+- **XER census on the measuring machine:** of 930 distinct XER files, none moves. Through the JS engine 926 are
+  readable (225,346 activities). Through the Python engine and the production converter all 930 compute (334,760
+  activities), and no value moves.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.10, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values.
+- **JS unit suite:** 1,498 checks green, as in v2.10.10. XL, OC and XC are pinned by the P6 probe replays
+  (`npm run test:p6-comparison`).
+- **Cross-validation:** 183 fixtures, 12887 of 12887 executed, 0 skipped, 0 failures; alert parity on 181 of 183
+  (the other 2 must throw). F179 to F186 hand both engines the three rules' shapes in hours and in whole days, and
+  F187 the four relationship checks.
+- **Coverage,** re-measured on these bytes: 94.60% statements, 82.96% branches, 96.90% functions.
+
+**Who is affected.**
+- **OC.** Schedules with "Make open-ended activities critical" on and unfinished work with no successor, when the
+  caller hands the option on. That work's late finish comes no later than its own early finish. So its late dates move
+  earlier, its total float falls to zero or below, and it prints critical; the late dates of the work driving it can
+  follow. Early dates and free float do not move. Under retained logic, completed work with no successor bounds its
+  unfinished predecessors the same way.
+- **XL.** Schedules under "Use Expected Finish Dates" with an expected finish on As Late As Possible work. Its
+  remaining duration is no longer re-sized, so its early finish, its float and what it drives can move.
+- **XC.** Schedules under "Use Expected Finish Dates" with an expected finish on work not yet started that carries a
+  Finish On or After, Finish On or Mandatory Finish. Its early finish no longer waits for the constraint date, so it
+  and what it drives can move earlier.
+- **CPP's Python analysis tools.** Schedules computed with start float or the smaller of start and finish float now
+  print P6's total float, and schedules with the open-ended option on print P6's critical open ends.
+- **The Python reference's callers** now receive four relationship alerts they did not; no value moves.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). Re-run a deliverable issued on an earlier version
+under §12.2 where its schedule carries any of these situations.
+
+**Not claimed.**
+- XL rests on held-out case H20-11 and its three probe projects. H21, drawn after it, gave it nothing to decide.
+- XC rests on its two probe projects; no held-out set has drawn it.
+- OC's main rule is held out on H21. Its edges rest on the probes: completed open ends under retained logic,
+  successors that are level of effort or a WBS summary, and open ends under way or As Late As Possible.
+
+---
+
 ## v2.10.10 - 2026-10-18 - The finish of resource dependent work under a finish requirement; RL in the Python engine
 
 **Computed values move (Class A): engine math changed.** One rule in both engines, ZP, measured on synthetic P6 probe

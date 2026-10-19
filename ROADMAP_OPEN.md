@@ -152,6 +152,17 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.11 (reviewed 2026-10-18)
+
+Held-out set H20 scored v2.10.10 at 195 of 198; its one difference, an expected finish on As Late As Possible work (H20-11 A1130), is **CLOSED** (rule XL). v2.10.11 moves computed values (change class A under the operator procedure). It also reads "Make open-ended activities critical" (rule OC), which no earlier version read, and drops the early side of a finish constraint on work not yet started under an expected finish (rule XC). All three were measured on 13 synthetic P6 probe projects (328 rows) and so are fitted (see CHANGELOG.md). Held-out set H21, drawn after them and the first set to draw the open-ended option, scored the release bytes once: 205 of 205, all 12 cases clean.
+- The unit suite stays at 1,498; XL, OC and XC are pinned by the P6 probe replays.
+- The cross-validation surface grew from 174 to 183 fixtures and from 11,776 of 11,776 to 12,887 of 12,887 comparisons, 0 skipped, still 0 failures. The Python reference now raises the JS engine's four relationship alerts.
+- Coverage was re-measured on the new bytes: 94.60% statements / 82.96% branches / 96.90% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+- No held-out difference is open: H1 to H21 match P6 on all 4,776 unfinished activities on these bytes.
+- **OPEN:** XL and XC have no held-out activity yet, and neither have OC's edges; H21 drew none of those shapes.
+- **OPEN:** the Python reference does not raise the JS engine's activity-level input alerts (a missing, padded or duplicate activity code, an empty network).
+
 ## Status at v2.10.10 (reviewed 2026-10-18)
 
 Held-out set H17 scored v2.10.9 at 207 of 208; its one difference, H17-10 A1070's early finish, is **CLOSED**. v2.10.10 moves computed values (change class A under the operator procedure). Rule ZP was measured on seven synthetic P6 probe projects (168 rows) and so is fitted (see CHANGELOG.md). The Python engine no longer runs RL where no bound was taken (held-out H18-08 A1120, fixture F178). Held-out set H18, drawn after ZP, scored 208 of 208. Held-out set H19, drawn after both, scored the release bytes once: 216 of 216, all 12 cases clean, on schedules dated before or across 1 January 2020.
@@ -379,4 +390,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.10. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.11. Update on every release that closes or opens an audit item.
