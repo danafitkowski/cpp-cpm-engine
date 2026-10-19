@@ -2106,7 +2106,8 @@ def _hours_sibling(name):
 
 def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project_calendar, schedule_mode,
                 relationship_lag_calendar, float_type, ss_lag_from, project_finish, use_expected_finish,
-                use_external_dates, alerts, open_critical=False, open_critical_linked=None):
+                use_external_dates, alerts, open_critical=False, open_critical_linked=None,
+                multiple_float_paths=False):
     """Schedule the network in minutes (cpm_hours) and attach the instants to `nodes` (see HR above)."""
     by_code = {}
     for a in activities or []:
@@ -2221,7 +2222,7 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             lag_calendar=lag_cal, project_calendar=project_calendar, project_finish=project_finish or None,
             ss_lag_from=ss_lag_from, use_expected_finish=use_expected_finish,
             use_external_dates=use_external_dates, float_type=float_type, open_critical=open_critical,
-            open_critical_linked=open_critical_linked)
+            open_critical_linked=open_critical_linked, multiple_float_paths=multiple_float_paths)
     except Exception as e:  # noqa: BLE001 - the day result stands whatever happens here
         alerts.append({'severity': 'WARN', 'context': 'hours-engine-error',
                        'message': ('The hours and minutes pass did not complete (%s); the dates are '
@@ -2282,7 +2283,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 relationship_lag_calendar='successor',
                 float_type='FT_FF', ss_lag_from='early_start',
                 project_finish='', use_expected_finish=False,
-                use_external_dates=True, open_critical=False):
+                use_external_dates=True, open_critical=False, multiple_float_paths=False):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -2330,6 +2331,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             that is level of effort or a WBS summary (a relationship to one,
             or the activity's successors_left_out count) makes work not
             open-ended. Default False, as P6's is.
+        multiple_float_paths: P6 SCHEDOPTIONS enable_multiple_longest_path_calc
+            ("Calculate multiple float paths"; True or 'Y'). When on, P6
+            prints the free float of As Late As Possible work as it stands
+            and FZ does not zero it (FP, 19-Oct-2026). Default False, as P6's
+            is.
         use_expected_finish: P6 SCHEDOPTIONS sched_use_expect_end_flag
             ("Use Expected Finish Dates"). When True, an unfinished activity
             carrying ``expected_finish`` (P6 TASK.expect_end_date as written,
@@ -2362,6 +2368,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     dd_num = _instant_of(data_date) if data_date else 0
     cal_map = cal_map or {}
     alerts = _AlertList()
+    # FP (19-Oct-2026) — "Calculate multiple float paths": True or 'Y', as the
+    # JS engine reads opts.multipleFloatPaths
+    _multiple_float_paths = multiple_float_paths is True or multiple_float_paths == 'Y'
     # B4 (P6 alignment wave 2026-08-11): both P6 scheduling modes
     # implemented. retained_logic (default; capture 9b748cc case 10):
     # remaining work restarts at max(data date, driving pred logic).
@@ -5394,8 +5403,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         n['ff_working_days'] = max(0, n['ff_signed_working_days'])
     # FZ (H23, 19-Oct-2026) — As Late As Possible work holds no free float, as P6
     # prints it on every unfinished As Late As Possible activity (see cpm_hours;
-    # ZZ-CPP-AFF F1). JS paired site: the same block in computeCPM.
-    for c, n in nodes.items():
+    # ZZ-CPP-AFF F1); FP: not under "Calculate multiple float paths"
+    # (ZZ-CPP-HSM). JS paired site: the same block in computeCPM.
+    for c, n in ({} if _multiple_float_paths else nodes).items():
         if n['is_complete'] or not any((k or {}).get('type') == 'ALAP'
                                        for k in (n.get('constraint'), n.get('constraint2'))):
             continue
@@ -5529,7 +5539,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         relationship_lag_calendar=relationship_lag_calendar, float_type=_float_type,
         ss_lag_from=_ss_lag_from, project_finish=project_finish,
         use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts,
-        open_critical=open_critical, open_critical_linked=sorted(_oc_linked))
+        open_critical=open_critical, open_critical_linked=sorted(_oc_linked),
+        multiple_float_paths=_multiple_float_paths)
     if _lag_cal_alert is not None:
         # LA (13-Oct-2026): now that the hours pass has run, say which figures
         # walk the lag as P6 does. JS paired site after the _hoursPass call.

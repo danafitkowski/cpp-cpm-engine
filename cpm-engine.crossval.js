@@ -122,6 +122,7 @@ try:
         float_type=payload.get('float_type', 'FT_FF'),
         use_external_dates=payload.get('use_external_dates', True),
         open_critical=payload.get('open_critical', False),
+        multiple_float_paths=payload.get('multiple_float_paths', False),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -212,7 +213,8 @@ function runJS(payload) {
               useExpectedFinish: payload.use_expected_finish === true,
               floatType: payload.float_type || 'FT_FF',
               useExternalDates: payload.use_external_dates !== false,
-              openCritical: payload.open_critical === true }
+              openCritical: payload.open_critical === true,
+              multipleFloatPaths: payload.multiple_float_paths === true }
         );
     } catch (e) {
         return {
@@ -3960,6 +3962,18 @@ compareFixture('F200 - AV: As Late As Possible on resource dependent work under 
     data_date: '2026-12-07 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
     schedule_mode: 'progress_override',
 }, { hours: true });
+
+// v2.10.12 (P6 probes ZZ-CPP-HSM; ZZ-CPP-RSRCR against ZZ-CPP-RSRCN): FP, under "Calculate multiple float paths" P6
+// prints the free float of As Late As Possible work as it stands, and FZ zeroes it only with the option off (F1 of
+// F197 / F198 keeps its free float here).
+compareFixture('F201 - FP: F197 under Calculate multiple float paths, in hours', {
+    activities: slActs(hA, true), relationships: slRels(hR), data_date: '2026-12-07 08:00', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true,
+}, { hours: true });
+compareFixture('F202 - FP: F198 under Calculate multiple float paths, whole days', {
+    activities: slActs(dA, false), relationships: slRels(dR), data_date: '2026-12-07', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true,
+});
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +

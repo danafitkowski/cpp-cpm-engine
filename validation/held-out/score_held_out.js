@@ -126,6 +126,7 @@ function runEngine(text) {
         relationshipLagCalendar: p.sched_calendar_on_relationship_lag,
         useExpectedFinish: p.use_expected_finish, projectFinish: p.project_finish || '',
         useExternalDates: p.use_external_dates, openCritical: p.open_critical,
+        multipleFloatPaths: p.multiple_float_paths,
     };
     const res = E.computeCPM(acts, rels, opts);
     const crit = new Set(res.criticalCodes || []);

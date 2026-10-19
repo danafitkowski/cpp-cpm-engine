@@ -200,9 +200,9 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  f63a9456be2eccf72e720b2cba2ba3ef99f1ae017c43522166a3e646e8ea87d2
+cpm.py          SHA-256:  ea33ea32bf8a521c106325e5446260311d4b478690bcd2fa67000d697ece3bcd
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  7af26840b0f9a019e015088551207d9f1a61ab79177b41addcd29f1304ead5cc
+cpm_hours.py    SHA-256:  7f314e54d4e2d98eceae7320d3addf819cbbe7e7345fd9d4863e3ae867728de2
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -247,27 +247,29 @@ Must Finish By (PC). Measured on the P6 probes ZZ-CPP-XQR, -XQO and -XQN
 (Q6-Q10). This withdraws the F5-C port above in both passes of both
 ports: P6 lets a tighter second constraint cap a primary pin and never
 pins on the second slot. F192 and F193 now pin it: 192 fixtures, 14686
-of 14686 executed. Then, from 756addd4... and 0da6c049..., after held-out
-set H23 (validation/held-out/H23) and the P6 probes of
+of 14686 executed. Then, from 756addd4... and 0da6c049..., after
+held-out set H23 (validation/held-out/H23) and the P6 probes of
 validation/p6-probes/h23-shapes-2026-10-19: a Mandatory Start or
 Mandatory Finish in the second slot is a floor on the early side, as a
 Start On or After or a Finish On or After, and does not hold the free
-float at zero, though a Mandatory Finish's date stays a deadline the F5-A
-re-check reads as written (SL; this withdraws the JS engine's v2.9.16
-rule that restored a mandatory second constraint's pin over a soft
-primary); a Mandatory Start ignores its finish-to-finish and
-start-to-finish predecessors (MG);
-an external early start does not move a Mandatory Start, and an external
-late finish does not cap a mandatory pin (MX); As Late As Possible work
-holds no free float (FZ), in both passes. In the hours pass only: an FF
-or SF requirement beyond the expected finish that falls off working time
+float at zero, though a Mandatory Finish's date stays a deadline the
+F5-A re-check reads as written (SL; this withdraws the JS engine's
+v2.9.16 rule that restored a mandatory second constraint's pin over a
+soft primary); a Mandatory Start ignores its finish-to-finish and
+start-to-finish predecessors (MG); an external early start does not move
+a Mandatory Start, and an external late finish does not cap a mandatory
+pin (MX); As Late As Possible work holds no free float (FZ), unless
+"Calculate multiple float paths" is on, where P6 prints it as it stands
+(FP; the new multiple_float_paths parameter of compute_cpm and
+compute_cpm_hours), in both passes. In the hours pass only: an FF or SF
+requirement beyond the expected finish that falls off working time
 prints at the next opening (XO); the As Late As Possible slide of
 resource dependent work restarts at the activity calendar's next opening
 (AV); an assignment with no work left and a lag starts at a start-to-
-start or start-to-finish bound and lands its lag later (ZB); and under an
-expected finish in force, resource dependent work not yet started keeps
-no first placement: its early dates are its remaining dates (XE). The
-harness gains 4 fixtures (F197-F200): 196 fixtures, 15587 of 15587
+start or start-to-finish bound and lands its lag later (ZB); and under
+an expected finish in force, resource dependent work not yet started
+keeps no first placement: its early dates are its remaining dates (XE).
+The harness gains 6 fixtures (F197-F202): 198 fixtures, 16284 of 16284
 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
@@ -836,15 +838,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 319341
-  sha-256:  f63a9456be2eccf72e720b2cba2ba3ef99f1ae017c43522166a3e646e8ea87d2
+  bytes: 320147
+  sha-256:  ea33ea32bf8a521c106325e5446260311d4b478690bcd2fa67000d697ece3bcd
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 196 passed, 0 failed
-  Checks:   15587 / 15587 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 198 passed, 0 failed
+  Checks:   16284 / 16284 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

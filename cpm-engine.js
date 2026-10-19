@@ -2672,6 +2672,9 @@ function computeCPMHours(activities, relationships, o) {
     // OC: "Make open-ended activities critical" (SCHEDOPTIONS
     // sched_open_critical_flag); off unless the caller hands it on
     const openCritical = !!o.open_critical;
+    // FP: "Calculate multiple float paths" (SCHEDOPTIONS
+    // enable_multiple_longest_path_calc); off unless the caller hands it on
+    const multipleFloatPaths = !!o.multiple_float_paths;
     // OC: work whose successor was left out of this network (level of effort,
     // WBS summary) is not open-ended (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C,
     // E3); computeCPM hands the codes on
@@ -3460,9 +3463,13 @@ function computeCPMHours(activities, relationships, o) {
             // float, even where its slide stops short of its successors (a
             // resource closing before its activity's calendar does): P6
             // prints zero on all 88 unfinished As Late As Possible activities
-            // in H1 to H23 (ZZ-CPP-AFF F1 against F2; H23-02 A1220)
+            // in H1 to H23 (ZZ-CPP-AFF F1 against F2; H23-02 A1220;
+            // ZZ-CPP-AFX, -AFP, -AF4, -HSR, -HSB). FP (19-Oct-2026): not
+            // under "Calculate multiple float paths", where P6 prints the free
+            // float as it stands (ZZ-CPP-HSM; ZZ-CPP-RSRCR H1-S against
+            // ZZ-CPP-RSRCN)
             const alapFf = (n.c1 && n.c1.type === 'ALAP') || (n.c2 && n.c2.type === 'ALAP');
-            if (alapFf && ffSigned > 0) ffSigned = 0;
+            if (alapFf && ffSigned > 0 && !multipleFloatPaths) ffSigned = 0;
             ff = Math.max(0, ffSigned);
         }
         const pDates = n.rem_dates || [n.es, n.ef];
@@ -3670,6 +3677,7 @@ function _hoursPass(activities, relationships, nodes, p) {
             ss_lag_from: p.ssLagFrom, use_expected_finish: p.useExpectedFinish,
             use_external_dates: p.useExternalDates, float_type: p.floatType,
             open_critical: p.openCritical, open_critical_linked: p.openCriticalLinked || [],
+            multiple_float_paths: p.multipleFloatPaths,
         });
     } catch (e) {
         p.alerts.push({
@@ -4494,6 +4502,15 @@ function computeCPM(activities, relationships, opts) {
     // paired site: the open_critical parameter of compute_cpm.
     const _ocOpt = (opts.openCritical !== undefined) ? opts.openCritical : opts.open_critical;
     const _openCritical = _ocOpt === true || _ocOpt === 'Y';
+    // FP (19-Oct-2026) — P6 SCHEDOPTIONS enable_multiple_longest_path_calc,
+    // "Calculate multiple float paths" (opts.multipleFloatPaths; aliases
+    // multiple_float_paths and the raw flag 'Y'). Default off, as P6's is.
+    // Under it P6 prints the free float of As Late As Possible work as it
+    // stands, and FZ does not apply (ZZ-CPP-HSM; ZZ-CPP-RSRCR H1-S against
+    // ZZ-CPP-RSRCN). Python paired site: the multiple_float_paths parameter of
+    // compute_cpm.
+    const _mfpOpt = (opts.multipleFloatPaths !== undefined) ? opts.multipleFloatPaths : opts.multiple_float_paths;
+    const _multipleFloatPaths = _mfpOpt === true || _mfpOpt === 'Y';
 
     // The calendar a lag between predNode and succNode is walked on.
     function lagCalFor(predNode, succNode) {
@@ -7214,9 +7231,9 @@ function computeCPM(activities, relationships, opts) {
     }
     // FZ (H23, 19-Oct-2026) — As Late As Possible work holds no free float, as
     // P6 prints it on every unfinished As Late As Possible activity (see the
-    // hours pass; ZZ-CPP-AFF F1). Python paired site: the same block in
-    // compute_cpm.
-    for (const c in nodes) {
+    // hours pass; ZZ-CPP-AFF F1); FP: not under "Calculate multiple float
+    // paths" (ZZ-CPP-HSM). Python paired site: the same block in compute_cpm.
+    for (const c in (_multipleFloatPaths ? {} : nodes)) {
         const n = nodes[c];
         if (n.is_complete || ![n.constraint, n.constraint2].some((k) => k && k.type === 'ALAP')) continue;
         if (n.ff_signed > 0) n.ff_signed = 0;
@@ -7431,7 +7448,8 @@ function computeCPM(activities, relationships, opts) {
             opts.sched_calendar_on_relationship_lag || 'successor',
         floatType: _floatType, ssLagFrom: _ssLagFrom, projectFinish: _projectFinishOpt,
         useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates,
-        openCritical: _openCritical, openCriticalLinked: Array.from(_ocLinked), alerts,
+        openCritical: _openCritical, openCriticalLinked: Array.from(_ocLinked),
+        multipleFloatPaths: _multipleFloatPaths, alerts,
     });
     if (_lagCalAlert) {
         // LA (13-Oct-2026): now that the hours pass has run, say which figures
@@ -8566,6 +8584,12 @@ function parseXER(content) {
         // P6's default, off.
         sched_open_critical_flag: String(_MC.schedOptions.sched_open_critical_flag || '').trim(),
         open_critical: String(_MC.schedOptions.sched_open_critical_flag || '').trim() === 'Y',
+        // FP (19-Oct-2026) — "Calculate multiple float paths"
+        // (enable_multiple_longest_path_calc), to hand computeCPM as
+        // opts.multipleFloatPaths: on only where the file says Y; a blank flag
+        // or a missing table is P6's default, off.
+        enable_multiple_longest_path_calc: String(_MC.schedOptions.enable_multiple_longest_path_calc || '').trim(),
+        multiple_float_paths: String(_MC.schedOptions.enable_multiple_longest_path_calc || '').trim() === 'Y',
         use_external_dates: String(_MC.schedOptions.sched_outer_depend_type || '').trim() !== 'SD_None',
         use_external_dates_source: !_soPresent
             ? 'SCHEDOPTIONS table absent; P6 default (relationships to other projects not ignored, SD_Both)'
@@ -11702,17 +11726,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '196 cross-validation fixtures. The harness defines 15587 ' +
+                '198 cross-validation fixtures. The harness defines 16284 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 15587 / 15587" is the whole comparison surface. ' +
+                'reported "Checks: 16284 / 16284" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 15587 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 16284 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 194 of the 196 fixtures: ' +
+                'severity-level alert parity, compared on 196 of the 198 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11751,18 +11775,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '15587 comparisons it defines over 196 fixtures and skips none; every ' +
+                '16284 comparisons it defines over 198 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '196 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '198 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 15587 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 16284 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 194 of the 196 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 196 of the 198 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

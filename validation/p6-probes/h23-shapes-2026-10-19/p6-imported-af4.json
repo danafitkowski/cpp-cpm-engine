@@ -1,0 +1,43 @@
+{
+ "case": "ZZ-CPP-AF4",
+ "proj_id": 5383,
+ "differences": [],
+ "resource_dependent": {
+  "tasks": {
+   "F0": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "F5": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "F0",
+    "rsrc_short_name": "ZZ-CPP-AF4-RS",
+    "remain_qty": 3.0,
+    "target_qty": 3.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "F5",
+    "rsrc_short_name": "ZZ-CPP-AF4-RS",
+    "remain_qty": 3.0,
+    "target_qty": 3.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

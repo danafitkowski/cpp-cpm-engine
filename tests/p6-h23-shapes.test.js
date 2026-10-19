@@ -6,10 +6,13 @@
 // -XFR, an expected finish with a finish-to-finish or start-to-finish requirement off working time; ZZ-CPP-ARU, As
 // Late As Possible on resource dependent work whose slide lands off its calendar; ZZ-CPP-AFF, the free float of As
 // Late As Possible work; ZZ-CPP-ZLA, a lagged assignment with no work left under a start-to-start bound; then
-// ZZ-CPP-HLX and -HLN, what H23-12 A1230 has that the first replica lacked, and ZZ-CPP-H12C, H23-12 itself renamed)
+// ZZ-CPP-HLX and -HLN, what H23-12 A1230 has that the first replica lacked, and ZZ-CPP-H12C, H23-12 itself renamed;
+// then ZZ-CPP-AFX, -AFP, -AF4 and -HSR, the free float of As Late As Possible work stopped at its resource's close;
+// ZZ-CPP-RSRCR and -HSB, why the 13-Oct ZZ-CPP-RSRC prints 1 h on H1-S; ZZ-CPP-RSRCN and -HSM, "Calculate multiple
+// float paths" off and on)
 // through the engine's public API, with P6's imported sizing laid over each file, and compare with P6's own values:
 // the four dates to the minute and total and free float in hours, every unfinished activity the engine schedules.
-// Fitted: SL, MG, MX, XO, AV, ZB, FZ and XE were taken on these answers (see the folder's README).
+// Fitted: SL, MG, MX, XO, AV, ZB, FZ, XE and FP were taken on these answers (see the folder's README).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -65,6 +68,7 @@ function run(text) {
         floatType: p.sched_float_type || 'FT_FF', relationshipLagCalendar: p.sched_calendar_on_relationship_lag,
         useExpectedFinish: p.use_expected_finish, projectFinish: p.project_finish || '',
         useExternalDates: p.use_external_dates, openCritical: p.open_critical,
+        multipleFloatPaths: p.multiple_float_paths,
     });
 }
 
@@ -90,8 +94,8 @@ for (const [name, proj] of Object.entries(P6.projects)) {
         else match++;
     }
 }
-if (rows !== 326) {
-    console.error('p6-h23-shapes.test.js: expected 326 probe rows, read ' + rows);
+if (rows !== 550) {
+    console.error('p6-h23-shapes.test.js: expected 550 probe rows, read ' + rows);
     process.exitCode = 1;
 }
 if (off.length) {

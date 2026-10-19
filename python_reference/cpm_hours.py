@@ -341,7 +341,8 @@ def _rsrc_place(n, cal, start_req, finish_req, xf=None):
 def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, schedule_mode='retained_logic',
                       lag_calendar='predecessor', project_calendar=None, project_finish=None,
                       ss_lag_from='early_start', use_expected_finish=False, use_external_dates=True,
-                      float_type='FT_FF', open_critical=False, open_critical_linked=None):
+                      float_type='FT_FF', open_critical=False, open_critical_linked=None,
+                      multiple_float_paths=False):
     cal_map = cal_map or {}
     cals = {}
     # OC: work whose successor was left out of this network (level of effort,
@@ -1173,8 +1174,12 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # float, even where its slide stops short of its successors (a
             # resource closing before its activity's calendar does): P6 prints
             # zero on all 88 unfinished As Late As Possible activities in H1 to
-            # H23 (ZZ-CPP-AFF F1 against F2; H23-02 A1220)
-            if ff_signed > 0 and any((n[k] or {}).get('type') == 'ALAP' for k in ('c1', 'c2')):
+            # H23 (ZZ-CPP-AFF F1 against F2; H23-02 A1220; ZZ-CPP-AFX, -AFP,
+            # -AF4, -HSR, -HSB). FP (19-Oct-2026): not under "Calculate
+            # multiple float paths", where P6 prints the free float as it
+            # stands (ZZ-CPP-HSM; ZZ-CPP-RSRCR H1-S against ZZ-CPP-RSRCN)
+            if (ff_signed > 0 and not multiple_float_paths
+                    and any((n[k] or {}).get('type') == 'ALAP' for k in ('c1', 'c2'))):
                 ff_signed = 0
             ff = max(0, ff_signed)
         p_es, p_ef = n.get('rem_dates') or (n['es'], n['ef'])

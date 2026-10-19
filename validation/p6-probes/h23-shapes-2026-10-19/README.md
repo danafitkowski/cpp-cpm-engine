@@ -1,10 +1,10 @@
 # P6 probes: the seven shapes held-out H23 found
 
-Held-out set H23 ([`../../held-out/H23/RESULT.md`](../../held-out/H23/RESULT.md)) scored the v2.10.12 candidate at 262 of 289. Its 27 differences came from seven shapes, each new to the held-out sets. These 13 probes measured each shape and its neighbours, in two rounds, on 19 October 2026, imported into EPS ZZ-CPP-TEST.
+Held-out set H23 ([`../../held-out/H23/RESULT.md`](../../held-out/H23/RESULT.md)) scored the v2.10.12 candidate at 262 of 289. Its 27 differences came from seven shapes, each new to the held-out sets. These 21 probes measured each shape and its neighbours, in five rounds, on 19 October 2026, imported into EPS ZZ-CPP-TEST. Rounds 3 to 5 followed one shape, the free float of As Late As Possible work, after the rule taken from rounds 1 and 2 (FZ) moved one row of an earlier P6 probe, ZZ-CPP-RSRC H1-S (13 October 2026), off P6.
 
 ## The probes
 
-Synthetic projects built from scratch, plus H23-12 itself renamed. Each probe activity sits in a chain P -> Q -> S -> FIN beside a long chain L -> FIN that sets the project's finish, unless said otherwise.
+Synthetic projects built from scratch, plus H23-12 and ZZ-CPP-RSRC renamed. Each probe activity sits in a chain P -> Q -> S -> FIN beside a long chain L -> FIN that sets the project's finish, unless said otherwise.
 
 ### Round 1
 
@@ -61,6 +61,20 @@ Synthetic projects built from scratch, plus H23-12 itself renamed. Each probe ac
 
 P6 kept a first placement for ZZ-CPP-HLA's Q1, as it does for H20-03 A1060, and stored none for H23-12 A1230. **ZZ-CPP-HLX** (H23-12's options: retained logic, the smaller float, open ends critical, "Use Expected Finish Dates", the Successor lag calendar; data date Sat 25 Jul 2026 08:00) toggles, one at a time, what A1230 had that Q1 lacked: an expected finish in force before the work can start (K1), a Finish On or Before (K2), both (K3), a resource dependent predecessor (K4), a level of effort successor (K5), all four (K6), none (K0). **ZZ-CPP-HLN** is K0 and K1 with the option off. **ZZ-CPP-H12C** is H23-12's own case file renamed, with fresh resource GUIDs, as a control.
 
+### Round 3
+
+FZ, taken from ZZ-CPP-AFF F1, moved ZZ-CPP-RSRC H1-S off P6: there P6 prints 1 h, the gap between the work's finish at its resource's close and what its successor needs. F1's successor needs it by Tue 07:30 through an FS +16 h link on the Successor lag calendar; H1-S's needs it by the next morning's opening through an FS 0 link. Each chain here is P (8 h) -> F (3 h of resource dependent work, As Late As Possible) -> S (1 h, held to a start) -> FIN; the data date is Mon 1 Mar 2027 08:00.
+
+**ZZ-CPP-AFX** (retained logic, the Successor lag calendar): activities on X, Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00; resource RS Mon-Sat 08:00-16:00; week of Mon 15 Mar. G0 as F1 (FS +16 h, S held to Wed 17 15:00, so S needs F by Tue 07:30); G1 FS 0, S held to Tue 16 07:30; G2 to Tue 07:00 (X's opening); G3 to Tue 08:00 (RS's opening); G4 to Tue 09:00 (inside RS's shift); G5 FS +16 h, S held to Wed 14:30 (needs F by Tue 07:00); G6 FS +2 h, S held to Tue 09:30 (needs F by Tue 07:30); G7 and G8 as G1 and G0 with F not As Late As Possible; G9 as G1 with F a task; G10 as G1 with F on M, Mon-Fri 08:00-12:00 and 13:00-17:00. **ZZ-CPP-AFP** is G0, G1 and G5 under the Predecessor lag calendar, **ZZ-CPP-AF4** G0 and G5 under the 24-hour one. **ZZ-CPP-HSR** (retained logic, the Predecessor lag calendar) replicates H1-S: activities on M, resource RT Mon-Fri 08:00-16:00, F 8 h with no predecessor, S 4 h held to Fri 5 Mar 08:00 (J0); J1 adds P; J2 links F to S FS +8 h with S held to Fri 17:00.
+
+### Round 4
+
+**ZZ-CPP-RSRCR** is the ZZ-CPP-RSRC file P6 scheduled from on 13 October, renamed and nothing else. **ZZ-CPP-HSB** is J0 again (B0), then with what H1-S has that the replicas lack: a successor with no successor of its own (B1), a holiday on the work's calendar after its successor's start (B2), the Duration percent complete type (B3), and all three (B4).
+
+### Round 5
+
+ZZ-CPP-RSRC has "Calculate multiple float paths" on (SCHEDOPTIONS enable_multiple_longest_path_calc Y; P6 stores float path 31 on H1-S); the replicas and every held-out set have it off. **ZZ-CPP-RSRCN** is ZZ-CPP-RSRC with the option off and nothing else changed. **ZZ-CPP-HSM** has it on: B0 (J0), G1, G0 and G7 as above, on the Successor lag calendar.
+
 ## What P6 does
 
 - **Shape 1 (XE).** HLA Q1, every K in HLX and HLN, and H12C A1230 print the same dates, Tue 18 Aug 08:00 to Mon 24 Aug 10:00: the remaining work starts at calendar A's next opening after its day off. Where the successor starts is what differs. With an expected finish in force on the work not yet started (HLX K1, K3, K6; H12C A1230), P6 keeps no first placement, and the successor starts at the printed finish, Mon 24 Aug 10:00. Without one (HLX K0, K2, K4, K5; HLN K0, K1; HLA Q1), P6 drives the successor from a first placement on the resources' calendars that runs through the activity's day off and finishes Thu 20 Aug 10:00: the successor starts there. Under the Predecessor lag calendar the lead lands on the day off itself (HLP), the work starts at the calendar's next opening with no first placement, and the successor starts Mon 24 Aug 10:00, as the engine already had it.
@@ -69,22 +83,24 @@ P6 kept a first placement for ZZ-CPP-HLA's Q1, as it does for H20-03 A1060, and 
 - **Shape 4 (MX).** An external early start moves neither a Mandatory Start (E1, E3, E9 start Wed 9 08:00 against Thu 10 and Fri 11) nor a Mandatory Finish (E4, E10), and an external late finish caps neither (E6, E7). A soft constraint takes both (E5 starts Thu 10 08:00; E8's late finish is Fri 11 17:00).
 - **Shape 5 (XO).** A finish-to-finish or start-to-finish requirement beyond the expected finish that falls off working time prints at the next opening: Mon 16 Nov 07:00 for Sat 03:00 (X1, X2, X6, X7), Fri 13 Nov 07:00 for Thu 19:00 (X3), as it does with no expected finish (X5). At a close it stays (X4). XFO and XFR print the same.
 - **Shape 6 (AV).** The As Late As Possible slide of resource dependent work under way restarts at the activity calendar's next opening when it lands on a day only its resource works, and the resource runs on from there, past the slide's bound. A1's late start is Sat 19 Dec 13:00; A1 runs Mon 21 Dec 07:00 to Sat 26 Dec 17:00, past its late finish, Fri 25 Dec 11:00. A5 runs Mon 14 Dec 07:00 to Sat 19 Dec 07:00, past the Friday close before its held successor.
-- **Shape 7 (FZ).** As Late As Possible work holds no free float. F1 finishes Mon 15 Mar 16:00, when its resource closes, though its successor needs it only by Tue 16 Mar 07:30, and P6 prints its free float as 0 h. F2, not As Late As Possible, keeps 80.5 h; F3, a task, slides to Tue 16 Mar 07:30.
+- **Shape 7 (FZ, FP).** With "Calculate multiple float paths" off, P6's default, As Late As Possible work holds no free float. F1 finishes Mon 15 Mar 16:00, when its resource closes, though its successor needs it only by Tue 16 Mar 07:30, and P6 prints its free float as 0 h. F2, not As Late As Possible, keeps 80.5 h; F3, a task, slides to Tue 16 Mar 07:30. So does every As Late As Possible F of rounds 3 and 4, where the gap is 1 h to 2.5 h, whatever the lag, the lag calendar, where the requirement falls, an open-ended successor, a holiday or the percent complete type; G4 and G9 slide to their requirement and have no gap; G7 and G8 keep 80.5 h. With the option on, P6 prints the free float as it stands: H1-S prints 1 h in RSRCR, as on 13 October, and 0 h in RSRCN, where the option is off; in HSM, B0 prints 1 h, G0 and G1 2 h, G7 80.5 h.
 
 ## The engine
 
 | Engine | Probe rows matching P6 on the four dates and both floats |
 |---|---|
-| v2.10.11 | 266 of 326 |
-| The v2.10.12 candidate H23 scored (`5b9a7c2d`) | 269 of 326 |
-| This candidate | 326 of 326 |
+| v2.10.11 | 469 of 550 |
+| The v2.10.12 candidate H23 scored (`5b9a7c2d`) | 472 of 550 |
+| The candidate with FZ and without FP (`1efe5eda`) | 546 of 550 |
+| This candidate | 550 of 550 |
 
 The rules are in `cpm-engine.js` (`computeCPMHours`, and the whole-day pass of `computeCPM` where it schedules the shape), `python_reference/cpm_hours.py` and `python_reference/cpm.py`:
 
 - **SL**, in both passes. Only the primary slot pins, and holds free float at zero. A Mandatory Start in the second slot is a Start On or After forward, a Mandatory Finish a Finish On or After; on the late side PC caps. This withdraws the half of the JS whole-day pass's v2.9.16 rule F5-B that restored a mandatory second constraint's pin over a soft primary; the Python reference never had it.
 - **MG**, in both passes. A Mandatory Start ignores its finish-to-finish and start-to-finish predecessors, and an expected finish's floor from them.
 - **MX**, in both passes. A Mandatory Start ignores an external early start; a mandatory pin ignores an external late finish (the hours pass already did; the whole-day pass capped the pin).
-- **FZ**, in both passes. As Late As Possible work holds no free float. P6 prints zero on all 88 unfinished As Late As Possible activities in H1 to H23.
+- **FZ**, in both passes. As Late As Possible work holds no free float. P6 prints zero on all 88 unfinished As Late As Possible activities in H1 to H23, none of which has "Calculate multiple float paths" on.
+- **FP**, in both passes. The engine reads "Calculate multiple float paths" for the first time: `parseXER` hands SCHEDOPTIONS enable_multiple_longest_path_calc on as `multiple_float_paths`, `computeCPM` takes it as `opts.multipleFloatPaths`, the Python reference as `multiple_float_paths`. Default off, as P6's is. Under it FZ does not apply.
 - **XO**, **AV**, **ZB** and **XE**, in the hours pass: they turn on times of day and on the resources' own calendars, which the whole-day pass does not schedule.
 
 On the same bytes:
@@ -95,11 +111,12 @@ On the same bytes:
 | H23 | 289 of 289 (fitted, not held out: the rules were taken after its score) |
 | The replays of the earlier P6 probes | all pass, as before |
 
-Across H1 to H23, 73 of 37,352 printed values moved, all onto P6, all in H23. The whole-day pass moved 10 of 21,344 values, all in H23: 6 onto P6's day, 4 moved but still off it. On these probes the whole-day pass puts 99 of 326 activities on P6's day for all four dates (the candidate H23 scored: 84): 82 of the 83 in SSM and MXE, on a Monday to Friday calendar of 8 h days, and 17 of the other 243, which run on calendars of 12 h every day, of 10 h Monday to Thursday, or of 9.5 h Monday to Thursday and 4 h on Friday.
+Across H1 to H23, 73 of 37,352 printed values moved, all onto P6, all in H23. The whole-day pass moved 10 of 21,344 values, all in H23: 6 onto P6's day, 4 moved but still off it. On these probes the whole-day pass puts 123 of 550 activities on P6's day for all four dates (the candidate H23 scored: 108): 82 of the 83 in SSM and MXE, which run on a Monday to Friday calendar of 8 h days, their resource on the same hours, and 41 of the other 467.
 
 **Not measured:**
 - a Start On or After, or a Mandatory Start, in the second slot later than a primary Mandatory Start. The hours passes and the Python whole-day pass move the start out to it; the JS whole-day pass keeps the primary date (the other half of F5-B). M4 points to the move: P6 took its start off the Mandatory Start for a later finish floor;
 - an expected finish on resource dependent work already under way (XE is taken on work not yet started);
-- the As Late As Possible slide of resource dependent work not yet started landing on a day only its resource works. P6's import re-sized A2's and A3's assignments to 119.5 h and 105.5 h on RE, and their slides start on working days, Tue 15 Dec 11:30 and Wed 9 Dec 13:30.
+- the As Late As Possible slide of resource dependent work not yet started landing on a day only its resource works. P6's import re-sized A2's and A3's assignments to 119.5 h and 105.5 h on RE, and their slides start on working days, Tue 15 Dec 11:30 and Wed 9 Dec 13:30;
+- "Calculate multiple float paths" with the paths calculated on free float (SCHEDOPTIONS use_total_float_multiple_longest_paths N): every probe here calculates them on total float, P6's default.
 
-The builders are in the P6 oracle repository (`h23_shapes_2026_10_19/build_h23p.py`, `build_h23q.py`).
+The builders are in the P6 oracle repository (`h23_shapes_2026_10_19/build_h23p.py`, `build_h23q.py`, `build_h23r.py`, `build_h23s.py`, `build_h23t.py`).
