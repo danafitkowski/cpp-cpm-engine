@@ -1,0 +1,25 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). The production Python engine with the v2.10.11 wiring: canonical cpm.py as ported from python_reference/cpm.py (a6bdc8dd), with python_reference/cpm_hours.py at the protocol commit (45d50a3c), through the production converter, which reads the open-ended option, the float type and each activity's successors left out of the network. Run on H21's 12 projects as P6's database holds them after the F9. Counts only.",
+ "against_p6": {
+  "projects": 12,
+  "unfinished_activities": 205,
+  "on_p6_all_four_dates_and_both_floats": 205,
+  "off": []
+ },
+ "against_this_engine": {
+  "projects": 12,
+  "activities": 291,
+  "every_field_equal": 291
+ },
+ "released_v2.10.10_production_python": {
+  "note": "The released v2.10.10 conversion and engine on the same projects, for comparison.",
+  "handed what the released tools hand the engine (neither the open-ended option nor the float type)": 189,
+  "handed the float type too": 190,
+  "moved onto P6 by the v2.10.11 wiring and engine": 16,
+  "moved away from P6": 0,
+  "moved by the float type alone": [
+   "H21-04 A1210: total float 211 h (finish float) to 185 h (the smaller of start and finish float), as P6",
+   "H21-10 A1170: total float 26 h to 16.5 h; the open-ended option takes it to P6's 0 h"
+  ]
+ }
+}

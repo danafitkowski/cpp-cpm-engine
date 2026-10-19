@@ -1,0 +1,29 @@
+{
+ "note": "What the draw gave XL, OC, XC and the expected finish to decide: every unfinished activity in scope of each shape, read from the frozen case files, with its match on all seven fields in the score (the v2.10.11 candidate) and in the v2.10.10 diagnosis. Counts and activity codes only.",
+ "shapes": [
+  {"shape": "In the nine cases under \"Make open-ended activities critical\"", "unfinished": 148, "score_all_seven": 148, "v2.10.10_all_seven": 133},
+  {"shape": "Open ends (no successor), the option on", "unfinished": 20, "score_all_seven": 20, "v2.10.10_all_seven": 13},
+  {"shape": "Open ends, the option on, in a project with a Must Finish By", "unfinished": 14, "score_all_seven": 14, "v2.10.10_all_seven": 10},
+  {"shape": "Open ends, the option on, under progress override", "unfinished": 10, "score_all_seven": 10, "v2.10.10_all_seven": 7},
+  {"shape": "Open ends, the option on, under retained logic", "unfinished": 10, "score_all_seven": 10, "v2.10.10_all_seven": 6},
+  {"shape": "Open ends, the option on, under way", "unfinished": 0, "score_all_seven": 0, "v2.10.10_all_seven": 0},
+  {"shape": "Open ends, the option on, As Late As Possible", "unfinished": 0, "score_all_seven": 0, "v2.10.10_all_seven": 0},
+  {"shape": "Successors only level of effort or WBS summary, the option on (E2)", "unfinished": 0, "score_all_seven": 0, "v2.10.10_all_seven": 0},
+  {"shape": "Successors only start-to-start, finish-to-finish or start-to-finish, the option on", "unfinished": 29, "score_all_seven": 29, "v2.10.10_all_seven": 27},
+  {"shape": "Open ends, the option off", "unfinished": 5, "score_all_seven": 5, "v2.10.10_all_seven": 5},
+  {"shape": "Expected finish in force", "unfinished": 10, "score_all_seven": 10, "v2.10.10_all_seven": 10},
+  {"shape": "Expected finish against a finish constraint, any status", "unfinished": 0, "score_all_seven": 0, "v2.10.10_all_seven": 0},
+  {"shape": "XL: expected finish on As Late As Possible work", "unfinished": 0, "score_all_seven": 0, "v2.10.10_all_seven": 0},
+  {"shape": "XC: expected finish against a finish constraint, not started", "unfinished": 0, "score_all_seven": 0, "v2.10.10_all_seven": 0},
+  {"shape": "All", "unfinished": 205, "score_all_seven": 205, "v2.10.10_all_seven": 190}
+ ],
+ "completed_open_ends_under_the_option": [
+  {"activity": "H21-07 A1090", "options": "progress override", "unfinished_predecessor": "A1030", "predecessor_score_all_seven": true, "predecessor_v2.10.10_all_seven": true}
+ ],
+ "moved_onto_p6_from_v2.10.10": {
+  "open_ends": ["H21-01 A1180", "H21-07 A1190", "H21-10 A1400", "H21-10 A1410", "H21-10 A1420", "H21-11 A1190", "H21-11 A1200"],
+  "leading_to_those_open_ends": ["H21-10 A1100", "H21-10 A1120", "H21-10 A1150", "H21-10 A1170", "H21-10 A1180", "H21-10 A1220", "H21-10 A1250", "H21-10 A1300"],
+  "fields_moved": ["late_start", "late_finish", "total_float_hr", "critical"],
+  "moved_away": []
+ }
+}
