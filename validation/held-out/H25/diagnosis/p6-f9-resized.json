@@ -1,0 +1,609 @@
+{
+ "note": "Resource dependent sizing P6's own F9 rewrote on H25 (read read-only from P6's database after the F9, against the import record p6-imported/): the remaining duration of each resource dependent activity and the remaining units of each assignment whose value changed. Diagnosis after the score, not an input to it.",
+ "activities": [
+  {
+   "case": "H25-01",
+   "task_code": "A1190",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 9.0
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1280",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 28.0
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1310",
+   "remaining_hours_after_import": 13.0,
+   "remaining_hours_after_f9": 18.5
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1360",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 12.0
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1440",
+   "remaining_hours_after_import": 34.5,
+   "remaining_hours_after_f9": 46.5
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1450",
+   "remaining_hours_after_import": 10.5,
+   "remaining_hours_after_f9": 34.5
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1460",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 8.5
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1490",
+   "remaining_hours_after_import": 1.0,
+   "remaining_hours_after_f9": 0.0
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1500",
+   "remaining_hours_after_import": 37.0,
+   "remaining_hours_after_f9": 21.0
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1520",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 8.5
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1220",
+   "remaining_hours_after_import": 56.0,
+   "remaining_hours_after_f9": 76.0
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1300",
+   "remaining_hours_after_import": 105.0,
+   "remaining_hours_after_f9": 154.5
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1440",
+   "remaining_hours_after_import": 73.0,
+   "remaining_hours_after_f9": 57.0
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1450",
+   "remaining_hours_after_import": 106.5,
+   "remaining_hours_after_f9": 153.0
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1510",
+   "remaining_hours_after_import": 79.0,
+   "remaining_hours_after_f9": 21.0
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1530",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 9.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1050",
+   "remaining_hours_after_import": 24.0,
+   "remaining_hours_after_f9": 50.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 12.0,
+   "remaining_hours_after_f9": 2.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1140",
+   "remaining_hours_after_import": 23.0,
+   "remaining_hours_after_f9": 25.5
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1160",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 30.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1300",
+   "remaining_hours_after_import": 34.5,
+   "remaining_hours_after_f9": 81.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1310",
+   "remaining_hours_after_import": 58.5,
+   "remaining_hours_after_f9": 82.5
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1320",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 17.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1340",
+   "remaining_hours_after_import": 7.0,
+   "remaining_hours_after_f9": 9.5
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1350",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 5.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1360",
+   "remaining_hours_after_import": 71.0,
+   "remaining_hours_after_f9": 47.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1380",
+   "remaining_hours_after_import": 11.0,
+   "remaining_hours_after_f9": 8.5
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1400",
+   "remaining_hours_after_import": 31.0,
+   "remaining_hours_after_f9": 16.0
+  },
+  {
+   "case": "H25-04",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 64.0,
+   "remaining_hours_after_f9": 56.0
+  },
+  {
+   "case": "H25-04",
+   "task_code": "A1100",
+   "remaining_hours_after_import": 120.0,
+   "remaining_hours_after_f9": 98.5
+  },
+  {
+   "case": "H25-04",
+   "task_code": "A1110",
+   "remaining_hours_after_import": 112.0,
+   "remaining_hours_after_f9": 127.0
+  },
+  {
+   "case": "H25-04",
+   "task_code": "A1280",
+   "remaining_hours_after_import": 79.0,
+   "remaining_hours_after_f9": 43.0
+  },
+  {
+   "case": "H25-04",
+   "task_code": "A1310",
+   "remaining_hours_after_import": 6.0,
+   "remaining_hours_after_f9": 8.0
+  },
+  {
+   "case": "H25-04",
+   "task_code": "A1320",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 30.0
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1150",
+   "remaining_hours_after_import": 31.0,
+   "remaining_hours_after_f9": 6.0
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 44.0,
+   "remaining_hours_after_f9": 45.0
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1240",
+   "remaining_hours_after_import": 32.0,
+   "remaining_hours_after_f9": 95.0
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1480",
+   "remaining_hours_after_import": 10.5,
+   "remaining_hours_after_f9": 1.0
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1520",
+   "remaining_hours_after_import": 4.0,
+   "remaining_hours_after_f9": 6.5
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1530",
+   "remaining_hours_after_import": 119.0,
+   "remaining_hours_after_f9": 72.0
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1540",
+   "remaining_hours_after_import": 11.0,
+   "remaining_hours_after_f9": 9.0
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1560",
+   "remaining_hours_after_import": 13.5,
+   "remaining_hours_after_f9": 9.5
+  },
+  {
+   "case": "H25-06",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 20.0
+  },
+  {
+   "case": "H25-06",
+   "task_code": "A1280",
+   "remaining_hours_after_import": 64.0,
+   "remaining_hours_after_f9": 72.0
+  },
+  {
+   "case": "H25-06",
+   "task_code": "A1320",
+   "remaining_hours_after_import": 3.0,
+   "remaining_hours_after_f9": 2.0
+  },
+  {
+   "case": "H25-06",
+   "task_code": "A1350",
+   "remaining_hours_after_import": 9.0,
+   "remaining_hours_after_f9": 8.0
+  },
+  {
+   "case": "H25-07",
+   "task_code": "A1030",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 19.0
+  },
+  {
+   "case": "H25-07",
+   "task_code": "A1140",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 30.0
+  },
+  {
+   "case": "H25-07",
+   "task_code": "A1320",
+   "remaining_hours_after_import": 32.0,
+   "remaining_hours_after_f9": 40.0
+  },
+  {
+   "case": "H25-07",
+   "task_code": "A1370",
+   "remaining_hours_after_import": 6.0,
+   "remaining_hours_after_f9": 4.0
+  },
+  {
+   "case": "H25-07",
+   "task_code": "A1390",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 4.0
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1050",
+   "remaining_hours_after_import": 125.0,
+   "remaining_hours_after_f9": 173.0
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1120",
+   "remaining_hours_after_import": 48.0,
+   "remaining_hours_after_f9": 61.5
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1140",
+   "remaining_hours_after_import": 122.0,
+   "remaining_hours_after_f9": 10.5
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1210",
+   "remaining_hours_after_import": 33.0,
+   "remaining_hours_after_f9": 82.5
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1280",
+   "remaining_hours_after_import": 56.0,
+   "remaining_hours_after_f9": 9.0
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1300",
+   "remaining_hours_after_import": 60.0,
+   "remaining_hours_after_f9": 16.0
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 32.0
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1270",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 32.0
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1360",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 16.0
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1470",
+   "remaining_hours_after_import": 120.0,
+   "remaining_hours_after_f9": 128.0
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1480",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 42.0
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1560",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 12.0
+  },
+  {
+   "case": "H25-10",
+   "task_code": "A1010",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 25.5
+  },
+  {
+   "case": "H25-10",
+   "task_code": "A1030",
+   "remaining_hours_after_import": 24.0,
+   "remaining_hours_after_f9": 32.0
+  },
+  {
+   "case": "H25-10",
+   "task_code": "A1150",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 15.0
+  },
+  {
+   "case": "H25-10",
+   "task_code": "A1330",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 15.0
+  },
+  {
+   "case": "H25-10",
+   "task_code": "A1370",
+   "remaining_hours_after_import": 35.0,
+   "remaining_hours_after_f9": 17.5
+  },
+  {
+   "case": "H25-11",
+   "task_code": "A1070",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 22.0
+  },
+  {
+   "case": "H25-11",
+   "task_code": "A1090",
+   "remaining_hours_after_import": 24.0,
+   "remaining_hours_after_f9": 16.0
+  },
+  {
+   "case": "H25-11",
+   "task_code": "A1160",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 7.0
+  },
+  {
+   "case": "H25-11",
+   "task_code": "A1320",
+   "remaining_hours_after_import": 80.0,
+   "remaining_hours_after_f9": 96.0
+  },
+  {
+   "case": "H25-11",
+   "task_code": "A1350",
+   "remaining_hours_after_import": 3.0,
+   "remaining_hours_after_f9": 2.5
+  },
+  {
+   "case": "H25-11",
+   "task_code": "A1370",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 7.0
+  },
+  {
+   "case": "H25-12",
+   "task_code": "A1040",
+   "remaining_hours_after_import": 32.0,
+   "remaining_hours_after_f9": 24.0
+  },
+  {
+   "case": "H25-12",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 32.0,
+   "remaining_hours_after_f9": 24.0
+  },
+  {
+   "case": "H25-12",
+   "task_code": "A1370",
+   "remaining_hours_after_import": 14.0,
+   "remaining_hours_after_f9": 10.0
+  }
+ ],
+ "assignments": [
+  {
+   "case": "H25-01",
+   "task_code": "A1440",
+   "resource": "H25-01-R4",
+   "remaining_units_after_import": 80.0,
+   "remaining_units_after_f9": 106.666666666667
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1440",
+   "resource": "H25-01-R5",
+   "remaining_units_after_import": 80.0,
+   "remaining_units_after_f9": 106.666666666667
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1450",
+   "resource": "H25-01-R4",
+   "remaining_units_after_import": 120.0,
+   "remaining_units_after_f9": 360.0
+  },
+  {
+   "case": "H25-01",
+   "task_code": "A1450",
+   "resource": "H25-01-R5",
+   "remaining_units_after_import": 72.0,
+   "remaining_units_after_f9": 360.0
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1440",
+   "resource": "H25-02-R5",
+   "remaining_units_after_import": 240.0,
+   "remaining_units_after_f9": 220.645161290323
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1450",
+   "resource": "H25-02-R5",
+   "remaining_units_after_import": 120.0,
+   "remaining_units_after_f9": 291.0
+  },
+  {
+   "case": "H25-02",
+   "task_code": "A1450",
+   "resource": "H25-02-R6",
+   "remaining_units_after_import": 232.0,
+   "remaining_units_after_f9": 695.999999999999
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1050",
+   "resource": "H25-03-R2",
+   "remaining_units_after_import": 27.0,
+   "remaining_units_after_f9": 51.5
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1160",
+   "resource": "H25-03-R2",
+   "remaining_units_after_import": 48.0,
+   "remaining_units_after_f9": 91.2
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1300",
+   "resource": "H25-03-R5",
+   "remaining_units_after_import": 120.0,
+   "remaining_units_after_f9": 231.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1300",
+   "resource": "H25-03-R6",
+   "remaining_units_after_import": 240.0,
+   "remaining_units_after_f9": 480.0
+  },
+  {
+   "case": "H25-03",
+   "task_code": "A1310",
+   "resource": "H25-03-R5",
+   "remaining_units_after_import": 80.0,
+   "remaining_units_after_f9": 106.666666666667
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1150",
+   "resource": "H25-05-R1",
+   "remaining_units_after_import": 16.0,
+   "remaining_units_after_f9": 3.2
+  },
+  {
+   "case": "H25-05",
+   "task_code": "A1480",
+   "resource": "H25-05-R4",
+   "remaining_units_after_import": 120.0,
+   "remaining_units_after_f9": 12.0
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1140",
+   "resource": "H25-08-R3",
+   "remaining_units_after_import": 25.0,
+   "remaining_units_after_f9": 9.5
+  },
+  {
+   "case": "H25-08",
+   "task_code": "A1210",
+   "resource": "H25-08-R4",
+   "remaining_units_after_import": 40.0,
+   "remaining_units_after_f9": 86.4864864864864
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1360",
+   "resource": "H25-09-R1",
+   "remaining_units_after_import": 4.0,
+   "remaining_units_after_f9": 8.44444444444444
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1360",
+   "resource": "H25-09-R2",
+   "remaining_units_after_import": 16.0,
+   "remaining_units_after_f9": 37.3333333333334
+  },
+  {
+   "case": "H25-09",
+   "task_code": "A1470",
+   "resource": "H25-09-R5",
+   "remaining_units_after_import": 360.0,
+   "remaining_units_after_f9": 398.511627906977
+  },
+  {
+   "case": "H25-11",
+   "task_code": "A1320",
+   "resource": "H25-11-R5",
+   "remaining_units_after_import": 160.0,
+   "remaining_units_after_f9": 165.161290322581
+  }
+ ]
+}
