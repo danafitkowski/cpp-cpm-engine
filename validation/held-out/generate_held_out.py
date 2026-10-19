@@ -176,7 +176,11 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # on work under way and not yet started, beside As Late As Possible, a finish constraint, another constraint or none,
 # with "Use Expected Finish Dates" mostly on ('xfx': chance, fewest, most, the option's chance); and the edges of the
 # open-ended rule ('oe': chance): work whose only successor is a level of effort or a WBS summary, As Late As
-# Possible open ends, open ends under way, and completed work with no successor after unfinished work.
+# Possible open ends, open ends under way, and completed work with no successor after unfinished work. 'wide5'
+# (H23 on) draws wide4's features exactly and then, from the same stream, the shapes of the rules taken after H22
+# ('xpm': chance; see draw_xpm): a Mandatory Finish and an expected finish on work not yet started whose successor
+# needs it earlier (XP), mandatory dates on resource dependent work (MR), milestones with an expected finish (XC on
+# finish milestones), and a mandatory date beside a second constraint (PC).
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
@@ -191,6 +195,10 @@ WIDE_PROFILES = {
                          'external': 0.55},
               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
               'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8},
+    'wide5': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                         'external': 0.55},
+              'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
+              'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85},
 }
 
 # The values P6 23.12 writes for a project created with its defaults.
@@ -619,7 +627,147 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
                 a = spur('complete, no successor, after work not finished', rng.choice(todo), 'PR_FS', cal)
                 a.update({'status': 'TK_Complete', 'act_start': st, 'act_end': fin, 'remain': 0, 'pct': 100})
                 w['oe']['done'].append(a['code'])
+    # wide5: the shapes of XP, MR and XC's finish-milestone edge, drawn after everything wide4 draws.
+    if pf.get('xpm') is not None:
+        draw_xpm(rng, pf['xpm'], w, acts, rels, cals, es, ef, at, dd_day, n0)
     return w
+
+
+def draw_xpm(rng, chance, w, acts, rels, cals, es, ef, at, dd_day, n0):
+    """wide5 (H23 on): a) a Mandatory Finish and an expected finish on work not yet started (a task or resource
+    dependent), its finish-to-start successor given a Finish On or Before near the Mandatory Finish date, so the
+    successor needs it earlier (XP: the cap and the pin differ there); b) a Mandatory Start or Mandatory Finish on
+    resource dependent work not yet started, sometimes with an expected finish, its successor often needing it
+    earlier (MR); c) a finish milestone (sometimes a start milestone) hung off the network with an expected finish
+    and a finish constraint or none, its 8 or 16 h successor running into the project's finish milestone with a
+    Finish On or Before (XC on milestones; the whole-day pass's milestone); d) a mandatory date beside a second
+    constraint (PC)."""
+    start = at(0)
+
+    def day(dt):
+        return (dt - start).total_seconds() / 86400.0
+
+    def cdays(a, h):
+        return h / max(a['cal'].week_hours() / 7.0, 0.1)
+
+    def fs_succ(a):
+        out = [acts[r['succ']] for r in rels if r['pred'] == a['i'] and r['type'] == 'PR_FS' and r['lag'] == 0]
+        return [s for s in out if s['type'] in ('TT_Task', 'TT_Rsrc') and s['status'] != 'TK_Complete'
+                and s['i'] < n0 - 1]
+
+    def needs_earlier(s, fin_day):
+        s['cstr'], s['cstr_date'] = 'CS_MEOB', s['cal'].last_end_at_or_before(at(max(1.0, fin_day + rng.uniform(-1, 1))))
+        s['cstr2'], s['cstr_date2'] = '', None
+        s.setdefault('tags', []).append('Finish On or Before: needs its predecessor earlier')
+
+    w['xpm'] = {'xp': [], 'mr': [], 'milestones': [], 'pairs': []}
+    if rng.random() >= chance:
+        return
+    taken = set()
+    fresh = [a for a in acts[:n0] if a['type'] in ('TT_Task', 'TT_Rsrc') and a['status'] == 'TK_NotStart'
+             and 0 < a['i'] < n0 - 1 and not a['xf'] and a['cstr'] != 'CS_ALAP']
+    # a) XP
+    pool = [a for a in fresh if fs_succ(a)]
+    for a in sorted(rng.sample(pool, min(len(pool), rng.randint(1, 3))), key=lambda x: x['i']):
+        if a['code'] in taken:
+            continue
+        cal = a['cal']
+        mf = cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(1, 6))))
+        a.update({'cstr': 'CS_MANDFIN', 'cstr_date': mf, 'cstr2': '', 'cstr_date2': None,
+                  'xf': cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(-2, 3))))})
+        a.setdefault('tags', []).append('Mandatory Finish and an expected finish')
+        s = rng.choice(fs_succ(a))
+        needs_earlier(s, day(mf))
+        taken.update((a['code'], s['code']))
+        w['xpm']['xp'].append(a['code'])
+    # b) MR
+    pool = [a for a in fresh if a['type'] == 'TT_Rsrc' and a['code'] not in taken]
+    for a in sorted(rng.sample(pool, min(len(pool), rng.randint(1, 3))), key=lambda x: x['i']):
+        if a['code'] in taken:
+            continue
+        cal = a['cal']
+        if rng.random() < 0.5:
+            ms = cal.first_start_at_or_after(at(max(dd_day, es[a['i']] + rng.uniform(-1, 6))))
+            a.update({'cstr': 'CS_MANDSTART', 'cstr_date': ms})
+            fin_day = day(ms) + cdays(a, a['remain'])
+        else:
+            mf = cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(-1, 6))))
+            a.update({'cstr': 'CS_MANDFIN', 'cstr_date': mf})
+            fin_day = day(mf)
+        a.update({'cstr2': '', 'cstr_date2': None})
+        if rng.random() < 0.4:
+            a['xf'] = cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(-2, 3))))
+        a.setdefault('tags', []).append('resource dependent, %s' % a['cstr'] + (', an expected finish' if a['xf'] else ''))
+        taken.add(a['code'])
+        if fs_succ(a) and rng.random() < 0.6:
+            s = rng.choice(fs_succ(a))
+            needs_earlier(s, fin_day)
+            taken.add(s['code'])
+        w['xpm']['mr'].append(a['code'])
+    # c) milestones with an expected finish
+    hosts = [a for a in acts[:n0 - 1] if a['type'] in ('TT_Task', 'TT_Rsrc') and a['status'] != 'TK_Complete']
+    end = acts[n0 - 1]
+    for _ in range(rng.randint(1, 2) if hosts else 0):
+        p = rng.choice(hosts)
+        cal = rng.choice(cals)
+        i = len(acts)
+        mtype = 'TT_FinMile' if rng.random() < 0.8 else 'TT_Mile'
+        es[i] = ef[i] = ef[p['i']]
+        xf = cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[p['i']] + rng.uniform(0.5, 6))))
+        if mtype == 'TT_FinMile':
+            c = pick(rng, [('CS_MEOA', 25), ('CS_MEO', 20), ('CS_MANDFIN', 25), ('', 30)])
+            cd = cal.last_end_at_or_before(at(day(xf) + rng.uniform(1, 8))) if c else None
+        else:
+            c = pick(rng, [('CS_MSOA', 30), ('CS_MANDSTART', 30), ('', 40)])
+            cd = cal.first_start_at_or_after(at(max(dd_day, day(xf) + rng.uniform(-3, 4)))) if c else None
+        m = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': mtype, 'cal': cal, 'hours': 0, 'preds': [],
+             'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': 0, 'xf': xf, 'pct': 0,
+             'cstr': c, 'cstr_date': cd, 'cstr2': '', 'cstr_date2': None,
+             'tags': ['%s, an expected finish%s' % ('finish milestone' if mtype == 'TT_FinMile' else 'start milestone',
+                                                     ' and %s' % c if c else '')]}
+        acts.append(m)
+        rels.append({'pred': p['i'], 'succ': i, 'type': 'PR_FS', 'lag': 0})
+        m['preds'].append(rels[-1])
+        j = len(acts)
+        hours = rng.choice([8, 16])
+        es[j] = ef[i]
+        ef[j] = es[j] + hours / max(cal.week_hours() / 7.0, 0.1)
+        s = {'i': j, 'code': 'A%d' % (1000 + 10 * j), 'type': 'TT_Task', 'cal': cal, 'hours': hours, 'preds': [],
+             'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': hours, 'xf': None, 'pct': 0,
+             'cstr': 'CS_MEOB', 'cstr_date': cal.last_end_at_or_before(at(day(xf) + rng.uniform(0, 6))),
+             'cstr2': '', 'cstr_date2': None, 'tags': ['after a milestone with an expected finish']}
+        acts.append(s)
+        rels.append({'pred': i, 'succ': j, 'type': 'PR_FS', 'lag': 0})
+        s['preds'].append(rels[-1])
+        if end['status'] != 'TK_Complete':
+            rels.append({'pred': j, 'succ': end['i'], 'type': 'PR_FS', 'lag': 0})
+            end['preds'].append(rels[-1])
+        w['xpm']['milestones'].append(m['code'])
+    # d) a mandatory date beside a second constraint (PC): a Mandatory Finish or Mandatory Start with a tighter Finish
+    # On or Before or Start On or Before, or a Finish On or Before or Start On or After with a Mandatory Finish second,
+    # or both mandatory dates; on about half, the successor needs the work earlier
+    w['xpm']['pairs'] = []
+    pool = [a for a in fresh if a['code'] not in taken and not a['xf']]
+    for a in sorted(rng.sample(pool, min(len(pool), rng.randint(1, 2))), key=lambda x: x['i']):
+        cal = a['cal']
+        e0, f0 = es[a['i']], ef[a['i']]
+        fin = lambda lo, hi: cal.last_end_at_or_before(at(max(dd_day + 1.0, f0 + rng.uniform(lo, hi))))
+        sta = lambda lo, hi: cal.first_start_at_or_after(at(max(dd_day, e0 + rng.uniform(lo, hi))))
+        kind = pick(rng, [('MF+FOB', 25), ('MS+SOB', 20), ('FOB+MF', 20), ('SOA+MF', 20), ('MS+MF', 15)])
+        c1, c2 = {'MF+FOB': (('CS_MANDFIN', fin(1, 6)), ('CS_MEOB', fin(-2, 2))),
+                  'MS+SOB': (('CS_MANDSTART', sta(0, 4)), ('CS_MSOB', sta(-3, 1))),
+                  'FOB+MF': (('CS_MEOB', fin(-2, 2)), ('CS_MANDFIN', fin(1, 6))),
+                  'SOA+MF': (('CS_MSOA', sta(-2, 2)), ('CS_MANDFIN', fin(1, 6))),
+                  'MS+MF': (('CS_MANDSTART', sta(0, 4)), ('CS_MANDFIN', fin(-1, 5)))}[kind]
+        a.update({'cstr': c1[0], 'cstr_date': c1[1], 'cstr2': c2[0], 'cstr_date2': c2[1]})
+        a.setdefault('tags', []).append('%s then %s' % (c1[0], c2[0]))
+        taken.add(a['code'])
+        if fs_succ(a) and rng.random() < 0.5:
+            s = rng.choice(fs_succ(a))
+            if s['code'] not in taken:
+                needs_earlier(s, day(c1[1]) if c1[0] in ('CS_MANDFIN', 'CS_MEOB') else f0)
+                taken.add(s['code'])
+        w['xpm']['pairs'].append(a['code'])
 
 
 def wide_task_fields(a, pid, assignments):
@@ -970,6 +1118,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             summary.update({'expected_finishes_added': len(wide['xfx']),
                             'use_expected_finish': so['sched_use_expect_end_flag'],
                             'open_end_edges': {k: len(v) for k, v in wide['oe'].items()}})
+        if wide.get('xpm') is not None:
+            summary.update({'xp_mr_milestones': {k: len(v) for k, v in wide['xpm'].items()}})
     return short, text, summary
 
 
