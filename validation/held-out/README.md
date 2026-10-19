@@ -6,7 +6,7 @@ The rules are in [`PROTOCOL.md`](PROTOCOL.md).
 
 | File | What it does |
 |---|---|
-| `generate_held_out.py` | Writes a set of synthetic P6 XER schedules from a seed (standard library only). `--dates pre2020` (H6) dates them before 2020; the default is the window H1 to H5 used. `--features wide` (H8) adds resource dependent work, level of effort, WBS summary, suspended work and external dates; `--features wide2` (H10) draws them heavier and puts about half the cases under progress override; `--features wide3` (H21) adds open ends hung off the network and "Make open-ended activities critical". |
+| `generate_held_out.py` | Writes a set of synthetic P6 XER schedules from a seed (standard library only). `--dates pre2020` (H6) dates them before 2020; the default is the window H1 to H5 used. `--features wide` (H8) adds resource dependent work, level of effort, WBS summary, suspended work and external dates; `--features wide2` (H10) draws them heavier and puts about half the cases under progress override; `--features wide3` (H21) adds open ends hung off the network and "Make open-ended activities critical"; `--features wide4` (H22) adds expected finishes on work not yet started and on As Late As Possible work, and the edges of the open-ended rule. |
 | `freeze.py` | Fetches the named drand round, generates the set from it, and records every hash in `manifest.json`. |
 | `readback_p6_sqlite.py` | Reads P6's own schedule of each case back from a P6 Professional SQLite database, read-only. |
 | `import_p6_sqlite.py` | From H8: after each case's import and before its F9, records what P6's import made of the case (read-only), including its sizing of resource dependent work. |

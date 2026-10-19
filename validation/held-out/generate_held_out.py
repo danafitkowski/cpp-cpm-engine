@@ -171,7 +171,12 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # remaining dates of resource dependent work under way, free float to them, and resume dates under progress
 # override. 'wide3' (H21 on) draws wide2's features exactly and then, from the same stream, one to three open ends
 # hung off the network in most cases ('spurs': chance, fewest, most) and "Make open-ended activities critical" in
-# about half ('oc'), the two options no set had drawn until engine v2.10.11 read them.
+# about half ('oc'), the two options no set had drawn until engine v2.10.11 read them. 'wide4' (H22 on) draws
+# wide3's features exactly and then, from the same stream, the shapes H21 gave nothing to decide: expected finishes
+# on work under way and not yet started, beside As Late As Possible, a finish constraint, another constraint or none,
+# with "Use Expected Finish Dates" mostly on ('xfx': chance, fewest, most, the option's chance); and the edges of the
+# open-ended rule ('oe': chance): work whose only successor is a level of effort or a WBS summary, As Late As
+# Possible open ends, open ends under way, and completed work with no successor after unfinished work.
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
@@ -182,6 +187,10 @@ WIDE_PROFILES = {
                          'external': 0.55},
               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
               'spurs': (0.6, 1, 3), 'oc': 0.5},
+    'wide4': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                         'external': 0.55},
+              'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
+              'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8},
 }
 
 # The values P6 23.12 writes for a project created with its defaults.
@@ -521,6 +530,95 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
             w['spurs'].append(spur['code'])
     if pf.get('oc') is not None:
         w['oc'] = rng.random() < pf['oc']
+    # wide4: expected finishes on unfinished task and resource dependent work, under way and not yet started, each
+    # with As Late As Possible, Finish On or After, Finish On, Mandatory Finish, Start On or After, Finish On or
+    # Before, or no constraint; "Use Expected Finish Dates" on in most cases. Drawn after everything wide3 draws.
+    if pf.get('xfx') is not None:
+        w['xfx'] = []
+        w['xf_on'] = rng.random() < pf['xfx'][3]
+        cands = [a for a in acts[:n0] if a['type'] in ('TT_Task', 'TT_Rsrc') and a['status'] != 'TK_Complete'
+                 and not a['xf'] and 0 < a['i'] < n0 - 1]
+        if cands and rng.random() < pf['xfx'][0]:
+            for a in sorted(rng.sample(cands, min(len(cands), rng.randint(pf['xfx'][1], pf['xfx'][2]))),
+                            key=lambda x: x['i']):
+                cal = a['cal']
+                if a['status'] == 'TK_Active':
+                    off = rng.uniform(1, 15) if rng.random() < 0.8 else -rng.uniform(0.5, 4)
+                    a['xf'] = cal.last_end_at_or_before(data_date + timedelta(days=off))
+                else:
+                    a['xf'] = cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(-4, 6))))
+                c = pick(rng, [('CS_ALAP', 30), ('CS_MEOA', 14), ('CS_MEO', 12), ('CS_MANDFIN', 10),
+                               ('CS_MSOA', 8), ('CS_MEOB', 8), ('', 18)])
+                a.update({'cstr': c, 'cstr_date': None, 'cstr2': '', 'cstr_date2': None})
+                if c in START_TYPES:
+                    a['cstr_date'] = cal.first_start_at_or_after(at(max(0.0, es[a['i']] + rng.uniform(-5, 10))))
+                elif c and c != 'CS_ALAP':
+                    a['cstr_date'] = cal.last_end_at_or_before(at(max(1.0, ef[a['i']] + rng.uniform(-10, 5))))
+                a.setdefault('tags', []).append('expected finish' + (' and %s' % c if c else ''))
+                w['xfx'].append(a['code'])
+    # wide4: the edges of the open-ended rule, each a new task hung off the network. a) its only successor a level
+    # of effort or a WBS summary (the task's predecessor comes before everything the level of effort drives, so no
+    # loop forms); b) As Late As Possible, no successor; c) under way, no successor, hung start-to-start off work
+    # that has started; d) complete, no successor, after work not finished (progress out of sequence).
+    if pf.get('oe') is not None:
+        w['oe'] = {'left_out': [], 'alap': [], 'under_way': [], 'done': []}
+        if rng.random() < pf['oe']:
+            hosts = [a for a in acts[:n0] if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_Mile')]
+
+            def spur(tag, p, typ, cal=None):
+                i = len(acts)
+                cal = cal or rng.choice(cals)
+                hours = rng.choice([8, 16, 24, 40])
+                es[i] = ef[p['i']] if typ == 'PR_FS' else es[p['i']]
+                ef[i] = es[i] + hours / max(cal.week_hours() / 7.0, 0.1)
+                a = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': 'TT_Task', 'cal': cal, 'hours': hours,
+                     'preds': [], 'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': hours,
+                     'xf': None, 'pct': 0, 'cstr': '', 'cstr_date': None, 'cstr2': '', 'cstr_date2': None,
+                     'tags': [tag]}
+                acts.append(a)
+                rels.append({'pred': p['i'], 'succ': i, 'type': typ, 'lag': 0})
+                a['preds'].append(rels[-1])
+                return a
+
+            for x in [a for a in acts if a['type'] in ('TT_LOE', 'TT_WBS')]:
+                if rng.random() >= 0.7:
+                    continue
+                lim = min([r['succ'] for r in rels if r['pred'] == x['i']] or [n0])
+                pool = [a for a in hosts if a['i'] < lim]
+                if not pool:
+                    continue
+                kind = 'level of effort' if x['type'] == 'TT_LOE' else 'WBS summary'
+                a = spur('its only successor a %s' % kind, rng.choice(pool), 'PR_FS')
+                typ = pick(rng, [('PR_FS', 40), ('PR_SS', 40), ('PR_FF', 20)]) if x['type'] == 'TT_LOE' else 'PR_FS'
+                rels.append({'pred': a['i'], 'succ': x['i'], 'type': typ, 'lag': 0})
+                x['preds'].append(rels[-1])
+                w['oe']['left_out'].append(a['code'])
+            for _ in range(rng.randint(0, 2)):
+                a = spur('open end, As Late As Possible', rng.choice(hosts), pick(rng, [('PR_FS', 70), ('PR_SS', 30)]))
+                a['cstr'] = 'CS_ALAP'
+                w['oe']['alap'].append(a['code'])
+            begun = [a for a in hosts if a['act_start'] and a['type'] != 'TT_Mile']
+            for _ in range(rng.randint(0, 2) if begun else 0):
+                p = rng.choice(begun)
+                cal = rng.choice(cals)
+                st = cal.first_start_at_or_after(p['act_start'] + timedelta(hours=rng.uniform(0, 48)))
+                if st >= data_date:
+                    continue
+                a = spur('open end under way', p, 'PR_SS', cal)
+                rem = max(1, int(round(a['hours'] * rng.uniform(0.2, 0.9))))
+                a.update({'status': 'TK_Active', 'act_start': st, 'remain': rem,
+                          'pct': int(round(100 * (1 - rem / float(a['hours']))))})
+                w['oe']['under_way'].append(a['code'])
+            todo = [a for a in hosts if a['status'] != 'TK_Complete' and a['type'] != 'TT_Mile']
+            for _ in range(rng.randint(1, 2) if todo and rng.random() < 0.8 else 0):
+                cal = rng.choice(cals)
+                st = cal.first_start_at_or_after(data_date - timedelta(days=rng.uniform(2, 8)))
+                fin = cal.last_end_at_or_before(min(st + timedelta(days=rng.uniform(0.5, 3)), data_date))
+                if not st < fin <= data_date:
+                    continue
+                a = spur('complete, no successor, after work not finished', rng.choice(todo), 'PR_FS', cal)
+                a.update({'status': 'TK_Complete', 'act_start': st, 'act_end': fin, 'remain': 0, 'pct': 100})
+                w['oe']['done'].append(a['code'])
     return w
 
 
@@ -729,6 +827,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
         if wide.get('po') is not None:     # wide2: the option the second stream drew replaces the default's
             opts['sched_retained_logic'] = 'N' if wide['po'] else 'Y'
             opts['sched_progress_override'] = 'Y' if wide['po'] else 'N'
+        if wide.get('xf_on') is not None:  # wide4: so does "Use Expected Finish Dates"
+            opts['sched_use_expect_end_flag'] = 'Y' if wide['xf_on'] else 'N'
 
     # Write the XER
     def row(table, values):
@@ -866,6 +966,10 @@ def make_case(seed, set_name, k, dates='default', features='default'):
         })
         if wide.get('oc') is not None:
             summary.update({'spurs': len(wide['spurs']), 'open_critical': so['sched_open_critical_flag']})
+        if wide.get('xfx') is not None:
+            summary.update({'expected_finishes_added': len(wide['xfx']),
+                            'use_expected_finish': so['sched_use_expect_end_flag'],
+                            'open_end_edges': {k: len(v) for k, v in wide['oe'].items()}})
     return short, text, summary
 
 
