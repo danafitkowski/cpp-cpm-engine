@@ -1,0 +1,371 @@
+{
+ "note": "Resource dependent sizing P6's F9 rewrote in H24, against P6's import of the same projects before the F9 (p6-imported/). Read from P6's database after the last F9.",
+ "activities": [
+  {
+   "case": "H24-01",
+   "task_code": "A1050",
+   "remaining_hours_after_import": 45.5,
+   "remaining_hours_after_f9": 50.0
+  },
+  {
+   "case": "H24-01",
+   "task_code": "A1250",
+   "remaining_hours_after_import": 1.5,
+   "remaining_hours_after_f9": 3.0
+  },
+  {
+   "case": "H24-01",
+   "task_code": "A1270",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 7.0
+  },
+  {
+   "case": "H24-02",
+   "task_code": "A1020",
+   "remaining_hours_after_import": 5.0,
+   "remaining_hours_after_f9": 247.0
+  },
+  {
+   "case": "H24-02",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 10.0,
+   "remaining_hours_after_f9": 12.0
+  },
+  {
+   "case": "H24-02",
+   "task_code": "A1110",
+   "remaining_hours_after_import": 27.0,
+   "remaining_hours_after_f9": 154.0
+  },
+  {
+   "case": "H24-02",
+   "task_code": "A1120",
+   "remaining_hours_after_import": 82.0,
+   "remaining_hours_after_f9": 178.0
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 11.0,
+   "remaining_hours_after_f9": 41.0
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1090",
+   "remaining_hours_after_import": 55.0,
+   "remaining_hours_after_f9": 75.0
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1100",
+   "remaining_hours_after_import": 3.0,
+   "remaining_hours_after_f9": 3.5
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1150",
+   "remaining_hours_after_import": 15.0,
+   "remaining_hours_after_f9": 25.0
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 8.5,
+   "remaining_hours_after_f9": 8.0
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1200",
+   "remaining_hours_after_import": 10.0,
+   "remaining_hours_after_f9": 7.0
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1220",
+   "remaining_hours_after_import": 3.0,
+   "remaining_hours_after_f9": 14.5
+  },
+  {
+   "case": "H24-03",
+   "task_code": "A1270",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 20.0
+  },
+  {
+   "case": "H24-04",
+   "task_code": "A1040",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 27.0
+  },
+  {
+   "case": "H24-04",
+   "task_code": "A1090",
+   "remaining_hours_after_import": 32.0,
+   "remaining_hours_after_f9": 20.0
+  },
+  {
+   "case": "H24-04",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 55.0,
+   "remaining_hours_after_f9": 57.5
+  },
+  {
+   "case": "H24-05",
+   "task_code": "A1220",
+   "remaining_hours_after_import": 14.5,
+   "remaining_hours_after_f9": 13.5
+  },
+  {
+   "case": "H24-05",
+   "task_code": "A1320",
+   "remaining_hours_after_import": 7.0,
+   "remaining_hours_after_f9": 9.5
+  },
+  {
+   "case": "H24-05",
+   "task_code": "A1370",
+   "remaining_hours_after_import": 120.0,
+   "remaining_hours_after_f9": 120.5
+  },
+  {
+   "case": "H24-06",
+   "task_code": "A1010",
+   "remaining_hours_after_import": 13.5,
+   "remaining_hours_after_f9": 41.0
+  },
+  {
+   "case": "H24-06",
+   "task_code": "A1050",
+   "remaining_hours_after_import": 48.0,
+   "remaining_hours_after_f9": 41.0
+  },
+  {
+   "case": "H24-08",
+   "task_code": "A1090",
+   "remaining_hours_after_import": 9.0,
+   "remaining_hours_after_f9": 20.0
+  },
+  {
+   "case": "H24-08",
+   "task_code": "A1100",
+   "remaining_hours_after_import": 4.0,
+   "remaining_hours_after_f9": 11.5
+  },
+  {
+   "case": "H24-08",
+   "task_code": "A1120",
+   "remaining_hours_after_import": 80.0,
+   "remaining_hours_after_f9": 61.0
+  },
+  {
+   "case": "H24-09",
+   "task_code": "A1160",
+   "remaining_hours_after_import": 77.0,
+   "remaining_hours_after_f9": 29.0
+  },
+  {
+   "case": "H24-09",
+   "task_code": "A1260",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 24.0
+  },
+  {
+   "case": "H24-09",
+   "task_code": "A1270",
+   "remaining_hours_after_import": 56.0,
+   "remaining_hours_after_f9": 45.0
+  },
+  {
+   "case": "H24-09",
+   "task_code": "A1320",
+   "remaining_hours_after_import": 73.0,
+   "remaining_hours_after_f9": 121.0
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1020",
+   "remaining_hours_after_import": 43.0,
+   "remaining_hours_after_f9": 52.0
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1090",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 15.0
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1110",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 14.0
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1130",
+   "remaining_hours_after_import": 112.0,
+   "remaining_hours_after_f9": 96.0
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1140",
+   "remaining_hours_after_import": 7.0,
+   "remaining_hours_after_f9": 8.0
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 56.0,
+   "remaining_hours_after_f9": 61.5
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1200",
+   "remaining_hours_after_import": 32.0,
+   "remaining_hours_after_f9": 48.0
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1240",
+   "remaining_hours_after_import": 20.0,
+   "remaining_hours_after_f9": 36.0
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1020",
+   "remaining_hours_after_import": 1.0,
+   "remaining_hours_after_f9": 9.0
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1030",
+   "remaining_hours_after_import": 29.0,
+   "remaining_hours_after_f9": 49.0
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1060",
+   "remaining_hours_after_import": 80.0,
+   "remaining_hours_after_f9": 56.0
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 12.0,
+   "remaining_hours_after_f9": 6.25
+  }
+ ],
+ "assignments": [
+  {
+   "case": "H24-01",
+   "task_code": "A1050",
+   "resource": "H24-01-R1",
+   "remaining_units_after_import": 168.0,
+   "remaining_units_after_f9": 189.295774647887
+  },
+  {
+   "case": "H24-02",
+   "task_code": "A1110",
+   "resource": "H24-02-R1",
+   "remaining_units_after_import": 13.0,
+   "remaining_units_after_f9": 58.0
+  },
+  {
+   "case": "H24-05",
+   "task_code": "A1370",
+   "resource": "H24-05-R1",
+   "remaining_units_after_import": 120.0,
+   "remaining_units_after_f9": 122.410714285714
+  },
+  {
+   "case": "H24-05",
+   "task_code": "A1370",
+   "resource": "H24-05-R3",
+   "remaining_units_after_import": 120.0,
+   "remaining_units_after_f9": 122.410714285714
+  },
+  {
+   "case": "H24-06",
+   "task_code": "A1050",
+   "resource": "H24-06-R2",
+   "remaining_units_after_import": 56.0,
+   "remaining_units_after_f9": 46.2
+  },
+  {
+   "case": "H24-08",
+   "task_code": "A1090",
+   "resource": "H24-08-R2",
+   "remaining_units_after_import": 75.0,
+   "remaining_units_after_f9": 321.0
+  },
+  {
+   "case": "H24-08",
+   "task_code": "A1100",
+   "resource": "H24-08-R1",
+   "remaining_units_after_import": 8.0,
+   "remaining_units_after_f9": 27.0
+  },
+  {
+   "case": "H24-08",
+   "task_code": "A1100",
+   "resource": "H24-08-R2",
+   "remaining_units_after_import": 8.0,
+   "remaining_units_after_f9": 51.0
+  },
+  {
+   "case": "H24-08",
+   "task_code": "A1120",
+   "resource": "H24-08-R1",
+   "remaining_units_after_import": 160.0,
+   "remaining_units_after_f9": 107.712418300654
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1130",
+   "resource": "H24-10-R1",
+   "remaining_units_after_import": 232.0,
+   "remaining_units_after_f9": 173.226666666666
+  },
+  {
+   "case": "H24-10",
+   "task_code": "A1130",
+   "resource": "H24-10-R2",
+   "remaining_units_after_import": 360.0,
+   "remaining_units_after_f9": 290.909090909091
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1020",
+   "resource": "H24-11-R1",
+   "remaining_units_after_import": 1.0,
+   "remaining_units_after_f9": 9.0
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1030",
+   "resource": "H24-11-R1",
+   "remaining_units_after_import": 19.0,
+   "remaining_units_after_f9": 49.0
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1030",
+   "resource": "H24-11-R2",
+   "remaining_units_after_import": 19.0,
+   "remaining_units_after_f9": 38.0
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1080",
+   "resource": "H24-11-R1",
+   "remaining_units_after_import": 3.0,
+   "remaining_units_after_f9": 6.25
+  },
+  {
+   "case": "H24-11",
+   "task_code": "A1080",
+   "resource": "H24-11-R2",
+   "remaining_units_after_import": 3.0,
+   "remaining_units_after_f9": 5.75
+  }
+ ]
+}

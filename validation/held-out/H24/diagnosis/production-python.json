@@ -1,0 +1,42 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). The production Python engine of the candidate's canonical tree (_cpp_common 9c1b609: cpm.py with python_reference/cpm_hours.py 7f314e54, through the production converter, which hands the engine the open-ended option, the multiple-float-path option, the float type and each activity's successors left out of the network), run on H24's 12 projects as P6's database holds them after the F9. Counts only.",
+ "against_p6": {
+  "projects": 12,
+  "unfinished_activities": 278,
+  "on_p6_all_four_dates_and_both_floats": 265,
+  "off_besides_the_score": [
+   "H24-01 A1250",
+   "H24-03 A1200"
+  ]
+ },
+ "p6_f9_rewrote": {
+  "note": "P6's F9 rewrote the remaining duration of 42 resource dependent activities and the remaining units of 16 assignments from what its import held when it scheduled them (p6-f9-resized.json). Scheduled from the database after the F9, those activities start from inputs P6 did not schedule from.",
+  "resource_dependent_activities": 42,
+  "assignments": 16
+ },
+ "against_p6_from_the_import": {
+  "note": "The same run with those values set back to the import record (p6-imported/), everything else as the database holds it: the same activities differ as in the score.",
+  "projects": 12,
+  "unfinished_activities": 278,
+  "on_p6_all_four_dates_and_both_floats": 267,
+  "off_same_as_the_score": true,
+  "off": [
+   "H24-03 A1150",
+   "H24-09 A1260",
+   "H24-10 A1050",
+   "H24-10 A1090",
+   "H24-10 A1130",
+   "H24-10 A1160",
+   "H24-10 A1290",
+   "H24-12 A1130",
+   "H24-12 A1140",
+   "H24-12 A1160",
+   "H24-12 A1180"
+  ]
+ },
+ "against_this_engine": {
+  "projects": 12,
+  "activities": 379,
+  "every_field_equal": 379
+ }
+}
