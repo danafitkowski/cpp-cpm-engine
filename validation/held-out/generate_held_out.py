@@ -180,7 +180,12 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # (H23 on) draws wide4's features exactly and then, from the same stream, the shapes of the rules taken after H22
 # ('xpm': chance; see draw_xpm): a Mandatory Finish and an expected finish on work not yet started whose successor
 # needs it earlier (XP), mandatory dates on resource dependent work (MR), milestones with an expected finish (XC on
-# finish milestones), and a mandatory date beside a second constraint (PC).
+# finish milestones), and a mandatory date beside a second constraint (PC). 'wide6' (H24 on) draws wide5's features
+# exactly and then, from the same stream, "Calculate multiple float paths" on in about half the cases, on total or
+# free float and with 1 to 50 paths to calculate ('mfp'), and the shapes of the rules taken after H23 ('h23s': chance; see draw_h23s): mandatory dates in the second slot, a Mandatory
+# Start against finish-to-finish and start-to-finish logic and against external dates, an expected finish passed by
+# its requirement, As Late As Possible and expected finishes on resource dependent work whose resource keeps other days
+# or hours, and assignments with no work left and a lag.
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
@@ -199,6 +204,11 @@ WIDE_PROFILES = {
                          'external': 0.55},
               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
               'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85},
+    'wide6': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                         'external': 0.55},
+              'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
+              'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85, 'h23s': 0.9,
+              'mfp': 0.5},
 }
 
 # The values P6 23.12 writes for a project created with its defaults.
@@ -630,6 +640,9 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
     # wide5: the shapes of XP, MR and XC's finish-milestone edge, drawn after everything wide4 draws.
     if pf.get('xpm') is not None:
         draw_xpm(rng, pf['xpm'], w, acts, rels, cals, es, ef, at, dd_day, n0)
+    # wide6: the shapes of the rules taken after H23, drawn after everything wide5 draws.
+    if pf.get('h23s') is not None:
+        draw_h23s(rng, pf, w, short, pid, acts, rels, es, ef, at, dd_day, n0)
     return w
 
 
@@ -769,6 +782,226 @@ def draw_xpm(rng, chance, w, acts, rels, cals, es, ef, at, dd_day, n0):
                 taken.add(s['code'])
         w['xpm']['pairs'].append(a['code'])
 
+
+def draw_h23s(rng, pf, w, short, pid, acts, rels, es, ef, at, dd_day, n0):
+    """wide6 (H24 on): the shapes of the rules taken after H23, each on both sides, and their neighbours (P6 probe
+    rounds 1 to 7). "Calculate multiple float paths" is drawn on in about half the cases (FP), whatever else is drawn,
+    on total float or free float and with 1, 3, 10 or 50 paths to calculate (ZZ-CPP-HSF, -HSP). Then,
+    with its chance: a) a mandatory date in the second slot, later and earlier than the work would be, beside a soft
+    primary or a primary Mandatory Start, a Start On or After or Mandatory Start second to a Mandatory Start among them,
+    sometimes with the successor's start held later (SL); b) a primary Mandatory Start given a finish-to-finish or
+    start-to-finish predecessor that would hold its finish later (MG); c) a Mandatory Start or Mandatory Finish beside an
+    external early start or late finish, on tasks and resource dependent work (MX); d) an expected finish with a
+    finish-to-finish or start-to-finish predecessor whose lag in hours carries its requirement past it (XO); e) As Late
+    As Possible resource dependent work on a resource that works every day, under way and not yet started (AV), and on a
+    resource that closes at 16:00 (FZ); f) resource dependent work not yet started with an assignment that has no work
+    left and a lag, beside one that has work, and a start-to-start successor (ZB); g) resource dependent work with an
+    expected finish on a calendar with days off, its resource working every day, not yet started and under way (XE).
+    They are drawn e, f, g, d, then a to c, so the shapes that need the scarcer activities get them first."""
+    start = at(0)
+
+    def day(dt):
+        return (dt - start).total_seconds() / 86400.0
+
+    def cdays(a, h):
+        return h / max(a['cal'].week_hours() / 7.0, 0.1)
+
+    w['mfp'] = rng.random() < pf['mfp']
+    w['mfp_basis'] = 'N' if rng.random() < 0.3 else 'Y'
+    w['mfp_paths'] = rng.choice(['1', '3', '10', '10', '50'])
+    w['h23s'] = {'sl': [], 'mg': [], 'mx': [], 'xo': [], 'av': [], 'alap_new': [], 'fz': [], 'zb': [], 'xe': []}
+    if rng.random() >= pf['h23s']:
+        return
+    made = {}
+
+    def resource(key):
+        # one resource per week pattern, on a calendar of its own with no holidays
+        if key not in made:
+            i = len(w['resources']) + 1
+            desc, week = WEEKS[key]
+            rid = '%s-R%d' % (short, i)
+            hours = [sum(b - a for a, b in sl) / 60.0 for sl in week.values()]
+            made[key] = {'id': pid * 10 + i, 'seq': i, 'short': rid, 'type': 'RT_Labor',
+                         'name': '%s synthetic crew' % rid,
+                         'cal': Cal(str(pid * 10 + 4 + i), '%s %s' % (rid, desc), week, set(), {},
+                                    hours[0] if len(set(hours)) == 1 else 8.0),
+                         'guid': guid(short, pid, 'RSRC', i)}
+            w['resources'].append(made[key])
+        return made[key]
+
+    def make_rd(a, parts, tag):
+        # resource dependent work on the given assignments: (resource, units per hour, lag, no work left)
+        w['assignments'][:] = [g for g in w['assignments'] if g['act'] is not a]
+        a['type'] = 'TT_Rsrc'
+        for res, rate, lag, empty in parts:
+            target_q = 0 if empty else (a['hours'] - lag) * rate
+            remain_q = 0 if empty else (a['remain'] - lag) * rate
+            w['assignments'].append({'act': a, 'res': res, 'rate': rate, 'lag': lag, 'remain_q': remain_q,
+                                     'target_q': target_q, 'act_q': target_q - remain_q})
+        a.setdefault('tags', []).append(tag)
+
+    taken = set()
+
+    def free(a):
+        return (a['code'] not in taken and not a['cstr'] and not a['cstr2'] and not a['xf'] and 0 < a['i'] < n0 - 1
+                and a['type'] in ('TT_Task', 'TT_Rsrc'))
+
+    def fresh():
+        return [a for a in acts[:n0] if a['status'] == 'TK_NotStart' and free(a)]
+
+    def linked(p, s):
+        return any(r['pred'] == p['i'] and r['succ'] == s['i'] for r in rels)
+
+    def add_link(p, s, typ, lag):
+        rels.append({'pred': p['i'], 'succ': s['i'], 'type': typ, 'lag': lag})
+        s['preds'].append(rels[-1])
+
+    def late_pred(a, other_cal=False):
+        # an unfinished earlier activity, not yet linked to a, that finishes late (another calendar first if asked)
+        pool = [p for p in acts[1:a['i']] if p['type'] in ('TT_Task', 'TT_Rsrc') and p['status'] != 'TK_Complete'
+                and not linked(p, a)]
+        if other_cal and any(p['cal'] is not a['cal'] for p in pool):
+            pool = [p for p in pool if p['cal'] is not a['cal']]
+        pool.sort(key=lambda p: -ef[p['i']])
+        return rng.choice(pool[:3]) if pool else None
+
+    def weekdays(cal):
+        return not cal.week.get(5) or not cal.week.get(6)
+
+    def sample(pool, lo, hi):
+        return sorted(rng.sample(pool, min(len(pool), rng.randint(lo, hi))), key=lambda x: x['i'])
+
+    # e) As Late As Possible resource dependent work
+    under_way = [a for a in acts[:n0] if a['status'] == 'TK_Active' and a['type'] == 'TT_Task' and free(a)
+                 and weekdays(a['cal']) and not a.get('suspend')]
+    for a in sample(under_way, 1, 1):
+        make_rd(a, [(resource('D12'), 1, 0, False)], 'As Late As Possible, under way, its resource every day')
+        a['cstr'] = 'CS_ALAP'
+        taken.add(a['code'])
+        w['h23s']['av'].append(a['code'])
+    for a in sample([a for a in fresh() if weekdays(a['cal'])], 1, 1):
+        make_rd(a, [(resource('D12'), 1, 0, False)], 'As Late As Possible, its resource every day')
+        a['cstr'] = 'CS_ALAP'
+        taken.add(a['code'])
+        w['h23s']['alap_new'].append(a['code'])
+    closes_late = [a for a in fresh() if max(b for sl in a['cal'].week.values() for _, b in sl) > 960]
+    for a in sample(closes_late, 1, 1):
+        make_rd(a, [(resource('MS8'), 1, 0, False)], 'As Late As Possible, its resource closing at 16:00')
+        a['cstr'] = 'CS_ALAP'
+        taken.add(a['code'])
+        w['h23s']['fz'].append(a['code'])
+    # f) ZB
+    for a in sample([a for a in fresh() if a['remain'] >= 8], 1, 1):
+        own = [r for r in w['resources'] if r not in made.values()]
+        pair = (rng.sample(own, 2) if len(own) >= 2 else
+                (own + [resource('MS8')] if own else [resource('MS8'), resource('D12')]))
+        lag = rng.choice([8, 16, 24])
+        make_rd(a, [(pair[0], rng.choice([1, 2]), 0, False), (pair[1], 1, lag, True)],
+                'an assignment with no work left and a %g h lag' % lag)
+        if not any(r['pred'] == a['i'] and r['type'] == 'PR_SS' for r in rels):
+            later = [s for s in acts[a['i'] + 1:n0 - 1] if s['type'] in ('TT_Task', 'TT_Rsrc')
+                     and s['status'] != 'TK_Complete' and not linked(a, s)]
+            if later:
+                add_link(a, rng.choice(later), 'PR_SS', rng.choice([0, 0, 8]))
+        taken.add(a['code'])
+        w['h23s']['zb'].append(a['code'])
+    # g) XE
+    for a in sample([a for a in fresh() if weekdays(a['cal'])], 1, 1):
+        parts = [(resource('D12'), 1, 0, False)]
+        own = [r for r in w['resources'] if r not in made.values()]
+        if own and rng.random() < 0.4:
+            parts.append((rng.choice(own), 1, 0, False))
+        make_rd(a, parts, 'an expected finish, its resource every day')
+        a['xf'] = a['cal'].last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(-8, 2))))
+        ins = [r for r in a['preds'] if r['type'] == 'PR_FS' and r['lag'] == 0]
+        if ins and rng.random() < 0.5:
+            rng.choice(ins)['lag'] = rng.choice([-8, -16])
+        taken.add(a['code'])
+        w['h23s']['xe'].append(a['code'])
+    for a in sample([a for a in acts[:n0] if a['status'] == 'TK_Active' and a['type'] == 'TT_Task' and free(a)
+                     and weekdays(a['cal']) and not a.get('suspend')], 0, 1):
+        make_rd(a, [(resource('D12'), 1, 0, False)], 'under way, an expected finish, its resource every day')
+        a['xf'] = a['cal'].last_end_at_or_before(at(dd_day + rng.uniform(1, 12)))
+        taken.add(a['code'])
+        w['h23s']['xe'].append(a['code'])
+    # d) XO
+    for a in sample(fresh(), 1, 1):
+        p = late_pred(a, other_cal=True)
+        if p is None:
+            continue
+        a['xf'] = a['cal'].last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(-3, 0))))
+        add_link(p, a, pick(rng, [('PR_FF', 75), ('PR_SF', 25)]), rng.choice([1.5, 2.5, 4.5, 6, 13, 16, 20]))
+        a.setdefault('tags', []).append('expected finish, a later finish-to-finish or start-to-finish requirement')
+        taken.add(a['code'])
+        w['h23s']['xo'].append(a['code'])
+    # a) SL
+    sides = {'SOA+MF<': (('CS_MSOA', 'S', -2, 1), ('CS_MANDFIN', 'F', -4, -0.5)),
+             'SOA+MF>': (('CS_MSOA', 'S', -2, 1), ('CS_MANDFIN', 'F', 1, 6)),
+             'FOB+MF<': (('CS_MEOB', 'F', 0, 4), ('CS_MANDFIN', 'F', -4, -0.5)),
+             'FOB+MF>': (('CS_MEOB', 'F', -2, 1), ('CS_MANDFIN', 'F', 1, 6)),
+             'MS+MF<': (('CS_MANDSTART', 'S', 0, 3), ('CS_MANDFIN', 'F', -3, 0)),
+             'MS+MF>': (('CS_MANDSTART', 'S', 0, 3), ('CS_MANDFIN', 'F', 3, 8)),
+             'FOA+MS>': (('CS_MEOA', 'F', -1, 1), ('CS_MANDSTART', 'S', 1, 5)),
+             'SOA+MS<': (('CS_MSOA', 'S', 0, 3), ('CS_MANDSTART', 'S', -4, -0.5)),
+             'MS+SOA>': (('CS_MANDSTART', 'S', 0, 2), ('CS_MSOA', 'S', 3, 7)),
+             'MS+MS>': (('CS_MANDSTART', 'S', 0, 2), ('CS_MANDSTART', 'S', 3, 7))}
+    weights = [('SOA+MF<', 10), ('SOA+MF>', 8), ('FOB+MF<', 10), ('FOB+MF>', 8), ('MS+MF<', 10), ('MS+MF>', 10),
+               ('FOA+MS>', 8), ('SOA+MS<', 8), ('MS+SOA>', 14), ('MS+MS>', 8)]
+    for a in sample(fresh(), 2, 3):
+        cal, e0, f0 = a['cal'], es[a['i']], ef[a['i']]
+
+        def when(side, lo, hi):
+            if side == 'S':
+                return cal.first_start_at_or_after(at(max(dd_day, e0 + rng.uniform(lo, hi))))
+            return cal.last_end_at_or_before(at(max(dd_day + 1.0, f0 + rng.uniform(lo, hi))))
+        kind = pick(rng, weights)
+        (t1, s1, lo1, hi1), (t2, s2, lo2, hi2) = sides[kind]
+        a.update({'cstr': t1, 'cstr_date': when(s1, lo1, hi1), 'cstr2': t2, 'cstr_date2': when(s2, lo2, hi2)})
+        a.setdefault('tags', []).append('%s then %s' % (t1, t2))
+        taken.add(a['code'])
+        w['h23s']['sl'].append(a['code'])
+        if rng.random() < 0.35:
+            outs = [acts[r['succ']] for r in rels if r['pred'] == a['i'] and r['type'] == 'PR_FS']
+            outs = [s for s in outs if s['status'] == 'TK_NotStart' and free(s)]
+            if outs:
+                s = rng.choice(outs)
+                s['cstr'], s['cstr_date'] = 'CS_MSOA', s['cal'].first_start_at_or_after(at(f0 + rng.uniform(3, 10)))
+                s.setdefault('tags', []).append('Start On or After: holds its predecessor\'s free float')
+                taken.add(s['code'])
+    # b) MG
+    for a in sample(fresh(), 1, 2):
+        p = late_pred(a)
+        if p is None:
+            continue
+        cal = a['cal']
+        ms = cal.first_start_at_or_after(at(max(dd_day, es[a['i']] + rng.uniform(-1, 3))))
+        a.update({'cstr': 'CS_MANDSTART', 'cstr_date': ms, 'cstr2': '', 'cstr_date2': None})
+        if rng.random() < 0.3:
+            a['cstr2'] = 'CS_MANDFIN'
+            a['cstr_date2'] = cal.last_end_at_or_before(at(day(ms) + cdays(a, a['remain']) + rng.uniform(0.5, 4)))
+        add_link(p, a, pick(rng, [('PR_FF', 70), ('PR_SF', 30)]), rng.choice([0, 0, 8, 16, 24]))
+        a.setdefault('tags', []).append('Mandatory Start, a later finish-to-finish or start-to-finish predecessor')
+        taken.add(a['code'])
+        w['h23s']['mg'].append(a['code'])
+    # c) MX
+    for a in sample(fresh(), 1, 3):
+        cal = a['cal']
+        if rng.random() < 0.55:
+            a.update({'cstr': 'CS_MANDSTART', 'cstr_date': cal.first_start_at_or_after(
+                at(max(dd_day, es[a['i']] + rng.uniform(-1, 2))))})
+        else:
+            a.update({'cstr': 'CS_MANDFIN', 'cstr_date': cal.last_end_at_or_before(
+                at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(-1, 3))))})
+        which = pick(rng, [('es', 45), ('lf', 30), ('both', 25)])
+        if which in ('es', 'both'):
+            a['ext_es'] = place(rng, cal, at(max(0.0, es[a['i']] + rng.uniform(1, 6))), 'start')
+        if which in ('lf', 'both'):
+            a['ext_lf'] = place(rng, cal, at(max(1.0, ef[a['i']] + rng.uniform(-4, -0.5))), 'finish')
+        if a['type'] == 'TT_Rsrc' and rng.random() < 0.4:
+            a['xf'] = cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[a['i']] + rng.uniform(0, 4))))
+        a.setdefault('tags', []).append('%s beside external dates' % a['cstr'])
+        taken.add(a['code'])
+        w['h23s']['mx'].append(a['code'])
 
 def wide_task_fields(a, pid, assignments):
     # --features wide: the TASK fields a drawn feature sets (each blank or the default mode's value otherwise).
@@ -999,6 +1232,11 @@ def make_case(seed, set_name, k, dates='default', features='default'):
         so['sched_outer_depend_type'] = wide['outer']
         if wide.get('oc') is not None:
             so['sched_open_critical_flag'] = 'Y' if wide['oc'] else 'N'
+        if wide.get('mfp') is not None:     # wide6: "Calculate multiple float paths"
+            so['enable_multiple_longest_path_calc'] = 'Y' if wide['mfp'] else 'N'
+            if wide['mfp']:
+                so['use_total_float_multiple_longest_paths'] = wide['mfp_basis']
+                so['max_multiple_longest_path'] = wide['mfp_paths']
     wbs = {'wbs_id': pid * 10, 'proj_id': pid, 'seq_num': '1', 'est_wt': '1', 'proj_node_flag': 'Y',
            'sum_data_flag': 'N', 'status_code': 'WS_Open', 'wbs_short_name': short,
            'wbs_name': 'Held-out P6 comparison case %s (synthetic)' % short, 'ev_user_pct': '0.06',
@@ -1120,6 +1358,12 @@ def make_case(seed, set_name, k, dates='default', features='default'):
                             'open_end_edges': {k: len(v) for k, v in wide['oe'].items()}})
         if wide.get('xpm') is not None:
             summary.update({'xp_mr_milestones': {k: len(v) for k, v in wide['xpm'].items()}})
+        if wide.get('h23s') is not None:
+            summary.update({'h23_shapes': {k: len(v) for k, v in wide['h23s'].items()},
+                            'multiple_float_paths': so['enable_multiple_longest_path_calc']})
+            if wide['mfp']:
+                summary.update({'float_paths': so['max_multiple_longest_path'],
+                                'float_paths_on': 'total float' if wide['mfp_basis'] == 'Y' else 'free float'})
     return short, text, summary
 
 
