@@ -1,0 +1,82 @@
+{
+ "case": "H22-05",
+ "proj_id": 5338,
+ "differences": [
+  "TASKRSRC A1160/H22-05-R2 remain_qty_per_hr: xer '1' p6 0.638297872340426",
+  "TASKRSRC A1160/H22-05-R2 target_qty_per_hr: xer '1' p6 0.638297872340426",
+  "TASKRSRC A1240/H22-05-R2 remain_qty_per_hr: xer '1' p6 0.714285714285714",
+  "TASKRSRC A1240/H22-05-R2 target_qty_per_hr: xer '1' p6 0.714285714285714",
+  "TASKRSRC A1310/H22-05-R2 remain_qty_per_hr: xer '3' p6 2.4",
+  "TASKRSRC A1310/H22-05-R2 target_qty_per_hr: xer '3' p6 2.4"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1020": {
+    "remain_drtn_hr_cnt": 1.0,
+    "target_drtn_hr_cnt": 4.0
+   },
+   "A1160": {
+    "remain_drtn_hr_cnt": 120.0,
+    "target_drtn_hr_cnt": 120.0
+   },
+   "A1240": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "A1310": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 16.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1020",
+    "rsrc_short_name": "H22-05-R2",
+    "remain_qty": 3.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 9.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1160",
+    "rsrc_short_name": "H22-05-R2",
+    "remain_qty": 120.0,
+    "target_qty": 120.0,
+    "remain_qty_per_hr": 0.638297872340426,
+    "target_qty_per_hr": 0.638297872340426,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1240",
+    "rsrc_short_name": "H22-05-R2",
+    "remain_qty": 40.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 0.714285714285714,
+    "target_qty_per_hr": 0.714285714285714,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1310",
+    "rsrc_short_name": "H22-05-R2",
+    "remain_qty": 48.0,
+    "target_qty": 48.0,
+    "remain_qty_per_hr": 2.4,
+    "target_qty_per_hr": 2.4,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

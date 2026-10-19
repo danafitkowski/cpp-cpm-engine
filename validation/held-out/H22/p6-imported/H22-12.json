@@ -1,0 +1,9 @@
+{
+ "case": "H22-12",
+ "proj_id": 5345,
+ "differences": [],
+ "resource_dependent": {
+  "tasks": {},
+  "assignments": []
+ }
+}
