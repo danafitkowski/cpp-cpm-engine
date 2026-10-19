@@ -3867,6 +3867,100 @@ compareFixture('F196 - input checks: an invalid constraint date, an invalid acti
     data_date: '2026-12-07', cal_map: HCAL,
 });
 
+// v2.10.12 (H23, P6 probes ZZ-CPP-SSM / -MXE / -AFF): SL, a Mandatory Start or Mandatory Finish in the second slot is
+// a floor forward and pins nothing (M1, M2, M3, M10, M11), and does not hold the free float at zero (M12); MG, a
+// Mandatory Start ignores its finish-to-finish predecessor (M7); MX, an external early start does not move a
+// Mandatory Start (E1) and an external late finish does not cap a mandatory pin (E6, E7); FZ, As Late As Possible
+// work holds no free float where its slide stops short of its successor (F1: its resource closes at 14:00, its
+// calendar at 17:00).
+const slD = (d, h) => xpDate(d) + (h === undefined ? '' : ' ' + h);
+const slActs = (A, hrs) => {
+    const at = (d, h) => slD(d, hrs ? h : undefined);
+    const C = (type, d, h) => ({ type, date: at(d, h) });
+    const q = {
+        M1: { constraint: C('CS_MEOB', 10, '17:00'), constraint2: C('CS_MANDFIN', 14, '17:00') },
+        M2: { constraint: C('CS_MEOB', 14, '17:00'), constraint2: C('CS_MANDFIN', '09', '17:00') },
+        M3: { constraint: C('CS_MANDSTART', '09', '08:00'), constraint2: C('CS_MANDFIN', 10, '17:00') },
+        M10: { constraint: C('CS_MEOA', 10, '17:00'), constraint2: C('CS_MANDSTART', 11, '08:00') },
+        M11: { constraint: C('CS_MSOA', '08', '08:00'), constraint2: C('CS_MANDSTART', '07', '08:00') },
+        M12: { constraint: C('CS_MEOB', 21, '17:00'), constraint2: C('CS_MANDFIN', '09', '17:00') },
+        M7: { constraint: C('CS_MANDSTART', '09', '08:00') },
+        E1: { constraint: C('CS_MANDSTART', '09', '08:00'), external_early_start: at(10, '08:00') },
+        E6: { constraint: C('CS_MANDSTART', '09', '08:00'), external_late_finish: at(10, '17:00') },
+        E7: { constraint: C('CS_MANDFIN', 14, '17:00'), external_late_finish: at(11, '17:00') },
+    };
+    const out = [A('L', 120), A('FIN', 0, { task_type: 'TT_FinMile' }), A('X7', 8, { constraint: C('CS_MSOA', 14, '08:00') })];
+    for (const [k, extra] of Object.entries(q)) {
+        out.push(A('P' + k, 8), A(k, 24, extra),
+            A('S' + k, 8, k === 'M12' ? { constraint: C('CS_MSOA', 21, '08:00') } : {}));
+    }
+    out.push(A('PF1', 8), A('F1', 3, Object.assign({ constraint: { type: 'CS_ALAP' } }, hrs ? { task_type: 'TT_Rsrc',
+        resource_assignments: 1, assignments: [{ clndr_id: 'R6', remaining_hours: 3, lag_hours: 0, driving: true }] } : {})),
+    A('SF1', 1, { constraint: C('CS_MSOA', 11, '08:00') }));
+    return out;
+};
+const slRels = (R) => [R('L', 'FIN'), R('X7', 'M7', 'FF'), R('PF1', 'F1'), R('F1', 'SF1'), R('SF1', 'FIN')].concat(
+    ...['M1', 'M2', 'M3', 'M10', 'M11', 'M12', 'M7', 'E1', 'E6', 'E7'].map((k) => [R('P' + k, k), R(k, 'S' + k),
+        R('S' + k, 'FIN')]));
+const SLCAL = Object.assign({}, HCAL, { R6: { work_days: [1, 2, 3, 4, 5], hours_per_day: 6, holidays: [] } });
+compareFixture('F197 - SL, MG, MX and FZ: a mandatory date in the second slot is a floor; a Mandatory Start ignores FF logic and external dates; As Late As Possible work holds no free float, in hours', {
+    activities: slActs(hA, true), relationships: slRels(hR), data_date: '2026-12-07 08:00', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F198 - SL, MG, MX and FZ: the same, whole days', {
+    activities: slActs(dA, false), relationships: slRels(dR), data_date: '2026-12-07', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+
+// v2.10.12 (H23, P6 probes ZZ-CPP-XFO / -HLX / -ZLA): XO, an FF requirement beyond the expected finish that falls off
+// working time prints at the next opening (X1: Sat 03:00 on the 24-hour lag calendar is Mon 08:00); XE, resource
+// dependent work under an expected finish keeps no first placement (K1: a lead lands on Sunday, both resources first
+// work on Monday, a holiday of the activity's calendar, so it starts Tuesday; K0 without the expected finish keeps the
+// Monday placement as its early dates); ZB, an assignment with no work left and a 16 h lag under a start-to-start bound
+// starts at the bound (Z1).
+const xeCal = Object.assign({}, HCAL, {
+    AE: { work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 12, holidays: [xpDate(14)] },
+    R1: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [xpDate(15)] },
+    R2: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] },
+});
+const xeRd = (A, code, extra) => A(code, 18, Object.assign({ clndr_id: 'AE', task_type: 'TT_Rsrc', resource_assignments: 2,
+    assignments: [{ clndr_id: 'R1', remaining_hours: 18, lag_hours: 0, driving: true },
+        { clndr_id: 'R2', remaining_hours: 18, lag_hours: 0, driving: true }] }, extra));
+const xeActs = (A) => [A('L', 160), A('FIN', 0, { task_type: 'TT_FinMile' }),
+    A('P1', 13.5, { constraint: { type: 'CS_MSOA', date: slD(10, '08:00') } }),
+    A('X1', 8, { constraint: { type: 'CS_MEO', date: slD('07', '17:00') }, expected_finish: slD('09', '17:00') }),
+    A('S1', 8),
+    A('PK0', 8, { clndr_id: 'AE', constraint: { type: 'CS_MSOA', date: slD(15, '12:00') } }), xeRd(A, 'K0'), A('SK0', 8),
+    A('PK1', 8, { clndr_id: 'AE', constraint: { type: 'CS_MSOA', date: slD(15, '12:00') } }),
+    xeRd(A, 'K1', { expected_finish: slD(11, '17:00') }), A('SK1', 8),
+    A('PZ1', 8, { clndr_id: 'AE' }),
+    A('Z1', 10, { clndr_id: 'AE', task_type: 'TT_Rsrc', resource_assignments: 2,
+        assignments: [{ clndr_id: 'R2', remaining_hours: 10, lag_hours: 0, driving: true },
+            { clndr_id: 'R2', remaining_hours: 0, lag_hours: 16, driving: true }] }),
+    A('SZ1', 32, { clndr_id: 'AE' })];
+const xeRels = (R) => [R('L', 'FIN'), R('P1', 'X1', 'FF', 16), R('X1', 'S1'), R('S1', 'FIN'),
+    R('PK0', 'K0', 'FS', -16), R('K0', 'SK0'), R('SK0', 'FIN'), R('PK1', 'K1', 'FS', -16), R('K1', 'SK1'),
+    R('SK1', 'FIN'), R('PZ1', 'Z1', 'SS'), R('Z1', 'SZ1', 'SS')];
+compareFixture('F199 - XO, XE and ZB: an expected finish with an FF requirement off working time, resource dependent work under an expected finish, a lagged assignment with no work under a start-to-start bound, in hours', {
+    activities: xeActs(hA), relationships: xeRels(hR), data_date: '2026-12-07 08:00', cal_map: xeCal,
+    relationship_lag_calendar: 'rcal_24Hour', use_expected_finish: true,
+}, { hours: true });
+
+// v2.10.12 (H23, P6 probes ZZ-CPP-ARU): AV, the As Late As Possible slide of resource dependent work under way, under
+// progress override, restarts at the activity calendar's next opening when the slide puts the restart on a day only
+// its resource works (A1: the resource works every day; the slide lands on Saturday, the work restarts Monday).
+compareFixture('F200 - AV: As Late As Possible on resource dependent work under way, the slid restart off its calendar, in hours', {
+    activities: [hA('L', 125), hA('FIN', 0, { task_type: 'TT_FinMile' }), hA('P1', 8),
+        hA('A1', 70, { task_type: 'TT_Rsrc', constraint: { type: 'CS_ALAP' }, resource_assignments: 1,
+            actual_start: slD('02', '08:00'), remaining_duration: 70 / 8, suspend_date: slD('03', '17:00'),
+            resume_date: slD('08', '13:00'),
+            assignments: [{ clndr_id: 'SD', remaining_hours: 70, lag_hours: 0, driving: true }] }),
+        hA('S1', 8)],
+    relationships: [hR('L', 'FIN'), hR('P1', 'A1'), hR('A1', 'S1', 'SS'), hR('S1', 'FIN')],
+    data_date: '2026-12-07 08:00', cal_map: HCAL, relationship_lag_calendar: 'rcal_Predecessor',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

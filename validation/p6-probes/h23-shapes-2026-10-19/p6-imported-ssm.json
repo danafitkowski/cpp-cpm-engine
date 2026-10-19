@@ -1,0 +1,9 @@
+{
+ "case": "ZZ-CPP-SSM",
+ "proj_id": 5370,
+ "differences": [],
+ "resource_dependent": {
+  "tasks": {},
+  "assignments": []
+ }
+}

@@ -1,0 +1,80 @@
+{
+ "case": "ZZ-CPP-HLN",
+ "proj_id": 5379,
+ "differences": [
+  "TASK K0 remain_drtn_hr_cnt: xer '40' p6 26.0",
+  "TASK K0 target_drtn_hr_cnt: xer '40' p6 26.0",
+  "TASK K1 remain_drtn_hr_cnt: xer '40' p6 26.0",
+  "TASK K1 target_drtn_hr_cnt: xer '40' p6 26.0",
+  "TASKRSRC K0/ZZ-CPP-HLN-R1 remain_qty_per_hr: xer '1' p6 2.22222222222222",
+  "TASKRSRC K0/ZZ-CPP-HLN-R1 target_qty_per_hr: xer '1' p6 2.22222222222222",
+  "TASKRSRC K0/ZZ-CPP-HLN-R2 remain_qty_per_hr: xer '2' p6 4.44444444444444",
+  "TASKRSRC K0/ZZ-CPP-HLN-R2 target_qty_per_hr: xer '2' p6 4.44444444444444",
+  "TASKRSRC K1/ZZ-CPP-HLN-R1 remain_qty_per_hr: xer '1' p6 2.22222222222222",
+  "TASKRSRC K1/ZZ-CPP-HLN-R1 target_qty_per_hr: xer '1' p6 2.22222222222222",
+  "TASKRSRC K1/ZZ-CPP-HLN-R2 remain_qty_per_hr: xer '2' p6 4.44444444444444",
+  "TASKRSRC K1/ZZ-CPP-HLN-R2 target_qty_per_hr: xer '2' p6 4.44444444444444"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "K0": {
+    "remain_drtn_hr_cnt": 26.0,
+    "target_drtn_hr_cnt": 26.0
+   },
+   "K1": {
+    "remain_drtn_hr_cnt": 26.0,
+    "target_drtn_hr_cnt": 26.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "K0",
+    "rsrc_short_name": "ZZ-CPP-HLN-R1",
+    "remain_qty": 40.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 2.22222222222222,
+    "target_qty_per_hr": 2.22222222222222,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "K0",
+    "rsrc_short_name": "ZZ-CPP-HLN-R2",
+    "remain_qty": 80.0,
+    "target_qty": 80.0,
+    "remain_qty_per_hr": 4.44444444444444,
+    "target_qty_per_hr": 4.44444444444444,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "K1",
+    "rsrc_short_name": "ZZ-CPP-HLN-R1",
+    "remain_qty": 40.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 2.22222222222222,
+    "target_qty_per_hr": 2.22222222222222,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "K1",
+    "rsrc_short_name": "ZZ-CPP-HLN-R2",
+    "remain_qty": 80.0,
+    "target_qty": 80.0,
+    "remain_qty_per_hr": 4.44444444444444,
+    "target_qty_per_hr": 4.44444444444444,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

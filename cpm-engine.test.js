@@ -7234,10 +7234,13 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         'alerts=' + JSON.stringify(alerts.map(a => a.message)));
 }
 {
-    // Bug A reverse — secondary MS_Finish silently violated by primary FNET
-    // is symmetric. Primary FNET to 2026-01-20, secondary MS_Finish at
-    // 2026-01-15. Final EF = 2026-01-20 (FNET wins per existing logic),
-    // secondary MS_Finish is now violated.
+    // SL (H23, 19-Oct-2026) — a Mandatory Finish in the second slot pins
+    // nothing: forward it is a floor, as a Finish On or After, and on the late
+    // side it caps, as a Finish On or Before (PC). Primary FNET 2026-01-20,
+    // secondary MS_Finish 2026-01-15: the FNET holds EF and the mandatory date
+    // caps LF, so the float goes negative (P6: ZZ-CPP-SSM M2; H23-08 A1220).
+    // Through v2.10.12's first candidate the secondary MS_Finish pinned EF back
+    // to 2026-01-15 (T-FIX-F5-A2).
     const r = E.computeCPM(
         [{ code: 'A', duration_days: 5,
            constraint:  { type: 'FNET',      date: '2026-01-20' },
@@ -7245,13 +7248,9 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         [],
         { dataDate: '2026-01-05' }
     );
-    // MS_Finish hard-pin actually wins on the second pass (it FORCES EF to
-    // cdNum). So this case isn't a violation — but if both were FNLT+FNET
-    // the F5-A check fires. Just assert no spurious alerts and final EF
-    // landed on the mandatory finish.
-    check('T-FIX-F5-A2: secondary MS_Finish hard-pins EF even after primary FNET',
-        r.nodes.A.ef_date === '2026-01-15',
-        'A.ef=' + r.nodes.A.ef_date);
+    check('SL: a secondary MS_Finish is a floor, not a pin: the primary FNET holds EF and the MS_Finish caps LF',
+        r.nodes.A.ef_date === '2026-01-20' && r.nodes.A.lf_date === '2026-01-15',
+        'A.ef=' + r.nodes.A.ef_date + ' A.lf=' + r.nodes.A.lf_date);
 }
 // Bug B: Secondary SNET cannot override primary MS_Start (mandatory hard-pin).
 {
@@ -10181,17 +10180,18 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
 
     // Slot selection: the back-compute must key off the constraint that
     // ACTUALLY held EF, not the first slot carrying a finish-pin type. Here a
-    // soft primary FNET (2026-01-20) loses to a mandatory secondary
-    // (2026-01-15); picking the FNET by type alone would find no date match
-    // and skip the back-compute, leaving ES on the logic date.
+    // soft primary FNET (2026-01-15) loses to the later floor of a mandatory
+    // secondary (2026-01-20; SL: a Mandatory Finish in the second slot is a
+    // floor); picking the FNET by type alone would find no date match and skip
+    // the back-compute, leaving ES on the logic date.
     const rP = E.computeCPM(
         [{ code: 'A', duration_days: 5, clndr_id: 'MF',
-           constraint:  { type: 'FNET',      date: '2026-01-20' },
-           constraint2: { type: 'MS_Finish', date: '2026-01-15' } }],
+           constraint:  { type: 'FNET',      date: '2026-01-15' },
+           constraint2: { type: 'MS_Finish', date: '2026-01-20' } }],
         [],
         { dataDate: '2026-01-05', calMap: _CALMF, projectCalendar: 'MF' });
     check('V2942-15: the back-compute keys off the constraint that held EF',
-        rP.nodes.A.es_date === '2026-01-08' && rP.nodes.A.ef_date === '2026-01-15',
+        rP.nodes.A.es_date === '2026-01-13' && rP.nodes.A.ef_date === '2026-01-20',
         'es=' + rP.nodes.A.es_date + ' ef=' + rP.nodes.A.ef_date);
 }
 

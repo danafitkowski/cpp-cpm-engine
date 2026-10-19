@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T09:20:13.965Z",
+  "generated_utc": "2026-10-19T12:24:34.435Z",
   "fixtures": {
-    "total": 192,
-    "passed": 192,
+    "total": 196,
+    "passed": 196,
     "failed": 0
   },
   "checks": {
-    "executed": 14686,
+    "executed": 15587,
     "failed": 0,
-    "passed": 14686,
+    "passed": 15587,
     "skipped": 0,
-    "surface": 14686
+    "surface": 15587
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 190,
-    "project_finish": 190,
-    "critical_codes": 190,
-    "topo_order": 190,
-    "alert_count": 190,
-    "alert_severity_counts": 190,
-    "node <id>": 13499,
+    "project_finish_num": 194,
+    "project_finish": 194,
+    "critical_codes": 194,
+    "topo_order": 194,
+    "alert_count": 194,
+    "alert_severity_counts": 194,
+    "node <id>": 14373,
     "threw (both engines)": 2,
-    "hours": 45
+    "hours": 48
   },
   "rows": [
     {
@@ -1562,6 +1562,38 @@
       "id": "F196",
       "name": "F196 - input checks: an invalid constraint date, an invalid activity date, inverted actuals, remaining longer than the duration",
       "checks": 69,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F197",
+      "name": "F197 - SL, MG, MX and FZ: a mandatory date in the second slot is a floor; a Mandatory Start ignores FF logic and external dates; As Late As Possible work holds no free float, in hours",
+      "checks": 367,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F198",
+      "name": "F198 - SL, MG, MX and FZ: the same, whole days",
+      "checks": 330,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F199",
+      "name": "F199 - XO, XE and ZB: an expected finish with an FF requirement off working time, resource dependent work under an expected finish, a lagged assignment with no work under a start-to-start bound, in hours",
+      "checks": 147,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F200",
+      "name": "F200 - AV: As Late As Possible on resource dependent work under way, the slid restart off its calendar, in hours",
+      "checks": 57,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

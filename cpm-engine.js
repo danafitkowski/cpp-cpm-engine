@@ -1814,8 +1814,9 @@ function _msOtherEnd(taskType, type) {
 function _openEndFFHeld(node) {
     if (node.expected_finish_applied && node.expected_finish_applied.applied) return true;
     if (node.actual_start && !node.is_complete) return false;
-    return [node.constraint, node.constraint2].some((c) => c &&
-        (c.type === 'MS_Start' || c.type === 'MS_Finish' || c.type === 'MFO'));
+    // SL (H23, 19-Oct-2026): only the primary slot pins (ZZ-CPP-SSM M12)
+    const c = node.constraint;
+    return !!c && (c.type === 'MS_Start' || c.type === 'MS_Finish' || c.type === 'MFO');
 }
 
 // A whole, non-negative count of resource assignments; 0 for anything that
@@ -2408,7 +2409,12 @@ function _hrExpectedFinish(n, cal, start, floor, startPred) {
         const pull = rd > 0 ? cal.sub(floor, rd) : cal.nextWork(floor);
         if (pull > begin) {
             n.rem = rd;
-            return [pull, rd > 0 ? floor : pull];
+            // XO (H23, 19-Oct-2026): a requirement that drives the finish
+            // past the expected finish prints as it does with no expected
+            // finish: off working time, at the next opening (ZZ-CPP-XFO /
+            // -XFR X1-X3, X6 against X4, X5, X8; H23-03 A1190)
+            const onWork = cal.isStart(floor) || cal.isFinish(floor);
+            return [pull, rd > 0 ? (onWork ? floor : cal.nextWork(floor)) : pull];
         }
     }
     n.rem = rd;
@@ -2581,11 +2587,28 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
                     actS = g.lag ? gc.sub(s, g.lag) : s;
                 }
             }
+        } else if (g.lag) {
+            // ZB (H23, 19-Oct-2026): an assignment with no work left and a lag
+            // takes a bound the way one with work does: the activity's late
+            // start sits at the bound and the assignment lands its lag later,
+            // on its own calendar, which can set the late finish. Placed back
+            // from the bound, its lag would pull the late start earlier
+            // (ZZ-CPP-ZLA Z1, Z2 against Z3 no lag, Z4 no bound, Z5 with
+            // work; H23-08 A1340)
+            f = gc.prevWorkEnd(lfAct);
+            s = f;
+            actS = gc.sub(s, g.lag);
+            if (lsBound !== null && lsBound <= actS) {
+                bound = true;
+                actS = (gc.isFinish(lsBound) || gc.isStart(lsBound)) ? lsBound : gc.prevWorkEnd(lsBound);
+                s = gc.nextWork(gc.add(actS, g.lag));
+                f = s;
+            }
         } else {
             const bound = lsBound === null ? lfAct : Math.min(lfAct, lsBound);
             f = gc.prevWorkEnd(bound);
             s = f;
-            actS = g.lag ? gc.sub(s, g.lag) : s;
+            actS = s;
         }
         starts.push(actS);
         fins.push(f);
@@ -2622,6 +2645,13 @@ function _hrRsrcPlace(n, cal, startReq, finishReq, xf) {
     if (rs !== es) n.rem_dates = _hrRsrcForward(n.asg, cal, rs, finishReq, xf);
     const rd = n.rem_dates || [es, ef];
     n.rem = cal.between(rd[0], rd[1]);
+    // XE (H23, 19-Oct-2026): under an expected finish in force, work not yet
+    // started keeps no first placement: its early dates are those remaining
+    // dates, and its successors follow them. Without one P6 keeps the first
+    // placement as the early dates and drives the successors from it
+    // (ZZ-CPP-HLX K1, K3, K6 and H12C A1230 against K0, K2, K4, K5,
+    // ZZ-CPP-HLN, ZZ-CPP-HLA Q1; H20-03 A1060; H23-12 A1230)
+    if (n.xf !== null && !n.started) return [rd[0], rd[1]];
     return [es, ef];
 }
 
@@ -2862,18 +2892,31 @@ function computeCPMHours(activities, relationships, o) {
                 finishReq = (finishReq === null) ? t : Math.max(finishReq, t);
             }
         }
+        const msPin = !n.started && n.c1 && n.c1.at !== null && n.c1.type === 'MS_Start';
         for (const cs of [n.c1, n.c2]) {
             if (cs && cs.at !== null && (cs.type === 'SNET' || cs.type === 'SO' || cs.type === 'MS_Start') &&
                     !n.started) {
                 // MD (H2, 13-Oct-2026): a Mandatory Start ignores logic but not
                 // the data date; dated before it, the work starts at the data
                 // date and the mandatory date stays on the late side
-                // (ZZ-CPP-H2S-M M1-M6, H2-06 A1130)
-                startReq = cs.type !== 'MS_Start' ? Math.max(startReq, cs.at)
+                // (ZZ-CPP-H2S-M M1-M6, H2-06 A1130). SL (H23, 19-Oct-2026):
+                // only the primary pins; a Mandatory Start in the second slot
+                // is a floor, as a Start On or After (ZZ-CPP-SSM M10, M11)
+                startReq = (cs.type !== 'MS_Start' || cs !== n.c1) ? Math.max(startReq, cs.at)
                     : (dd === null ? cs.at : Math.max(dd, cs.at));
             }
         }
-        if (n.ext_es !== null) startReq = Math.max(startReq, n.ext_es);
+        if (msPin) {
+            // MG (H23, 19-Oct-2026): the logic a Mandatory Start ignores
+            // includes its finish-to-finish and start-to-finish predecessors,
+            // under an expected finish too: the work runs its own duration from
+            // the mandatory date (ZZ-CPP-SSM M7, M8, M9; H23-08 A1250)
+            finishReq = null;
+            xfFloor = null;
+        }
+        // MX (H23, 19-Oct-2026): nor does an external early start move a
+        // Mandatory Start (ZZ-CPP-MXE E1, E3, E9 against E2, E5; H23-03 A1260)
+        if (n.ext_es !== null && !msPin) startReq = Math.max(startReq, n.ext_es);
         if (n.started && n.rf !== null) startReq = Math.max(startReq, n.rf);
         // XM (H3, 14-Oct-2026): under "Use Expected Finish Dates" a milestone
         // with an expected finish sits no earlier than it, at the next opening
@@ -2940,20 +2983,27 @@ function computeCPMHours(activities, relationships, o) {
                     !n.started && !xfFin) {
                 let fin = cs.at;
                 if (n.rem === 0 && !onWorkingTime(cal, fin)) fin = cal.nextWork(fin);
-                if (cs.type === 'MS_Finish' || fin > n.ef) {
+                // SL (H23, 19-Oct-2026): only the primary pins. A Mandatory
+                // Finish in the second slot is a floor, as a Finish On or
+                // After: it moves the finish out to its date, never back to
+                // it (ZZ-CPP-SSM M1-M6, M9, M12; H23-04 A1140, H23-07 A1120,
+                // H23-08 A1220 against H23-02 A1230, H23-03 A1280, H23-08
+                // A1250, H23-12 A1150); on the late side PC caps
+                const pin = cs.type === 'MS_Finish' && cs === n.c1;
+                if (pin || fin > n.ef) {
                     if (n.asg.length) {
                         // RD: the activity's own remaining duration back from
                         // the constraint sets the start; the assignments run
                         // from there
                         const rin = n.rem_in;
                         let st = rin > 0 ? cal.sub(cal.prevWorkEnd(fin), rin) : fin;
-                        if (cs.type === 'MS_Finish' && dd !== null && st < dd) st = dd;   // MD
+                        if (pin && dd !== null && st < dd) st = dd;   // MD
                         [n.es, n.ef] = _hrRsrcPlace(n, cal, st, null, null);
                         continue;
                     }
                     n.ef = n.rem > 0 ? cal.prevWorkEnd(fin) : fin;
                     n.es = n.rem > 0 ? cal.sub(n.ef, n.rem) : n.ef;
-                    if (cs.type === 'MS_Finish' && dd !== null && n.es < dd) {
+                    if (pin && dd !== null && n.es < dd) {
                         // MD (H2, 13-Oct-2026): a Mandatory Finish the work
                         // cannot meet from the data date starts it at the data
                         // date; the finish falls where the work takes it and
@@ -3303,7 +3353,13 @@ function computeCPMHours(activities, relationships, o) {
         const cur = n.started ? n.restart : n.es;
         if (n.asg.length) {
             // RD: the assignments finish by the bound on their own calendars
-            const [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
+            let [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
+            // AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
+            // working time moves on to its next opening, as RU has it, and the
+            // assignments run from there, past the bound if they must
+            // (ZZ-CPP-ARU A1, A5 against A4; H23-05 A1060)
+            const rs = cal.nextWork(ne);
+            if (rs !== ne) [ne, nf] = _hrRsrcForward(n.asg, cal, rs, null, null);
             if (ne > cur) {
                 if (n.started) n.restart = ne; else n.es = ne;
                 n.ef = nf;
@@ -3393,11 +3449,20 @@ function computeCPMHours(activities, relationships, o) {
                 // calendar (H1-10 A1110 / A1120, H1-11 A1110)
                 cands.push(cal.between(own, lagBwd(sa, lag, lc)));
             }
-            const pinned = !n.started && [n.c1, n.c2].some((cs) => cs && (cs.type === 'MS_Start' ||
-                cs.type === 'MS_Finish'));
+            // SL (H23, 19-Oct-2026): a mandatory date pins, and holds free
+            // float at zero, only from the primary slot (ZZ-CPP-SSM M12; H23-08
+            // A1220)
+            const pinned = !n.started && n.c1 && (n.c1.type === 'MS_Start' || n.c1.type === 'MS_Finish');
             if (n.xf !== null || pinned) ffSigned = 0;
             else if (cands.length) ffSigned = Math.min.apply(null, cands);
             else ffSigned = cal.between(rEf, projEf);
+            // FZ (H23, 19-Oct-2026): As Late As Possible work holds no free
+            // float, even where its slide stops short of its successors (a
+            // resource closing before its activity's calendar does): P6
+            // prints zero on all 88 unfinished As Late As Possible activities
+            // in H1 to H23 (ZZ-CPP-AFF F1 against F2; H23-02 A1220)
+            const alapFf = (n.c1 && n.c1.type === 'ALAP') || (n.c2 && n.c2.type === 'ALAP');
+            if (alapFf && ffSigned > 0) ffSigned = 0;
             ff = Math.max(0, ffSigned);
         }
         const pDates = n.rem_dates || [n.es, n.ef];
@@ -5248,6 +5313,12 @@ function computeCPM(activities, relationships, opts) {
                 };
                 finishAnchorEF = null;
             }
+            // MG (H23, 19-Oct-2026) — a Mandatory Start ignores its finish-to-
+            // finish and start-to-finish predecessors too: pulled back to the
+            // mandatory date, the work runs its own duration from there, not
+            // to their finish (see the hours pass; ZZ-CPP-SSM M7, M8, M9).
+            // Python paired site: the same block in compute_cpm.
+            if (cstr && cstr.type === 'MS_Start' && cstr.date) finishAnchorEF = null;
             // v2.9.16 F5-A — capture primary mandatory-start pin so secondary
             // SNET cannot silently override it. Per P6, MS_Start/SO is a
             // hard pin; soft secondary constraints cannot move it.
@@ -5258,7 +5329,12 @@ function computeCPM(activities, relationships, opts) {
             const _primaryMandatoryStartNum = _isPrimaryMandatoryStart
                 ? _constraintStartNum(cstr, nodeCal, [], code) : -1;
             const _esBeforeSecondary = maxES;
-            maxES = _applyForwardESConstraint(code, maxES, cstr2, 'secondary', alerts, nodeCal);
+            // SL (H23, 19-Oct-2026) — only the primary pins: a Mandatory Start
+            // in the second slot is a floor, as a Start On or After (see the
+            // hours pass; ZZ-CPP-SSM M10, M11). Python paired site: the same
+            // block in compute_cpm.
+            const _slStart = (cstr2 && cstr2.type === 'MS_Start') ? Object.assign({}, cstr2, { type: 'SNET' }) : cstr2;
+            maxES = _applyForwardESConstraint(code, maxES, _slStart, 'secondary', alerts, nodeCal);
             if (maxES > _esBeforeSecondary && cstr2 && cstr2.date) {
                 drivingPred = {
                     type: 'CONSTRAINT',
@@ -5284,30 +5360,12 @@ function computeCPM(activities, relationships, opts) {
                 };
                 finishAnchorEF = null;
             }
-            // v2.9.16 F5-B (symmetric) — if secondary is mandatory and primary
-            // is soft, primary can have moved maxES off the secondary mandatory.
-            // v2.9.42 — SO dropped (soft), same reasoning as the primary above.
-            const _isSecondaryMandatoryStart = cstr2 && cstr2.type === 'MS_Start' && cstr2.date;
-            if (_isSecondaryMandatoryStart) {
-                const _secondaryMandatoryStartNum = _constraintStartNum(cstr2, nodeCal, [], code);
-                if (maxES !== _secondaryMandatoryStartNum) {
-                    // Secondary mandatory should be honored. If a soft primary
-                    // (SNET) pushed maxES past it, the mandatory pin still wins.
-                    alerts.push({
-                        severity: 'WARN',
-                        context: 'constraint-priority-override',
-                        message: 'Mandatory secondary ' + cstr2.type + ' on ' + code +
-                            ' restored ES to ' + cstr2.date + ' over soft primary.',
-                    });
-                    maxES = _secondaryMandatoryStartNum;
-                    drivingPred = {
-                        type: 'CONSTRAINT',
-                        constraint_type: cstr2.type,
-                        date: cstr2.date,
-                    };
-                    finishAnchorEF = null;
-                }
-            }
+            // SL (H23, 19-Oct-2026) withdraws v2.9.16 F5-B's symmetric half,
+            // which restored a mandatory second constraint's pin over a soft
+            // primary: P6 pins only from the primary slot (ZZ-CPP-SSM M11, a
+            // Mandatory Start in the second slot dated before the Start On or
+            // After, leaves the start on the Start On or After). The Python
+            // reference never had it.
             // MD (H2, 13-Oct-2026): a Mandatory Start ignores logic but not the
             // data date; dated before it, the work starts at the data date and
             // the mandatory date stays on the late side (P6 probes
@@ -5615,6 +5673,13 @@ function computeCPM(activities, relationships, opts) {
                 _underwayFinishNoop(code, node.ef, _c, _i === 0 ? 'primary' : 'secondary',
                     nodeCal, alerts, _underway ? 'underway' : 'expected-finish');
                 return null;
+            }
+            // SL (H23, 19-Oct-2026) — a Mandatory Finish in the second slot is a
+            // floor, as a Finish On or After: it moves the finish out to its
+            // date, never back to it (see the hours pass; ZZ-CPP-SSM M1-M6, M9,
+            // M12). Python paired site: the same block in compute_cpm.
+            if (_i === 1 && _c && (_c.type === 'MS_Finish' || _c.type === 'MFO')) {
+                return Object.assign({}, _c, { type: 'FNET' });
             }
             if (!hasActualStart && ddNum > 0 && _c && _c.date && (_c.type === 'MS_Finish' || _c.type === 'MFO')) {
                 // MD (H2, 13-Oct-2026): a Mandatory Finish the work cannot meet
@@ -6486,8 +6551,12 @@ function computeCPM(activities, relationships, opts) {
         const _minLFBeforeSecondary = minLF;
         minLF = _applyBackwardLFConstraint(code, minLF, _c2cap, nodeCal, node.duration_days, alerts);
         if (minLF !== _minLFBeforeSecondary) _mlBy = _c2cap;
-        // EX (v2.9.57) — the external late finish caps the late finish.
-        if (node.external_late_finish) {
+        // EX (v2.9.57) — the external late finish caps the late finish. MX
+        // (H23, 19-Oct-2026) — but not a primary mandatory pin on work not yet
+        // started: the pin holds against it, as in the hours pass (ZZ-CPP-MXE
+        // E6, E7 against E8). Python paired site: the same block in
+        // compute_cpm.
+        if (node.external_late_finish && !(cstr && _isMandatoryConstraint(cstr) && !node.actual_start)) {
             const _extLFNum = _externalLateFinishNum(node.external_late_finish, nodeCal,
                 'external late finish ' + code);
             if (_extLFNum > 0 && _extLFNum < minLF) {
@@ -7136,6 +7205,18 @@ function computeCPM(activities, relationships, opts) {
             : (_openEndFFHeld(n) ? n.ef : n._ff_terminal);
         n.ff_signed_working_days = _countWorkDaysBetween(_ffFromNum, _ffToNum, ffCal);
         n.ff_working_days = Math.max(0, n.ff_signed_working_days);
+    }
+    // FZ (H23, 19-Oct-2026) — As Late As Possible work holds no free float, as
+    // P6 prints it on every unfinished As Late As Possible activity (see the
+    // hours pass; ZZ-CPP-AFF F1). Python paired site: the same block in
+    // compute_cpm.
+    for (const c in nodes) {
+        const n = nodes[c];
+        if (n.is_complete || ![n.constraint, n.constraint2].some((k) => k && k.type === 'ALAP')) continue;
+        if (n.ff_signed > 0) n.ff_signed = 0;
+        if (n.ff_signed_working_days > 0) n.ff_signed_working_days = 0;
+        n.ff = 0;
+        n.ff_working_days = 0;
     }
 
     const criticalCodes = new Set();
@@ -11615,17 +11696,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '192 cross-validation fixtures. The harness defines 14686 ' +
+                '196 cross-validation fixtures. The harness defines 15587 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 14686 / 14686" is the whole comparison surface. ' +
+                'reported "Checks: 15587 / 15587" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 14686 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 15587 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 190 of the 192 fixtures: ' +
+                'severity-level alert parity, compared on 194 of the 196 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11664,18 +11745,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '14686 comparisons it defines over 192 fixtures and skips none; every ' +
+                '15587 comparisons it defines over 196 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '192 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '196 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 14686 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 15587 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 190 of the 192 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 194 of the 196 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

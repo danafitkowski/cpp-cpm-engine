@@ -1625,8 +1625,8 @@ def _open_end_ff_held(node):
         return True
     if node.get('actual_start') and not node.get('is_complete'):
         return False        # the mandatory pins are dropped on work under way
-    return any((c or {}).get('type') in _FF_HOLDING_TYPES
-               for c in (node.get('constraint'), node.get('constraint2')))
+    # SL (H23, 19-Oct-2026): only the primary slot pins (ZZ-CPP-SSM M12)
+    return (node.get('constraint') or {}).get('type') in _FF_HOLDING_TYPES
 
 
 # MC (H3, 14-Oct-2026) - a milestone keeps a constraint on its other end, but
@@ -3663,8 +3663,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     'date': cstr.get('date'),
                 }
                 finish_anchor_ef = None
+            # MG (H23, 19-Oct-2026) — a Mandatory Start ignores its finish-to-
+            # finish and start-to-finish predecessors too: pulled back to the
+            # mandatory date, the work runs its own duration from there, not to
+            # their finish (see the hours pass; ZZ-CPP-SSM M7, M8, M9). JS paired
+            # site: the same block.
+            if cstr and cstr.get('type') == 'MS_Start' and cstr.get('date'):
+                finish_anchor_ef = None
             _es_before_secondary = max_es
-            max_es = _apply_forward_es_constraint(code, max_es, cstr2, 'secondary', alerts, node_cal)
+            # SL (H23, 19-Oct-2026) — only the primary pins: a Mandatory Start in
+            # the second slot is a floor, as a Start On or After (see the hours
+            # pass; ZZ-CPP-SSM M10, M11). JS paired site: the same block.
+            _sl_start = dict(cstr2, type='SNET') if (cstr2 and cstr2.get('type') == 'MS_Start') else cstr2
+            max_es = _apply_forward_es_constraint(code, max_es, _sl_start, 'secondary', alerts, node_cal)
             if max_es > _es_before_secondary and cstr2 and cstr2.get('date'):
                 driving_pred = {
                     'type': 'CONSTRAINT',
@@ -3992,6 +4003,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 _underway_finish_noop(code, node['ef'], _c, _lab, node_cal, alerts,
                                       'underway' if _underway else 'expected-finish')
                 continue
+            # SL (H23, 19-Oct-2026) — a Mandatory Finish in the second slot is a
+            # floor, as a Finish On or After: it moves the finish out to its
+            # date, never back to it (see the hours pass; ZZ-CPP-SSM M1-M6, M9,
+            # M12). JS paired site: the same block.
+            if _lab == 'secondary' and _c and _c.get('type') in ('MS_Finish', 'MFO'):
+                _c = dict(_c, type='FNET')
             if (not has_actual_start and dd_num > 0 and _c and _c.get('date')
                     and _c.get('type') in ('MS_Finish', 'MFO')):
                 # MD (H2, 13-Oct-2026): a Mandatory Finish the work cannot meet
@@ -4759,8 +4776,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             code, min_lf, cstr2, node_cal, node['duration_days'], alerts)
         if min_lf != _ml_prev:
             _ml_by = cstr2
-        # EX (v2.9.57) — the external late finish caps the late finish.
-        if node['external_late_finish']:
+        # EX (v2.9.57) — the external late finish caps the late finish. MX (H23,
+        # 19-Oct-2026) — but not a primary mandatory pin on work not yet
+        # started: the pin holds against it, as in cpm_hours (ZZ-CPP-MXE E6, E7
+        # against E8). JS paired site: the same block in computeCPM.
+        _pin_held = bool(cstr and cstr.get('type') in ('MS_Start', 'MS_Finish', 'MFO')
+                         and not node.get('actual_start'))
+        if node['external_late_finish'] and not _pin_held:
             _ext_lf_num = _external_late_finish_num(
                 node['external_late_finish'], node_cal, ctx=f'external late finish {code}')
             if 0 < _ext_lf_num < min_lf:
@@ -5367,6 +5389,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         n['ff_signed_working_days'] = _count_float_days(
             _ff_from, _ff_to, ff_cal)
         n['ff_working_days'] = max(0, n['ff_signed_working_days'])
+    # FZ (H23, 19-Oct-2026) — As Late As Possible work holds no free float, as P6
+    # prints it on every unfinished As Late As Possible activity (see cpm_hours;
+    # ZZ-CPP-AFF F1). JS paired site: the same block in computeCPM.
+    for c, n in nodes.items():
+        if n['is_complete'] or not any((k or {}).get('type') == 'ALAP'
+                                       for k in (n.get('constraint'), n.get('constraint2'))):
+            continue
+        if n['ff_signed'] > 0:
+            n['ff_signed'] = 0
+        if n['ff_signed_working_days'] > 0:
+            n['ff_signed_working_days'] = 0
+        n['ff'] = 0
+        n['ff_working_days'] = 0
 
     critical = {c for c, n in nodes.items() if n['tf'] <= 0.0 and not n['is_complete']}
 
