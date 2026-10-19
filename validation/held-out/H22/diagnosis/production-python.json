@@ -1,0 +1,18 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 6). The production Python engine of the released tools at v2.10.11 (canonical cpm.py with python_reference/cpm_hours.py 45d50a3c, through the production converter, which hands the engine the open-ended option, the float type and each activity's successors left out of the network), run on H22's 12 projects as P6's database holds them after the F9. Counts only.",
+ "against_p6": {
+  "projects": 12,
+  "unfinished_activities": 271,
+  "on_p6_all_four_dates_and_both_floats": 268,
+  "off": [
+   "H22-06 A1090 (late start, late finish, total float)",
+   "H22-06 A1100 (late start, late finish, total float)",
+   "H22-06 A1120 (late start, late finish, total float)"
+  ]
+ },
+ "against_this_engine": {
+  "projects": 12,
+  "activities": 385,
+  "every_field_equal": 385
+ }
+}

@@ -1,0 +1,45 @@
+{
+ "note": "P6's own values for H22-06 A1090, A1100, A1120 (the three that differ), their successor A1140 and the completed A1210, as readback_p6_sqlite.py read them after the F9.",
+ "p6": {
+  "A1090": {
+   "task_code": "A1090",
+   "status": "TK_Active",
+   "early_start": "2026-11-06 08:00",
+   "early_finish": "2026-11-06 08:00",
+   "late_start": "2026-11-06 08:00",
+   "late_finish": "2026-11-06 08:00",
+   "total_float_hr": "0",
+   "free_float_hr": "0"
+  },
+  "A1100": {
+   "task_code": "A1100",
+   "status": "TK_NotStart",
+   "early_start": "2026-11-06 08:00",
+   "early_finish": "2026-11-18 17:00",
+   "late_start": "2026-11-06 08:00",
+   "late_finish": "2026-11-18 17:00",
+   "total_float_hr": "0",
+   "free_float_hr": "0"
+  },
+  "A1120": {
+   "task_code": "A1120",
+   "status": "TK_NotStart",
+   "early_start": "2026-11-19 07:00",
+   "early_finish": "2026-11-19 17:00",
+   "late_start": "2026-11-19 07:00",
+   "late_finish": "2026-11-19 17:00",
+   "total_float_hr": "0",
+   "free_float_hr": "0"
+  },
+  "A1140": {
+   "task_code": "A1140",
+   "status": "TK_NotStart",
+   "early_start": "2026-11-20 07:00",
+   "early_finish": "2026-11-24 11:00",
+   "late_start": "2026-11-20 07:00",
+   "late_finish": "2026-11-24 11:00",
+   "total_float_hr": "0",
+   "free_float_hr": "0"
+  }
+ }
+}
