@@ -1,0 +1,145 @@
+{
+ "case": "H23-02",
+ "proj_id": 5356,
+ "differences": [
+  "TASK A1200 remain_drtn_hr_cnt: xer '13' p6 13.5",
+  "TASK A1200 target_drtn_hr_cnt: xer '16' p6 15.0",
+  "TASK A1220 remain_drtn_hr_cnt: xer '4' p6 3.0",
+  "TASK A1220 target_drtn_hr_cnt: xer '4' p6 3.0",
+  "TASK A1320 remain_drtn_hr_cnt: xer '23' p6 25.0",
+  "TASK A1320 target_drtn_hr_cnt: xer '40' p6 39.0",
+  "TASKRSRC A1100/H23-02-R2 remain_qty_per_hr: xer '0.5' p6 0.585365853658537",
+  "TASKRSRC A1100/H23-02-R2 target_qty_per_hr: xer '0.5' p6 0.585365853658537",
+  "TASKRSRC A1150/H23-02-R1 remain_qty_per_hr: xer '0.5' p6 0.470588235294118",
+  "TASKRSRC A1150/H23-02-R1 target_qty_per_hr: xer '0.5' p6 0.470588235294118",
+  "TASKRSRC A1150/H23-02-R2 remain_qty_per_hr: xer '3' p6 3.28421052631579",
+  "TASKRSRC A1150/H23-02-R2 target_qty_per_hr: xer '3' p6 3.28421052631579",
+  "TASKRSRC A1200/H23-02-R3 target_qty_per_hr: xer '1' p6 1.10344827586207",
+  "TASKRSRC A1220/H23-02-R1 remain_qty_per_hr: xer '1' p6 1.33333333333333",
+  "TASKRSRC A1220/H23-02-R1 target_qty_per_hr: xer '1' p6 1.33333333333333",
+  "TASKRSRC A1320/H23-02-R1 target_qty_per_hr: xer '1' p6 0.842105263157895",
+  "TASKRSRC A1320/H23-02-R3 target_qty_per_hr: xer '3' p6 2.52631578947368"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1100": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "A1150": {
+    "remain_drtn_hr_cnt": 56.0,
+    "target_drtn_hr_cnt": 56.0
+   },
+   "A1200": {
+    "remain_drtn_hr_cnt": 13.5,
+    "target_drtn_hr_cnt": 15.0
+   },
+   "A1220": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "A1320": {
+    "remain_drtn_hr_cnt": 25.0,
+    "target_drtn_hr_cnt": 39.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1100",
+    "rsrc_short_name": "H23-02-R2",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 0.585365853658537,
+    "target_qty_per_hr": 0.585365853658537,
+    "target_lag_drtn_hr_cnt": 16.0,
+    "relag_drtn_hr_cnt": 16.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1100",
+    "rsrc_short_name": "H23-02-R3",
+    "remain_qty": 120.0,
+    "target_qty": 120.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 3.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1150",
+    "rsrc_short_name": "H23-02-R1",
+    "remain_qty": 28.0,
+    "target_qty": 28.0,
+    "remain_qty_per_hr": 0.470588235294118,
+    "target_qty_per_hr": 0.470588235294118,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1150",
+    "rsrc_short_name": "H23-02-R2",
+    "remain_qty": 156.0,
+    "target_qty": 156.0,
+    "remain_qty_per_hr": 3.28421052631579,
+    "target_qty_per_hr": 3.28421052631579,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1200",
+    "rsrc_short_name": "H23-02-R3",
+    "remain_qty": 13.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.10344827586207,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 3.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1220",
+    "rsrc_short_name": "H23-02-R1",
+    "remain_qty": 4.0,
+    "target_qty": 4.0,
+    "remain_qty_per_hr": 1.33333333333333,
+    "target_qty_per_hr": 1.33333333333333,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1320",
+    "rsrc_short_name": "H23-02-R1",
+    "remain_qty": 23.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.842105263157895,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 17.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1320",
+    "rsrc_short_name": "H23-02-R3",
+    "remain_qty": 69.0,
+    "target_qty": 120.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 2.52631578947368,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 51.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
