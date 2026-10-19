@@ -1,0 +1,92 @@
+{
+ "case": "H24-08",
+ "proj_id": 5404,
+ "differences": [
+  "TASK A1090 remain_drtn_hr_cnt: xer '25' p6 9.0",
+  "TASKRSRC A1090/H24-08-R2 target_qty_per_hr: xer '3' p6 0.839160839160839",
+  "TASKRSRC A1120/H24-08-R1 remain_qty_per_hr: xer '2' p6 1.04575163398693",
+  "TASKRSRC A1120/H24-08-R1 target_qty_per_hr: xer '2' p6 1.04575163398693"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1080": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 4.0
+   },
+   "A1090": {
+    "remain_drtn_hr_cnt": 9.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "A1100": {
+    "remain_drtn_hr_cnt": 4.0,
+    "target_drtn_hr_cnt": 4.0
+   },
+   "A1120": {
+    "remain_drtn_hr_cnt": 80.0,
+    "target_drtn_hr_cnt": 80.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1080",
+    "rsrc_short_name": "H24-08-R2",
+    "remain_qty": 3.0,
+    "target_qty": 4.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 1.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1090",
+    "rsrc_short_name": "H24-08-R2",
+    "remain_qty": 75.0,
+    "target_qty": 120.0,
+    "remain_qty_per_hr": 3.0,
+    "target_qty_per_hr": 0.839160839160839,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 45.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1100",
+    "rsrc_short_name": "H24-08-R1",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1100",
+    "rsrc_short_name": "H24-08-R2",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 2.0,
+    "target_qty_per_hr": 2.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1120",
+    "rsrc_short_name": "H24-08-R1",
+    "remain_qty": 160.0,
+    "target_qty": 160.0,
+    "remain_qty_per_hr": 1.04575163398693,
+    "target_qty_per_hr": 1.04575163398693,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

@@ -1,0 +1,142 @@
+{
+ "case": "H24-01",
+ "proj_id": 5397,
+ "differences": [
+  "TASK A1050 remain_drtn_hr_cnt: xer '56' p6 45.5",
+  "TASK A1050 target_drtn_hr_cnt: xer '56' p6 45.5",
+  "TASK A1090 remain_drtn_hr_cnt: xer '58' p6 42.0",
+  "TASK A1250 remain_drtn_hr_cnt: xer '12' p6 1.5",
+  "TASK A1250 target_drtn_hr_cnt: xer '12' p6 1.5",
+  "TASKRSRC A1050/H24-01-R1 remain_qty_per_hr: xer '3' p6 4.73239436619718",
+  "TASKRSRC A1050/H24-01-R1 target_qty_per_hr: xer '3' p6 4.73239436619718",
+  "TASKRSRC A1250/H24-01-R1 remain_qty_per_hr: xer '2' p6 16.0",
+  "TASKRSRC A1250/H24-01-R1 target_qty_per_hr: xer '2' p6 16.0",
+  "TASKRSRC A1090/H24-01-R3 target_qty_per_hr: xer '1' p6 0.492813141683778",
+  "TASKRSRC A1260/H24-01-R3 remain_qty_per_hr: xer '1' p6 0.827586206896552",
+  "TASKRSRC A1260/H24-01-R3 target_qty_per_hr: xer '1' p6 0.827586206896552",
+  "TASKRSRC A1270/H24-01-R4 remain_qty_per_hr: xer '1' p6 1.45454545454545",
+  "TASKRSRC A1270/H24-01-R4 target_qty_per_hr: xer '1' p6 1.45454545454545",
+  "TASKRSRC A1120/H24-01-R1 remain_qty_per_hr: xer '1' p6 1.05263157894737",
+  "TASKRSRC A1120/H24-01-R1 target_qty_per_hr: xer '1' p6 1.05263157894737",
+  "TASKRSRC A1120/H24-01-R2 remain_qty_per_hr: xer '1' p6 0.0",
+  "TASKRSRC A1120/H24-01-R2 target_qty_per_hr: xer '1' p6 0.0"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1050": {
+    "remain_drtn_hr_cnt": 45.5,
+    "target_drtn_hr_cnt": 45.5
+   },
+   "A1090": {
+    "remain_drtn_hr_cnt": 42.0,
+    "target_drtn_hr_cnt": 120.0
+   },
+   "A1120": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   },
+   "A1170": {
+    "remain_drtn_hr_cnt": 13.0,
+    "target_drtn_hr_cnt": 16.0
+   },
+   "A1250": {
+    "remain_drtn_hr_cnt": 1.5,
+    "target_drtn_hr_cnt": 1.5
+   },
+   "A1260": {
+    "remain_drtn_hr_cnt": 12.0,
+    "target_drtn_hr_cnt": 12.0
+   },
+   "A1270": {
+    "remain_drtn_hr_cnt": 8.0,
+    "target_drtn_hr_cnt": 8.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1050",
+    "rsrc_short_name": "H24-01-R1",
+    "remain_qty": 168.0,
+    "target_qty": 168.0,
+    "remain_qty_per_hr": 4.73239436619718,
+    "target_qty_per_hr": 4.73239436619718,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1090",
+    "rsrc_short_name": "H24-01-R3",
+    "remain_qty": 58.0,
+    "target_qty": 120.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.492813141683778,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 62.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1120",
+    "rsrc_short_name": "H24-01-R1",
+    "remain_qty": 40.0,
+    "target_qty": 40.0,
+    "remain_qty_per_hr": 1.05263157894737,
+    "target_qty_per_hr": 1.05263157894737,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1120",
+    "rsrc_short_name": "H24-01-R2",
+    "remain_qty": 0.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 0.0,
+    "target_qty_per_hr": 0.0,
+    "target_lag_drtn_hr_cnt": 8.0,
+    "relag_drtn_hr_cnt": 8.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1250",
+    "rsrc_short_name": "H24-01-R1",
+    "remain_qty": 24.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 16.0,
+    "target_qty_per_hr": 16.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1260",
+    "rsrc_short_name": "H24-01-R3",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 0.827586206896552,
+    "target_qty_per_hr": 0.827586206896552,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "A1270",
+    "rsrc_short_name": "H24-01-R4",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.45454545454545,
+    "target_qty_per_hr": 1.45454545454545,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}
