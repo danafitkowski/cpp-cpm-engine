@@ -3839,6 +3839,20 @@ compareFixture('F193 - a mandatory date beside a second constraint, in hours', {
     relationship_lag_calendar: 'rcal_Predecessor',
 }, { hours: true });
 
+// v2.10.12: the activity-level input checks both engines raise - a null activity, one with no code, a padded code
+// (trimmed, so a relationship naming the trimmed code still links, and a padded relationship endpoint too), a
+// duplicate code (the later record wins) and a control character in a name - and an empty network. Until v2.10.12
+// the Python reference raised none of them and kept a padded code as it came.
+compareFixture('F194 - input checks: a null activity, a missing code, a padded code, a duplicate code, a control character in a name', {
+    activities: [dA('A', 8), null, { code: '', duration_days: 1, clndr_id: 'MF' }, dA(' B ', 16), dA('C', 8),
+        dA('C', 24), dA('D', 8, { name: 'D' + String.fromCharCode(1) + 'name' }), dA('E', 8)],
+    relationships: [dR('A', 'B'), dR('B', 'C'), dR(' C', 'D '), dR('A', 'E')],
+    data_date: '2026-12-07', cal_map: HCAL,
+});
+compareFixture('F195 - input checks: an empty network', {
+    activities: [], relationships: [], data_date: '2026-12-07', cal_map: HCAL,
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

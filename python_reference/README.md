@@ -200,7 +200,7 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  109cae84f4026a05ff1cb3a61c6692700a5fa6ee79967a46a5b3d40b08f73f7d
+cpm.py          SHA-256:  0e29d2d10b33bcff73f3a6cb0240968887d7cb38e6159cb8fa82ba27dfdb980a
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  036ab3593f02de6350c568af6e89b53b09092d9f007e4700b0c7a51cc777eeb6
 
@@ -222,7 +222,14 @@ takes the mandatory pin, its assignments running back from the pinned
 late finish (MR). Measured on the P6 probes ZZ-CPP-XMR, -XMO, -XMN,
 -XNR and -XNN (validation/p6-probes/xf-mandatory-2026-10-18), after
 held-out case H22-06 A1120. The harness gains 6 fixtures (F188-F193):
-189 fixtures, 14560 of 14560 executed.)
+189 fixtures, 14560 of 14560 executed. Then, from 109cae84...: compute_cpm
+raises the JS engine's activity-level input alerts (empty-schedule,
+activity-null, activity-missing-code, activity-name-control-chars,
+activity-code-trimmed, duplicate-activity-code) and trims activity codes
+and relationship endpoints as the JS engine does, where it had skipped a
+null or code-less activity silently and kept a padded code, so that a
+relationship naming the trimmed code dangled. The harness gains 2
+fixtures (F194-F195): 191 fixtures, 14617 of 14617 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -790,15 +797,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 308467
-  sha-256:  109cae84f4026a05ff1cb3a61c6692700a5fa6ee79967a46a5b3d40b08f73f7d
+  bytes: 311589
+  sha-256:  0e29d2d10b33bcff73f3a6cb0240968887d7cb38e6159cb8fa82ba27dfdb980a
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 189 passed, 0 failed
-  Checks:   14560 / 14560 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 191 passed, 0 failed
+  Checks:   14617 / 14617 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

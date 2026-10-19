@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T04:02:41.818Z",
+  "generated_utc": "2026-10-19T04:32:40.068Z",
   "fixtures": {
-    "total": 189,
-    "passed": 189,
+    "total": 191,
+    "passed": 191,
     "failed": 0
   },
   "checks": {
-    "executed": 14560,
+    "executed": 14617,
     "failed": 0,
-    "passed": 14560,
+    "passed": 14617,
     "skipped": 0,
-    "surface": 14560
+    "surface": 14617
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,13 +19,13 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 187,
-    "project_finish": 187,
-    "critical_codes": 187,
-    "topo_order": 187,
-    "alert_count": 187,
-    "alert_severity_counts": 187,
-    "node <id>": 13391,
+    "project_finish_num": 189,
+    "project_finish": 189,
+    "critical_codes": 189,
+    "topo_order": 189,
+    "alert_count": 189,
+    "alert_severity_counts": 189,
+    "node <id>": 13436,
     "threw (both engines)": 2,
     "hours": 45
   },
@@ -1538,6 +1538,22 @@
       "id": "F193",
       "name": "F193 - a mandatory date beside a second constraint, in hours",
       "checks": 287,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F194",
+      "name": "F194 - input checks: a null activity, a missing code, a padded code, a duplicate code, a control character in a name",
+      "checks": 51,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F195",
+      "name": "F195 - input checks: an empty network",
+      "checks": 6,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

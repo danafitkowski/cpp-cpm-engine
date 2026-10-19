@@ -2393,11 +2393,39 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # neither bounds it (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C, E3). JS paired
     # site: _ocLinked.
     _oc_linked = set()
-    for a in activities:
+    # v2.10.12 — the JS engine's activity-level input alerts, raised here too
+    # (empty-schedule, activity-null, activity-missing-code, and below
+    # activity-name-control-chars, activity-code-trimmed and
+    # duplicate-activity-code), and the code trimmed as the JS engine trims
+    # it: until then this loop skipped a null or code-less activity silently
+    # and kept a padded code, so a relationship naming the trimmed code
+    # dangled here and not in the JS engine. JS paired site: the node loop of
+    # computeCPM.
+    if len(activities) == 0:
+        alerts.append({
+            'severity': 'WARN',
+            'context': 'empty-schedule',
+            'message': ('compute_cpm called with zero activities. Result will have empty nodes, '
+                        'topo_order and critical_codes and project_finish_num=0. Verify the activity '
+                        'list was actually populated upstream.'),
+        })
+    for _activity_idx, a in enumerate(activities):
         if a is None:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'activity-null',
+                'message': 'activities[%d] is null/undefined; skipped.' % _activity_idx,
+            })
             continue
-        code = a.get('code', '')
+        code_raw = a.get('code', '') or ''
+        code = str(code_raw).strip()
         if not code:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'activity-missing-code',
+                'message': ('activities[%d] has missing/empty code; activity skipped. Verify the '
+                            'upstream parser preserved task_code.' % _activity_idx),
+            })
             continue
         # v2.9.42 PAIRED FIX — task-type exclusion. Section C had no task_type
         # handling at all, so a level-of-effort bar could drive the critical
@@ -2439,6 +2467,30 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 _oc_linked.add(code)
         except (TypeError, ValueError):
             pass
+        _name = a.get('name')
+        if isinstance(_name, str) and re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', _name):
+            alerts.append({
+                'severity': 'INFO',
+                'context': 'activity-name-control-chars',
+                'message': ('Activity %s name contained ASCII control characters (not \t \n \r); '
+                            'engine retains the raw value but downstream renderers may misbehave. '
+                            'Consider sanitizing.' % code),
+            })
+        if code != str(code_raw):
+            alerts.append({
+                'severity': 'INFO',
+                'context': 'activity-code-trimmed',
+                'message': ('Activity code %s had leading/trailing whitespace; trimmed to %s. Source XER '
+                            'should be cleaned.' % (json.dumps(str(code_raw)), json.dumps(code))),
+            })
+        if code in nodes:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'duplicate-activity-code',
+                'message': ('DUPLICATE_ACTIVITY_CODE: activity code %s appears more than once in the input '
+                            'set; the later record silently overwrites the earlier one. Forensic ambiguity '
+                            '- split codes or reject the second record before forensic use.' % code),
+            })
         dur_raw = a.get('duration_days')
         try:
             dur = float(dur_raw) if dur_raw is not None else 0.0
@@ -2623,8 +2675,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     succ_map = defaultdict(list)
     _oc_excluded = {x['code'] for x in excluded_by_task_type}
     for r in relationships:
-        fc = r.get('from_code', '')
-        tc = r.get('to_code', '')
+        # v2.10.12 — the endpoints trimmed, as the JS engine trims them (and
+        # the activity codes above).
+        fc = r.get('from_code')
+        tc = r.get('to_code')
+        fc = str(fc).strip() if fc is not None else ''
+        tc = str(tc).strip() if tc is not None else ''
         # v2.10.11 — the JS engine's four relationship alerts, raised here too
         # (self-loop, invalid-rel-type, lag-non-finite, dangling-rel): until
         # then this loop dropped or coerced each case silently, and a
