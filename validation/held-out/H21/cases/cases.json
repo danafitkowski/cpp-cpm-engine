@@ -1,0 +1,798 @@
+{
+ "set": "H21",
+ "seed": "c68ec28a4363b6e3ccec31907b2a3389add21ebde81157e9981f0dd8f59b93e9",
+ "count": 12,
+ "cases": [
+  {
+   "case": "H21-01",
+   "file": "H21-01.xer",
+   "sha256": "23e1166ceeef84939f58fdcc9c2d5628ca66605e364bbf41c628512db1c1a9a6",
+   "features": {
+    "activities": 21,
+    "unfinished": 18,
+    "completed": 3,
+    "in_progress": 0,
+    "relationships": {
+     "PR_FS": 21,
+     "PR_SS": 4,
+     "PR_FF": 7,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 18,
+     "positive": 10,
+     "negative": 5
+    },
+    "constraints": [],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 1,
+    "calendars": [
+     "H21-01 Mon-Fri 08:00-12:00 and 13:00-17:00",
+     "H21-01 Mon-Sat 08:00-16:00"
+    ],
+    "data_date": "2026-10-18 00:00",
+    "must_finish_by": "2026-11-06 17:00",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 6,
+    "assignments": 9,
+    "assignment_lags": 1,
+    "resources": 3,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Equip",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 0,
+    "resume": {
+     "after_data_date": 0,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 1,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 3,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-02",
+   "file": "H21-02.xer",
+   "sha256": "b3991fafed74c8717cd5f127961a43a0f1ec5016b8b16b9c9a45fcd67ef67ba4",
+   "features": {
+    "activities": 18,
+    "unfinished": 8,
+    "completed": 10,
+    "in_progress": 2,
+    "relationships": {
+     "PR_FS": 19,
+     "PR_SS": 5,
+     "PR_FF": 2,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 16,
+     "positive": 9,
+     "negative": 1
+    },
+    "constraints": [
+     "CS_MANDSTART"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H21-02 Mon-Fri 07:00-17:00",
+     "H21-02 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-05-15 00:00",
+    "must_finish_by": "2026-05-29 17:00",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Successor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 5,
+    "assignments": 4,
+    "assignment_lags": 0,
+    "resources": 3,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 3,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 0,
+     "before_data_date": 1,
+     "blank": 0
+    },
+    "external_early_start": 2,
+    "external_late_finish": 2,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-03",
+   "file": "H21-03.xer",
+   "sha256": "fdfb19e9cf67be468062d57a3ee1aeb10e389a7f32b5cfca2e154c6fcfdc0e55",
+   "features": {
+    "activities": 25,
+    "unfinished": 21,
+    "completed": 4,
+    "in_progress": 19,
+    "relationships": {
+     "PR_FS": 24,
+     "PR_SS": 5,
+     "PR_FF": 4,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 14,
+     "positive": 15,
+     "negative": 4
+    },
+    "constraints": [
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 8,
+    "open_ends": 1,
+    "calendars": [
+     "H21-03 Every day 00:00-24:00",
+     "H21-03 Mon-Thu 07:00-12:00 and 12:30-17:30"
+    ],
+    "data_date": "2026-05-28 17:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 6,
+    "assignments": 12,
+    "assignment_lags": 0,
+    "resources": 3,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 4,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 1,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "N"
+   }
+  },
+  {
+   "case": "H21-04",
+   "file": "H21-04.xer",
+   "sha256": "37637dd152fad7f25b7da59575a05ce91bcf10e568ff903b972712c9e7e70384",
+   "features": {
+    "activities": 39,
+    "unfinished": 31,
+    "completed": 8,
+    "in_progress": 4,
+    "relationships": {
+     "PR_FS": 49,
+     "PR_SS": 12,
+     "PR_FF": 7,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 31,
+     "positive": 33,
+     "negative": 5
+    },
+    "constraints": [
+     "CS_MANDFIN"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H21-04 Mon-Sat 08:00-16:00",
+     "H21-04 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-03-21 17:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_Min",
+     "sched_calendar_on_relationship_lag": "rcal_Successor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 7,
+    "assignments": 10,
+    "assignment_lags": 1,
+    "resources": 3,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 3,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 3,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 1,
+     "blank": 1
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 0,
+    "open_critical": "N"
+   }
+  },
+  {
+   "case": "H21-05",
+   "file": "H21-05.xer",
+   "sha256": "f3c4059cf03f71edb27b946931fb131e92acd94d47494aa2c4016c208dc3fb0a",
+   "features": {
+    "activities": 14,
+    "unfinished": 13,
+    "completed": 1,
+    "in_progress": 3,
+    "relationships": {
+     "PR_FS": 15,
+     "PR_SS": 3,
+     "PR_FF": 3,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 13,
+     "positive": 3,
+     "negative": 5
+    },
+    "constraints": [
+     "CS_MSOA",
+     "CS_MSOB"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H21-05 Every day 00:00-24:00",
+     "H21-05 Mon-Thu 07:00-12:00 and 12:30-17:30"
+    ],
+    "data_date": "2026-07-26 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_Start",
+     "sched_calendar_on_relationship_lag": "rcal_ProjDefault",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 4,
+    "assignments": 5,
+    "assignment_lags": 0,
+    "resources": 2,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-06",
+   "file": "H21-06.xer",
+   "sha256": "81aa1cf9f56e709ed8f27fc4901b45a792ce4a647fd859c72e31949ec4635a55",
+   "features": {
+    "activities": 20,
+    "unfinished": 16,
+    "completed": 4,
+    "in_progress": 11,
+    "relationships": {
+     "PR_FS": 22,
+     "PR_SS": 2,
+     "PR_FF": 4,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 20,
+     "positive": 9,
+     "negative": 1
+    },
+    "constraints": [
+     "CS_MSO"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 2,
+    "open_ends": 0,
+    "calendars": [
+     "H21-06 Every day 06:00-18:00",
+     "H21-06 Mon-Sat 08:00-16:00"
+    ],
+    "data_date": "2026-08-14 08:00",
+    "must_finish_by": "2026-08-25 18:00",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 3,
+    "assignments": 4,
+    "assignment_lags": 0,
+    "resources": 3,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Equip",
+     "RT_Labor"
+    ],
+    "level_of_effort": 2,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 4,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-07",
+   "file": "H21-07.xer",
+   "sha256": "810dc18cc48d666d796d3d58223518b5cf1ccdcf72049c8a31d6fcea7d311c0a",
+   "features": {
+    "activities": 22,
+    "unfinished": 16,
+    "completed": 6,
+    "in_progress": 7,
+    "relationships": {
+     "PR_FS": 23,
+     "PR_SS": 7,
+     "PR_FF": 2,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 19,
+     "positive": 10,
+     "negative": 3
+    },
+    "constraints": [
+     "CS_MSOA",
+     "CS_MSOB"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 1,
+    "calendars": [
+     "H21-07 Every day 00:00-24:00",
+     "H21-07 Mon-Thu 07:00-12:00 and 12:30-17:30"
+    ],
+    "data_date": "2026-12-20 08:00",
+    "must_finish_by": "2026-12-30 00:00",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_Start",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 4,
+    "assignments": 6,
+    "assignment_lags": 0,
+    "resources": 2,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 1,
+    "wbs_nodes": 2,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 3,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-08",
+   "file": "H21-08.xer",
+   "sha256": "b049b2f87e285abfeb22041445ff994e681bde616d64c6b7e9ac9fb8d35d24ca",
+   "features": {
+    "activities": 19,
+    "unfinished": 13,
+    "completed": 6,
+    "in_progress": 6,
+    "relationships": {
+     "PR_FS": 19,
+     "PR_SS": 3,
+     "PR_FF": 3,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 18,
+     "positive": 4,
+     "negative": 3
+    },
+    "constraints": [
+     "CS_MEOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H21-08 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H21-08 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-03-29 17:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_ProjDefault",
+     "sched_lag_early_start_flag": "N",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 0,
+    "assignments": 0,
+    "assignment_lags": 0,
+    "resources": 0,
+    "resource_types": [],
+    "level_of_effort": 1,
+    "level_of_effort_started": 1,
+    "wbs_summary": 2,
+    "wbs_nodes": 2,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 1
+    },
+    "external_early_start": 2,
+    "external_late_finish": 3,
+    "outer_depend_type": "SD_None",
+    "spurs": 1,
+    "open_critical": "N"
+   }
+  },
+  {
+   "case": "H21-09",
+   "file": "H21-09.xer",
+   "sha256": "ede4888673f883d32940cedfb1967872c422518e73ddc640f9bf394de554b0da",
+   "features": {
+    "activities": 35,
+    "unfinished": 16,
+    "completed": 19,
+    "in_progress": 4,
+    "relationships": {
+     "PR_FS": 41,
+     "PR_SS": 10,
+     "PR_FF": 8,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 34,
+     "positive": 20,
+     "negative": 6
+    },
+    "constraints": [
+     "CS_MEOA",
+     "CS_MSOA",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 1,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H21-09 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H21-09 Mon-Sat 08:00-16:00",
+     "H21-09 Every day 00:00-24:00"
+    ],
+    "data_date": "2026-06-26 08:00",
+    "must_finish_by": "2026-07-16 17:30",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_Start",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 6,
+    "assignments": 8,
+    "assignment_lags": 0,
+    "resources": 3,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Equip",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 3,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 1,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-10",
+   "file": "H21-10.xer",
+   "sha256": "84d5c213b1d9cfb3463ebc30abe707234712a843b1903db14363cd6ff964457e",
+   "features": {
+    "activities": 43,
+    "unfinished": 35,
+    "completed": 8,
+    "in_progress": 7,
+    "relationships": {
+     "PR_FS": 40,
+     "PR_SS": 12,
+     "PR_FF": 10,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 39,
+     "positive": 20,
+     "negative": 4
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_MSOA",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 1,
+    "expected_finishes": 0,
+    "open_ends": 0,
+    "calendars": [
+     "H21-10 Mon-Fri 07:00-17:00",
+     "H21-10 Mon-Thu 07:00-12:00 and 12:30-17:30"
+    ],
+    "data_date": "2026-08-09 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_Min",
+     "sched_calendar_on_relationship_lag": "rcal_ProjDefault",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 5,
+    "assignments": 7,
+    "assignment_lags": 1,
+    "resources": 2,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor"
+    ],
+    "level_of_effort": 1,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 2,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 3,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-11",
+   "file": "H21-11.xer",
+   "sha256": "60aa0877875d7a4259cd2f0095cc24e95ca2502d6454e30211c04269718f105e",
+   "features": {
+    "activities": 21,
+    "unfinished": 17,
+    "completed": 4,
+    "in_progress": 3,
+    "relationships": {
+     "PR_FS": 21,
+     "PR_SS": 5,
+     "PR_FF": 7,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 20,
+     "positive": 12,
+     "negative": 3
+    },
+    "constraints": [],
+    "secondary_constraints": 0,
+    "expected_finishes": 1,
+    "open_ends": 0,
+    "calendars": [
+     "H21-11 Mon-Fri 08:00-12:00 and 13:00-17:00",
+     "H21-11 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H21-11 Every day 00:00-24:00"
+    ],
+    "data_date": "2026-10-10 08:00",
+    "must_finish_by": "2026-11-13 17:00",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_ProjDefault",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 3,
+    "assignments": 5,
+    "assignment_lags": 0,
+    "resources": 3,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 3,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 1
+    },
+    "external_early_start": 2,
+    "external_late_finish": 1,
+    "outer_depend_type": "SD_Both",
+    "spurs": 2,
+    "open_critical": "Y"
+   }
+  },
+  {
+   "case": "H21-12",
+   "file": "H21-12.xer",
+   "sha256": "dd0d7570b1a249ac27cf2b8a4c01ee93aa2ff1f3baf17a88066cc6c1b991180b",
+   "features": {
+    "activities": 37,
+    "unfinished": 23,
+    "completed": 14,
+    "in_progress": 8,
+    "relationships": {
+     "PR_FS": 38,
+     "PR_SS": 8,
+     "PR_FF": 8,
+     "PR_SF": 4
+    },
+    "lags": {
+     "zero": 25,
+     "positive": 27,
+     "negative": 6
+    },
+    "constraints": [
+     "CS_MEO",
+     "CS_MSO"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 2,
+    "open_ends": 0,
+    "calendars": [
+     "H21-12 Mon-Fri 07:00-17:00",
+     "H21-12 Mon-Sat 08:00-16:00"
+    ],
+    "data_date": "2027-03-04 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Successor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 4,
+    "assignments": 5,
+    "assignment_lags": 0,
+    "resources": 2,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 4,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 0,
+     "before_data_date": 2,
+     "blank": 0
+    },
+    "external_early_start": 1,
+    "external_late_finish": 1,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "Y"
+   }
+  }
+ ]
+}
