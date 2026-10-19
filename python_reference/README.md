@@ -200,9 +200,9 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  ea33ea32bf8a521c106325e5446260311d4b478690bcd2fa67000d697ece3bcd
+cpm.py          SHA-256:  b06d14f35684e94b713249b6ed5cd09da737f7ec8c8f1c087b0998a14b04ff91
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  523987b642fbda7216fc394aeae3c51cd646b3a7d8d72829eec58c78c7079eba
+cpm_hours.py    SHA-256:  b7425ea2e018661f371b78474e352dafa0dec6d8238e86bbeb46607d1220ad21
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -283,7 +283,17 @@ bound and the lag back from there (ZL); an expected finish sizes
 resource dependent work once, from its first placement, and the
 remaining work runs that size from the activity calendar's opening (XW).
 cpm.py does not change. The harness gains 3 fixtures (F205-F207): 203
-fixtures, 17028 of 17028 executed.)
+fixtures, 17028 of 17028 executed. Then, from ea33ea32... (cpm.py) and
+523987b6... (cpm_hours.py), after the P6 probes ZZ-CPP-ZRA, -ZWA and -ZBZ
+(validation/p6-probes/zero-units-2026-10-19), in the hours pass only: under
+a bound on the late start that another assignment takes, an assignment
+with no duration and no lag runs back from the activity's late finish to
+its resource's last working time at or before it (ZR, H24-09 A1260); and
+an assignment with no units per hour is scheduled for its resource's
+working hours between its own remaining start and finish, as work (ZW),
+which compute_cpm now hands on to compute_cpm_hours with each assignment
+(window_start, window_finish). The harness gains 2 fixtures (F208-F209):
+205 fixtures, 17482 of 17482 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -851,15 +861,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 320147
-  sha-256:  ea33ea32bf8a521c106325e5446260311d4b478690bcd2fa67000d697ece3bcd
+  bytes: 320301
+  sha-256:  b06d14f35684e94b713249b6ed5cd09da737f7ec8c8f1c087b0998a14b04ff91
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 203 passed, 0 failed
-  Checks:   17028 / 17028 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 205 passed, 0 failed
+  Checks:   17482 / 17482 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

@@ -2632,7 +2632,16 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
     if (bound && asg.length > 1) {
         const lfAll = actCal.prevWorkEnd(Math.max.apply(null, fins));
         asg.forEach((g, i) => {
-            if (!(g.rem > 0)) return;
+            if (!(g.rem > 0)) {
+                // ZR (round 9, 19-Oct-2026): so does one with no duration and
+                // no lag: it sits at its resource's last working time at or
+                // before that late finish, not at the bound (ZZ-CPP-ZRA Z1-Z3,
+                // Z7 against Z4, Z5; H24-09 A1260)
+                if (g.lag) return;
+                fins[i] = g.cal.prevWorkEnd(lfAll);
+                starts[i] = fins[i];
+                return;
+            }
             fins[i] = g.cal.prevWorkEnd(lfAll);
             const s = g.cal.sub(fins[i], g.rem);
             starts[i] = g.lag ? g.cal.sub(s, g.lag) : s;
@@ -2750,9 +2759,21 @@ function computeCPMHours(activities, relationships, o) {
                 const gid = g.clndr_id;
                 const known = gid !== null && gid !== undefined && gid !== '' &&
                     Object.prototype.hasOwnProperty.call(calMap, gid);
+                const gc = known ? calOf(gid) : n.cal;
+                let rem = _hrRound(g.remaining_minutes || 0);
+                // ZW (round 9, 19-Oct-2026): an assignment with no units and
+                // no units per hour keeps the working hours of its resource
+                // between its own remaining start and finish, as work. One
+                // whose units per hour P6 kept has no duration, as before
+                // (ZZ-CPP-ZWA W1-W4, W6, W7 against W5; ZZ-CPP-ZBZ Y1-Y4)
+                if (!(rem > 0) && g.window_start && g.window_finish) {
+                    const ws = _hrInst(g.window_start);
+                    const wf = _hrInst(g.window_finish);
+                    if (ws !== null && wf !== null && wf > ws) rem = gc.between(ws, wf);
+                }
                 n.asg.push({
-                    cal: known ? calOf(gid) : n.cal,
-                    rem: _hrRound(g.remaining_minutes || 0),
+                    cal: gc,
+                    rem,
                     lag: _hrRound(g.lag_minutes || 0),
                 });
             }
@@ -3655,6 +3676,8 @@ function _hoursPass(activities, relationships, nodes, p) {
                     remaining_minutes: _hrRound((_hoursFloat(g.remaining_hours) || 0) * 60),
                     lag_minutes: _hrRound((_hoursFloat(g.lag_hours) || 0) * 60),
                     driving: g.driving !== false,
+                    window_start: g.window_start || null,
+                    window_finish: g.window_finish || null,
                 })),
         });
     }
@@ -8306,11 +8329,20 @@ function parseXER(content) {
                 const _rate = _num(row.remain_qty_per_hr) || 0;
                 let _alag = _num(row.relag_drtn_hr_cnt);
                 if (_alag === null) _alag = _num(row.target_lag_drtn_hr_cnt) || 0;
+                // ZW (round 9, 19-Oct-2026): an assignment with no units per
+                // hour has no units / units per hour to size it; P6 keeps its
+                // own remaining start and finish (the planned ones when
+                // blank), which the hours pass sizes on its resource's calendar
+                const _d = (v) => String(v || '').trim();
+                const _ws = _d(row.restart_date) || _d(row.target_start_date);
+                const _wf = _d(row.reend_date) || _d(row.target_end_date);
                 (_assignRows[row.task_id] = _assignRows[row.task_id] || []).push({
                     rsrc_id: String(row.rsrc_id || '').trim(),
                     remaining_hours: _rate > 0 ? _qty / _rate : 0,
                     lag_hours: _alag,
                     driving: String(row.rollup_dates_flag || 'Y').trim().toUpperCase() !== 'N',
+                    window_start: !(_rate > 0) && _ws && _wf ? _ws : null,
+                    window_finish: !(_rate > 0) && _ws && _wf ? _wf : null,
                 });
             }
             if (currentTable === 'RSRC' && row.rsrc_id) {
@@ -8407,6 +8439,8 @@ function parseXER(content) {
             remaining_hours: g.remaining_hours,
             lag_hours: g.lag_hours,
             driving: g.driving,
+            window_start: g.window_start,
+            window_finish: g.window_finish,
         }));
     }
 
@@ -11721,17 +11755,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '203 cross-validation fixtures. The harness defines 17028 ' +
+                '205 cross-validation fixtures. The harness defines 17482 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 17028 / 17028" is the whole comparison surface. ' +
+                'reported "Checks: 17482 / 17482" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 17028 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 17482 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 201 of the 203 fixtures: ' +
+                'severity-level alert parity, compared on 203 of the 205 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11770,18 +11804,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '17028 comparisons it defines over 203 fixtures and skips none; every ' +
+                '17482 comparisons it defines over 205 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '203 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '205 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 17028 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 17482 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 201 of the 203 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 203 of the 205 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

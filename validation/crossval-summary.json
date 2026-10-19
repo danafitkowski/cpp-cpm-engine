@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T18:32:57.038Z",
+  "generated_utc": "2026-10-19T19:39:52.617Z",
   "fixtures": {
-    "total": 203,
-    "passed": 203,
+    "total": 205,
+    "passed": 205,
     "failed": 0
   },
   "checks": {
-    "executed": 17028,
+    "executed": 17482,
     "failed": 0,
-    "passed": 17028,
+    "passed": 17482,
     "skipped": 0,
-    "surface": 17028
+    "surface": 17482
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 201,
-    "project_finish": 201,
-    "critical_codes": 201,
-    "topo_order": 201,
-    "alert_count": 201,
-    "alert_severity_counts": 201,
-    "node <id>": 15767,
+    "project_finish_num": 203,
+    "project_finish": 203,
+    "critical_codes": 203,
+    "topo_order": 203,
+    "alert_count": 203,
+    "alert_severity_counts": 203,
+    "node <id>": 16207,
     "threw (both engines)": 2,
-    "hours": 53
+    "hours": 55
   },
   "rows": [
     {
@@ -1650,6 +1650,22 @@
       "id": "F207",
       "name": "F207 - XW: an expected finish sizes resource dependent work once, from its first placement, in hours",
       "checks": 117,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F208",
+      "name": "F208 - ZR: an assignment with no duration and no lag runs back from the late finish under a start-to-start bound, in hours",
+      "checks": 237,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F209",
+      "name": "F209 - ZW: an assignment with no units and no units per hour keeps the hours between its own dates, in hours",
+      "checks": 217,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

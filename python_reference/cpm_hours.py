@@ -310,6 +310,11 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
         lf_all = act_cal.prev_work_end(max(fins))
         for i, g in enumerate(asg):
             if not g['rem'] > 0:
+                # ZR (round 9, 19-Oct-2026): so does one with no duration and no lag: it sits at its resource's last
+                # working time at or before that late finish, not at the bound (ZZ-CPP-ZRA Z1-Z3, Z7 against Z4,
+                # Z5; H24-09 A1260)
+                if not g['lag']:
+                    fins[i] = starts[i] = g['cal'].prev_work_end(lf_all)
                 continue
             fins[i] = g['cal'].prev_work_end(lf_all)
             s = g['cal'].sub(fins[i], g['rem'])
@@ -421,9 +426,16 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 if not g.get('driving', True):
                     continue
                 gid = g.get('clndr_id')
-                n['asg'].append({'cal': cal_of(gid) if gid not in (None, '') and gid in cal_map else n['cal'],
-                                 'rem': int(round(g.get('remaining_minutes') or 0)),
-                                 'lag': int(round(g.get('lag_minutes') or 0))})
+                gc = cal_of(gid) if gid not in (None, '') and gid in cal_map else n['cal']
+                rem = int(round(g.get('remaining_minutes') or 0))
+                # ZW (round 9, 19-Oct-2026): an assignment with no units and no units per hour keeps the working
+                # hours of its resource between its own remaining start and finish, as work. One whose units per
+                # hour P6 kept has no duration, as before (ZZ-CPP-ZWA W1-W4, W6, W7 against W5; ZZ-CPP-ZBZ Y1-Y4)
+                if not rem > 0 and g.get('window_start') and g.get('window_finish'):
+                    ws, wf = _inst(g['window_start']), _inst(g['window_finish'])
+                    if ws is not None and wf is not None and wf > ws:
+                        rem = gc.between(ws, wf)
+                n['asg'].append({'cal': gc, 'rem': rem, 'lag': int(round(g.get('lag_minutes') or 0))})
         nodes[a['code']] = n
     preds, succs = defaultdict(list), defaultdict(list)
     for r in relationships:

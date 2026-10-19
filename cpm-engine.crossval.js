@@ -4071,6 +4071,61 @@ compareFixture('F207 - XW: an expected finish sizes resource dependent work once
     schedule_mode: 'progress_override',
 }, { hours: true });
 
+// v2.10.12 (H24-09 A1260, P6 probes ZZ-CPP-ZRA / -ZWA / -ZBZ, round 9): ZR, under a start-to-start bound an assignment
+// with no duration and no lag sits at its resource's last working time at or before the late finish the others set,
+// not at the bound (Z1 H24-09's shape, its lagged resource off on the day; Z2, Z3, Z7; Z4 and Z5, where no assignment
+// lands a lag, keep the bound); ZW, an assignment with no units and no units per hour keeps its resource's working
+// hours between its own remaining start and finish (W1-W4, W6, W7).
+const H24 = [['00:00', '00:00']];
+const SPLIT = [['08:00', '12:00'], ['13:00', '17:00']];
+const ZRCAL = {
+    AY: rawCal(EVERYDAY, H24), AW: rawCal(MONFRI, SPLIT), R2: rawCal(MONFRI, SPLIT),
+    R1: Object.assign(rawCal(EVERYDAY, H24), { holidays: ['2026-12-08'] }), R1N: rawCal(EVERYDAY, H24),
+    R3: rawCal(EVERYDAY, H24), R4: rawCal(EVERYDAY, [['06:00', '18:00']]), R5: rawCal(MONFRI, [['07:00', '15:00']]),
+};
+const zrAsg = (r, h, lag) => ({ clndr_id: r, remaining_hours: h, lag_hours: lag || 0, driving: true });
+const ZR = {
+    Z1: [8, [zrAsg('R2', 0), zrAsg('R1', 0, 8)], '08', 'SS'], Z2: [8, [zrAsg('R2', 0), zrAsg('R1N', 0, 8)], 14, 'SS'],
+    Z3: [12, [zrAsg('R2', 0), zrAsg('R3', 4, 8)], 14, 'SS'], Z4: [8, [zrAsg('R2', 0), zrAsg('R5', 0)], 14, 'SS'],
+    Z5: [8, [zrAsg('R2', 0)], 14, 'SS'], Z6: [8, [zrAsg('R2', 0), zrAsg('R1N', 0, 8)], 14, 'FS'],
+    Z7: [8, [zrAsg('R2', 0), zrAsg('R4', 0, 12)], 14, 'SS'],
+};
+const zrActs = (A) => [A('L', 400, { clndr_id: 'AY' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AY' })].concat(
+    ...Object.entries(ZR).map(([k, [h, asg, held]]) => [A('P' + k.slice(1), 16, { clndr_id: 'AY' }),
+        A(k, h, { clndr_id: 'AY', task_type: 'TT_Rsrc', resource_assignments: asg.length, assignments: asg }),
+        A('B' + k.slice(1), 8, { clndr_id: 'AW', constraint: { type: 'CS_MSOB', date: slD(held, '16:00') } })]));
+const zrRels = (R) => [R('L', 'FIN')].concat(...Object.entries(ZR).map(([k, [, , , t]]) => [R('P' + k.slice(1), k),
+    R(k, 'B' + k.slice(1), t, t === 'SS' ? 8 : 0), R('B' + k.slice(1), 'FIN'), R(k, 'FIN')]));
+compareFixture('F208 - ZR: an assignment with no duration and no lag runs back from the late finish under a start-to-start bound, in hours', {
+    activities: zrActs(hA), relationships: zrRels(hR), data_date: '2026-12-07 08:00', cal_map: ZRCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', project_calendar: 'AY', open_critical: true,
+    use_expected_finish: true,
+}, { hours: true });
+const ZWCAL = {
+    AW: rawCal(MONFRI, SPLIT), R2: rawCal(MONFRI, SPLIT), R6: rawCal([2, 3, 4], SPLIT), R1: rawCal(EVERYDAY, H24),
+};
+const zwNil = (r, ws, wf, lag) => ({ clndr_id: r, remaining_hours: 0, lag_hours: lag || 0, driving: true,
+    window_start: slD('07', ws), window_finish: wf.length > 5 ? wf : slD('07', wf) });
+const ZW = {
+    W1: [8, [zrAsg('R2', 8), zwNil('R6', '08:00', '17:00')]],
+    W2: [8, [zrAsg('R2', 8), zwNil('R6', '13:00', '17:00', 4)]],
+    W3: [8, [zwNil('R2', '08:00', '17:00'), zwNil('R6', '08:00', '17:00')]],
+    W4: [4, [zrAsg('R2', 4), zwNil('R6', '08:00', '12:00')]],
+    W6: [8, [zrAsg('R2', 8), zwNil('R6', '08:00', slD('09', '17:00'))]],
+    W7: [8, [zrAsg('R2', 8), zwNil('R1', '16:00', '17:00', 8)]],
+};
+const zwActs = (A) => [A('L', 200, { clndr_id: 'AW' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AW' }),
+    A('Q4', 36, { clndr_id: 'AW' })].concat(...Object.entries(ZW).map(([k, [h, asg]]) => [A('P' + k.slice(1), 20, { clndr_id: 'AW' }),
+    A(k, h, { clndr_id: 'AW', task_type: 'TT_Rsrc', resource_assignments: asg.length, assignments: asg }),
+    A('S' + k.slice(1), 8, { clndr_id: 'AW' })]));
+const zwRels = (R) => [R('L', 'FIN'), R('Q4', 'W4', 'FF')].concat(...Object.keys(ZW).map((k) => [R('P' + k.slice(1), k),
+    R(k, 'S' + k.slice(1)), R('S' + k.slice(1), 'FIN')]));
+compareFixture('F209 - ZW: an assignment with no units and no units per hour keeps the hours between its own dates, in hours', {
+    activities: zwActs(hA), relationships: zwRels(hR), data_date: '2026-12-07 08:00', cal_map: ZWCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', project_calendar: 'AW', open_critical: true,
+    use_expected_finish: true,
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

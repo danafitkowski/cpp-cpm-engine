@@ -218,13 +218,18 @@ def main():
 
     rd = {c for c, t in pt.items() if t['task_type'] == 'TT_Rsrc'}
     raw = lambda v: v.decode('latin-1') if isinstance(v, bytes) else v   # P6's stored value, unrounded
+    # an assignment's remaining start and finish, to the minute as an export writes them: with no units per hour,
+    # P6 schedules the assignment for the working hours between them (rule ZW, P6 probe ZZ-CPP-ZWA, 19-Oct-2026;
+    # recorded from H25 on)
+    minute = lambda v: (raw(v) or '')[:16] or None
     out = {'case': short, 'proj_id': pid, 'differences': diffs,
            'resource_dependent': {
                'tasks': {c: {f: raw(pt[c][f]) for f in ('remain_drtn_hr_cnt', 'target_drtn_hr_cnt')} for c in sorted(rd)},
                'assignments': [dict({'task_code': k[0], 'rsrc_short_name': k[1]},
                                     **{f: raw(q[f]) for f in ('remain_qty', 'target_qty', 'remain_qty_per_hr',
                                                              'target_qty_per_hr', 'target_lag_drtn_hr_cnt',
-                                                             'relag_drtn_hr_cnt', 'act_reg_qty', 'act_ot_qty')})
+                                                             'relag_drtn_hr_cnt', 'act_reg_qty', 'act_ot_qty')},
+                                    **{f: minute(q[f]) for f in ('restart_date', 'reend_date')})
                                for k, rows in sorted(pa.items()) if k[0] in rd for q in rows]}}
     os.makedirs(os.path.join(set_dir, 'p6-imported'), exist_ok=True)
     with open(os.path.join(set_dir, 'p6-imported', short + '.json'), 'w', encoding='utf-8', newline='\n') as f:

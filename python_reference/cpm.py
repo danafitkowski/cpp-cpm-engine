@@ -2192,7 +2192,9 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             'assignments': [{'clndr_id': g.get('clndr_id'),
                              'remaining_minutes': int(round((_hours_float(g.get('remaining_hours')) or 0.0) * 60)),
                              'lag_minutes': int(round((_hours_float(g.get('lag_hours')) or 0.0) * 60)),
-                             'driving': g.get('driving', True) is not False}
+                             'driving': g.get('driving', True) is not False,
+                             'window_start': g.get('window_start') or None,
+                             'window_finish': g.get('window_finish') or None}
                             for g in (a.get('assignments') or []) if isinstance(g, dict)],
         })
     rels = []

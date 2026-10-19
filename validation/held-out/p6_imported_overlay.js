@@ -21,12 +21,25 @@
 const TASK_FIELDS = ['remain_drtn_hr_cnt', 'target_drtn_hr_cnt'];
 const ASSIGNMENT_FIELDS = ['remain_qty', 'target_qty', 'remain_qty_per_hr', 'target_qty_per_hr',
     'target_lag_drtn_hr_cnt', 'relag_drtn_hr_cnt', 'act_reg_qty', 'act_ot_qty'];
+// An assignment's remaining start and finish (restart_date, reend_date), recorded from H25 on: with no units per
+// hour, P6 schedules the assignment for its resource's working hours between them (rule ZW, P6 probe ZZ-CPP-ZWA,
+// 19-Oct-2026). Written as 'YYYY-MM-DD HH:MM', a null as an empty field; a record without them leaves the case
+// file's fields as they are.
+const ASSIGNMENT_DATE_FIELDS = ['restart_date', 'reend_date'];
 
 function value(v, where) {
     if (v === null) return '';
     const n = typeof v === 'number' || typeof v === 'string' ? Number(v) : NaN;
     if (v === '' || !Number.isFinite(n)) throw new Error('p6-imported: ' + where + ' is not a number: ' + JSON.stringify(v));
     return String(n);
+}
+
+function dateValue(v, where) {
+    if (v === null) return '';
+    if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(v)) {
+        throw new Error('p6-imported: ' + where + ' is not a date to the minute: ' + JSON.stringify(v));
+    }
+    return v;
 }
 
 function overlay(text, imported) {
@@ -49,13 +62,13 @@ function overlay(text, imported) {
         const k = r.fields ? r.fields.indexOf(f) : -1;
         return k < 0 ? undefined : lines[r.i].split('\t')[k + 1] || '';
     };
-    const set = (table, r, vals, where) => {
+    const set = (table, r, vals, where, as = value) => {
         const cells = lines[r.i].split('\t');
         for (const [f, v] of Object.entries(vals)) {
             const k = r.fields ? r.fields.indexOf(f) : -1;
             if (k < 0) throw new Error('p6-imported: ' + table + ' has no ' + f + ' column');
             if (k + 1 >= cells.length) throw new Error('p6-imported: ' + where + ': the ' + table + ' row has no ' + f + ' field');
-            cells[k + 1] = value(v, where + ' ' + f);
+            cells[k + 1] = as(v, where + ' ' + f);
         }
         lines[r.i] = cells.join('\t');
     };
@@ -101,9 +114,14 @@ function overlay(text, imported) {
         if (found.length !== list.length) {
             throw new Error('p6-imported: ' + where + ' is ' + list.length + ' assignments in P6 and ' + found.length + ' rows in the case file');
         }
-        list.forEach((a, n) => { set('TASKRSRC', found[n], pick(a, ASSIGNMENT_FIELDS, where), where); assignments++; });
+        list.forEach((a, n) => {
+            set('TASKRSRC', found[n], pick(a, ASSIGNMENT_FIELDS, where), where);
+            const dates = ASSIGNMENT_DATE_FIELDS.filter((f) => Object.prototype.hasOwnProperty.call(a, f));
+            if (dates.length) set('TASKRSRC', found[n], pick(a, dates, where), where, dateValue);
+            assignments++;
+        });
     }
     return { text: lines.join('\r\n'), tasks, assignments };
 }
 
-module.exports = { overlay, TASK_FIELDS, ASSIGNMENT_FIELDS };
+module.exports = { overlay, TASK_FIELDS, ASSIGNMENT_FIELDS, ASSIGNMENT_DATE_FIELDS };
