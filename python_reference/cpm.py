@@ -4006,7 +4006,10 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             # SL (H23, 19-Oct-2026) — a Mandatory Finish in the second slot is a
             # floor, as a Finish On or After: it moves the finish out to its
             # date, never back to it (see the hours pass; ZZ-CPP-SSM M1-M6, M9,
-            # M12). JS paired site: the same block.
+            # M12). Its date is still a deadline (it caps the late finish, PC),
+            # so the F5-A re-check below reads it as written. JS paired site:
+            # the same block, and the second _checkFinalEFDeadline call.
+            _deadline = _c
             if _lab == 'secondary' and _c and _c.get('type') in ('MS_Finish', 'MFO'):
                 _c = dict(_c, type='FNET')
             if (not has_actual_start and dd_num > 0 and _c and _c.get('date')
@@ -4034,7 +4037,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     continue
             node['ef'] = _apply_forward_ef_constraint(
                 code, node['ef'], _c, _lab, alerts, node['es'], node_cal)
-            _ef_applied.append((_c, _lab))
+            _ef_applied.append((_deadline, _lab))
         # v2.9.16 F5-A — after BOTH EF constraints applied, re-check FNLT /
         # MS_Finish / MFO deadlines on either slot: a soft FNET on the
         # secondary can push EF past a primary FNLT's deadline, and the

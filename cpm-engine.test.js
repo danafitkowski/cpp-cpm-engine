@@ -7248,9 +7248,13 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         [],
         { dataDate: '2026-01-05' }
     );
-    check('SL: a secondary MS_Finish is a floor, not a pin: the primary FNET holds EF and the MS_Finish caps LF',
-        r.nodes.A.ef_date === '2026-01-20' && r.nodes.A.lf_date === '2026-01-15',
-        'A.ef=' + r.nodes.A.ef_date + ' A.lf=' + r.nodes.A.lf_date);
+    // The mandatory date is still a deadline: the F5-A re-check reads it as
+    // written and reports the finish past it.
+    const missed = r.alerts.some(a => a.context === 'constraint-violated' &&
+        a.message.indexOf('MS_Finish (secondary) on A violated by subsequent constraint') === 0);
+    check('SL: a secondary MS_Finish is a floor, not a pin: the primary FNET holds EF, the MS_Finish caps LF and its missed date is reported',
+        r.nodes.A.ef_date === '2026-01-20' && r.nodes.A.lf_date === '2026-01-15' && missed,
+        'A.ef=' + r.nodes.A.ef_date + ' A.lf=' + r.nodes.A.lf_date + ' missed alert=' + missed);
 }
 // Bug B: Secondary SNET cannot override primary MS_Start (mandatory hard-pin).
 {

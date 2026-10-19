@@ -200,7 +200,7 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  089983867862a93654adb8274902157163b929af0cd5cc08006aca98d6386cef
+cpm.py          SHA-256:  f63a9456be2eccf72e720b2cba2ba3ef99f1ae017c43522166a3e646e8ea87d2
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  7af26840b0f9a019e015088551207d9f1a61ab79177b41addcd29f1304ead5cc
 
@@ -252,9 +252,11 @@ set H23 (validation/held-out/H23) and the P6 probes of
 validation/p6-probes/h23-shapes-2026-10-19: a Mandatory Start or
 Mandatory Finish in the second slot is a floor on the early side, as a
 Start On or After or a Finish On or After, and does not hold the free
-float at zero (SL; this withdraws the JS engine's v2.9.16 rule that restored a
-mandatory second constraint's pin over a soft primary); a Mandatory
-Start ignores its finish-to-finish and start-to-finish predecessors (MG);
+float at zero, though a Mandatory Finish's date stays a deadline the F5-A
+re-check reads as written (SL; this withdraws the JS engine's v2.9.16
+rule that restored a mandatory second constraint's pin over a soft
+primary); a Mandatory Start ignores its finish-to-finish and
+start-to-finish predecessors (MG);
 an external early start does not move a Mandatory Start, and an external
 late finish does not cap a mandatory pin (MX); As Late As Possible work
 holds no free float (FZ), in both passes. In the hours pass only: an FF
@@ -834,8 +836,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 319128
-  sha-256:  089983867862a93654adb8274902157163b929af0cd5cc08006aca98d6386cef
+  bytes: 319341
+  sha-256:  f63a9456be2eccf72e720b2cba2ba3ef99f1ae017c43522166a3e646e8ea87d2
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

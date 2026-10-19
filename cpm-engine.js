@@ -5745,7 +5745,13 @@ function computeCPM(activities, relationships, opts) {
             }
         }
         _checkFinalEFDeadline(_efCstr[0], 'primary');
-        _checkFinalEFDeadline(_efCstr[1], 'secondary');
+        // SL (H23, 19-Oct-2026) — a Mandatory Finish in the second slot moves
+        // the finish only as a floor, but its date is still a deadline: it caps
+        // the late finish (PC), so a finish past it is re-checked as written
+        // (ZZ-CPP-SSM M2, M3, M5, M12). Python paired site: the same check in
+        // compute_cpm.
+        _checkFinalEFDeadline(_efCstr[1] && cstr2 && (cstr2.type === 'MS_Finish' || cstr2.type === 'MFO')
+            ? cstr2 : _efCstr[1], 'secondary');
 
         // v2.9.42 — in-progress work with no remaining_duration. The
         // retained-logic restart above applies ONLY when remaining_duration is
