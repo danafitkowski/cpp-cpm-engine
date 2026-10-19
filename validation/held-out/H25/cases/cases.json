@@ -1,0 +1,1500 @@
+{
+ "set": "H25",
+ "seed": "704a3324a05ea04877d415a26459fbf387ee2b11706cb02b4681e57b4ea8b91e",
+ "count": 12,
+ "cases": [
+  {
+   "case": "H25-01",
+   "file": "H25-01.xer",
+   "sha256": "c72f10bf59ce2063a71165b2716f481cfc9851fe558e756f5b9a8629025bb419",
+   "features": {
+    "activities": 53,
+    "unfinished": 38,
+    "completed": 15,
+    "in_progress": 6,
+    "relationships": {
+     "PR_FS": 63,
+     "PR_SS": 10,
+     "PR_FF": 15,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 61,
+     "positive": 22,
+     "negative": 7
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOB"
+    ],
+    "secondary_constraints": 4,
+    "expected_finishes": 11,
+    "open_ends": 0,
+    "calendars": [
+     "H25-01 Every day 06:00-18:00",
+     "H25-01 Every day 00:00-24:00",
+     "H25-01 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00"
+    ],
+    "data_date": "2026-11-09 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 15,
+    "assignments": 26,
+    "assignment_lags": 6,
+    "resources": 9,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 2,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 4,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 1,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "N",
+    "expected_finishes_added": 5,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 0,
+     "alap": 0,
+     "under_way": 0,
+     "done": 0
+    },
+    "xp_mr_milestones": {
+     "xp": 1,
+     "mr": 3,
+     "milestones": 1,
+     "pairs": 2
+    },
+    "h23_shapes": {
+     "sl": 2,
+     "mg": 0,
+     "mx": 0,
+     "xo": 1,
+     "av": 0,
+     "alap_new": 0,
+     "fz": 1,
+     "zb": 1,
+     "xe": 0
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "1",
+    "float_paths_on": "free float",
+    "h24_shapes": {
+     "qs": 1,
+     "zl": 1,
+     "xw": 2,
+     "no_units": 1,
+     "no_hours": 0,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-02",
+   "file": "H25-02.xer",
+   "sha256": "a3e5c3edc562025ed14c71b4f2bd6733ead5f344c3777637ab83b80a5cee2e4a",
+   "features": {
+    "activities": 54,
+    "unfinished": 48,
+    "completed": 6,
+    "in_progress": 12,
+    "relationships": {
+     "PR_FS": 60,
+     "PR_SS": 14,
+     "PR_FF": 15,
+     "PR_SF": 4
+    },
+    "lags": {
+     "zero": 63,
+     "positive": 24,
+     "negative": 6
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSO",
+     "CS_MSOA",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 4,
+    "expected_finishes": 9,
+    "open_ends": 0,
+    "calendars": [
+     "H25-02 Every day 00:00-24:00",
+     "H25-02 Mon-Fri 08:00-12:00 and 13:00-17:00"
+    ],
+    "data_date": "2026-05-09 08:00",
+    "must_finish_by": "2026-06-02 00:00",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Successor",
+     "sched_lag_early_start_flag": "N",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 16,
+    "assignments": 23,
+    "assignment_lags": 6,
+    "resources": 11,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 3,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 1,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 2,
+    "open_critical": "Y",
+    "expected_finishes_added": 2,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 0,
+     "alap": 0,
+     "under_way": 0,
+     "done": 0
+    },
+    "xp_mr_milestones": {
+     "xp": 2,
+     "mr": 1,
+     "milestones": 1,
+     "pairs": 1
+    },
+    "h23_shapes": {
+     "sl": 2,
+     "mg": 0,
+     "mx": 0,
+     "xo": 1,
+     "av": 0,
+     "alap_new": 1,
+     "fz": 1,
+     "zb": 1,
+     "xe": 1
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "1",
+    "float_paths_on": "total float",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 2,
+     "no_units": 1,
+     "no_hours": 0,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-03",
+   "file": "H25-03.xer",
+   "sha256": "a41f3b1d6d6c3f626f471dcdc74b649b93e2a80f540779b868899536c79d3d20",
+   "features": {
+    "activities": 41,
+    "unfinished": 33,
+    "completed": 8,
+    "in_progress": 5,
+    "relationships": {
+     "PR_FS": 53,
+     "PR_SS": 7,
+     "PR_FF": 6,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 53,
+     "positive": 11,
+     "negative": 4
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB"
+    ],
+    "secondary_constraints": 1,
+    "expected_finishes": 11,
+    "open_ends": 1,
+    "calendars": [
+     "H25-03 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H25-03 Every day 00:00-24:00"
+    ],
+    "data_date": "2026-06-12 00:00",
+    "must_finish_by": "2026-06-24 17:30",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_Start",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 16,
+    "assignments": 23,
+    "assignment_lags": 4,
+    "resources": 10,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 3,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 0,
+     "before_data_date": 1,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 0,
+    "open_critical": "N",
+    "expected_finishes_added": 4,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 2,
+     "alap": 1,
+     "under_way": 0,
+     "done": 2
+    },
+    "xp_mr_milestones": {
+     "xp": 2,
+     "mr": 2,
+     "milestones": 1,
+     "pairs": 1
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 1,
+     "alap_new": 1,
+     "fz": 1,
+     "zb": 0,
+     "xe": 0
+    },
+    "multiple_float_paths": "N",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 2,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-04",
+   "file": "H25-04.xer",
+   "sha256": "9977f100f67a88d3027db19cd751bff5fc5de162429a056c64233822cf1c2d10",
+   "features": {
+    "activities": 36,
+    "unfinished": 25,
+    "completed": 11,
+    "in_progress": 4,
+    "relationships": {
+     "PR_FS": 45,
+     "PR_SS": 9,
+     "PR_FF": 3,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 47,
+     "positive": 7,
+     "negative": 3
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOA",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 8,
+    "open_ends": 1,
+    "calendars": [
+     "H25-04 Mon-Fri 08:00-12:00 and 13:00-17:00",
+     "H25-04 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H25-04 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-12-12 00:00",
+    "must_finish_by": "2027-01-08 17:00",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_ProjDefault",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 12,
+    "assignments": 20,
+    "assignment_lags": 3,
+    "resources": 7,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 1,
+    "level_of_effort_started": 1,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 0,
+    "open_critical": "N",
+    "expected_finishes_added": 5,
+    "use_expected_finish": "N",
+    "open_end_edges": {
+     "left_out": 1,
+     "alap": 2,
+     "under_way": 1,
+     "done": 2
+    },
+    "xp_mr_milestones": {
+     "xp": 0,
+     "mr": 0,
+     "milestones": 2,
+     "pairs": 0
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 0,
+     "alap_new": 0,
+     "fz": 0,
+     "zb": 0,
+     "xe": 0
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "10",
+    "float_paths_on": "free float",
+    "h24_shapes": {
+     "qs": 1,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 0,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-05",
+   "file": "H25-05.xer",
+   "sha256": "2139a94874ea79bac0841d016269f29a20351bf2fefb9556963d85c107ab27b8",
+   "features": {
+    "activities": 57,
+    "unfinished": 42,
+    "completed": 15,
+    "in_progress": 9,
+    "relationships": {
+     "PR_FS": 65,
+     "PR_SS": 10,
+     "PR_FF": 14,
+     "PR_SF": 5
+    },
+    "lags": {
+     "zero": 70,
+     "positive": 17,
+     "negative": 7
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEO",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 2,
+    "expected_finishes": 8,
+    "open_ends": 0,
+    "calendars": [
+     "H25-05 Mon-Fri 07:00-17:00",
+     "H25-05 Every day 00:00-24:00",
+     "H25-05 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00"
+    ],
+    "data_date": "2026-11-12 08:00",
+    "must_finish_by": "2026-12-04 17:00",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 16,
+    "assignments": 21,
+    "assignment_lags": 4,
+    "resources": 11,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 3,
+    "open_critical": "Y",
+    "expected_finishes_added": 4,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 0,
+     "alap": 2,
+     "under_way": 1,
+     "done": 1
+    },
+    "xp_mr_milestones": {
+     "xp": 2,
+     "mr": 1,
+     "milestones": 1,
+     "pairs": 2
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 1,
+     "alap_new": 1,
+     "fz": 0,
+     "zb": 0,
+     "xe": 0
+    },
+    "multiple_float_paths": "N",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 0,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-06",
+   "file": "H25-06.xer",
+   "sha256": "b93c96c6a7fc5143f21cec35486dda904491dfafb49bc71102d317dbf9f6dea0",
+   "features": {
+    "activities": 38,
+    "unfinished": 31,
+    "completed": 7,
+    "in_progress": 7,
+    "relationships": {
+     "PR_FS": 46,
+     "PR_SS": 11,
+     "PR_FF": 7,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 51,
+     "positive": 9,
+     "negative": 5
+    },
+    "constraints": [
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOA",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 1,
+    "expected_finishes": 8,
+    "open_ends": 0,
+    "calendars": [
+     "H25-06 Mon-Fri 08:00-12:00 and 13:00-17:00",
+     "H25-06 Mon-Sat 08:00-16:00"
+    ],
+    "data_date": "2026-07-02 17:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_Start",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 12,
+    "assignments": 18,
+    "assignment_lags": 5,
+    "resources": 10,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 1,
+    "level_of_effort_started": 0,
+    "wbs_summary": 1,
+    "wbs_nodes": 4,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 3,
+    "open_critical": "N",
+    "expected_finishes_added": 4,
+    "use_expected_finish": "N",
+    "open_end_edges": {
+     "left_out": 1,
+     "alap": 0,
+     "under_way": 2,
+     "done": 1
+    },
+    "xp_mr_milestones": {
+     "xp": 0,
+     "mr": 1,
+     "milestones": 1,
+     "pairs": 1
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 0,
+     "alap_new": 0,
+     "fz": 0,
+     "zb": 0,
+     "xe": 0
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "50",
+    "float_paths_on": "total float",
+    "h24_shapes": {
+     "qs": 1,
+     "zl": 1,
+     "xw": 2,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-07",
+   "file": "H25-07.xer",
+   "sha256": "5ac765833c4669bd5821e6e312946f9b6a0f0b44846fe72263d669be57adaa37",
+   "features": {
+    "activities": 42,
+    "unfinished": 38,
+    "completed": 4,
+    "in_progress": 5,
+    "relationships": {
+     "PR_FS": 51,
+     "PR_SS": 12,
+     "PR_FF": 8,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 61,
+     "positive": 6,
+     "negative": 4
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 1,
+    "expected_finishes": 7,
+    "open_ends": 0,
+    "calendars": [
+     "H25-07 Mon-Sat 08:00-16:00",
+     "H25-07 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-04-15 08:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Successor",
+     "sched_lag_early_start_flag": "N",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 13,
+    "assignments": 17,
+    "assignment_lags": 2,
+    "resources": 9,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 3,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 3,
+    "open_critical": "Y",
+    "expected_finishes_added": 0,
+    "use_expected_finish": "N",
+    "open_end_edges": {
+     "left_out": 1,
+     "alap": 2,
+     "under_way": 2,
+     "done": 0
+    },
+    "xp_mr_milestones": {
+     "xp": 2,
+     "mr": 1,
+     "milestones": 2,
+     "pairs": 1
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 1,
+     "alap_new": 1,
+     "fz": 0,
+     "zb": 0,
+     "xe": 0
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "10",
+    "float_paths_on": "total float",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 2,
+     "no_units": 1,
+     "no_hours": 0,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-08",
+   "file": "H25-08.xer",
+   "sha256": "56d6cdbda581a9af73fb21fbd5297239b19beec5452c55ce2ab26118144ad085",
+   "features": {
+    "activities": 31,
+    "unfinished": 21,
+    "completed": 10,
+    "in_progress": 7,
+    "relationships": {
+     "PR_FS": 24,
+     "PR_SS": 9,
+     "PR_FF": 4,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 31,
+     "positive": 6,
+     "negative": 1
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDSTART",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 6,
+    "open_ends": 1,
+    "calendars": [
+     "H25-08 Every day 00:00-24:00",
+     "H25-08 Mon-Fri 08:00-12:00 and 13:00-17:00"
+    ],
+    "data_date": "2026-04-09 00:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 14,
+    "assignments": 20,
+    "assignment_lags": 4,
+    "resources": 11,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 1,
+    "wbs_nodes": 4,
+    "suspended": 3,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 1,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 2,
+    "open_critical": "N",
+    "expected_finishes_added": 4,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 0,
+     "alap": 0,
+     "under_way": 0,
+     "done": 0
+    },
+    "xp_mr_milestones": {
+     "xp": 0,
+     "mr": 0,
+     "milestones": 1,
+     "pairs": 0
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 0,
+     "alap_new": 0,
+     "fz": 0,
+     "zb": 0,
+     "xe": 0
+    },
+    "multiple_float_paths": "N",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-09",
+   "file": "H25-09.xer",
+   "sha256": "f4b9591cc64555072e6d94d1ac268a7b3d2f7bf27392464cd917b4d8fccff37b",
+   "features": {
+    "activities": 57,
+    "unfinished": 38,
+    "completed": 19,
+    "in_progress": 4,
+    "relationships": {
+     "PR_FS": 65,
+     "PR_SS": 17,
+     "PR_FF": 10,
+     "PR_SF": 4
+    },
+    "lags": {
+     "zero": 72,
+     "positive": 16,
+     "negative": 8
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB"
+    ],
+    "secondary_constraints": 3,
+    "expected_finishes": 11,
+    "open_ends": 0,
+    "calendars": [
+     "H25-09 Mon-Fri 08:00-12:00 and 13:00-17:00",
+     "H25-09 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00",
+     "H25-09 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H25-09 Mon-Sat 08:00-16:00"
+    ],
+    "data_date": "2026-10-25 17:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_Start",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 17,
+    "assignments": 26,
+    "assignment_lags": 6,
+    "resources": 12,
+    "resource_types": [
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 2,
+    "wbs_nodes": 2,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 1
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_Both",
+    "spurs": 3,
+    "open_critical": "Y",
+    "expected_finishes_added": 4,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 0,
+     "alap": 0,
+     "under_way": 0,
+     "done": 0
+    },
+    "xp_mr_milestones": {
+     "xp": 2,
+     "mr": 2,
+     "milestones": 1,
+     "pairs": 2
+    },
+    "h23_shapes": {
+     "sl": 1,
+     "mg": 0,
+     "mx": 0,
+     "xo": 1,
+     "av": 0,
+     "alap_new": 1,
+     "fz": 1,
+     "zb": 1,
+     "xe": 1
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "1",
+    "float_paths_on": "total float",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-10",
+   "file": "H25-10.xer",
+   "sha256": "4e9bddc28524a195a307c12fa089f1f3d141ec41f06da38d896dc43e5d27a149",
+   "features": {
+    "activities": 38,
+    "unfinished": 35,
+    "completed": 3,
+    "in_progress": 1,
+    "relationships": {
+     "PR_FS": 44,
+     "PR_SS": 10,
+     "PR_FF": 5,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 45,
+     "positive": 13,
+     "negative": 3
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOA",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 5,
+    "expected_finishes": 10,
+    "open_ends": 1,
+    "calendars": [
+     "H25-10 Mon-Sat 08:00-16:00",
+     "H25-10 Every day 00:00-24:00"
+    ],
+    "data_date": "2027-01-16 08:00",
+    "must_finish_by": "2027-01-20 16:00",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_24Hour",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 14,
+    "assignments": 22,
+    "assignment_lags": 6,
+    "resources": 11,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 0,
+    "level_of_effort_started": 0,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 0,
+    "resume": {
+     "after_data_date": 0,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 1,
+    "outer_depend_type": "SD_Both",
+    "spurs": 2,
+    "open_critical": "Y",
+    "expected_finishes_added": 3,
+    "use_expected_finish": "N",
+    "open_end_edges": {
+     "left_out": 0,
+     "alap": 1,
+     "under_way": 1,
+     "done": 1
+    },
+    "xp_mr_milestones": {
+     "xp": 1,
+     "mr": 1,
+     "milestones": 2,
+     "pairs": 2
+    },
+    "h23_shapes": {
+     "sl": 3,
+     "mg": 1,
+     "mx": 0,
+     "xo": 1,
+     "av": 0,
+     "alap_new": 1,
+     "fz": 1,
+     "zb": 1,
+     "xe": 1
+    },
+    "multiple_float_paths": "N",
+    "h24_shapes": {
+     "qs": 1,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-11",
+   "file": "H25-11.xer",
+   "sha256": "9ad246f215ab09cf5d3cda288e3d0acf7f2e9fae581653b5b30082e1380190e1",
+   "features": {
+    "activities": 41,
+    "unfinished": 32,
+    "completed": 9,
+    "in_progress": 10,
+    "relationships": {
+     "PR_FS": 55,
+     "PR_SS": 10,
+     "PR_FF": 7,
+     "PR_SF": 0
+    },
+    "lags": {
+     "zero": 58,
+     "positive": 9,
+     "negative": 5
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 0,
+    "expected_finishes": 5,
+    "open_ends": 1,
+    "calendars": [
+     "H25-11 Mon-Sat 08:00-16:00",
+     "H25-11 Mon-Thu 07:00-12:00 and 12:30-17:30"
+    ],
+    "data_date": "2027-01-05 17:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "Y",
+     "sched_progress_override": "N",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_ProjDefault",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 12,
+    "assignments": 15,
+    "assignment_lags": 1,
+    "resources": 10,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 2,
+    "level_of_effort_started": 1,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 2,
+    "resume": {
+     "after_data_date": 2,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 3,
+    "external_late_finish": 1,
+    "outer_depend_type": "SD_Both",
+    "spurs": 2,
+    "open_critical": "N",
+    "expected_finishes_added": 2,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 2,
+     "alap": 0,
+     "under_way": 2,
+     "done": 0
+    },
+    "xp_mr_milestones": {
+     "xp": 0,
+     "mr": 1,
+     "milestones": 2,
+     "pairs": 0
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 1,
+     "alap_new": 0,
+     "fz": 0,
+     "zb": 0,
+     "xe": 0
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "50",
+    "float_paths_on": "free float",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 0,
+     "zw": 1
+    }
+   }
+  },
+  {
+   "case": "H25-12",
+   "file": "H25-12.xer",
+   "sha256": "cdc2c18bae3ab0d23c70f9c31bfd369e88da36b0201d59301b8b40926da96cb3",
+   "features": {
+    "activities": 40,
+    "unfinished": 33,
+    "completed": 7,
+    "in_progress": 4,
+    "relationships": {
+     "PR_FS": 50,
+     "PR_SS": 9,
+     "PR_FF": 8,
+     "PR_SF": 1
+    },
+    "lags": {
+     "zero": 58,
+     "positive": 8,
+     "negative": 2
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEOA",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 2,
+    "expected_finishes": 5,
+    "open_ends": 1,
+    "calendars": [
+     "H25-12 Mon-Sat 08:00-16:00",
+     "H25-12 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-10-25 08:00",
+    "must_finish_by": "2026-11-07 16:00",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "N"
+    },
+    "resource_dependent": 16,
+    "assignments": 22,
+    "assignment_lags": 4,
+    "resources": 12,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 3,
+    "level_of_effort_started": 2,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 1,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 0,
+     "blank": 0
+    },
+    "external_early_start": 0,
+    "external_late_finish": 0,
+    "outer_depend_type": "SD_None",
+    "spurs": 0,
+    "open_critical": "N",
+    "expected_finishes_added": 0,
+    "use_expected_finish": "N",
+    "open_end_edges": {
+     "left_out": 2,
+     "alap": 1,
+     "under_way": 0,
+     "done": 1
+    },
+    "xp_mr_milestones": {
+     "xp": 2,
+     "mr": 2,
+     "milestones": 1,
+     "pairs": 2
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 0,
+     "alap_new": 1,
+     "fz": 0,
+     "zb": 1,
+     "xe": 0
+    },
+    "multiple_float_paths": "Y",
+    "float_paths": "50",
+    "float_paths_on": "free float",
+    "h24_shapes": {
+     "qs": 2,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 1,
+     "zw": 1
+    }
+   }
+  }
+ ]
+}
