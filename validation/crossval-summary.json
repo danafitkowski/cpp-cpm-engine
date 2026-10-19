@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T15:23:05.839Z",
+  "generated_utc": "2026-10-19T18:32:57.038Z",
   "fixtures": {
-    "total": 200,
-    "passed": 200,
+    "total": 203,
+    "passed": 203,
     "failed": 0
   },
   "checks": {
-    "executed": 16677,
+    "executed": 17028,
     "failed": 0,
-    "passed": 16677,
+    "passed": 17028,
     "skipped": 0,
-    "surface": 16677
+    "surface": 17028
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 198,
-    "project_finish": 198,
-    "critical_codes": 198,
-    "topo_order": 198,
-    "alert_count": 198,
-    "alert_severity_counts": 198,
-    "node <id>": 15437,
+    "project_finish_num": 201,
+    "project_finish": 201,
+    "critical_codes": 201,
+    "topo_order": 201,
+    "alert_count": 201,
+    "alert_severity_counts": 201,
+    "node <id>": 15767,
     "threw (both engines)": 2,
-    "hours": 50
+    "hours": 53
   },
   "rows": [
     {
@@ -1626,6 +1626,30 @@
       "id": "F204",
       "name": "F204 - SL: F203 in whole days",
       "checks": 186,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F205",
+      "name": "F205 - QS: work an FF requirement places starts where its resource first works after the activity calendar opens, in hours",
+      "checks": 117,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F206",
+      "name": "F206 - ZL: a lagged assignment with no work whose lag lands off the activity calendar, in hours",
+      "checks": 117,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F207",
+      "name": "F207 - XW: an expected finish sizes resource dependent work once, from its first placement, in hours",
+      "checks": 117,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

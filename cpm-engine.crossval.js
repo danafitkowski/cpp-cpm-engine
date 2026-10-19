@@ -4005,6 +4005,72 @@ compareFixture('F204 - SL: F203 in whole days', {
     relationship_lag_calendar: 'rcal_Predecessor',
 });
 
+// v2.10.12 (H24, P6 probes ZZ-CPP-AVR / -ZBS / -MXR): QS, the work an FF requirement places starts where its resource
+// first works at or after the activity calendar's opening (A7 a resource opening at 08:00 after 07:00, A9 one with the
+// Monday off, A10 one opening at 10:00); ZL, the late finish a lagged assignment with no work lands on takes the
+// activity calendar's last working time at or before it, and the late start is the earlier of the bound and the lag
+// back from there (Z1, Z3, Z5); XW, an expected finish sizes resource dependent work once, from its first placement,
+// and the remaining work runs that size from the activity calendar's opening, past the expected finish (X1, X2, X4).
+const rawWeek = (days) => '(0||CalendarData()((0||DaysOfWeek()(' + [1, 2, 3, 4, 5, 6, 7].map((d) => '(0||' + d + '()(' +
+    (days[d] || []).map(([a, b], i) => '(0||' + i + '(s|' + a + '|f|' + b + ')())').join('') + '))').join('') +
+    '))(0||Exceptions()())))';
+const wk = (dayNums, shifts) => Object.fromEntries(dayNums.map((d) => [d, shifts]));
+const rawCal = (dayNums, shifts) => ({ work_days: dayNums.map((d) => d - 1), holidays: [], raw: rawWeek(wk(dayNums, shifts)) });
+const MONFRI = [2, 3, 4, 5, 6], MONSAT = [2, 3, 4, 5, 6, 7], MONTHU = [2, 3, 4, 5], TUESAT = [3, 4, 5, 6, 7];
+const EVERYDAY = [1, 2, 3, 4, 5, 6, 7];
+const QSCAL = {
+    AC: rawCal(MONFRI, [['07:00', '17:00']]), R4: rawCal(MONSAT, [['08:00', '16:00']]),
+    R6: rawCal(TUESAT, [['08:00', '16:00']]), R7: rawCal(EVERYDAY, [['10:00', '18:00']]),
+};
+const qsActs = (A) => [A('L', 160, { clndr_id: 'AC' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AC' })].concat(
+    ...[['7', 'R4'], ['9', 'R6'], ['10', 'R7']].map(([i, r]) => [
+        A('Q' + i, 4, { clndr_id: 'AC', constraint: { type: 'CS_MSOA', date: slD(11, '16:00') } }),
+        A('A' + i, 4, { clndr_id: 'AC', task_type: 'TT_Rsrc', resource_assignments: 1,
+            assignments: [{ clndr_id: r, remaining_hours: 4, lag_hours: 0, driving: true }] }),
+        A('S' + i, 8, { clndr_id: 'AC' })]));
+const qsRels = (R) => [R('L', 'FIN')].concat(...['7', '9', '10'].map((i) => [R('Q' + i, 'A' + i, 'FF'),
+    R('A' + i, 'S' + i), R('S' + i, 'FIN')]));
+compareFixture('F205 - QS: work an FF requirement places starts where its resource first works after the activity calendar opens, in hours', {
+    activities: qsActs(hA), relationships: qsRels(hR), data_date: '2026-12-07 07:00', cal_map: QSCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+const ZLCAL = {
+    AZ: rawCal(MONSAT, [['08:00', '16:00']]), R2: rawCal(MONSAT, [['08:00', '16:00']]),
+    R1: rawCal(EVERYDAY, [['06:00', '18:00']]), R3: rawCal(MONSAT, [['08:00', '16:00']]),
+};
+const zlActs = (A) => [A('L', 160, { clndr_id: 'AZ' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AZ' })].concat(
+    ...[['1', 'R1', 16], ['3', 'R3', 16], ['5', 'R1', 14]].map(([i, r, lag]) => [A('P' + i, 8, { clndr_id: 'AZ' }),
+        A('Z' + i, 12, { clndr_id: 'AZ', task_type: 'TT_Rsrc', resource_assignments: 2,
+            assignments: [{ clndr_id: 'R2', remaining_hours: 8, lag_hours: 0, driving: true },
+                { clndr_id: r, remaining_hours: 0, lag_hours: lag, driving: true }] }),
+        A('B' + i, 0, { clndr_id: 'AZ', task_type: 'TT_FinMile', constraint: { type: 'CS_MEOB', date: slD(14, '16:00') } })]));
+const zlRels = (R) => [R('L', 'FIN')].concat(...['1', '3', '5'].map((i) => [R('P' + i, 'Z' + i), R('Z' + i, 'B' + i, 'SS'),
+    R('B' + i, 'FIN')]));
+compareFixture('F206 - ZL: a lagged assignment with no work whose lag lands off the activity calendar, in hours', {
+    activities: zlActs(hA), relationships: zlRels(hR), data_date: '2026-12-07 08:00', cal_map: ZLCAL,
+    relationship_lag_calendar: 'rcal_Successor',
+}, { hours: true });
+const XWCAL = {
+    AM: rawCal(MONSAT, [['08:00', '16:00']]),
+    RM: rawCal(MONTHU, [['07:00', '12:00'], ['12:30', '17:30']]),
+};
+const xwD = (m, d, h) => '2027-' + m + '-' + d + ' ' + h;
+const xwActs = (A) => [A('L', 300, { clndr_id: 'AM' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AM' })].concat(
+    ...[['1', xwD('02', '19', '08:00'), xwD('03', '06', '16:00')], ['2', xwD('02', '19', '08:00'), xwD('03', '04', '16:00')],
+        ['4', null, xwD('03', '06', '16:00')]].map(([i, ms, xf]) => [A('P' + i, 8, { clndr_id: 'AM' }),
+        A('X' + i, 112, Object.assign({ clndr_id: 'AM', task_type: 'TT_Rsrc', resource_assignments: 2, expected_finish: xf,
+            assignments: [{ clndr_id: 'RM', remaining_hours: 99, lag_hours: 0, driving: true },
+                { clndr_id: 'RM', remaining_hours: 75, lag_hours: 4, driving: true }] },
+        ms ? { constraint: { type: 'CS_MANDSTART', date: ms } } : {})),
+        A('S' + i, 8, { clndr_id: 'AM' })]));
+const xwRels = (R) => [R('L', 'FIN')].concat(...['1', '2', '4'].map((i) => [R('P' + i, 'X' + i), R('X' + i, 'S' + i),
+    R('S' + i, 'FIN')]));
+compareFixture('F207 - XW: an expected finish sizes resource dependent work once, from its first placement, in hours', {
+    activities: xwActs(hA), relationships: xwRels(hR), data_date: '2027-02-05 00:00', cal_map: XWCAL,
+    relationship_lag_calendar: 'rcal_ProjDefault', project_calendar: 'AM', use_expected_finish: true,
+    schedule_mode: 'progress_override',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

@@ -171,7 +171,12 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
                 s = max(s, gc.next_work(finish_req))
                 a0 = max(a0, gc.sub(s, g['lag']) if g['lag'] else s)
             f = s
-        starts.append(act_start if bound else a0)
+        # QS (H24, 19-Oct-2026): where an FF / SF requirement sets the start, the
+        # work starts where its resource first works at or after the activity
+        # calendar's opening, not at that opening: a resource that opens later,
+        # or has that day off, starts it later (ZZ-CPP-AVR A7-A10; H24-03 A1150,
+        # H24-10 A1160)
+        starts.append(a0)
         fins.append(f)
     ef = max(fins)
     # where the requirement set the start and no activity working time separates
@@ -279,7 +284,14 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
             if ls_bound is not None and ls_bound <= act_s:
                 bound = True
                 act_s = ls_bound if (gc.is_finish(ls_bound) or gc.is_start(ls_bound)) else gc.prev_work_end(ls_bound)
-                f = s = gc.next_work(gc.add(act_s, g['lag']))
+                s = gc.next_work(gc.add(act_s, g['lag']))
+                # ZL (H24, 19-Oct-2026): the late finish the lag lands on takes the
+                # activity calendar's last working time at or before it, and the
+                # late start is the earlier of the bound and the lag back from that
+                # finish on the assignment's calendar (ZZ-CPP-ZBS Z1, Z3, Z5 against
+                # Z2, Z4; H24-12 A1180)
+                f = act_cal.prev_work_end(s)
+                act_s = min(act_s, gc.sub(f, g['lag']))
         else:
             # the cap is its own name: the bound flag above decides RL below
             # (H18-08 A1120: an assignment with no work beside one with work,
@@ -322,8 +334,12 @@ def _rsrc_place(n, cal, start_req, finish_req, xf=None):
     # an unfinished or a completed predecessor; H8-11 A1040, ZZ-CPP-RDU U1 U2 U4
     # U5 U6)
     rs = cal.next_work(es)
+    # XW (H24, 19-Oct-2026): an expected finish sizes each assignment once, from
+    # the first placement; the remaining work runs that size from the activity
+    # calendar's opening, past the expected finish where the resources' hours
+    # run out (ZZ-CPP-MXR X1-X4 against X5, X6; H24-10 A1130)
     if rs != es:
-        n['rem_dates'] = _rsrc_forward(n['asg'], cal, rs, finish_req, xf)
+        n['rem_dates'] = _rsrc_forward(n['asg'], cal, rs, finish_req, None)
     # the activity's remaining duration, as P6 stores it: the working time
     # between its remaining dates on its own calendar
     n['rem'] = cal.between(*n.get('rem_dates', (es, ef)))

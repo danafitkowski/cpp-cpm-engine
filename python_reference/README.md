@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  ea33ea32bf8a521c106325e5446260311d4b478690bcd2fa67000d697ece3bcd
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  7f314e54d4e2d98eceae7320d3addf819cbbe7e7345fd9d4863e3ae867728de2
+cpm_hours.py    SHA-256:  523987b642fbda7216fc394aeae3c51cd646b3a7d8d72829eec58c78c7079eba
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -273,7 +273,17 @@ The JS engine's whole-day pass also loses the rest of its v2.9.16 rule
 F5-B, which held the start on a primary Mandatory Start against a later
 second constraint (P6 moves it out, ZZ-CPP-MSS); this file never had
 it. The harness gains 8 fixtures (F197-F204): 200 fixtures, 16677 of
-16677 executed.)
+16677 executed. Then, from 7f314e54..., after held-out set H24
+(validation/held-out/H24) and the P6 probes ZZ-CPP-AVR, -ZBS and -MXR: work
+an FF or SF requirement places starts where its resource first works at
+or after the activity calendar's opening (QS); the late finish a lagged
+assignment with no work lands on takes the activity calendar's last
+working time at or before it, and the late start is the earlier of the
+bound and the lag back from there (ZL); an expected finish sizes
+resource dependent work once, from its first placement, and the
+remaining work runs that size from the activity calendar's opening (XW).
+cpm.py does not change. The harness gains 3 fixtures (F205-F207): 203
+fixtures, 17028 of 17028 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -848,8 +858,8 @@ Python reference: <repo>/python_reference/cpm.py
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 200 passed, 0 failed
-  Checks:   16677 / 16677 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 203 passed, 0 failed
+  Checks:   17028 / 17028 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

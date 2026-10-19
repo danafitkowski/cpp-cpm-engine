@@ -2436,11 +2436,11 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
     // activity calendar's working time first moves to its next opening (one
     // at a close stays: ZZ-CPP-RSRC C2). Each assignment reaches it at its
     // resource's last close at or before that, starting its work that much
-    // earlier on its own calendar. The activity starts where the first of
+    // earlier on its own calendar. The work starts from where the first of
     // them would, at the activity calendar's next opening, and every
     // assignment runs from that one start on its own calendar, as with no
     // requirement (ZZ-CPP-RD2F C1-C3, D1-D11; ZZ-CPP-RDSF S1-S10; H10-04
-    // A1040; H9-09 A1230)
+    // A1040; H9-09 A1230), each from its own resource's next opening (QS)
     let bound = false;
     let frA = null;
     if (req) {
@@ -2483,7 +2483,12 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
             }
             f = s;
         }
-        starts.push(bound ? actStart : a0);
+        // QS (H24, 19-Oct-2026): where an FF / SF requirement sets the start,
+        // the work starts where its resource first works at or after the
+        // activity calendar's opening, not at that opening: a resource that
+        // opens later, or has that day off, starts it later (ZZ-CPP-AVR
+        // A7-A10; H24-03 A1150, H24-10 A1160)
+        starts.push(a0);
         fins.push(f);
     }
     let ef = Math.max.apply(null, fins);
@@ -2602,7 +2607,13 @@ function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
                 bound = true;
                 actS = (gc.isFinish(lsBound) || gc.isStart(lsBound)) ? lsBound : gc.prevWorkEnd(lsBound);
                 s = gc.nextWork(gc.add(actS, g.lag));
-                f = s;
+                // ZL (H24, 19-Oct-2026): the late finish the lag lands on takes
+                // the activity calendar's last working time at or before it,
+                // and the late start is the earlier of the bound and the lag
+                // back from that finish on the assignment's calendar
+                // (ZZ-CPP-ZBS Z1, Z3, Z5 against Z2, Z4; H24-12 A1180)
+                f = actCal.prevWorkEnd(s);
+                actS = Math.min(actS, gc.sub(f, g.lag));
             }
         } else {
             const bound = lsBound === null ? lfAct : Math.min(lfAct, lsBound);
@@ -2642,7 +2653,11 @@ function _hrRsrcPlace(n, cal, startReq, finishReq, xf) {
     // opening as it does for work not started, whatever drives the restart
     // (the data date, an unfinished or a completed predecessor; H8-11 A1040,
     // ZZ-CPP-RDU U1 U2 U4 U5 U6)
-    if (rs !== es) n.rem_dates = _hrRsrcForward(n.asg, cal, rs, finishReq, xf);
+    // XW (H24, 19-Oct-2026): an expected finish sizes each assignment once,
+    // from the first placement; the remaining work runs that size from the
+    // activity calendar's opening, past the expected finish where the
+    // resources' hours run out (ZZ-CPP-MXR X1-X4 against X5, X6; H24-10 A1130)
+    if (rs !== es) n.rem_dates = _hrRsrcForward(n.asg, cal, rs, finishReq, null);
     const rd = n.rem_dates || [es, ef];
     n.rem = cal.between(rd[0], rd[1]);
     // XE (H23, 19-Oct-2026): under an expected finish in force, work not yet
@@ -11706,17 +11721,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '200 cross-validation fixtures. The harness defines 16677 ' +
+                '203 cross-validation fixtures. The harness defines 17028 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 16677 / 16677" is the whole comparison surface. ' +
+                'reported "Checks: 17028 / 17028" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 16677 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 17028 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 198 of the 200 fixtures: ' +
+                'severity-level alert parity, compared on 201 of the 203 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11755,18 +11770,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '16677 comparisons it defines over 200 fixtures and skips none; every ' +
+                '17028 comparisons it defines over 203 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '200 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '203 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 16677 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 17028 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 198 of the 200 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 201 of the 203 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +
