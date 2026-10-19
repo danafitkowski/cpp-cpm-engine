@@ -12,6 +12,7 @@ The rules are in [`PROTOCOL.md`](PROTOCOL.md).
 | `import_p6_sqlite.py` | From H8: after each case's import and before its F9, records what P6's import made of the case (read-only), including its sizing of resource dependent work. |
 | `p6_imported_overlay.js` | From H8: lays P6's sizing of resource dependent work over a case file before the engine reads it. |
 | `merge_cases.py` | From H9: writes the frozen cases as one XER, so P6 imports the whole set at once. |
+| `model_p6_import.js` | From H26: a model of how P6's import sizes resource dependent work, written from the imports recorded so far, which it reproduces (H8 to H25: 1,025 activities and 1,393 assignments; 59 P6 probe sets: 687 activities and 855 assignments). Not part of any score. It checks, before any P6 time, that a generator profile's shapes reach their rules once P6's import has sized them; its prediction for each new set is measured against P6's record after the capture. |
 | `score_held_out.js` | Runs `cpm-engine.js` on each frozen case through its public API and compares it with P6, field by field. |
 | `score_whole_day.js` | From H6: compares the engine's whole-day pass with the calendar day of P6's dates (`--engine <file>` runs a diagnosis of another engine, never a score). |
 

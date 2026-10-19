@@ -18,7 +18,8 @@ and so is --features (H8 and H9: wide; H10 to H20: wide2; H21: wide3; H22:
 wide4; H23: wide5; H24: wide6; H25: wide7; H26 on: wide8; every earlier set used the default), which
 the manifest records; from H6 on the manifest also records score_whole_day.js,
 and from H8 on import_p6_sqlite.py and p6_imported_overlay.js (P6's import laid
-over each case before the engine reads it).
+over each case before the engine reads it), from H26 on model_p6_import.js (the
+model of P6's import whose prediction for the set is measured after the capture).
 """
 import argparse
 import hashlib
@@ -78,7 +79,8 @@ def main():
         'scripts': dict({n: sha(os.path.join(HERE, n)) for n in ('generate_held_out.py', 'score_held_out.js',
                                                                 'readback_p6_sqlite.py', 'freeze.py', 'PROTOCOL.md',
                                                                 'score_whole_day.js', 'import_p6_sqlite.py',
-                                                                'p6_imported_overlay.js', 'merge_cases.py')
+                                                                'p6_imported_overlay.js', 'merge_cases.py',
+                                                                'model_p6_import.js')
                          if os.path.exists(os.path.join(HERE, n))},
                         **({a.set + '/PROTOCOL.md': sha(os.path.join(HERE, a.set, 'PROTOCOL.md'))}
                            if os.path.exists(os.path.join(HERE, a.set, 'PROTOCOL.md')) else {})),
