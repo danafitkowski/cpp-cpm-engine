@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T19:39:52.617Z",
+  "generated_utc": "2026-10-19T21:20:38.327Z",
   "fixtures": {
-    "total": 205,
-    "passed": 205,
+    "total": 207,
+    "passed": 207,
     "failed": 0
   },
   "checks": {
-    "executed": 17482,
+    "executed": 17926,
     "failed": 0,
-    "passed": 17482,
+    "passed": 17926,
     "skipped": 0,
-    "surface": 17482
+    "surface": 17926
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 203,
-    "project_finish": 203,
-    "critical_codes": 203,
-    "topo_order": 203,
-    "alert_count": 203,
-    "alert_severity_counts": 203,
-    "node <id>": 16207,
+    "project_finish_num": 205,
+    "project_finish": 205,
+    "critical_codes": 205,
+    "topo_order": 205,
+    "alert_count": 205,
+    "alert_severity_counts": 205,
+    "node <id>": 16637,
     "threw (both engines)": 2,
-    "hours": 55
+    "hours": 57
   },
   "rows": [
     {
@@ -1666,6 +1666,22 @@
       "id": "F209",
       "name": "F209 - ZW: an assignment with no units and no units per hour keeps the hours between its own dates, in hours",
       "checks": 217,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F210",
+      "name": "F210 - ZF and BM: a lagged assignment with no work under a start-to-start bound another assignment can outlast, in hours",
+      "checks": 267,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F211",
+      "name": "F211 - AG: As Late As Possible resource dependent work with no working time to gain does not slide, in hours",
+      "checks": 177,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

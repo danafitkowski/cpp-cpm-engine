@@ -239,6 +239,7 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
         b_act = (ls_bound_in if (act_cal.is_finish(ls_bound_in) or act_cal.is_start(ls_bound_in))
                  else act_cal.prev_work_end(ls_bound_in))
     bound = False
+    zb = {}   # the start each lagged assignment with no work takes at the bound (ZB), by its index, for ZF
     for g in asg:
         gc = g['cal']
         # RW (H10, 17-Oct-2026): an SS / SF lead bounds each assignment at its
@@ -291,6 +292,7 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
                 # finish on the assignment's calendar (ZZ-CPP-ZBS Z1, Z3, Z5 against
                 # Z2, Z4; H24-12 A1180)
                 f = act_cal.prev_work_end(s)
+                zb[len(starts)] = act_s
                 act_s = min(act_s, gc.sub(f, g['lag']))
         else:
             # the cap is its own name: the bound flag above decides RL below
@@ -315,10 +317,24 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
                 # Z5; H24-09 A1260)
                 if not g['lag']:
                     fins[i] = starts[i] = g['cal'].prev_work_end(lf_all)
+                elif i in zb:
+                    # ZF (round 10, 19-Oct-2026): one with a lag that took the bound sits at that late finish too, and
+                    # its lag back from there, not from its own landing, gives its start: the earlier of the bound and
+                    # that. Another assignment can set the late finish later than the landing (ZZ-CPP-ZLB B4 against
+                    # B3, B5; H25-02 A1460, H25-08 A1220)
+                    fins[i] = g['cal'].prev_work_end(lf_all)
+                    starts[i] = min(zb[i], g['cal'].sub(fins[i], g['lag']))
                 continue
             fins[i] = g['cal'].prev_work_end(lf_all)
             s = g['cal'].sub(fins[i], g['rem'])
             starts[i] = g['cal'].sub(s, g['lag']) if g['lag'] else s
+    # BM (round 10, 19-Oct-2026): the bound binds only where it moves an assignment's late finish earlier than its own
+    # calendar's last working time at or before the requirement. Where it moves none, the work is placed as with no
+    # bound, and the late start is not printed at the bound's close (ZZ-CPP-ZLB B1, B2 against B4; H25-02 A1460,
+    # whose lagged resource works past the activity calendar's close, binds)
+    if b_act is not None and not any(fins[i] < g['cal'].prev_work_end(lf_req) for i, g in enumerate(asg)):
+        u = _rsrc_backward(asg, act_cal, lf_req, None, None)
+        return u[0], u[1], None
     return min(starts), max(fins), b_act
 
 
@@ -1089,6 +1105,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             continue
         cur = n['restart'] if n['started'] else n['es']
         if n['asg']:
+            # AG (round 10, 19-Oct-2026): no slide where no working time of the activity calendar lies between the
+            # early finish and the bound; an assignment with no duration stays where the early pass put it
+            # (ZZ-CPP-ALZ A1 against A2; H25-01 A1310)
+            if cal.between(n['ef'], ef_b) <= 0:
+                continue
             # RD: the assignments finish by the bound on their own calendars,
             # as on the backward pass (ZZ-CPP-RSRC H1)
             new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)

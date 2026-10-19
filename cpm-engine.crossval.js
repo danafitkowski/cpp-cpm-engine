@@ -4126,6 +4126,56 @@ compareFixture('F209 - ZW: an assignment with no units and no units per hour kee
     use_expected_finish: true,
 }, { hours: true });
 
+// v2.10.12 (H25, P6 probes ZZ-CPP-ZLB / -ALZ, round 10): ZF, a lagged assignment with no work that takes a
+// start-to-start bound runs back from the activity's late finish, which another assignment can set later than its
+// landing (B4); BM, the bound binds only where it moves an assignment's late finish (B1, B2 do not: the work is placed
+// as with no bound); B3, B5 and B7 are ZL as before. AG, As Late As Possible resource dependent work does not slide
+// where no working time lies between its early finish and the bound, and an assignment with no duration stays where
+// the early pass put it (A1; A2-A4 slide).
+const ZLCAL2 = { AW: rawCal(MONFRI, SPLIT), RW: rawCal(MONFRI, SPLIT), R12: rawCal(EVERYDAY, [['06:00', '18:00']]) };
+const ZLB = {
+    B1: [12, [zrAsg('RW', 8), zrAsg('R12', 0, 16)], slD(11, '17:00')],
+    B2: [10, [zrAsg('RW', 8), zrAsg('R12', 0, 14)], slD(11, '17:00')],
+    B3: [12, [zrAsg('RW', 8), zrAsg('R12', 0, 16)], slD(10, '17:00')],
+    B4: [12, [zrAsg('RW', 4), zrAsg('R12', 0, 16)], slD(11, '17:00')],
+    B5: [12, [zrAsg('R12', 0, 16)], slD(11, '17:00')],
+    B7: [16, [zrAsg('RW', 16), zrAsg('R12', 0, 21)], slD('09', '12:00')],
+};
+const zlbActs = (A) => [A('L', 200, { clndr_id: 'AW' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AW' })].concat(
+    ...Object.entries(ZLB).map(([k, [h, asg, held]]) => [A('P' + k.slice(1), 8, { clndr_id: 'AW' }),
+        A(k, h, { clndr_id: 'AW', task_type: 'TT_Rsrc', resource_assignments: asg.length, assignments: asg }),
+        A('M' + k.slice(1), 0, { clndr_id: 'AW', task_type: 'TT_FinMile', constraint: { type: 'CS_MEOB', date: held } }),
+        A('E' + k.slice(1), 0, { clndr_id: 'AW', task_type: 'TT_FinMile', constraint: { type: 'CS_MEOB', date: slD(14, '17:00') } })]));
+const zlbRels = (R) => [R('L', 'FIN')].concat(...Object.keys(ZLB).map((k) => [R('P' + k.slice(1), k),
+    R(k, 'M' + k.slice(1), 'SS'), R(k, 'E' + k.slice(1)), R('M' + k.slice(1), 'FIN'), R('E' + k.slice(1), 'FIN')]));
+compareFixture('F210 - ZF and BM: a lagged assignment with no work under a start-to-start bound another assignment can outlast, in hours', {
+    activities: zlbActs(hA), relationships: zlbRels(hR), data_date: '2026-12-07 08:00', cal_map: ZLCAL2,
+    relationship_lag_calendar: 'rcal_Predecessor', project_calendar: 'AW', open_critical: true,
+    use_expected_finish: true,
+}, { hours: true });
+const ALZCAL = {
+    AE: rawCal(EVERYDAY, [['06:00', '18:00']]),
+    R1: Object.assign(rawCal(EVERYDAY, [['06:00', '18:00']]), { holidays: ['2026-12-14'] }),
+    RU: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: rawWeek(Object.assign(wk([2, 3, 4, 5], [['07:00', '12:00'], ['13:00', '17:30']]), { 6: [['07:00', '11:00']] })) },
+};
+const alzR1 = zrAsg('R1', 8, 4);
+const ALZ = {
+    A1: [13, [alzR1, zrAsg('RU', 0)], 16], A2: [13, [alzR1, zrAsg('RU', 0)], 17], A3: [12, [alzR1], 17],
+    A4: [15, [alzR1, zrAsg('RU', 0, 2)], 17], A5: [12, [alzR1], 16],
+};
+const alzActs = (A) => [A('L', 300, { clndr_id: 'AE' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AE' })].concat(
+    ...Object.entries(ALZ).map(([k, [h, asg, held]]) => [A('P' + k.slice(1), 89.5, { clndr_id: 'AE' }),
+        A(k, h, { clndr_id: 'AE', task_type: 'TT_Rsrc', resource_assignments: asg.length, assignments: asg,
+            constraint: { type: 'CS_ALAP' } }),
+        A('S' + k.slice(1), 8, { clndr_id: 'AE', constraint: { type: 'CS_MSOA', date: slD(held, '06:00') } })]));
+const alzRels = (R) => [R('L', 'FIN')].concat(...Object.keys(ALZ).map((k) => [R('P' + k.slice(1), k),
+    R(k, 'S' + k.slice(1)), R('S' + k.slice(1), 'FIN'), R(k, 'FIN')]));
+compareFixture('F211 - AG: As Late As Possible resource dependent work with no working time to gain does not slide, in hours', {
+    activities: alzActs(hA), relationships: alzRels(hR), data_date: '2026-12-07 06:00', cal_map: ALZCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', project_calendar: 'AE', open_critical: true,
+    use_expected_finish: true,
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

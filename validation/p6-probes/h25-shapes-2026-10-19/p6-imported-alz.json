@@ -1,0 +1,156 @@
+{
+ "case": "ZZ-CPP-ALZ",
+ "proj_id": 5433,
+ "differences": [
+  "TASK A1 remain_drtn_hr_cnt: xer '12' p6 13.0",
+  "TASK A1 target_drtn_hr_cnt: xer '12' p6 13.0",
+  "TASK A2 remain_drtn_hr_cnt: xer '12' p6 13.0",
+  "TASK A2 target_drtn_hr_cnt: xer '12' p6 13.0",
+  "TASK A4 remain_drtn_hr_cnt: xer '12' p6 15.0",
+  "TASK A4 target_drtn_hr_cnt: xer '12' p6 15.0",
+  "TASKRSRC A1/ZZ-CPP-ALZ-RU remain_qty: xer '6' p6 0.0",
+  "TASKRSRC A1/ZZ-CPP-ALZ-RU target_qty: xer '6' p6 0.0",
+  "TASKRSRC A2/ZZ-CPP-ALZ-RU remain_qty: xer '6' p6 0.0",
+  "TASKRSRC A2/ZZ-CPP-ALZ-RU target_qty: xer '6' p6 0.0",
+  "TASKRSRC A4/ZZ-CPP-ALZ-RU remain_qty: xer '6' p6 0.0",
+  "TASKRSRC A4/ZZ-CPP-ALZ-RU target_qty: xer '6' p6 0.0"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "A1": {
+    "remain_drtn_hr_cnt": 13.0,
+    "target_drtn_hr_cnt": 13.0
+   },
+   "A2": {
+    "remain_drtn_hr_cnt": 13.0,
+    "target_drtn_hr_cnt": 13.0
+   },
+   "A3": {
+    "remain_drtn_hr_cnt": 12.0,
+    "target_drtn_hr_cnt": 12.0
+   },
+   "A4": {
+    "remain_drtn_hr_cnt": 15.0,
+    "target_drtn_hr_cnt": 15.0
+   },
+   "A5": {
+    "remain_drtn_hr_cnt": 12.0,
+    "target_drtn_hr_cnt": 12.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "A1",
+    "rsrc_short_name": "ZZ-CPP-ALZ-R1",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-13 10:00",
+    "reend_date": "2026-12-13 18:00"
+   },
+   {
+    "task_code": "A1",
+    "rsrc_short_name": "ZZ-CPP-ALZ-RU",
+    "remain_qty": 0.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 0.5,
+    "target_qty_per_hr": 0.5,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-14 07:00",
+    "reend_date": "2026-12-14 07:00"
+   },
+   {
+    "task_code": "A2",
+    "rsrc_short_name": "ZZ-CPP-ALZ-R1",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-13 10:00",
+    "reend_date": "2026-12-13 18:00"
+   },
+   {
+    "task_code": "A2",
+    "rsrc_short_name": "ZZ-CPP-ALZ-RU",
+    "remain_qty": 0.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 0.5,
+    "target_qty_per_hr": 0.5,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-14 07:00",
+    "reend_date": "2026-12-14 07:00"
+   },
+   {
+    "task_code": "A3",
+    "rsrc_short_name": "ZZ-CPP-ALZ-R1",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-13 10:00",
+    "reend_date": "2026-12-13 18:00"
+   },
+   {
+    "task_code": "A4",
+    "rsrc_short_name": "ZZ-CPP-ALZ-R1",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-13 10:00",
+    "reend_date": "2026-12-13 18:00"
+   },
+   {
+    "task_code": "A4",
+    "rsrc_short_name": "ZZ-CPP-ALZ-RU",
+    "remain_qty": 0.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 0.5,
+    "target_qty_per_hr": 0.5,
+    "target_lag_drtn_hr_cnt": 2.0,
+    "relag_drtn_hr_cnt": 2.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-14 09:00",
+    "reend_date": "2026-12-14 09:00"
+   },
+   {
+    "task_code": "A5",
+    "rsrc_short_name": "ZZ-CPP-ALZ-R1",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2026-12-13 10:00",
+    "reend_date": "2026-12-13 18:00"
+   }
+  ]
+ }
+}

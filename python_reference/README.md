@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  b06d14f35684e94b713249b6ed5cd09da737f7ec8c8f1c087b0998a14b04ff91
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  b7425ea2e018661f371b78474e352dafa0dec6d8238e86bbeb46607d1220ad21
+cpm_hours.py    SHA-256:  c116fdd3e84566a04744cf1e345c4149d8d4255f5dc31b77a32c513ccd7eacdf
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -293,7 +293,19 @@ an assignment with no units per hour is scheduled for its resource's
 working hours between its own remaining start and finish, as work (ZW),
 which compute_cpm now hands on to compute_cpm_hours with each assignment
 (window_start, window_finish). The harness gains 2 fixtures (F208-F209):
-205 fixtures, 17482 of 17482 executed.)
+205 fixtures, 17482 of 17482 executed. Then, from b7425ea2...
+(cpm_hours.py), after held-out set H25 (validation/held-out/H25) and the
+P6 probes ZZ-CPP-ZLB and -ALZ (validation/p6-probes/h25-shapes-2026-10-19),
+in the hours pass only: a lagged assignment with no work that takes a
+start-to-start bound runs back from the activity's late finish, which
+another assignment can set later than its landing (ZF); a bound binds
+only where it moves an assignment's late finish earlier than its own
+calendar's last working time at or before the requirement, and where it
+moves none the work is placed as with no bound (BM); and the As Late As
+Possible slide of resource dependent work does not move it where no
+working time lies between its early finish and the bound (AG). cpm.py
+does not change. The harness gains 2 fixtures (F210-F211): 207 fixtures,
+17926 of 17926 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -868,8 +880,8 @@ Python reference: <repo>/python_reference/cpm.py
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 205 passed, 0 failed
-  Checks:   17482 / 17482 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 207 passed, 0 failed
+  Checks:   17926 / 17926 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 
