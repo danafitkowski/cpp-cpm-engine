@@ -169,13 +169,19 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # (None: the options stay the default case's). 'wide' (H8, H9) keeps the draws above exactly. 'wide2' (H10 on)
 # draws the same features heavier, so a set gives the rules the engine took from H8 and H9 more to decide: the
 # remaining dates of resource dependent work under way, free float to them, and resume dates under progress
-# override.
+# override. 'wide3' (H21 on) draws wide2's features exactly and then, from the same stream, one to three open ends
+# hung off the network in most cases ('spurs': chance, fewest, most) and "Make open-ended activities critical" in
+# about half ('oc'), the two options no set had drawn until engine v2.10.11 read them.
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
     'wide2': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
                          'external': 0.55},
               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5},
+    'wide3': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                         'external': 0.55},
+              'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
+              'spurs': (0.6, 1, 3), 'oc': 0.5},
 }
 
 # The values P6 23.12 writes for a project created with its defaults.
@@ -491,6 +497,30 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
     # wide2: progress override in about half the cases, the stream's last draw (wide makes none)
     if pf['po'] is not None:
         w['po'] = rng.random() < pf['po']
+    # wide3: open ends, each a task not started hung off the network by FS, SS or FF with no successor, then "Make
+    # open-ended activities critical"; drawn after everything wide2 draws, so a wide2 case is unchanged
+    if pf.get('spurs') is not None:
+        w['spurs'] = []
+    if pf.get('spurs') is not None and rng.random() < pf['spurs'][0]:
+        hosts = [a for a in acts if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_Mile')]
+        for _ in range(rng.randint(pf['spurs'][1], pf['spurs'][2])):
+            p = rng.choice(hosts)
+            i = len(acts)
+            cal = rng.choice(cals)
+            hours = rng.choice([8, 16, 24, 40])
+            typ = pick(rng, [('PR_FS', 70), ('PR_SS', 20), ('PR_FF', 10)])
+            es[i] = ef[p['i']] if typ == 'PR_FS' else es[p['i']]
+            ef[i] = es[i] + hours / max(cal.week_hours() / 7.0, 0.1)
+            spur = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': 'TT_Task', 'cal': cal, 'hours': hours,
+                    'preds': [], 'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': hours,
+                    'xf': None, 'pct': 0, 'cstr': '', 'cstr_date': None, 'cstr2': '', 'cstr_date2': None,
+                    'tags': ['open end']}
+            acts.append(spur)
+            rels.append({'pred': p['i'], 'succ': i, 'type': typ, 'lag': 0})
+            spur['preds'].append(rels[-1])
+            w['spurs'].append(spur['code'])
+    if pf.get('oc') is not None:
+        w['oc'] = rng.random() < pf['oc']
     return w
 
 
@@ -719,6 +749,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
     so.update(opts)
     if wide:
         so['sched_outer_depend_type'] = wide['outer']
+        if wide.get('oc') is not None:
+            so['sched_open_critical_flag'] = 'Y' if wide['oc'] else 'N'
     wbs = {'wbs_id': pid * 10, 'proj_id': pid, 'seq_num': '1', 'est_wt': '1', 'proj_node_flag': 'Y',
            'sum_data_flag': 'N', 'status_code': 'WS_Open', 'wbs_short_name': short,
            'wbs_name': 'Held-out P6 comparison case %s (synthetic)' % short, 'ev_user_pct': '0.06',
@@ -832,6 +864,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             'external_late_finish': sum(1 for a in acts if a.get('ext_lf')),
             'outer_depend_type': wide['outer'],
         })
+        if wide.get('oc') is not None:
+            summary.update({'spurs': len(wide['spurs']), 'open_critical': so['sched_open_critical_flag']})
     return short, text, summary
 
 
