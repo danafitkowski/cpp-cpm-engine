@@ -1,0 +1,171 @@
+{
+ "note": "Resource dependent sizing P6's F9 rewrote in H23, against P6's import of the same projects before the F9 (p6-imported/). Read from P6's database after the last F9.",
+ "activities": [
+  {
+   "case": "H23-01",
+   "task_code": "A1110",
+   "remaining_hours_after_import": 5.0,
+   "remaining_hours_after_f9": 3.0
+  },
+  {
+   "case": "H23-01",
+   "task_code": "A1140",
+   "remaining_hours_after_import": 8.0,
+   "remaining_hours_after_f9": 22.0
+  },
+  {
+   "case": "H23-02",
+   "task_code": "A1100",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 44.0
+  },
+  {
+   "case": "H23-02",
+   "task_code": "A1150",
+   "remaining_hours_after_import": 56.0,
+   "remaining_hours_after_f9": 65.0
+  },
+  {
+   "case": "H23-03",
+   "task_code": "A1220",
+   "remaining_hours_after_import": 24.0,
+   "remaining_hours_after_f9": 14.5
+  },
+  {
+   "case": "H23-03",
+   "task_code": "A1260",
+   "remaining_hours_after_import": 80.0,
+   "remaining_hours_after_f9": 84.0
+  },
+  {
+   "case": "H23-04",
+   "task_code": "A1280",
+   "remaining_hours_after_import": 10.5,
+   "remaining_hours_after_f9": 8.0
+  },
+  {
+   "case": "H23-04",
+   "task_code": "A1300",
+   "remaining_hours_after_import": 15.0,
+   "remaining_hours_after_f9": 24.5
+  },
+  {
+   "case": "H23-05",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 13.5
+  },
+  {
+   "case": "H23-05",
+   "task_code": "A1210",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 16.0
+  },
+  {
+   "case": "H23-07",
+   "task_code": "A1020",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 48.0
+  },
+  {
+   "case": "H23-07",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 24.0
+  },
+  {
+   "case": "H23-08",
+   "task_code": "A1190",
+   "remaining_hours_after_import": 30.0,
+   "remaining_hours_after_f9": 44.0
+  },
+  {
+   "case": "H23-08",
+   "task_code": "A1230",
+   "remaining_hours_after_import": 38.0,
+   "remaining_hours_after_f9": 41.0
+  },
+  {
+   "case": "H23-08",
+   "task_code": "A1260",
+   "remaining_hours_after_import": 40.0,
+   "remaining_hours_after_f9": 28.0
+  },
+  {
+   "case": "H23-09",
+   "task_code": "A1060",
+   "remaining_hours_after_import": 3.0,
+   "remaining_hours_after_f9": 166.0
+  },
+  {
+   "case": "H23-09",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 16.0,
+   "remaining_hours_after_f9": 20.5
+  },
+  {
+   "case": "H23-09",
+   "task_code": "A1110",
+   "remaining_hours_after_import": 120.0,
+   "remaining_hours_after_f9": 130.5
+  },
+  {
+   "case": "H23-10",
+   "task_code": "A1080",
+   "remaining_hours_after_import": 4.0,
+   "remaining_hours_after_f9": 0.0
+  },
+  {
+   "case": "H23-10",
+   "task_code": "A1100",
+   "remaining_hours_after_import": 24.0,
+   "remaining_hours_after_f9": 23.0
+  },
+  {
+   "case": "H23-10",
+   "task_code": "A1150",
+   "remaining_hours_after_import": 120.0,
+   "remaining_hours_after_f9": 80.0
+  },
+  {
+   "case": "H23-12",
+   "task_code": "A1130",
+   "remaining_hours_after_import": 200.0,
+   "remaining_hours_after_f9": 203.0
+  },
+  {
+   "case": "H23-12",
+   "task_code": "A1170",
+   "remaining_hours_after_import": 31.0,
+   "remaining_hours_after_f9": 41.0
+  },
+  {
+   "case": "H23-12",
+   "task_code": "A1200",
+   "remaining_hours_after_import": 91.0,
+   "remaining_hours_after_f9": 93.0
+  },
+  {
+   "case": "H23-12",
+   "task_code": "A1230",
+   "remaining_hours_after_import": 26.0,
+   "remaining_hours_after_f9": 74.0
+  }
+ ],
+ "assignments": [
+  {
+   "case": "H23-03",
+   "task_code": "A1260",
+   "resource": "H23-03-R1",
+   "remaining_units_after_import": 160.0,
+   "remaining_units_after_f9": 171.177645
+  },
+  {
+   "case": "H23-09",
+   "task_code": "A1080",
+   "resource": "H23-09-R2",
+   "remaining_units_after_import": 32.0,
+   "remaining_units_after_f9": 41.0
+  }
+ ]
+}
