@@ -7256,7 +7256,11 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         r.nodes.A.ef_date === '2026-01-20' && r.nodes.A.lf_date === '2026-01-15' && missed,
         'A.ef=' + r.nodes.A.ef_date + ' A.lf=' + r.nodes.A.lf_date + ' missed alert=' + missed);
 }
-// Bug B: Secondary SNET cannot override primary MS_Start (mandatory hard-pin).
+// SL (v2.10.12) — a later Start On or After in the second slot moves the start
+// off a primary Mandatory Start, as P6 23.12.1 did on its own F9 (ZZ-CPP-MSS
+// N1, N3, N5, N6, N7 against N2, N4). From v2.9.16 to the first v2.10.12
+// candidates this test pinned the opposite (F5-B: the secondary suppressed, a
+// priority-override WARN); P6 contradicts it.
 {
     const r = E.computeCPM(
         [{ code: 'A', duration_days: 5,
@@ -7265,17 +7269,12 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         [],
         { dataDate: '2026-01-05' }
     );
-    // After F5-B: ES restored to MS_Start date (2026-01-10), priority-override
-    // WARN emitted. EF = ES + 5wd = 2026-01-19 (Mon) on default 7-day cal.
-    // Note: with no clndr_id, engine emits a calendar-fallback alert; that's
-    // separate from F5-B's priority-override WARN.
     const priorityWarns = r.alerts.filter(a => a.context === 'constraint-priority-override');
-    check('T-FIX-F5-B: secondary SNET suppressed by primary MS_Start (priority-override WARN)',
-        priorityWarns.length === 1 &&
-        priorityWarns[0].message.indexOf('MS_Start') >= 0,
+    check('SL: a later secondary SNET is not suppressed by a primary MS_Start (no priority-override WARN)',
+        priorityWarns.length === 0,
         'warns=' + JSON.stringify(priorityWarns.map(a => a.message)));
-    check('T-FIX-F5-B: ES pinned to MS_Start date (not pushed by secondary SNET)',
-        r.nodes.A.es_date === '2026-01-10',
+    check('SL: ES moves out to the later secondary SNET, off the MS_Start date',
+        r.nodes.A.es_date === '2026-01-20',
         'A.es=' + r.nodes.A.es_date);
 }
 

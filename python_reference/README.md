@@ -269,8 +269,11 @@ resource dependent work restarts at the activity calendar's next opening
 start or start-to-finish bound and lands its lag later (ZB); and under
 an expected finish in force, resource dependent work not yet started
 keeps no first placement: its early dates are its remaining dates (XE).
-The harness gains 6 fixtures (F197-F202): 198 fixtures, 16284 of 16284
-executed.)
+The JS engine's whole-day pass also loses the rest of its v2.9.16 rule
+F5-B, which held the start on a primary Mandatory Start against a later
+second constraint (P6 moves it out, ZZ-CPP-MSS); this file never had
+it. The harness gains 8 fixtures (F197-F204): 200 fixtures, 16677 of
+16677 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -845,8 +848,8 @@ Python reference: <repo>/python_reference/cpm.py
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 198 passed, 0 failed
-  Checks:   16284 / 16284 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 200 passed, 0 failed
+  Checks:   16677 / 16677 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

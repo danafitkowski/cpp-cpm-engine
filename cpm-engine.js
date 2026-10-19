@@ -5336,15 +5336,6 @@ function computeCPM(activities, relationships, opts) {
             // to their finish (see the hours pass; ZZ-CPP-SSM M7, M8, M9).
             // Python paired site: the same block in compute_cpm.
             if (cstr && cstr.type === 'MS_Start' && cstr.date) finishAnchorEF = null;
-            // v2.9.16 F5-A — capture primary mandatory-start pin so secondary
-            // SNET cannot silently override it. Per P6, MS_Start/SO is a
-            // hard pin; soft secondary constraints cannot move it.
-            // v2.9.42 — SO dropped: Start On is soft, so a secondary constraint
-            // is allowed to move ES off it. Only the mandatory pin is protected.
-            const _isPrimaryMandatoryStart = cstr && cstr.type === 'MS_Start' && cstr.date;
-            // OW (2026-10-10) — the pin is the date as the clamp resolved it.
-            const _primaryMandatoryStartNum = _isPrimaryMandatoryStart
-                ? _constraintStartNum(cstr, nodeCal, [], code) : -1;
             const _esBeforeSecondary = maxES;
             // SL (H23, 19-Oct-2026) — only the primary pins: a Mandatory Start
             // in the second slot is a floor, as a Start On or After (see the
@@ -5360,23 +5351,12 @@ function computeCPM(activities, relationships, opts) {
                 };
                 finishAnchorEF = null;
             }
-            // v2.9.16 F5-B — secondary cannot override primary mandatory start.
-            if (_isPrimaryMandatoryStart && maxES !== _primaryMandatoryStartNum) {
-                alerts.push({
-                    severity: 'WARN',
-                    context: 'constraint-priority-override',
-                    message: 'Secondary ' + (cstr2 ? cstr2.type : '') + ' on ' + code +
-                        ' attempted to move ES off mandatory ' + cstr.type +
-                        ' pin (' + cstr.date + '); secondary suppressed.',
-                });
-                maxES = _primaryMandatoryStartNum;
-                drivingPred = {
-                    type: 'CONSTRAINT',
-                    constraint_type: cstr.type,
-                    date: cstr.date,
-                };
-                finishAnchorEF = null;
-            }
+            // SL (H23 follow-up, 19-Oct-2026) also withdraws v2.9.16 F5-B,
+            // which held the start on a primary Mandatory Start against a later
+            // second constraint: P6 moves the start out to a later Start On or
+            // After or Mandatory Start in the second slot, as the hours pass
+            // and the Python reference do (ZZ-CPP-MSS N1, N3, N5, N6, N7
+            // against N2, N4).
             // SL (H23, 19-Oct-2026) withdraws v2.9.16 F5-B's symmetric half,
             // which restored a mandatory second constraint's pin over a soft
             // primary: P6 pins only from the primary slot (ZZ-CPP-SSM M11, a
@@ -11726,17 +11706,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '198 cross-validation fixtures. The harness defines 16284 ' +
+                '200 cross-validation fixtures. The harness defines 16677 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 16284 / 16284" is the whole comparison surface. ' +
+                'reported "Checks: 16677 / 16677" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 16284 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 16677 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 196 of the 198 fixtures: ' +
+                'severity-level alert parity, compared on 198 of the 200 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11775,18 +11755,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '16284 comparisons it defines over 198 fixtures and skips none; every ' +
+                '16677 comparisons it defines over 200 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '198 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '200 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 16284 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 16677 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 196 of the 198 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 198 of the 200 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

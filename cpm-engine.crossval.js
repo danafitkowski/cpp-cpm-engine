@@ -3975,6 +3975,36 @@ compareFixture('F202 - FP: F198 under Calculate multiple float paths, whole days
     relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true,
 });
 
+// v2.10.12 (P6 probes ZZ-CPP-MSS): SL with a primary Mandatory Start beside a second constraint. A later Start On or
+// After or Mandatory Start in the second slot moves the start out to it (N1, N3, N6; N7 a later Finish On or After);
+// an earlier one leaves the start on the Mandatory Start (N2, N4). The JS whole-day pass held the start on the
+// Mandatory Start until it lost v2.9.16 F5-B, where the hours pass and the Python reference moved it.
+const msActs = (A, hrs) => {
+    const C = (type, d, h) => ({ type, date: slD(d, hrs ? h : undefined) });
+    const ms9 = C('CS_MANDSTART', '09', '08:00');
+    const q = {
+        N1: { constraint: ms9, constraint2: C('CS_MSOA', 10, '08:00') },
+        N2: { constraint: ms9, constraint2: C('CS_MSOA', '08', '08:00') },
+        N3: { constraint: ms9, constraint2: C('CS_MANDSTART', 11, '08:00') },
+        N4: { constraint: ms9, constraint2: C('CS_MANDSTART', '08', '08:00') },
+        N6: { constraint: ms9, constraint2: C('CS_MSOA', 10, '13:00') },
+        N7: { constraint: ms9, constraint2: C('CS_MEOA', 14, '17:00') },
+    };
+    const out = [A('L', 120), A('FIN', 0, { task_type: 'TT_FinMile' })];
+    for (const [k, extra] of Object.entries(q)) out.push(A('P' + k, 8), A(k, 24, extra), A('S' + k, 8));
+    return out;
+};
+const msRels = (R) => [R('L', 'FIN')].concat(...['N1', 'N2', 'N3', 'N4', 'N6', 'N7'].map((k) => [R('P' + k, k),
+    R(k, 'S' + k), R('S' + k, 'FIN')]));
+compareFixture('F203 - SL: a primary Mandatory Start beside a later or earlier second constraint, in hours', {
+    activities: msActs(hA, true), relationships: msRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F204 - SL: F203 in whole days', {
+    activities: msActs(dA, false), relationships: msRels(dR), data_date: '2026-12-07', cal_map: HCAL,
+    relationship_lag_calendar: 'rcal_Predecessor',
+});
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +

@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T14:29:52.911Z",
+  "generated_utc": "2026-10-19T15:23:05.839Z",
   "fixtures": {
-    "total": 198,
-    "passed": 198,
+    "total": 200,
+    "passed": 200,
     "failed": 0
   },
   "checks": {
-    "executed": 16284,
+    "executed": 16677,
     "failed": 0,
-    "passed": 16284,
+    "passed": 16677,
     "skipped": 0,
-    "surface": 16284
+    "surface": 16677
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 196,
-    "project_finish": 196,
-    "critical_codes": 196,
-    "topo_order": 196,
-    "alert_count": 196,
-    "alert_severity_counts": 196,
-    "node <id>": 15057,
+    "project_finish_num": 198,
+    "project_finish": 198,
+    "critical_codes": 198,
+    "topo_order": 198,
+    "alert_count": 198,
+    "alert_severity_counts": 198,
+    "node <id>": 15437,
     "threw (both engines)": 2,
-    "hours": 49
+    "hours": 50
   },
   "rows": [
     {
@@ -1610,6 +1610,22 @@
       "id": "F202",
       "name": "F202 - FP: F198 under Calculate multiple float paths, whole days",
       "checks": 330,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F203",
+      "name": "F203 - SL: a primary Mandatory Start beside a later or earlier second constraint, in hours",
+      "checks": 207,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F204",
+      "name": "F204 - SL: F203 in whole days",
+      "checks": 186,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
