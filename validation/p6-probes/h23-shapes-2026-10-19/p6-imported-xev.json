@@ -1,0 +1,50 @@
+{
+ "case": "ZZ-CPP-XEV",
+ "proj_id": 5395,
+ "differences": [
+  "TASK V1 remain_drtn_hr_cnt: xer '24' p6 16.0",
+  "TASK V2 remain_drtn_hr_cnt: xer '24' p6 40.0",
+  "TASK V2 target_drtn_hr_cnt: xer '24' p6 40.0",
+  "TASKRSRC V1/ZZ-CPP-XEV-RE target_qty_per_hr: xer '1' p6 0.463768115942029",
+  "TASKRSRC V2/ZZ-CPP-XEV-RE remain_qty_per_hr: xer '1' p6 0.421052631578947",
+  "TASKRSRC V2/ZZ-CPP-XEV-RE target_qty_per_hr: xer '1' p6 0.421052631578947"
+ ],
+ "resource_dependent": {
+  "tasks": {
+   "V1": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 32.0
+   },
+   "V2": {
+    "remain_drtn_hr_cnt": 40.0,
+    "target_drtn_hr_cnt": 40.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "V1",
+    "rsrc_short_name": "ZZ-CPP-XEV-RE",
+    "remain_qty": 24.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 0.463768115942029,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 8.0,
+    "act_ot_qty": 0.0
+   },
+   {
+    "task_code": "V2",
+    "rsrc_short_name": "ZZ-CPP-XEV-RE",
+    "remain_qty": 24.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 0.421052631578947,
+    "target_qty_per_hr": 0.421052631578947,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0
+   }
+  ]
+ }
+}

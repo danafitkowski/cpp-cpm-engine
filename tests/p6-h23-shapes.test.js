@@ -11,7 +11,9 @@
 // ZZ-CPP-RSRCR and -HSB, why the 13-Oct ZZ-CPP-RSRC prints 1 h on H1-S; ZZ-CPP-RSRCN and -HSM, "Calculate multiple
 // float paths" off and on; then ZZ-CPP-MSS, a primary Mandatory Start beside a later or earlier second constraint;
 // ZZ-CPP-XEU, an expected finish on resource dependent work under way; ZZ-CPP-HSF, the float paths calculated on
-// free float)
+// free float; then ZZ-CPP-AVN, As Late As Possible on resource dependent work not yet started whose slide lands where
+// only its resource works; ZZ-CPP-XEV, an expected finish earlier than the resource would finish; ZZ-CPP-HSP and
+// -HSK, As Late As Possible work off the calculated float paths)
 // through the engine's public API, with P6's imported sizing laid over each file, and compare with P6's own values:
 // the four dates to the minute and total and free float in hours, every unfinished activity the engine schedules.
 // Fitted: SL, MG, MX, XO, AV, ZB, FZ, XE and FP were taken on these answers (see the folder's README).
@@ -96,8 +98,8 @@ for (const [name, proj] of Object.entries(P6.projects)) {
         else match++;
     }
 }
-if (rows !== 596) {
-    console.error('p6-h23-shapes.test.js: expected 596 probe rows, read ' + rows);
+if (rows !== 642) {
+    console.error('p6-h23-shapes.test.js: expected 642 probe rows, read ' + rows);
     process.exitCode = 1;
 }
 if (off.length) {
