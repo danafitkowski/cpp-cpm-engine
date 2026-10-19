@@ -4,9 +4,11 @@
 // a successor that needs it earlier than its constraint date, under retained logic and progress override, with a
 // finish milestone, resource dependent work, a finish-to-finish successor and a chain shaped like H22-06's;
 // ZZ-CPP-XMN, the same with "Use Expected Finish Dates" off; ZZ-CPP-XNR and -XNN, finish and start milestones and
-// resource dependent work under a mandatory or finish constraint, the option on and off) through the engine's public API, with P6's imported
+// resource dependent work under a mandatory or finish constraint, the option on and off; ZZ-CPP-XQR, -XQO and -XQN,
+// resource dependent work on resources keeping other hours, a mandatory date beside a second constraint, and the
+// milestone shapes under progress override) through the engine's public API, with P6's imported
 // sizing laid over each file, and compare with P6's own values: the four dates to the minute and total and free
-// float in hours, every unfinished activity. Fitted: XP, MR and XC on finish milestones were taken on these answers
+// float in hours, every unfinished activity. Fitted: XP, MR, PC and XC on finish milestones were taken on these answers
 // (see the folder's README).
 'use strict';
 const fs = require('fs');
@@ -88,8 +90,8 @@ for (const [name, proj] of Object.entries(P6.projects)) {
         else match++;
     }
 }
-if (rows !== 175) {
-    console.error('p6-xf-mandatory.test.js: expected 175 probe rows, read ' + rows);
+if (rows !== 307) {
+    console.error('p6-xf-mandatory.test.js: expected 307 probe rows, read ' + rows);
     process.exitCode = 1;
 }
 if (off.length) {

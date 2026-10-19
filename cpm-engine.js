@@ -3177,27 +3177,34 @@ function computeCPMHours(activities, relationships, o) {
         // MR (H22 follow-up, 18-Oct-2026): resource dependent work is pinned
         // too, its assignments running back from the pinned late finish
         // (ZZ-CPP-XMN M10, ZZ-CPP-XNR R1-R3, ZZ-CPP-XNN R1-R4, each resource
-        // on the activity's own calendar hours)
+        // on the activity's own calendar hours; ZZ-CPP-XQR / -XQO / -XQN Q1-Q5,
+        // resources on other hours and every day)
+        // PC (19-Oct-2026): only the primary constraint pins. A second
+        // constraint caps the pinned dates as a Start On or Before or a Finish
+        // On or Before does, a Mandatory Start or Mandatory Finish in the
+        // second slot too, which pins nothing (ZZ-CPP-XQR / -XQO / -XQN: Q7 a
+        // Finish On or Before under a Mandatory Finish, Q8 a Start On or
+        // Before under a Mandatory Start, Q9 a Mandatory Finish second to a
+        // Finish On or Before, Q10 a Mandatory Finish second to a Start On or
+        // After; Q6 a Mandatory Finish second to a Mandatory Start). "The
+        // earlier of the two" above follows from it
         if (!n.started) {
             const tt = n.task_type || 'TT_Task';
             const zero = (at) => ((tt === 'TT_Mile' && cal.isStart(at)) ? at : cal.prevWorkEnd(at));
             const xfLift = n.xf !== null && tt !== 'TT_Mile';
             let pin = null;
-            for (const cs of [n.c1, n.c2]) {
-                if (!cs || cs.at === null || (cs.type !== 'MS_Start' && cs.type !== 'MS_Finish')) continue;
-                if (cs.type === 'MS_Finish' && xfLift) continue;
-                let p;
+            const cs = n.c1;
+            if (cs && cs.at !== null && (cs.type === 'MS_Start' || (cs.type === 'MS_Finish' && !xfLift))) {
                 if (n.rem <= 0) {
                     const z = zero(cs.at);
-                    p = [z, z];
+                    pin = [z, z];
                 } else if (cs.type === 'MS_Start') {
                     const s0 = cal.nextWork(cs.at);
-                    p = [s0, cal.add(s0, n.rem)];
+                    pin = [s0, cal.add(s0, n.rem)];
                 } else {
                     const f0 = cal.prevWorkEnd(cs.at);
-                    p = [cal.sub(f0, n.rem), f0];
+                    pin = [cal.sub(f0, n.rem), f0];
                 }
-                if (pin === null || p[1] < pin[1] || (p[1] === pin[1] && p[0] < pin[0])) pin = p;
             }
             // MC (H12, 17-Oct-2026): the project's late finish still caps the
             // pin. Where the pin would put the late finish after the Must
@@ -3209,6 +3216,27 @@ function computeCPMHours(activities, relationships, o) {
             if (pin !== null) {
                 const cap = n.rem > 0 ? cal.prevWorkEnd(seed) : zero(seed);
                 if (pin[1] > cap) pin = n.rem > 0 ? [cal.sub(cap, n.rem), cap] : [cap, cap];
+                // PC: the second constraint caps the pin
+                const c2 = n.c2;
+                if (c2 && c2.at !== null) {
+                    if (c2.type === 'FNLT' || c2.type === 'FO' || c2.type === 'MS_Finish') {
+                        if (n.rem <= 0) {
+                            const z = zero(Math.min(pin[1], c2.at));
+                            if (z < pin[1]) pin = [z, z];
+                        } else {
+                            const f = cal.prevWorkEnd(c2.at);
+                            if (f < pin[1]) pin = [cal.sub(f, n.rem), f];
+                        }
+                    } else if (c2.type === 'SNLT' || c2.type === 'SO' || c2.type === 'MS_Start') {
+                        if (n.rem <= 0) {
+                            const z = zero(Math.min(pin[1], c2.at));
+                            if (z < pin[1]) pin = [z, z];
+                        } else {
+                            const s2 = cal.nextWork(c2.at);
+                            if (s2 < pin[0]) pin = [s2, cal.add(s2, n.rem)];
+                        }
+                    }
+                }
                 if (n.asg.length) {
                     const rb = _hrRsrcBackward(n.asg, cal, pin[1], null, null);
                     pin = [rb[0], rb[1]];
@@ -6422,71 +6450,42 @@ function computeCPM(activities, relationships, opts) {
             ? Object.assign({}, c, { type: 'FNLT' }) : c);
         const cstr = _xpCap(_uwDrop(node.constraint) ? null : node.constraint);
         const cstr2 = _xpCap(_uwDrop(node.constraint2) ? null : node.constraint2);
-        // v2.9.16 F5-C — soft secondary cannot tighten LF below a primary
-        // mandatory pin. Capture the LF that a primary mandatory (MS_Start /
-        // SO / MS_Finish / MFO) would have set, then refuse to let the
-        // secondary FNLT / SNLT pull LF below it.
         function _isMandatoryConstraint(c) {
             // v2.9.42 — SO / FO are NOT mandatory; only the four hard pins are.
             return c && (c.type === 'MS_Start' ||
                          c.type === 'MS_Finish' || c.type === 'MFO');
         }
-        const _primaryMandatoryLF = _isMandatoryConstraint(cstr)
-            ? _applyBackwardLFConstraint(code, Infinity, cstr, nodeCal, node.duration_days, [])
-            : null;
+        // PC (19-Oct-2026) — only the primary constraint pins. A second
+        // constraint caps the late finish, a Mandatory Start or Mandatory
+        // Finish in the second slot as a Start On or Before or a Finish On or
+        // Before does (see the hours pass; ZZ-CPP-XQR / -XQO / -XQN Q6-Q10).
+        // Through v2.10.11 a soft second constraint could not tighten the late
+        // finish below a primary pin and a mandatory second one restored its
+        // own pin (v2.9.16 F5-C); P6 does neither. Python paired site: the
+        // same block in compute_cpm.
+        const _asCap = c => ((c && (c.type === 'MS_Finish' || c.type === 'MFO'))
+            ? Object.assign({}, c, { type: 'FNLT' })
+            : (c && c.type === 'MS_Start') ? Object.assign({}, c, { type: 'SNLT' }) : c);
         // MD — which constraint, if any, holds the late date (printing only).
         let _mlBy = null;
         const _mlPrev = minLF;
         minLF = _applyBackwardLFConstraint(code, minLF, cstr, nodeCal, node.duration_days, alerts);
         if (minLF !== _mlPrev) _mlBy = cstr;
-        const _minLFBeforeSecondary = minLF;
-        minLF = _applyBackwardLFConstraint(code, minLF, cstr2, nodeCal, node.duration_days, alerts);
-        if (minLF !== _minLFBeforeSecondary) _mlBy = cstr2;
-        // MP (H4, 14-Oct-2026): a secondary that is itself mandatory is not
-        // soft: with a Mandatory Start and a Mandatory Finish the earlier pin
-        // holds the late date, as P6's own F9 of a real export carrying both
-        // on 1,090 activities did (the start pin governing 195 tasks, the
-        // finish pin 72) and as the Python reference and the hours pass do.
-        if (_primaryMandatoryLF !== null && Number.isFinite(_primaryMandatoryLF) &&
-            minLF < _primaryMandatoryLF && !_isMandatoryConstraint(cstr2)) {
-            alerts.push({
-                severity: 'WARN',
-                context: 'constraint-priority-override',
-                message: 'Secondary ' + (cstr2 ? cstr2.type : '') + ' on ' + code +
-                    ' attempted to tighten LF below primary mandatory ' + cstr.type +
-                    ' pin (' + cstr.date + '); secondary suppressed.',
-            });
-            minLF = _primaryMandatoryLF;
-            _mlBy = cstr;
-        }
-        // Symmetric — if secondary is mandatory, restore its pin if primary
-        // (soft) pulled LF off it.
-        const _secondaryMandatoryLF = _isMandatoryConstraint(cstr2)
-            ? _applyBackwardLFConstraint(code, Infinity, cstr2, nodeCal, node.duration_days, [])
-            : null;
-        if (_secondaryMandatoryLF !== null && Number.isFinite(_secondaryMandatoryLF) &&
-            minLF !== _secondaryMandatoryLF && !_isMandatoryConstraint(cstr)) {
-            // Only restore if primary was NOT also mandatory (otherwise the
-            // primary check above already won).
-            alerts.push({
-                severity: 'WARN',
-                context: 'constraint-priority-override',
-                message: 'Mandatory secondary ' + cstr2.type + ' on ' + code +
-                    ' restored LF to ' + cstr2.date + ' over soft primary.',
-            });
-            minLF = _secondaryMandatoryLF;
-            _mlBy = cstr2;
-        }
         // MC (H12, 17-Oct-2026) — the project's late finish still caps a
         // mandatory pin: where the pin would put the late finish after the
         // seed (the Must Finish By), P6 keeps the seed, so the float goes
-        // negative (ZZ-CPP-MSNP / -MSNR M1 M2 M4 M5 M9; H12-09 A1330). Python
-        // paired site: the same block in compute_cpm.
-        if (_mlBy && _mlBy !== 'ext' && _isMandatoryConstraint(_mlBy) && Number.isFinite(node._seedLF) &&
+        // negative (ZZ-CPP-MSNP / -MSNR M1 M2 M4 M5 M9; H12-09 A1330). Before
+        // the second constraint caps, as in the hours pass. Python paired
+        // site: the same block in compute_cpm.
+        if (_mlBy && _isMandatoryConstraint(_mlBy) && Number.isFinite(node._seedLF) &&
                 minLF > node._seedLF) {
             minLF = node._seedLF;
             _mlBy = null;
         }
+        const _c2cap = _asCap(cstr2);
+        const _minLFBeforeSecondary = minLF;
+        minLF = _applyBackwardLFConstraint(code, minLF, _c2cap, nodeCal, node.duration_days, alerts);
+        if (minLF !== _minLFBeforeSecondary) _mlBy = _c2cap;
         // EX (v2.9.57) — the external late finish caps the late finish.
         if (node.external_late_finish) {
             const _extLFNum = _externalLateFinishNum(node.external_late_finish, nodeCal,

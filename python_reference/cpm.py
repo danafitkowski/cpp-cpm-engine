@@ -4727,53 +4727,38 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         _uw_all = _uw_back and any(_c and _c.get('type') in _UNDERWAY_LATE_DROP_ALL for _c in (cstr, cstr2))
         cstr, cstr2 = [None if (_uw_back and _c and (_uw_all or _c.get('type') in _UNDERWAY_DROPPED_LATE_TYPES))
                        else _c for _c in (cstr, cstr2)]
+        # PC (19-Oct-2026) — only the primary constraint pins. A second
+        # constraint caps the late finish, a Mandatory Start or Mandatory Finish
+        # in the second slot as a Start On or Before or a Finish On or Before
+        # does (see cpm_hours; ZZ-CPP-XQR / -XQO / -XQN Q6-Q10). The JS engine
+        # had, since v2.9.16, kept a primary pin against a tighter soft second
+        # constraint and restored a mandatory second one's pin (F5-C); P6 does
+        # neither. JS paired site: the same block in computeCPM.
+        if cstr2 and cstr2.get('type') in ('MS_Finish', 'MFO'):
+            cstr2 = dict(cstr2, type='FNLT')
+        elif cstr2 and cstr2.get('type') == 'MS_Start':
+            cstr2 = dict(cstr2, type='SNLT')
         _ml_by = None
-        for _c in (cstr, cstr2):
-            _ml_prev = min_lf
-            min_lf = _apply_backward_lf_constraint(
-                code, min_lf, _c, node_cal, node['duration_days'], alerts)
-            if min_lf != _ml_prev:
-                _ml_by = _c
-        # v2.9.16 F5-C — a soft secondary cannot tighten LF below a primary
-        # mandatory pin, and a mandatory secondary restores its pin over a soft
-        # primary; with both mandatory the earlier pin holds (MP, H4). Through
-        # v2.10.11 the Python reference let the soft one win. JS paired site:
-        # the same block in computeCPM.
-        _is_mand = lambda _c: bool(_c) and _c.get('type') in ('MS_Start', 'MS_Finish', 'MFO')
-        if _is_mand(cstr) and not _is_mand(cstr2):
-            _pin_lf = _apply_backward_lf_constraint(
-                code, float('inf'), cstr, node_cal, node['duration_days'], [])
-            if _pin_lf != float('inf') and min_lf < _pin_lf:
-                alerts.append({
-                    'severity': 'WARN',
-                    'context': 'constraint-priority-override',
-                    'message': (f"Secondary {cstr2['type'] if cstr2 else ''} on {code} attempted to tighten "
-                                f"LF below primary mandatory {cstr['type']} pin ({cstr['date']}); "
-                                f"secondary suppressed."),
-                })
-                min_lf = _pin_lf
-                _ml_by = cstr
-        if _is_mand(cstr2) and not _is_mand(cstr):
-            _pin_lf = _apply_backward_lf_constraint(
-                code, float('inf'), cstr2, node_cal, node['duration_days'], [])
-            if _pin_lf != float('inf') and min_lf != _pin_lf:
-                alerts.append({
-                    'severity': 'WARN',
-                    'context': 'constraint-priority-override',
-                    'message': (f"Mandatory secondary {cstr2['type']} on {code} restored LF to "
-                                f"{cstr2['date']} over soft primary."),
-                })
-                min_lf = _pin_lf
-                _ml_by = cstr2
+        _ml_prev = min_lf
+        min_lf = _apply_backward_lf_constraint(
+            code, min_lf, cstr, node_cal, node['duration_days'], alerts)
+        if min_lf != _ml_prev:
+            _ml_by = cstr
         # MC (H12, 17-Oct-2026) — the project's late finish still caps a
         # mandatory pin: where the pin would put the late finish after the
         # seed (the Must Finish By), P6 keeps the seed, so the float goes
-        # negative (ZZ-CPP-MSNP / -MSNR M1 M2 M4 M5 M9; H12-09 A1330). JS
-        # paired site: the same block in computeCPM.
+        # negative (ZZ-CPP-MSNP / -MSNR M1 M2 M4 M5 M9; H12-09 A1330). Before
+        # the second constraint caps, as in cpm_hours. JS paired site: the same
+        # block in computeCPM.
         if (isinstance(_ml_by, dict) and _ml_by.get('type') in ('MS_Start', 'MS_Finish', 'MFO')
                 and node.get('_seed_lf') is not None and min_lf > node['_seed_lf']):
             min_lf = node['_seed_lf']
             _ml_by = None
+        _ml_prev = min_lf
+        min_lf = _apply_backward_lf_constraint(
+            code, min_lf, cstr2, node_cal, node['duration_days'], alerts)
+        if min_lf != _ml_prev:
+            _ml_by = cstr2
         # EX (v2.9.57) — the external late finish caps the late finish.
         if node['external_late_finish']:
             _ext_lf_num = _external_late_finish_num(

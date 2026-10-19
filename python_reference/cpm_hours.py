@@ -873,28 +873,36 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # MR (H22 follow-up, 18-Oct-2026): resource dependent work is pinned
         # too, its assignments running back from the pinned late finish
         # (ZZ-CPP-XMN M10, ZZ-CPP-XNR R1-R3, ZZ-CPP-XNN R1-R4, each resource on
-        # the activity's own calendar hours).
+        # the activity's own calendar hours; ZZ-CPP-XQR / -XQO / -XQN Q1-Q5,
+        # resources on other hours and every day).
+        # PC (19-Oct-2026): only the primary constraint pins. A second
+        # constraint caps the pinned dates as a Start On or Before or a Finish
+        # On or Before does, a Mandatory Start or Mandatory Finish in the second
+        # slot too, which pins nothing (ZZ-CPP-XQR / -XQO / -XQN: Q7 a Finish On
+        # or Before under a Mandatory Finish, Q8 a Start On or Before under a
+        # Mandatory Start, Q9 a Mandatory Finish second to a Finish On or
+        # Before, Q10 a Mandatory Finish second to a Start On or After; Q6 a
+        # Mandatory Finish second to a Mandatory Start). "The earlier of the
+        # two" above follows from it.
         if not n['started']:
             tt = n.get('task_type') or 'TT_Task'
             xf_lift = n['xf'] is not None and tt != 'TT_Mile'
+
+            def zero(at):
+                return at if (tt == 'TT_Mile' and cal.is_start(at)) else cal.prev_work_end(at)
             pin = None
-            for k in ('c1', 'c2'):
-                cs = n[k]
-                if not cs or cs['at'] is None or cs['type'] not in ('MS_Start', 'MS_Finish'):
-                    continue
-                if cs['type'] == 'MS_Finish' and xf_lift:
-                    continue
+            cs = n['c1']
+            if (cs and cs['at'] is not None
+                    and (cs['type'] == 'MS_Start' or (cs['type'] == 'MS_Finish' and not xf_lift))):
                 if n['rem'] <= 0:
-                    z = cs['at'] if (tt == 'TT_Mile' and cal.is_start(cs['at'])) else cal.prev_work_end(cs['at'])
-                    p = (z, z)
+                    z = zero(cs['at'])
+                    pin = (z, z)
                 elif cs['type'] == 'MS_Start':
                     s0 = cal.next_work(cs['at'])
-                    p = (s0, cal.add(s0, n['rem']))
+                    pin = (s0, cal.add(s0, n['rem']))
                 else:
                     f0 = cal.prev_work_end(cs['at'])
-                    p = (cal.sub(f0, n['rem']), f0)
-                if pin is None or p[1] < pin[1] or (p[1] == pin[1] and p[0] < pin[0]):
-                    pin = p
+                    pin = (cal.sub(f0, n['rem']), f0)
             # MC (H12, 17-Oct-2026): the project's late finish still caps the
             # pin. Where the pin would put the late finish after the Must
             # Finish By, P6 keeps the late finish the Must Finish By gives and
@@ -908,6 +916,27 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     cap = seed if (tt == 'TT_Mile' and cal.is_start(seed)) else cal.prev_work_end(seed)
                 if pin[1] > cap:
                     pin = (cal.sub(cap, n['rem']), cap) if n['rem'] > 0 else (cap, cap)
+                # PC: the second constraint caps the pin
+                c2 = n['c2']
+                if c2 and c2['at'] is not None:
+                    if c2['type'] in ('FNLT', 'FO', 'MS_Finish'):
+                        if n['rem'] <= 0:
+                            z = zero(min(pin[1], c2['at']))
+                            if z < pin[1]:
+                                pin = (z, z)
+                        else:
+                            f = cal.prev_work_end(c2['at'])
+                            if f < pin[1]:
+                                pin = (cal.sub(f, n['rem']), f)
+                    elif c2['type'] in ('SNLT', 'SO', 'MS_Start'):
+                        if n['rem'] <= 0:
+                            z = zero(min(pin[1], c2['at']))
+                            if z < pin[1]:
+                                pin = (z, z)
+                        else:
+                            s2 = cal.next_work(c2['at'])
+                            if s2 < pin[0]:
+                                pin = (s2, cal.add(s2, n['rem']))
                 if n['asg']:
                     rb = _rsrc_backward(n['asg'], cal, pin[1], None)
                     pin = (rb[0], rb[1])

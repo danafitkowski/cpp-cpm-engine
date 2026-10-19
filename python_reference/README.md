@@ -200,9 +200,9 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  2f49582437df7e7bb025508dd5af56ef1fc08fab376bf6e5a47e0daebd5057fd
+cpm.py          SHA-256:  756addd436ec78af0c5db1cae1a47f9d2a2b507de45e81696af5befb6b609ea9
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  036ab3593f02de6350c568af6e89b53b09092d9f007e4700b0c7a51cc777eeb6
+cpm_hours.py    SHA-256:  0da6c0490d654f3d913f26ad83d20fd2e148523262eccc167a1ea8ebe0710634
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -239,7 +239,15 @@ completed work derive the early start back from the actual finish
 start), a remaining duration longer than the duration is flagged
 (remaining-exceeds-duration), and the As Late As Possible slide checks
 its successors (alap-slide-violates-succ). The harness gains F196: 192
-fixtures, 14686 of 14686 executed.)
+fixtures, 14686 of 14686 executed. Then, from 2f495824... and 036ab359...:
+only the primary constraint pins; a second constraint caps the late
+dates, a Mandatory Start or Mandatory Finish in the second slot as a
+Start On or Before or a Finish On or Before does, after the pin and the
+Must Finish By (PC). Measured on the P6 probes ZZ-CPP-XQR, -XQO and -XQN
+(Q6-Q10). This withdraws the F5-C port above in both passes of both
+ports: P6 lets a tighter second constraint cap a primary pin and never
+pins on the second slot. F192 and F193 now pin it: 192 fixtures, 14686
+of 14686 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -807,8 +815,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 317667
-  sha-256:  2f49582437df7e7bb025508dd5af56ef1fc08fab376bf6e5a47e0daebd5057fd
+  bytes: 316819
+  sha-256:  756addd436ec78af0c5db1cae1a47f9d2a2b507de45e81696af5befb6b609ea9
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

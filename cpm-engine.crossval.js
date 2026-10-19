@@ -3816,11 +3816,12 @@ compareFixture('F191 - XP and MR: the same with the option off, whole days', {
     relationship_lag_calendar: 'rcal_Predecessor',
 });
 
-// v2.10.12: a mandatory date beside a second constraint. The JS engine's whole-day pass has, since v2.9.16, kept a
-// primary mandatory pin against a soft secondary that would tighten the late finish, restored a mandatory secondary's
-// pin over a soft primary (F5-C), and re-checked each Finish On or Before and Mandatory Finish after both finish
-// clamps (F5-A). Through v2.10.11 the Python reference did neither: the soft constraint won its late dates and the
-// alerts were missing. The hours pass already agreed.
+// PC (v2.10.12, P6 probes ZZ-CPP-XQR / -XQO / -XQN Q6-Q10): a mandatory date beside a second constraint. Only the
+// primary constraint pins; a second one caps the late dates, a Mandatory Start or Mandatory Finish in the second slot
+// as a Start On or Before or a Finish On or Before does. From v2.9.16 to v2.10.11 the JS engine's whole-day pass kept a
+// primary pin against a tighter second constraint and restored a mandatory second one's pin (F5-C), and its hours pass
+// pinned on either slot; P6 does neither. Both engines also re-check each Finish On or Before and Mandatory Finish
+// after both finish clamps (F5-A), which the Python reference lacked until v2.10.12.
 const prPairs = [['CS_MANDFIN', '18', 'CS_MEOB', '11'], ['CS_MEOB', '11', 'CS_MANDFIN', '18'],
     ['CS_MANDSTART', '16', 'CS_MSOB', '09'], ['CS_MSOB', '09', 'CS_MANDSTART', '16'],
     ['CS_MANDSTART', '16', 'CS_MEOB', '11'], ['CS_MANDFIN', '18', 'CS_MEO', '11'],
@@ -3831,10 +3832,10 @@ const prActs = (A, hrs) => [A('Z', 160)].concat(...prPairs.map((q, i) => [A('A' 
         constraint2: { type: q[2], date: xpDate(q[3]) + (hrs ? (/START|MSO/.test(q[2]) ? ' 08:00' : ' 17:00') : '') } }),
     A('C' + i, 8)]));
 const prRels = (R) => [].concat(...prPairs.map((q, i) => [R('A' + i, 'B' + i), R('B' + i, 'C' + i)]));
-compareFixture('F192 - a mandatory date beside a second constraint: the mandatory pin holds the late dates, whole days', {
+compareFixture('F192 - PC: a mandatory date beside a second constraint: only the primary pins, the second caps, whole days', {
     activities: prActs(dA, false), relationships: prRels(dR), data_date: '2026-12-07', cal_map: HCAL,
 });
-compareFixture('F193 - a mandatory date beside a second constraint, in hours', {
+compareFixture('F193 - PC: the same, in hours', {
     activities: prActs(hA, true), relationships: prRels(hR), data_date: '2026-12-07 08:00', cal_map: HCAL,
     relationship_lag_calendar: 'rcal_Predecessor',
 }, { hours: true });

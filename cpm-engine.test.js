@@ -7276,10 +7276,11 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         'A.es=' + r.nodes.A.es_date);
 }
 
-// v2.9.16 F5-C — backward pass: secondary FNLT cannot pull LF below
-// primary mandatory-start pin. MS_Start primary at 2026-01-10 pins
-// LF = MS_Start.date + duration; secondary FNLT at 2026-01-08 must NOT
-// tighten LF earlier than the primary mandatory pin.
+// PC (v2.10.12) — backward pass: the primary Mandatory Start pins and the
+// secondary FNLT still caps the late finish below the pin, as P6 23.12.1 did on
+// its own F9 (ZZ-CPP-XQR / -XQO / -XQN Q7, Q8). From v2.9.16 to v2.10.11 this
+// test pinned the opposite (F5-C: the secondary suppressed, a priority-override
+// WARN); P6 contradicts it.
 {
     const r = E.computeCPM(
         [{ code: 'A', duration_days: 5,
@@ -7289,14 +7290,16 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         { dataDate: '2026-01-05' }
     );
     const A = r.nodes.A;
-    // After F5-C: LS pinned at MS_Start date (2026-01-10), priority-override
-    // WARN emitted. With no calendar, LF = 2026-01-10 + 5 = 2026-01-15.
-    const priorityWarns = r.alerts.filter(a => a.context === 'constraint-priority-override');
-    check('T-FIX-F5-C: backward secondary FNLT cannot override primary MS_Start',
-        priorityWarns.some(a => a.message.indexOf('FNLT') >= 0 && a.message.indexOf('MS_Start') >= 0),
-        'warns=' + JSON.stringify(priorityWarns.map(a => a.message)));
-    check('T-FIX-F5-C: LS preserved on MS_Start date',
-        A.ls_date === '2026-01-10',
+    // The late finish is the secondary FNLT date and the late start five days
+    // before it (no calendar), so the float is negative; nothing is
+    // overridden and no priority-override WARN is raised on the late side.
+    const lateWarns = r.alerts.filter(a => a.context === 'constraint-priority-override' &&
+        a.message.indexOf('tighten LF') >= 0);
+    check('PC: a secondary FNLT caps the late finish below a primary MS_Start pin (no override)',
+        lateWarns.length === 0 && A.tf < 0,
+        'warns=' + JSON.stringify(lateWarns.map(a => a.message)) + ' tf=' + A.tf);
+    check('PC: LS is the FNLT date less the duration, before the MS_Start date',
+        A.ls_date === '2026-01-03',
         'A.ls=' + A.ls_date);
 }
 

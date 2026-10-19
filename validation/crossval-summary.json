@@ -1,6 +1,6 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T04:44:43.558Z",
+  "generated_utc": "2026-10-19T09:20:13.965Z",
   "fixtures": {
     "total": 192,
     "passed": 192,
@@ -1528,7 +1528,7 @@
     },
     {
       "id": "F192",
-      "name": "F192 - a mandatory date beside a second constraint: the mandatory pin holds the late dates, whole days",
+      "name": "F192 - PC: a mandatory date beside a second constraint: only the primary pins, the second caps, whole days",
       "checks": 258,
       "fails": 0,
       "skips": 0,
@@ -1536,7 +1536,7 @@
     },
     {
       "id": "F193",
-      "name": "F193 - a mandatory date beside a second constraint, in hours",
+      "name": "F193 - PC: the same, in hours",
       "checks": 287,
       "fails": 0,
       "skips": 0,
