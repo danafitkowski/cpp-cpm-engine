@@ -200,7 +200,7 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  0e29d2d10b33bcff73f3a6cb0240968887d7cb38e6159cb8fa82ba27dfdb980a
+cpm.py          SHA-256:  2f49582437df7e7bb025508dd5af56ef1fc08fab376bf6e5a47e0daebd5057fd
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  036ab3593f02de6350c568af6e89b53b09092d9f007e4700b0c7a51cc777eeb6
 
@@ -229,7 +229,17 @@ activity-code-trimmed, duplicate-activity-code) and trims activity codes
 and relationship endpoints as the JS engine does, where it had skipped a
 null or code-less activity silently and kept a padded code, so that a
 relationship naming the trimmed code dangled. The harness gains 2
-fixtures (F194-F195): 191 fixtures, 14617 of 14617 executed.)
+fixtures (F194-F195): 191 fixtures, 14617 of 14617 executed. Then, from
+0e29d2d1...: five more of the JS engine's checks, which the reference
+lacked: a constraint dated on no real day is dropped loudly
+(constraint-invalid-date, primary and secondary), an activity date that
+does not parse is alerted (invalid-date-coerced), actuals inverted on
+completed work derive the early start back from the actual finish
+(inverted-actuals; the reference had seeded it from the inverted actual
+start), a remaining duration longer than the duration is flagged
+(remaining-exceeds-duration), and the As Late As Possible slide checks
+its successors (alap-slide-violates-succ). The harness gains F196: 192
+fixtures, 14686 of 14686 executed.)
 
 (v2.10.11 candidate, unreleased, 2026-10-18 - cpm.py bumped from 9fab4c0b...:
 ENGINE_VERSION reads 2.10.11; the whole-day pass leaves the expected
@@ -797,15 +807,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 311589
-  sha-256:  0e29d2d10b33bcff73f3a6cb0240968887d7cb38e6159cb8fa82ba27dfdb980a
+  bytes: 317667
+  sha-256:  2f49582437df7e7bb025508dd5af56ef1fc08fab376bf6e5a47e0daebd5057fd
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 191 passed, 0 failed
-  Checks:   14617 / 14617 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 192 passed, 0 failed
+  Checks:   14686 / 14686 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

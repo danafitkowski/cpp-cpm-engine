@@ -3852,6 +3852,19 @@ compareFixture('F194 - input checks: a null activity, a missing code, a padded c
 compareFixture('F195 - input checks: an empty network', {
     activities: [], relationships: [], data_date: '2026-12-07', cal_map: HCAL,
 });
+// v2.10.12: the other input checks of the JS engine's whole-day pass, which the Python reference lacked until
+// v2.10.12: a constraint dated on no real day (primary and secondary: dropped), an activity date that does not
+// parse, actuals inverted on completed work (the early start derived back from the actual finish), and a remaining
+// duration longer than the duration.
+compareFixture('F196 - input checks: an invalid constraint date, an invalid activity date, inverted actuals, remaining longer than the duration', {
+    activities: [dA('A', 8), dA('B', 16, { constraint: { type: 'CS_MSOA', date: '2026-13-45' } }),
+        dA('C', 16, { constraint: { type: 'CS_MSOA', date: '2026-12-08' }, constraint2: { type: 'CS_MEOB', date: 'abc' } }),
+        dA('D', 8, { early_start: 'not-a-date' }),
+        dA('E', 24, { actual_start: '2026-12-03', actual_finish: '2026-12-01', is_complete: true }),
+        dA('F', 16, { actual_start: '2026-12-02', remaining_duration: 4 }), dA('G', 8)],
+    relationships: [dR('A', 'B'), dR('A', 'C'), dR('B', 'D'), dR('E', 'F'), dR('F', 'G'), dR('C', 'G')],
+    data_date: '2026-12-07', cal_map: HCAL,
+});
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +

@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.12",
-  "generated_utc": "2026-10-19T04:32:40.068Z",
+  "generated_utc": "2026-10-19T04:44:43.558Z",
   "fixtures": {
-    "total": 191,
-    "passed": 191,
+    "total": 192,
+    "passed": 192,
     "failed": 0
   },
   "checks": {
-    "executed": 14617,
+    "executed": 14686,
     "failed": 0,
-    "passed": 14617,
+    "passed": 14686,
     "skipped": 0,
-    "surface": 14617
+    "surface": 14686
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,13 +19,13 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 189,
-    "project_finish": 189,
-    "critical_codes": 189,
-    "topo_order": 189,
-    "alert_count": 189,
-    "alert_severity_counts": 189,
-    "node <id>": 13436,
+    "project_finish_num": 190,
+    "project_finish": 190,
+    "critical_codes": 190,
+    "topo_order": 190,
+    "alert_count": 190,
+    "alert_severity_counts": 190,
+    "node <id>": 13499,
     "threw (both engines)": 2,
     "hours": 45
   },
@@ -1554,6 +1554,14 @@
       "id": "F195",
       "name": "F195 - input checks: an empty network",
       "checks": 6,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F196",
+      "name": "F196 - input checks: an invalid constraint date, an invalid activity date, inverted actuals, remaining longer than the duration",
+      "checks": 69,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

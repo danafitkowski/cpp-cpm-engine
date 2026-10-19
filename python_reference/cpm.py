@@ -303,6 +303,21 @@ def _normalize_constraint(c, alerts=None, ctx=None):
                 ),
             })
         return None
+    if date_to_num(date_str) == 0:
+        # v2.10.12 — a constraint date that does not parse is dropped loudly,
+        # as the JS engine drops it (constraint-invalid-date), not carried on
+        # as the epoch. JS paired site: _normalizeConstraint.
+        if alerts is not None:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-invalid-date',
+                'message': (
+                    f'Constraint {canonical} on {ctx or "activity"} has invalid date '
+                    f'{json.dumps(str(raw_date))}; constraint dropped to prevent silent '
+                    'epoch-coercion. Provide a YYYY-MM-DD date.'
+                ),
+            })
+        return None
     # v2.9.45 — carry the TIME OF DAY beside the date. `date` is unchanged
     # (every consumer that reads a constraint back still sees the date P6
     # stored); `time_minutes` is what the finish-side clamp resolves the
@@ -347,6 +362,21 @@ def _normalize_constraint2(c, alerts=None, ctx=None):
                 'message': (
                     f'Secondary constraint {canonical} on {ctx or "activity"} '
                     'has no date; secondary constraint dropped.'
+                ),
+            })
+        return None
+    if date_to_num(date_str) == 0:
+        # v2.10.12 — a constraint date that does not parse is dropped loudly,
+        # as the JS engine drops it (constraint-invalid-date), not carried on
+        # as the epoch. JS paired site: _normalizeConstraint2.
+        if alerts is not None:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'constraint-invalid-date',
+                'message': (
+                    f'Constraint {canonical} (secondary) on {ctx or "activity"} has invalid date '
+                    f'{json.dumps(str(raw_date))}; constraint dropped to prevent silent '
+                    'epoch-coercion. Provide a YYYY-MM-DD date.'
                 ),
             })
         return None
@@ -2509,6 +2539,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         actual_start = a.get('actual_start', '') or ''
         actual_finish = a.get('actual_finish', '') or ''
         is_complete = bool(a.get('is_complete', False)) or bool(actual_finish)
+        # v2.10.12 — a non-empty activity date that does not parse as
+        # YYYY-MM-DD is alerted, as the JS engine alerts it (it reads as the
+        # epoch otherwise). JS paired site: _alertOnSilentDateCoerce.
+        for _raw, _field in ((a.get('early_start'), 'early_start'), (a.get('early_finish'), 'early_finish'),
+                             (actual_start, 'actual_start'), (actual_finish, 'actual_finish')):
+            if not _raw:
+                continue
+            _trim = str(_raw)[:10]
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', _trim) or (date_to_num(_raw) == 0 and _trim != '2020-01-01'):
+                alerts.append({
+                    'severity': 'ALERT',
+                    'context': 'invalid-date-coerced',
+                    'message': ('INVALID_DATE on %s.%s: %s did not parse as YYYY-MM-DD; silently coerced to '
+                                'epoch. Forensic dates must be valid 4-digit Gregorian dates.'
+                                % (code, _field, json.dumps(str(_raw)))),
+                })
         es = date_to_num(a.get('early_start', '')) if a.get('early_start') else 0
         ef = date_to_num(a.get('early_finish', '')) if a.get('early_finish') else 0
         # v2.9.44 — a completed predecessor drives its successors from its
@@ -2544,7 +2590,25 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         actual_start = str(actual_start).strip()[:10]
         actual_finish = str(actual_finish).strip()[:10]
         if is_complete and actual_finish:
-            if actual_start:
+            if actual_start and date_to_num(actual_start) > ef:
+                # v2.10.12 — inverted actuals (an actual start after the actual
+                # finish): the early start is derived back from the finish, as
+                # for a missing actual start, and alerted, as the JS engine
+                # does; it had been seeded from the inverted actual start. JS
+                # paired site: the inverted-actuals branch of computeCPM.
+                _clndr_id = a.get('clndr_id', '') or ''
+                _cal_info = cal_map.get(_clndr_id) if _clndr_id else None
+                es = _retreat_workdays(ef, dur, _cal_info, alerts=alerts,
+                                       ctx=f'INVERTED_ACTUALS ES derive {code}')
+                alerts.append({
+                    'severity': 'ALERT',
+                    'context': 'inverted-actuals',
+                    'message': (f'INVERTED_ACTUALS on {code}: actual_start={actual_start} is AFTER '
+                                f'actual_finish={actual_finish}. Negative-duration completed activity; ES '
+                                f'derived from the actual finish back by the duration = {num_to_date(es)}. '
+                                'Investigate P6 data-entry error.'),
+                })
+            elif actual_start:
                 es = date_to_num(actual_start)
             else:
                 # v2.9.12 T4.25 — backport R8A-1 from JS. Previously this
@@ -2580,6 +2644,18 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 _tmp = float(_rem_raw)
                 if math.isfinite(_tmp) and _tmp >= 0:
                     _rem_dur = _tmp
+                    # v2.10.12 — a remaining duration longer than the duration
+                    # is a red flag the JS engine raises; the engine uses it.
+                    if _tmp > dur:
+                        alerts.append({
+                            'severity': 'WARN',
+                            'context': 'remaining-exceeds-duration',
+                            'message': ('REMAINING_EXCEEDS_DURATION on %s: remaining_duration=%s > '
+                                        'duration_days=%s. Engine uses remaining_duration for EF anchor '
+                                        '(retained-logic mode); investigate whether OD should have been '
+                                        're-baselined or whether RD was incorrectly extended.'
+                                        % (code, '%g' % _tmp, '%g' % dur)),
+                        })
         except (TypeError, ValueError):
             _rem_dur = None
         nodes[code] = {
@@ -4937,6 +5013,30 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             n['tf'] = min(n['tf_start'], n['tf_finish'])
         else:
             n['tf'] = n['tf_finish']
+        # v2.10.12 — the JS engine's invariant check after the slide: no
+        # successor may now start (or finish) before this activity lets it;
+        # a link the slide does not read is not checked. JS paired site: the
+        # ALAP post-pass (alap-slide-violates-succ).
+        for s in succ_map.get(c, []):
+            bn = nodes.get(s['to_code'])
+            if not bn or bn.get('is_complete'):
+                continue
+            if schedule_mode == 'progress_override' and (
+                    (_a_started and s['type'] in ('SS', 'SF')) or
+                    (s['type'] in ('FS', 'SS') and date_to_num(bn.get('actual_start') or '') > 0)):
+                continue
+            _refs = {'FS': (n['ef'], bn['es'], 'pred.EF > succ.ES'), 'SS': (n['es'], bn['es'], 'pred.ES > succ.ES'),
+                     'FF': (n['ef'], bn['ef'], 'pred.EF > succ.EF'), 'SF': (n['es'], bn['ef'], 'pred.ES > succ.EF')}
+            if s['type'] not in _refs:
+                continue
+            _pr, _sr, _desc = _refs[s['type']]
+            if (s.get('lag_days', 0) or 0) == 0 and _pr > _sr:
+                alerts.append({
+                    'severity': 'WARN',
+                    'context': 'alap-slide-violates-succ',
+                    'message': ('ALAP slide on %s produced %s for %s relation to %s (successor dates are stale).'
+                                % (c, _desc, s['type'], s['to_code'])),
+                })
 
     for n in nodes.values():
         n['es_date'] = num_to_date(n['es'])
