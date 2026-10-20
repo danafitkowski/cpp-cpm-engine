@@ -200,13 +200,14 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  1be1edef3a69c6d4f264571144c251720ec115374e1a0b4a01ff6cb1cd4a276e
+cpm.py          SHA-256:  aa0132b23a6f1e9692272432044810db60932f277844b88360dfd1006c71d316
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  c03f8f3b6c78f18a0a3519dabdf608c7c5543c09dfd6aef359a57d8fb4075192
 
 (v2.10.13 candidate, unreleased, 2026-10-20 - cpm.py bumped from b06d14f3...:
-compute_cpm takes float_path_end, the activity P6's "Calculate multiple
-float paths" ends at (SCHEDOPTIONS key_activity_for_multiple_longest_paths):
+ENGINE_VERSION reads 2.10.13. compute_cpm takes float_path_end, the
+activity P6's "Calculate multiple float paths" ends at (SCHEDOPTIONS
+key_activity_for_multiple_longest_paths):
 under it As Late As Possible work that is neither that activity nor leads
 into it holds no free float, as with the option off (FK; P6 probe rounds
 11 to 14, validation/p6-probes/key-activity-2026-10-20); and on work
@@ -894,7 +895,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 323123
-  sha-256:  1be1edef3a69c6d4f264571144c251720ec115374e1a0b4a01ff6cb1cd4a276e
+  sha-256:  aa0132b23a6f1e9692272432044810db60932f277844b88360dfd1006c71d316
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
