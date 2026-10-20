@@ -200,7 +200,11 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # bound at the next opening after its early finish (AG) or a day later. 'wide9' (H27 on) draws exactly what wide8 draws,
 # from the same stream, except that no activity gets two assignments of one resource: where wide7's ZW shape draws the
 # Mon-Thu resource the work already has, it takes the other one, and any other repeat is dropped, keeping the first, as
-# P6's import keeps (H26-08 A1490).
+# P6's import keeps (H26-08 A1490). 'wide10' (H27 on) draws exactly what wide9 draws and then, from the same stream, the
+# shapes v2.10.12 lists as not measured ('unm': chance; see draw_unm): start milestones with an expected finish, a
+# second constraint on work under way beside a mandatory date, an assignment with no units per hour on resource
+# dependent work under way, and, where "Calculate multiple float paths" is on, the float paths ending at an activity
+# of the network rather than at the project's finish.
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
@@ -239,6 +243,11 @@ WIDE_PROFILES = {
               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
               'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85, 'h23s': 0.9,
               'mfp': 0.5, 'h24s': 0.9, 'h25s': 0.9, 'one_per_rsrc': True},
+    'wide10': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                          'external': 0.55},
+               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
+               'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85, 'h23s': 0.9,
+               'mfp': 0.5, 'h24s': 0.9, 'h25s': 0.9, 'one_per_rsrc': True, 'unm': 0.9},
 }
 
 # The values P6 23.12 writes for a project created with its defaults.
@@ -687,6 +696,9 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
         w['h25s'] = {'zf': [], 'bm': [], 'ag': [], 'ag_slide': []}
     if pf.get('h24s') is not None:
         draw_h24s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0)
+    # wide10: the shapes v2.10.12 lists as not measured, drawn after everything wide9 draws.
+    if pf.get('unm') is not None:
+        draw_unm(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, data_date, n0)
     return w
 
 
@@ -1440,6 +1452,171 @@ def draw_h24s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0):
         w['h25s']['ag_slide' if slide else 'ag'].append(a['code'])
 
 
+def draw_unm(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, data_date, n0):
+    """wide10 (H27 on): the shapes v2.10.12 lists as not measured, each from the same stream after everything wide9
+    draws. With its chance: a) one or two start milestones with an expected finish, each finish-to-start after
+    unfinished work of the network and before a task held by a Finish On or Before, with a Start On or After, a
+    Mandatory Start or no constraint ("Use Expected Finish Dates" keeps wide4's draw, on in about four cases in five);
+    b) one or two tasks under way with a primary and a second constraint, one of them a mandatory date; c) one task
+    under way made resource dependent, with an assignment with work and one with no units per hour, a lag on about
+    half; d) where "Calculate multiple float paths" is on, about three times in five, the float paths end at an
+    unfinished activity of the network drawn at random rather than at the project's finish. Where the earlier
+    features leave no free task under way for b) or c), a new one is added: started start-to-start after work that
+    has started, before the data date, with 30 to 90 per cent of its 16, 24 or 40 h left, and finish-to-start into the
+    project's finish milestone. The shapes' resources are one per week pattern, with no holidays, their resource and
+    calendar ids from pid * 100 + 81 on, clear of wide7's (pid * 100 + 61 on) and of the calendar wide8 may add
+    (pid * 100 + 99)."""
+    w['unm'] = {'xs': [], 'pcu': [], 'zu': [], 'mfk': []}
+    if rng.random() >= pf['unm']:
+        return
+    made = {}
+    end = acts[n0 - 1]
+
+    def cdays(cal, h):
+        return h / max(cal.week_hours() / 7.0, 0.1)
+
+    def day(dt):
+        return (dt - at(0)).total_seconds() / 86400.0
+
+    def add_link(p, s, typ, lag):
+        rels.append({'pred': p['i'], 'succ': s['i'], 'type': typ, 'lag': lag})
+        s['preds'].append(rels[-1])
+
+    def resource(key):
+        # one resource per week pattern, on a calendar of its own with no holidays
+        if key not in made:
+            i = len(w['resources']) + 1
+            num = pid * 100 + 81 + len(made)
+            desc, week = WEEKS[key] if key in WEEKS else H24_WEEKS[key]
+            rid = '%s-R%d' % (short, i)
+            hours = [sum(b - a for a, b in sl) / 60.0 for sl in week.values()]
+            made[key] = {'id': num, 'seq': i, 'short': rid, 'type': 'RT_Labor', 'name': '%s synthetic crew' % rid,
+                         'cal': Cal(str(num), '%s %s' % (rid, desc), week, set(), {},
+                                    hours[0] if len(set(hours)) == 1 else 8.0),
+                         'guid': guid(short, pid, 'RSRC', i)}
+            w['resources'].append(made[key])
+        return made[key]
+
+    def under_way():
+        # tasks under way that no earlier shape took: no constraint, no expected finish, not suspended, no assignment
+        return [a for a in acts[:n0 - 1] if a['status'] == 'TK_Active' and a['type'] == 'TT_Task' and a['i'] > 0
+                and not a['cstr'] and not a['cstr2'] and not a['xf'] and not a.get('suspend')
+                and not any(g['act'] is a for g in w['assignments'])]
+
+    def new_under_way(tag):
+        # a new task under way, start-to-start after work that has started, into the finish milestone
+        begun = [a for a in acts[:n0] if a['act_start'] and a['type'] in ('TT_Task', 'TT_Rsrc')
+                 and a['act_start'] < data_date]
+        if not begun:
+            return None
+        p = rng.choice(begun)
+        cal = p['cal'] if rng.random() < 0.5 else rng.choice(cals)
+        st = cal.first_start_at_or_after(p['act_start'] + timedelta(hours=rng.uniform(0, 48)))
+        if st >= data_date:
+            return None
+        hours = rng.choice([16, 24, 40])
+        rem = max(8, int(round(hours * rng.uniform(0.3, 0.9))))
+        i = len(acts)
+        es[i] = day(st)
+        ef[i] = dd_day + cdays(cal, rem)
+        a = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': 'TT_Task', 'cal': cal, 'hours': hours, 'preds': [],
+             'status': 'TK_Active', 'act_start': st, 'act_end': None, 'remain': rem, 'xf': None,
+             'pct': int(round(100 * (1 - rem / float(hours)))), 'cstr': '', 'cstr_date': None, 'cstr2': '',
+             'cstr_date2': None, 'tags': [tag]}
+        acts.append(a)
+        add_link(p, a, 'PR_SS', 0)
+        if end['status'] != 'TK_Complete':
+            add_link(a, end, 'PR_FS', 0)
+        return a
+
+    # a) start milestones with an expected finish (round-7 probes measured them; no held-out set drew one)
+    hosts = [a for a in acts[:n0 - 1] if a['type'] in ('TT_Task', 'TT_Rsrc') and a['status'] != 'TK_Complete']
+    for _ in range(rng.randint(1, 2) if hosts else 0):
+        p = rng.choice(hosts)
+        cal = rng.choice(cals)
+        i = len(acts)
+        es[i] = ef[i] = ef[p['i']]
+        xf = cal.last_end_at_or_before(at(max(dd_day + 1.0, ef[p['i']] + rng.uniform(0.5, 6))))
+        c = pick(rng, [('CS_MSOA', 30), ('CS_MANDSTART', 30), ('', 40)])
+        cd = cal.first_start_at_or_after(at(max(dd_day, day(xf) + rng.uniform(-3, 4)))) if c else None
+        m = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': 'TT_Mile', 'cal': cal, 'hours': 0, 'preds': [],
+             'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': 0, 'xf': xf, 'pct': 0,
+             'cstr': c, 'cstr_date': cd, 'cstr2': '', 'cstr_date2': None,
+             'tags': ['start milestone, an expected finish' + (' and %s' % c if c else '')]}
+        acts.append(m)
+        add_link(p, m, 'PR_FS', 0)
+        j = len(acts)
+        hours = rng.choice([8, 16])
+        es[j] = ef[i]
+        ef[j] = es[j] + cdays(cal, hours)
+        s = {'i': j, 'code': 'A%d' % (1000 + 10 * j), 'type': 'TT_Task', 'cal': cal, 'hours': hours, 'preds': [],
+             'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': hours, 'xf': None, 'pct': 0,
+             'cstr': 'CS_MEOB', 'cstr_date': cal.last_end_at_or_before(at(day(xf) + rng.uniform(0, 6))),
+             'cstr2': '', 'cstr_date2': None, 'tags': ['after a start milestone with an expected finish']}
+        acts.append(s)
+        add_link(m, s, 'PR_FS', 0)
+        if end['status'] != 'TK_Complete':
+            add_link(s, end, 'PR_FS', 0)
+        w['unm']['xs'].append(m['code'])
+    # b) a second constraint on work under way beside a mandatory date, in either slot; a start constraint on started
+    # work drawn about its actual start, a finish constraint about the data date plus the remaining work
+    pairs = {'MF+FOA': (('CS_MANDFIN', 'F', -3, 3), ('CS_MEOA', 'F', -2, 6)),
+             'MF+FOB': (('CS_MANDFIN', 'F', -2, 4), ('CS_MEOB', 'F', -4, 2)),
+             'MF+SOA': (('CS_MANDFIN', 'F', -2, 4), ('CS_MSOA', 'S', -2, 3)),
+             'FOB+MF': (('CS_MEOB', 'F', -1, 4), ('CS_MANDFIN', 'F', -4, 4)),
+             'FOA+MF': (('CS_MEOA', 'F', -2, 2), ('CS_MANDFIN', 'F', -2, 6)),
+             'MS+MF': (('CS_MANDSTART', 'S', -3, 2), ('CS_MANDFIN', 'F', -3, 5)),
+             'MS+FOB': (('CS_MANDSTART', 'S', -3, 2), ('CS_MEOB', 'F', -3, 4)),
+             'SOA+MF': (('CS_MSOA', 'S', -2, 2), ('CS_MANDFIN', 'F', -3, 5))}
+    need = rng.randint(1, 2)
+    pool = sorted(rng.sample(under_way(), min(len(under_way()), need)), key=lambda x: x['i'])
+    while len(pool) < need:
+        a = new_under_way('added under way')
+        if a is None:
+            break
+        pool.append(a)
+    for a in pool:
+        cal = a['cal']
+        e0 = day(a['act_start']) if a['act_start'] else es[a['i']]
+        f0 = dd_day + cdays(cal, a['remain'])
+        kind = pick(rng, [(k, 1) for k in sorted(pairs)])
+        dates = []
+        for typ, side, lo, hi in pairs[kind]:
+            if side == 'S':
+                dates.append(cal.first_start_at_or_after(at(max(0.0, e0 + rng.uniform(lo, hi)))))
+            else:
+                dates.append(cal.last_end_at_or_before(at(max(dd_day + 0.5, f0 + rng.uniform(lo, hi)))))
+        (t1, _, _, _), (t2, _, _, _) = pairs[kind]
+        a.update({'cstr': t1, 'cstr_date': dates[0], 'cstr2': t2, 'cstr_date2': dates[1]})
+        a.setdefault('tags', []).append('under way, %s then %s' % (t1, t2))
+        w['unm']['pcu'].append(a['code'])
+    # c) an assignment with no units per hour on work under way: a task under way made resource dependent, with an
+    # assignment with work and one with no units and no units per hour
+    pool = [a for a in under_way() if a['remain'] >= 8]
+    pool = rng.sample(pool, 1) if pool else [x for x in [new_under_way('added under way')] if x is not None]
+    for a in pool:
+        own = next((k for k in sorted(WEEKS) if WEEKS[k][1] is a['cal'].week), 'MF8S')
+        other = rng.choice([k for k in ('D12', 'MT8', 'MS8', 'D24') if k != own])
+        lag = rng.choice([4, 8]) if rng.random() < 0.5 else 0
+        a['type'] = 'TT_Rsrc'
+        for res, rate, lg, empty in [(resource(own), rng.choice([1, 2]), 0, False), (resource(other), 0, lag, True)]:
+            target_q = 0 if empty else (a['hours'] - lg) * rate
+            remain_q = 0 if empty else (a['remain'] - lg) * rate
+            w['assignments'].append({'act': a, 'res': res, 'rate': rate, 'lag': lg, 'remain_q': remain_q,
+                                     'target_q': target_q, 'act_q': target_q - remain_q})
+        a.setdefault('tags', []).append('under way, beside an assignment with no units per hour%s'
+                                        % (' and a %g h lag' % lag if lag else ''))
+        w['unm']['zu'].append(a['code'])
+    # d) float paths ending at an activity of the network, where "Calculate multiple float paths" is on
+    if w.get('mfp') and rng.random() < 0.6:
+        pool = [a for a in acts if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_Mile', 'TT_FinMile')
+                and a['status'] != 'TK_Complete' and a is not end]
+        if pool:
+            k = rng.choice(pool)
+            w['mfk'] = k['i']
+            w['unm']['mfk'].append(k['code'])
+
+
 def wide_task_fields(a, pid, assignments):
     # --features wide: the TASK fields a drawn feature sets (each blank or the default mode's value otherwise).
     f = {'wbs_id': a.get('wbs', pid * 10), 'suspend_date': fmt(a.get('suspend')), 'resume_date': fmt(a.get('resume')),
@@ -1674,6 +1851,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             if wide['mfp']:
                 so['use_total_float_multiple_longest_paths'] = wide['mfp_basis']
                 so['max_multiple_longest_path'] = wide['mfp_paths']
+                if wide.get('mfk') is not None:     # wide10: the float paths end at this activity
+                    so['key_activity_for_multiple_longest_paths'] = pid * 1000 + wide['mfk']
     wbs = {'wbs_id': pid * 10, 'proj_id': pid, 'seq_num': '1', 'est_wt': '1', 'proj_node_flag': 'Y',
            'sum_data_flag': 'N', 'status_code': 'WS_Open', 'wbs_short_name': short,
            'wbs_name': 'Held-out P6 comparison case %s (synthetic)' % short, 'ev_user_pct': '0.06',
@@ -1807,6 +1986,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             summary.update({'h25_shapes': {k: len(v) for k, v in wide['h25s'].items()}})
         if wide.get('one_per_rsrc_dropped'):
             summary.update({'one_per_resource_dropped': wide['one_per_rsrc_dropped']})
+        if wide.get('unm') is not None:
+            summary.update({'unmeasured_shapes': {k: len(v) for k, v in wide['unm'].items()}})
     return short, text, summary
 
 
