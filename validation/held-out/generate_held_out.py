@@ -203,8 +203,10 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # P6's import keeps (H26-08 A1490). 'wide10' (H27 on) draws exactly what wide9 draws and then, from the same stream, the
 # shapes v2.10.12 lists as not measured ('unm': chance; see draw_unm): start milestones with an expected finish, a
 # second constraint on work under way beside a mandatory date, an assignment with no units per hour on resource
-# dependent work under way, and, where "Calculate multiple float paths" is on, the float paths ending at an activity
-# of the network rather than at the project's finish.
+# dependent work under way, and, where "Calculate multiple float paths" is on, an activity of the network named in
+# SCHEDOPTIONS as the end of the float paths. P6's import keeps that task id as the file has it and does not map it
+# to the activity it imports (round 7, ZZ-CPP-HSK), so in P6 it names no activity: the draw tests an end activity P6
+# cannot resolve, as in any XER imported into another database, not float paths ending at an activity chosen in P6.
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
@@ -1459,8 +1461,9 @@ def draw_unm(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, data_
     Mandatory Start or no constraint ("Use Expected Finish Dates" keeps wide4's draw, on in about four cases in five);
     b) one or two tasks under way with a primary and a second constraint, one of them a mandatory date; c) one task
     under way made resource dependent, with an assignment with work and one with no units per hour, a lag on about
-    half; d) where "Calculate multiple float paths" is on, about three times in five, the float paths end at an
-    unfinished activity of the network drawn at random rather than at the project's finish. Where the earlier
+    half; d) where "Calculate multiple float paths" is on, about three times in five, SCHEDOPTIONS name an unfinished
+    activity of the network drawn at random as the end of the float paths (P6's import keeps the file's task id
+    without mapping it, so in P6 the name resolves to no activity). Where the earlier
     features leave no free task under way for b) or c), a new one is added: started start-to-start after work that
     has started, before the data date, with 30 to 90 per cent of its 16, 24 or 40 h left, and finish-to-start into the
     project's finish milestone. The shapes' resources are one per week pattern, with no holidays, their resource and
@@ -1607,7 +1610,7 @@ def draw_unm(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, data_
         a.setdefault('tags', []).append('under way, beside an assignment with no units per hour%s'
                                         % (' and a %g h lag' % lag if lag else ''))
         w['unm']['zu'].append(a['code'])
-    # d) float paths ending at an activity of the network, where "Calculate multiple float paths" is on
+    # d) an activity of the network named as the end of the float paths, where "Calculate multiple float paths" is on
     if w.get('mfp') and rng.random() < 0.6:
         pool = [a for a in acts if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_Mile', 'TT_FinMile')
                 and a['status'] != 'TK_Complete' and a is not end]
@@ -1851,7 +1854,7 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             if wide['mfp']:
                 so['use_total_float_multiple_longest_paths'] = wide['mfp_basis']
                 so['max_multiple_longest_path'] = wide['mfp_paths']
-                if wide.get('mfk') is not None:     # wide10: the float paths end at this activity
+                if wide.get('mfk') is not None:     # wide10: the file's task id, which P6's import keeps unmapped
                     so['key_activity_for_multiple_longest_paths'] = pid * 1000 + wide['mfk']
     wbs = {'wbs_id': pid * 10, 'proj_id': pid, 'seq_num': '1', 'est_wt': '1', 'proj_node_flag': 'Y',
            'sum_data_flag': 'N', 'status_code': 'WS_Open', 'wbs_short_name': short,
