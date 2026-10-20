@@ -1,0 +1,22 @@
+H28: 12 cases recorded; activities 194 of 198, assignments 277 of 289 (dates 277 of 289), float-path ends 7 of 12 as P6 imported them
+  H28-01 A1660: remain_drtn_hr_cnt P6 21 model 11
+  H28-01 A1660/H28-01-R13: reend_date P6 2027-02-03 13:00 model 2027-02-01 08:00
+  H28-02 A1400/H28-02-R12: restart_date P6 2026-09-17 08:00 model 2026-09-18 08:00; reend_date P6 2026-09-18 15:00 model 2026-09-18 08:00
+  H28-03 A1420/H28-03-R7: restart_date P6 2026-12-01 08:00 model 2026-12-01 12:00; reend_date P6 2026-12-01 16:00 model 2026-12-01 12:00
+  H28-04 A1530: remain_drtn_hr_cnt P6 12 model 9
+  H28-04 A1530/H28-04-R13: restart_date P6 2026-07-13 06:00 model 2026-07-13 10:00; reend_date P6 2026-07-13 21:00 model 2026-07-13 10:00
+  H28-05 A1410/H28-05-R11: reend_date P6 2026-09-04 16:00 model 2026-09-02 08:00
+  H28-06 float-path end: P6 "A1360" model null
+  H28-06 A1630/H28-06-R12: restart_date P6 2026-08-04 08:00 model 2026-08-04 12:00; reend_date P6 2026-08-05 11:00 model 2026-08-04 12:00
+  H28-07 float-path end: P6 "A1270" model null
+  H28-07 A1650/H28-07-R17: reend_date P6 2026-04-28 11:30 model 2026-04-27 08:00
+  H28-08 A1450/H28-08-R12: reend_date P6 2026-11-02 11:00 model 2026-10-29 08:00
+  H28-09 A1570/H28-09-R15: restart_date P6 2026-10-29 17:00 model 2026-10-30 01:00; reend_date P6 2026-10-30 16:00 model 2026-10-30 01:00
+  H28-10 float-path end: P6 "A1020" model null
+  H28-10 A1510/H28-10-R4: reend_date P6 2026-04-30 14:00 model 2026-04-29 08:00
+  H28-11 float-path end: P6 "A1410" model null
+  H28-11 A1550: remain_drtn_hr_cnt P6 11 model 12
+  H28-11 A1550/H28-11-R14: restart_date P6 2026-12-02 08:00 model 2026-12-03 08:00; reend_date P6 2026-12-02 16:00 model 2026-12-03 08:00
+  H28-12 float-path end: P6 "A1230" model null
+  H28-12 A1540: remain_drtn_hr_cnt P6 8 model 10
+  H28-12 A1540/H28-12-R6: restart_date P6 2026-05-15 06:00 model 2026-05-15 10:00; reend_date P6 2026-05-15 08:00 model 2026-05-15 10:00

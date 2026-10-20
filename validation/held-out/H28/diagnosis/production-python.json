@@ -1,0 +1,20 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 7). The production Python engine of the candidate's canonical tree (_cpp_common feat/fk 30398f9: cpm.py with python_reference/cpm_hours.py c03f8f3b; the converters of the six feat/fk-2.10.13 skill branches), through the production converter, run on H28's 12 projects as P6's database holds them after the F9, with the scheduling options, 'Make open-ended activities critical' and the float-path end P6 holds handed on. Counts only.",
+ "js_equals_python": {
+  "projects": 12,
+  "activities": 712,
+  "equal": 712,
+  "differ": 0
+ },
+ "against_p6": {
+  "projects": 12,
+  "unfinished_activities": 563,
+  "on_p6_all_four_dates_and_both_floats": 486,
+  "note": "P6's F9 rewrote the remaining duration of 94 resource dependent activities and the remaining units of 33 assignments (p6-f9-resized.json)"
+ },
+ "against_p6_import_sizing": {
+  "unfinished_activities": 563,
+  "on_p6_all_four_dates_and_both_floats": 537,
+  "note": "the same projects with the resource dependent sizing P6's F9 rewrote set back to P6's import record (p6-imported/); the 26 that differ are the 26 the score lists"
+ }
+}
