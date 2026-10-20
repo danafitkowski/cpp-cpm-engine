@@ -123,6 +123,7 @@ try:
         use_external_dates=payload.get('use_external_dates', True),
         open_critical=payload.get('open_critical', False),
         multiple_float_paths=payload.get('multiple_float_paths', False),
+        float_path_end=payload.get('float_path_end'),
     )
 except (ValueError, RuntimeError) as e:
     err_type = type(e).__name__
@@ -214,7 +215,8 @@ function runJS(payload) {
               floatType: payload.float_type || 'FT_FF',
               useExternalDates: payload.use_external_dates !== false,
               openCritical: payload.open_critical === true,
-              multipleFloatPaths: payload.multiple_float_paths === true }
+              multipleFloatPaths: payload.multiple_float_paths === true,
+              floatPathEnd: payload.float_path_end }
         );
     } catch (e) {
         return {
@@ -4175,6 +4177,28 @@ compareFixture('F211 - AG: As Late As Possible resource dependent work with no w
     relationship_lag_calendar: 'rcal_Predecessor', project_calendar: 'AE', open_critical: true,
     use_expected_finish: true,
 }, { hours: true });
+
+// v2.10.13 candidate (P6 probes rounds 11-13, ZZ-CPP-KEA, -KEB, -KF1 to -KF4, -KG1 to -KG4): FK, where "Calculate
+// multiple float paths" ends at an activity set in P6, As Late As Possible work that is neither it nor leads into it
+// holds no free float. F197's network under the option: F1 (As Late As Possible, PF1 -> F1 -> SF1 -> FIN) does not
+// lead into SM1 and is zeroed (F212, F213); it leads into SF1 and keeps its free float (F214); an end that is not an
+// activity of the network changes nothing and raises an INFO (F215).
+compareFixture('F212 - FK: F201 with the float paths ending at SM1, which F1 does not lead into, in hours', {
+    activities: slActs(hA, true), relationships: slRels(hR), data_date: '2026-12-07 08:00', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true, float_path_end: 'SM1',
+}, { hours: true });
+compareFixture('F213 - FK: F202 with the float paths ending at SM1, whole days', {
+    activities: slActs(dA, false), relationships: slRels(dR), data_date: '2026-12-07', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true, float_path_end: 'SM1',
+});
+compareFixture('F214 - FK: F201 with the float paths ending at SF1, which F1 leads into, in hours', {
+    activities: slActs(hA, true), relationships: slRels(hR), data_date: '2026-12-07 08:00', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true, float_path_end: 'SF1',
+}, { hours: true });
+compareFixture('F215 - FK: F202 with the float paths ending at an activity not in the network, whole days', {
+    activities: slActs(dA, false), relationships: slRels(dR), data_date: '2026-12-07', cal_map: SLCAL,
+    relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true, float_path_end: 'NOT-HERE',
+});
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +

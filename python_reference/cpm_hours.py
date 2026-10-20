@@ -379,8 +379,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                       lag_calendar='predecessor', project_calendar=None, project_finish=None,
                       ss_lag_from='early_start', use_expected_finish=False, use_external_dates=True,
                       float_type='FT_FF', open_critical=False, open_critical_linked=None,
-                      multiple_float_paths=False):
+                      multiple_float_paths=False, float_path_lead=None):
     cal_map = cal_map or {}
+    # FK: the activity the float paths end at and every activity leading into
+    # it (compute_cpm hands them on); None where no end activity is set
+    _fp_lead = set(float_path_lead) if float_path_lead is not None else None
     cals = {}
     # OC: work whose successor was left out of this network (level of effort,
     # WBS summary) is not open-ended (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C,
@@ -1226,8 +1229,11 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # H23 (ZZ-CPP-AFF F1 against F2; H23-02 A1220; ZZ-CPP-AFX, -AFP,
             # -AF4, -HSR, -HSB). FP (19-Oct-2026): not under "Calculate
             # multiple float paths", where P6 prints the free float as it
-            # stands (ZZ-CPP-HSM; ZZ-CPP-RSRCR H1-S against ZZ-CPP-RSRCN)
-            if (ff_signed > 0 and not multiple_float_paths
+            # stands (ZZ-CPP-HSM; ZZ-CPP-RSRCR H1-S against ZZ-CPP-RSRCN). FK
+            # (20-Oct-2026): where those paths end at an activity set in P6,
+            # only that activity and the work leading into it keep theirs
+            # (ZZ-CPP-KEA, -KEB, -KF1 to -KF4, -KG1 to -KG4)
+            if (ff_signed > 0 and (not multiple_float_paths or (_fp_lead is not None and c not in _fp_lead))
                     and any((n[k] or {}).get('type') == 'ALAP' for k in ('c1', 'c2'))):
                 ff_signed = 0
             ff = max(0, ff_signed)

@@ -2107,7 +2107,7 @@ def _hours_sibling(name):
 def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project_calendar, schedule_mode,
                 relationship_lag_calendar, float_type, ss_lag_from, project_finish, use_expected_finish,
                 use_external_dates, alerts, open_critical=False, open_critical_linked=None,
-                multiple_float_paths=False):
+                multiple_float_paths=False, float_path_lead=None):
     """Schedule the network in minutes (cpm_hours) and attach the instants to `nodes` (see HR above)."""
     by_code = {}
     for a in activities or []:
@@ -2224,7 +2224,8 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             lag_calendar=lag_cal, project_calendar=project_calendar, project_finish=project_finish or None,
             ss_lag_from=ss_lag_from, use_expected_finish=use_expected_finish,
             use_external_dates=use_external_dates, float_type=float_type, open_critical=open_critical,
-            open_critical_linked=open_critical_linked, multiple_float_paths=multiple_float_paths)
+            open_critical_linked=open_critical_linked, multiple_float_paths=multiple_float_paths,
+            float_path_lead=float_path_lead)
     except Exception as e:  # noqa: BLE001 - the day result stands whatever happens here
         alerts.append({'severity': 'WARN', 'context': 'hours-engine-error',
                        'message': ('The hours and minutes pass did not complete (%s); the dates are '
@@ -2285,7 +2286,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 relationship_lag_calendar='successor',
                 float_type='FT_FF', ss_lag_from='early_start',
                 project_finish='', use_expected_finish=False,
-                use_external_dates=True, open_critical=False, multiple_float_paths=False):
+                use_external_dates=True, open_critical=False, multiple_float_paths=False,
+                float_path_end=None):
     """Run forward + backward CPM pass on a canonical network.
 
     Args:
@@ -2338,6 +2340,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             prints the free float of As Late As Possible work as it stands
             and FZ does not zero it (FP, 19-Oct-2026). Default False, as P6's
             is.
+        float_path_end: the code of the activity those float paths end at,
+            set in P6's Schedule Options (SCHEDOPTIONS
+            key_activity_for_multiple_longest_paths). Under it, As Late As
+            Possible work that is neither that activity nor leads into it
+            holds no free float, as with the option off (FK, 20-Oct-2026).
+            None, or a code that is not an activity of the network, changes
+            nothing.
         use_expected_finish: P6 SCHEDOPTIONS sched_use_expect_end_flag
             ("Use Expected Finish Dates"). When True, an unfinished activity
             carrying ``expected_finish`` (P6 TASK.expect_end_date as written,
@@ -2373,6 +2382,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # FP (19-Oct-2026) — "Calculate multiple float paths": True or 'Y', as the
     # JS engine reads opts.multipleFloatPaths
     _multiple_float_paths = multiple_float_paths is True or multiple_float_paths == 'Y'
+    # FK (20-Oct-2026) — the activity "Calculate multiple float paths" ends at
+    # (see the FZ block); the JS engine reads opts.floatPathEnd
+    _fp_end_code = '' if float_path_end is None else str(float_path_end).strip()
     # B4 (P6 alignment wave 2026-08-11): both P6 scheduling modes
     # implemented. retained_logic (default; capture 9b748cc case 10):
     # remaining work restarts at max(data date, driving pred logic).
@@ -5406,8 +5418,42 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # FZ (H23, 19-Oct-2026) — As Late As Possible work holds no free float, as P6
     # prints it on every unfinished As Late As Possible activity (see cpm_hours;
     # ZZ-CPP-AFF F1); FP: not under "Calculate multiple float paths"
-    # (ZZ-CPP-HSM). JS paired site: the same block in computeCPM.
-    for c, n in ({} if _multiple_float_paths else nodes).items():
+    # (ZZ-CPP-HSM), except, where the paths end at an activity set in P6, on
+    # work that is neither it nor leads into it (FK). JS paired site: the same
+    # block in computeCPM.
+    #
+    # FK (20-Oct-2026) — the activity "Calculate multiple float paths" ends at,
+    # set in P6's Schedule Options (SCHEDOPTIONS
+    # key_activity_for_multiple_longest_paths). Under it P6 holds no free float
+    # on As Late As Possible work that is neither that activity nor leads into
+    # it, as with the option off; the end activity and every activity leading
+    # into it keep theirs, whatever the number of paths or their basis (P6
+    # rounds 11-13: ZZ-CPP-KEA, -KEB, -KF1 to -KF4, -KG1 to -KG4). With no end
+    # activity, or one that is not an activity of this network, nothing
+    # changes. Measured on finish-to-start chains; the walk follows every
+    # relationship type.
+    _fp_lead = None
+    if _multiple_float_paths and _fp_end_code:
+        if _fp_end_code in nodes:
+            _fp_lead = {_fp_end_code}
+            stack = [_fp_end_code]
+            while stack:
+                at = stack.pop()
+                for r in pred_map.get(at, []):
+                    if r['from_code'] not in _fp_lead:
+                        _fp_lead.add(r['from_code'])
+                        stack.append(r['from_code'])
+        else:
+            alerts.append({
+                'severity': 'INFO',
+                'context': 'float-path-end-not-in-network',
+                'message': ('The float paths end at %s, which is not an activity of this network; no free '
+                            'float was held for it, as P6 does with an end activity it cannot resolve.'
+                            % json.dumps(_fp_end_code)),
+            })
+    for c, n in nodes.items():
+        if _multiple_float_paths and not (_fp_lead is not None and c not in _fp_lead):
+            continue
         if n['is_complete'] or not any((k or {}).get('type') == 'ALAP'
                                        for k in (n.get('constraint'), n.get('constraint2'))):
             continue
@@ -5542,7 +5588,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         ss_lag_from=_ss_lag_from, project_finish=project_finish,
         use_expected_finish=use_expected_finish, use_external_dates=use_external_dates, alerts=alerts,
         open_critical=open_critical, open_critical_linked=sorted(_oc_linked),
-        multiple_float_paths=_multiple_float_paths)
+        multiple_float_paths=_multiple_float_paths,
+        float_path_lead=sorted(_fp_lead) if _fp_lead is not None else None)
     if _lag_cal_alert is not None:
         # LA (13-Oct-2026): now that the hours pass has run, say which figures
         # walk the lag as P6 does. JS paired site after the _hoursPass call.

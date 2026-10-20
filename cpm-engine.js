@@ -4587,47 +4587,10 @@ function computeCPM(activities, relationships, opts) {
     // compute_cpm.
     const _mfpOpt = (opts.multipleFloatPaths !== undefined) ? opts.multipleFloatPaths : opts.multiple_float_paths;
     const _multipleFloatPaths = _mfpOpt === true || _mfpOpt === 'Y';
-    // FK (20-Oct-2026) — the activity "Calculate multiple float paths" ends at,
-    // set in P6's Schedule Options (Advanced tab, "Display multiple float paths
-    // ending with activity"; SCHEDOPTIONS key_activity_for_multiple_longest_paths,
-    // which parseXER resolves to an activity code as float_path_end):
-    // opts.floatPathEnd, alias float_path_end. Under it P6 holds no free float on
-    // As Late As Possible work that is neither that activity nor leads into it,
-    // as with the option off; the end activity and every activity leading into
-    // it keep theirs, whatever the number of paths or their basis (P6 rounds
-    // 11-13: ZZ-CPP-KEA, -KEB, -KF1 to -KF4, -KG1 to -KG4; ZZ-CPP-KG1, one path,
-    // keeps the free float of work off its one path that leads into the end).
-    // With no end activity, or one that is not an activity of this network (as
-    // P6 leaves an id it cannot resolve), nothing changes. Python paired site:
-    // the float_path_end parameter of compute_cpm.
+    // FK (20-Oct-2026) — the activity "Calculate multiple float paths" ends at:
+    // opts.floatPathEnd, alias float_path_end (see the FZ block).
     const _fpEndOpt = (opts.floatPathEnd !== undefined) ? opts.floatPathEnd : opts.float_path_end;
     const _fpEndCode = (_fpEndOpt === undefined || _fpEndOpt === null) ? '' : String(_fpEndOpt).trim();
-    let _floatPathEnd = null;
-    let _fpLead = null;
-    if (_multipleFloatPaths && _fpEndCode) {
-        if (Object.prototype.hasOwnProperty.call(nodes, _fpEndCode)) {
-            _floatPathEnd = _fpEndCode;
-            _fpLead = new Set([_fpEndCode]);
-            const stack = [_fpEndCode];
-            while (stack.length) {
-                const at = stack.pop();
-                for (const r of (predMap[at] || [])) {
-                    if (!_fpLead.has(r.from_code)) {
-                        _fpLead.add(r.from_code);
-                        stack.push(r.from_code);
-                    }
-                }
-            }
-        } else {
-            alerts.push({
-                severity: 'INFO',
-                context: 'float-path-end-not-in-network',
-                message: 'The float paths end at ' + JSON.stringify(_fpEndCode) +
-                    ', which is not an activity of this network; no free float was held for it, ' +
-                    'as P6 does with an end activity it cannot resolve.',
-            });
-        }
-    }
 
     // The calendar a lag between predNode and succNode is walked on.
     function lagCalFor(predNode, succNode) {
@@ -7330,8 +7293,46 @@ function computeCPM(activities, relationships, opts) {
     // P6 prints it on every unfinished As Late As Possible activity (see the
     // hours pass; ZZ-CPP-AFF F1); FP: not under "Calculate multiple float
     // paths" (ZZ-CPP-HSM), except, where the paths end at an activity set in
-    // P6, on work that is neither it nor leads into it (FK, ZZ-CPP-KEA). Python
-    // paired site: the same block in compute_cpm.
+    // P6, on work that is neither it nor leads into it (FK). Python paired
+    // site: the same block in compute_cpm.
+    //
+    // FK (20-Oct-2026) — the activity "Calculate multiple float paths" ends at,
+    // set in P6's Schedule Options (Advanced tab, "Display multiple float paths
+    // ending with activity"; SCHEDOPTIONS key_activity_for_multiple_longest_paths,
+    // which parseXER resolves to an activity code as float_path_end). Under it P6
+    // holds no free float on As Late As Possible work that is neither that
+    // activity nor leads into it, as with the option off; the end activity and
+    // every activity leading into it keep theirs, whatever the number of paths
+    // or their basis (P6 rounds 11-13: ZZ-CPP-KEA, -KEB, -KF1 to -KF4, -KG1 to
+    // -KG4; ZZ-CPP-KG1, one path, keeps the free float of work off its one path
+    // that leads into the end). With no end activity, or one that is not an
+    // activity of this network (as P6 leaves an id it cannot resolve), nothing
+    // changes. Measured on finish-to-start chains; the walk follows every
+    // relationship type.
+    let _fpLead = null;
+    if (_multipleFloatPaths && _fpEndCode) {
+        if (Object.prototype.hasOwnProperty.call(nodes, _fpEndCode)) {
+            _fpLead = new Set([_fpEndCode]);
+            const stack = [_fpEndCode];
+            while (stack.length) {
+                const at = stack.pop();
+                for (const r of (predMap[at] || [])) {
+                    if (!_fpLead.has(r.from_code)) {
+                        _fpLead.add(r.from_code);
+                        stack.push(r.from_code);
+                    }
+                }
+            }
+        } else {
+            alerts.push({
+                severity: 'INFO',
+                context: 'float-path-end-not-in-network',
+                message: 'The float paths end at ' + JSON.stringify(_fpEndCode) +
+                    ', which is not an activity of this network; no free float was held for it, ' +
+                    'as P6 does with an end activity it cannot resolve.',
+            });
+        }
+    }
     for (const c in nodes) {
         if (_multipleFloatPaths && !(_fpLead && !_fpLead.has(c))) continue;
         const n = nodes[c];
