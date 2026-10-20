@@ -12,7 +12,7 @@ Thank you for considering a contribution. The engine is the core of an active fo
    npm test
    ```
 
-2. **Every commit must pass the cross-validation harness against the Python sibling: 12887 of 12887 defined comparisons executed and bit-identical, 0 failures, across 183 fixtures; 0 comparisons are skipped rather than compared (50 `ff_signed`, 50 `ff_signed_working_days`, all on completed activities where neither engine emits the field).**
+2. **Every commit must pass the cross-validation harness against the Python sibling: 17926 of 17926 defined comparisons executed and bit-identical, 0 failures, across 207 fixtures; 0 comparisons are skipped rather than compared (50 `ff_signed`, 50 `ff_signed_working_days`, all on completed activities where neither engine emits the field).**
 
    ```bash
    npm run crossval
@@ -97,7 +97,7 @@ Every output manifest reads `ENGINE_VERSION` and embeds it in the report. A vers
 ## Pull-request checklist
 
 - [ ] `npm test` passes (1,498 tests, 0 fail).
-- [ ] `npm run crossval` passes (12887 of 12887 defined comparisons executed and bit-identical, 0 failures, across 183 fixtures; 0 skipped).
+- [ ] `npm run crossval` passes (17926 of 17926 defined comparisons executed and bit-identical, 0 failures, across 207 fixtures; 0 skipped).
 - [ ] If you added a new citation, the URL is in `docs/citations.md` and the case/RP is real.
 - [ ] If you bumped the engine version, both `cpm-engine.js` and `package.json` are updated.
 - [ ] If you added a new public API, it is documented in `docs/api.md`.

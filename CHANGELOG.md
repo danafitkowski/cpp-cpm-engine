@@ -12,6 +12,403 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.12 - 2026-10-19 - A Mandatory Finish under an expected finish caps; only the primary constraint pins; "Calculate multiple float paths"; resource dependent work on its resources' own hours; assignments with no units
+
+**Computed values move (Class A): engine math changed.** Twenty-one rules, each measured on synthetic P6 probe projects
+in Primavera P6 Professional 23.12.1 before it went in. Nine are in both passes of both engines (XP, XC on finish
+milestones, MR, PC, SL, MG, MX, FZ and FP). Twelve turn on times of day and on the resources' own calendars, and are
+in the hours pass only (XO, AV, ZB, XE, QS, ZL, XW, ZR, ZW, ZF, BM and AG). Held-out set H22, on the released
+v2.10.11, found the first (XP).
+The probes that measured it measured the next three (MR, XC on finish milestones, PC). Held-out set H23, drawn after
+those four, found seven shapes new to the held-out sets. The probes that measured them gave eight rules (SL, MG, MX,
+FZ, XO, AV, ZB, XE), and a ninth, FP: an option the engine had never read. Held-out set H24, drawn after those, found
+five shapes of resource dependent work; the probes measured all five and gave QS, ZL, XW, ZR and ZW (ZW from the
+probe of the fifth shape). Held-out set H25, drawn after those eighteen, scored 384 of 391 and found two shapes of
+resource dependent work; the probes that measured them gave ZF, BM and AG. Held-out set H26, drawn after all
+twenty-one, matches P6 on all 407 of its unfinished activities. The JS whole-day pass also loses its v2.9.16 rule
+F5-B, and keeps a milestone with an expected finish at zero duration.
+
+*A Mandatory Finish under an expected finish, and mandatory dates (H22 and its probes)*
+
+- **A Mandatory Finish under an expected finish caps; it does not pin (XP).** Under "Use Expected Finish Dates", an
+  expected finish in force on work not yet started (a task, resource dependent work or a finish milestone) lifts the
+  Mandatory Finish pin. The date caps the late finish, as a Finish On or Before does, so a successor that needs the
+  work earlier sets its late finish. A Mandatory Start keeps its pin (M5, G1, R2). With the option off, the Mandatory
+  Finish pins as before. Through v2.10.11 rule MP pinned the late finish to the Mandatory Finish date whatever the
+  successors needed. Held-out case H22-06 A1120 found it (P6 0 h and critical, the engine 10 h); the XC probes of
+  v2.10.11 could not show it, as their successors ran two weeks later. Measured on ZZ-CPP-XMR, -XMO and -XMN (M1, M3,
+  M9, M10, M11, and CA to CD, a chain shaped like H22-06's) and on ZZ-CPP-XNR R4.
+- **An expected finish on a finish milestone (XC).** XC (v2.10.11) now covers finish milestones: an expected finish in
+  force drops the early side of Finish On or After, Finish On and Mandatory Finish, and the milestone sits at its
+  expected finish. The late side caps, as XP has it. A start milestone is left as it was. Through v2.10.11 XC applied
+  only to work that is not a milestone, so the constraint's early side still held a finish milestone. Measured on
+  ZZ-CPP-XNR F1 to F3 and ZZ-CPP-XMR, -XMO M9; with the option off (ZZ-CPP-XNN) the constraint holds the milestone, as
+  the control F4 shows in both.
+- **Mandatory dates on resource dependent work (MR).** Resource dependent work not yet started takes the mandatory pin
+  as a task does. The pin is taken on the activity's own calendar from its remaining duration, and the assignments run
+  back from the pinned late finish as from any late finish, so a late start can come before the Mandatory Start
+  (ZZ-CPP-XQR Q4, on a resource that works every day: two days before). Under an expected finish, XP applies to it as
+  to a task. Through v2.10.11 rule MP left resource dependent work out, as not measured. Measured on ZZ-CPP-XMN M10,
+  ZZ-CPP-XNR R1 to R3, ZZ-CPP-XNN R1 to R4, and ZZ-CPP-XQR, -XQO and -XQN Q1 to Q4, where the resource keeps other
+  hours or works every day.
+- **Only the primary constraint pins (PC).** A second constraint caps the late dates, whatever its type. A Mandatory
+  Start or Mandatory Finish in the second slot caps as a Start On or Before or a Finish On or Before does, and pins
+  nothing (Q9, Q10); a tighter second constraint caps a primary pin (Q7, Q8). The primary pin still holds against the
+  successors (Q6). The Must Finish By caps the pin before the second constraint, in both passes. From v2.9.16 to
+  v2.10.11 the whole-day pass kept a primary pin against a tighter second constraint and restored a mandatory second
+  one's pin (rule F5-C, now withdrawn), and the hours pass pinned on either slot. Measured on ZZ-CPP-XQR, -XQO and
+  -XQN Q6 to Q10. No held-out set to H22 had drawn a mandatory date beside a second constraint.
+
+*The seven shapes H23 found (H23 and its probes)*
+
+- **A Mandatory Start or Mandatory Finish in the second slot (SL).** Only the primary slot pins, and only it holds the
+  free float at zero. Forward, a Mandatory Start in the second slot is a floor, as a Start On or After is, and a
+  Mandatory Finish, as a Finish On or After is: later than where the work would otherwise be, it moves the work out to
+  its date, off a primary Mandatory Start too; earlier, it leaves the work where it would be. On the late side it caps,
+  as PC has it. A Mandatory Finish's date stays a deadline: a finish past it raises the constraint-violated alert, where
+  P6 prints the negative float (ZZ-CPP-SSM M2, M3, M5, M12). Through v2.10.11, and with PC, the forward pass pinned the
+  early finish to a Mandatory Finish in either slot and held at zero the free float of work with a mandatory date in
+  either slot. Held-out set H23 found it in H23-04 A1140, H23-07 A1120 and H23-08 A1220, and the two activities that
+  follow them: P6 does not pull the finish back to an earlier second-slot date, and gives H23-08 A1220 114 h of free
+  float where the engine gave 0. Measured on ZZ-CPP-SSM M1 to M6 and M9 to M12, and on ZZ-CPP-MSS N1 to N7 (below).
+- **The JS whole-day pass loses its v2.9.16 rule F5-B.** Both halves go: the one that restored a mandatory second
+  constraint's pin over a soft primary (withdrawn with SL), and the one that held the start on a primary Mandatory
+  Start against a later Start On or After or Mandatory Start in the second slot. P6 moves such work out: ZZ-CPP-MSS N1,
+  N3, N5 and N6 start on the later second constraint, N7 moves so its finish meets a later Finish On or After, and N2
+  and N4, with an earlier second constraint, stay on the Mandatory Start. The pin capture and its priority-override WARN
+  are deleted. The hours pass already scheduled these shapes as P6 does, so no printed value moves; the whole-day
+  pass's dates move onto P6's day (on the h23-shapes probes at that step, 152 of 596 activities on P6's day for all
+  four dates, 131 before). The JS = Python parity fuzz on the H24 generator found the second half. The Python
+  reference never had F5-B.
+- **A Mandatory Start ignores its finish-to-finish and start-to-finish predecessors (MG),** and an expected finish's
+  floor from them: the work runs its own duration from the mandatory date. Through v2.10.11 such a predecessor held the
+  finish, and the work ran from the mandatory date to the finish it gave. Measured on ZZ-CPP-SSM M7, M8 and M9: M7 and
+  M8 run Wed 9 to Fri 11 Dec against predecessors that would hold their finish to Mon 14, and M9 finishes at its
+  second-slot floor, Mon 14 17:00, not at its predecessor's Tue 15 17:00 (the shape of H23-08 A1250).
+- **A mandatory date beside external dates (MX).** An external early start moves neither a Mandatory Start nor a
+  Mandatory Finish, and an external late finish caps no mandatory pin; a soft constraint takes both. Through v2.10.11
+  an external early start moved a Mandatory Start, and the whole-day pass capped a pin with an external late finish
+  (the hours pass already ignored it). Held-out case H23-03 A1260 found it: P6 starts it at its Mandatory Start, Mon 30
+  Nov 07:00, with zero float; the engine moved it to the external early start, Wed 9 Dec 07:00, at −61 h; its
+  predecessor A1250 followed. Measured on ZZ-CPP-MXE E1, E3, E9, E4, E10, E6 and E7, against E5 and E8.
+- **As Late As Possible work holds no free float (FZ).** With "Calculate multiple float paths" off, P6's default,
+  unfinished As Late As Possible work prints zero free float. Through v2.10.11 the engine gave such work the hours its
+  own calendar works between its finish and what its successor needs, where its resource does not work them (held-out
+  case H23-02 A1220: P6 0 h, the engine 2 h). P6 prints zero on all 88 unfinished As Late As Possible activities in H1
+  to H23. Measured on ZZ-CPP-AFF F1 (against F2, F3 and F4), then on ZZ-CPP-AFX, -AFP, -AF4, -HSR and -HSB: 0 h on
+  every As Late As Possible activity, whatever the lag, the lag calendar, where the requirement falls, an open-ended
+  successor, a holiday or the percent complete type.
+- **"Calculate multiple float paths" (FP).** P6's SCHEDOPTIONS `enable_multiple_longest_path_calc`, which no earlier
+  release read. With it on, P6 prints the free float of As Late As Possible work as it stands, so FZ does not apply, in
+  both passes.
+  - FZ as first built moved one row of an earlier probe off P6: ZZ-CPP-RSRC H1-S (13 October 2026), where P6 prints
+    1 h. A test of CPP's time impact analysis tool found it. A run over the measuring machine's P6 database (647
+    projects, 103,483 rows) confirmed it: of the 83 rows the candidate's rules then moved, 80 moved onto P6, 2 moved
+    but stayed off, and H1-S moved away; no row of a real project moved.
+  - ZZ-CPP-RSRC has the option on. ZZ-CPP-RSRCN, the same file with it off, prints 0 h, and ZZ-CPP-RSRCR, the file
+    renamed, 1 h again. ZZ-CPP-HSM, the replicas with it on, prints the gaps (1 h, 2 h), and so do ZZ-CPP-HSF (the
+    paths calculated on free float), -HSP (one path, every As Late As Possible chain off it) and -HSK (ten paths P6
+    chose).
+  - `parseXER` returns the option as `multiple_float_paths`. `computeCPM` takes `opts.multipleFloatPaths` (alias
+    `multiple_float_paths`, or `'Y'`; Python `multiple_float_paths=` on `compute_cpm` and `compute_cpm_hours`). It is
+    off unless handed on, as P6's is.
+- **An expected finish passed by a finish requirement off working time (XO).** In the hours pass, a finish-to-finish or
+  start-to-finish requirement beyond the expected finish that falls off working time prints at the activity calendar's
+  next opening, as it does with no expected finish; at a close it stays. Through v2.10.11 the engine kept such a
+  requirement as it stood when an expected finish was in force. Held-out case H23-03 A1190 found it (P6 Mon 16 Nov
+  07:00, the engine Sat 14 Nov 03:00). Measured on ZZ-CPP-XFO and -XFR X1, X2, X3, X6 and X7, against X4, X5 and X8.
+- **The As Late As Possible slide of resource dependent work (AV).** In the hours pass, where the slide lands where
+  only the work's resource works (a day the activity calendar has off, or a time before it opens), the work restarts at
+  the activity calendar's next opening and the resource runs on from there, past the slide's bound, under way or not
+  yet started. Through v2.10.11 rule RU's restart at the calendar's next opening applied where the engine places
+  resource dependent work forward, but not after the slide. Held-out case H23-05 A1060 found it (P6 restarts it Mon 8
+  Jun 07:00 at −126 h; the engine Sat 6 Jun 11:00 at −124 h). Measured on ZZ-CPP-ARU A1 and A5 (under way) and
+  ZZ-CPP-AVN A1, A2 and A4 (not yet started), against ARU A4 and AVN A3.
+- **An assignment with no work left and a lag (ZB).** In the hours pass, under a start-to-start bound, such an
+  assignment starts at the bound (the activity's late start) and lands its lag later on its resource's calendar, which
+  can set the activity's late finish. Through v2.10.11 the engine placed it back from the bound, so its lag pulled the
+  activity's late start earlier. Held-out case H23-08 A1340 found it (P6's late start Mon 27 Jul 14:00, the engine's
+  Thu 23 Jul 14:00, 16 working hours earlier; A1280, linked to it start-to-start, followed). Measured on ZZ-CPP-ZLA Z1
+  and Z2, against Z3, Z4 and Z5.
+- **Resource dependent work under an expected finish keeps no first placement (XE).** In the hours pass, under an
+  expected finish in force, resource dependent work not yet started keeps no first placement: its early dates are its
+  remaining dates, and its successors follow them. Without one, P6 keeps the first placement on the resources'
+  calendars and drives the successors from it. Through v2.10.11 the engine kept the first placement in both. Held-out
+  case H23-12 A1230 found it: the engine drove its successor from Thu 20 Aug 10:00, P6 from Mon 24 Aug 10:00, and 15
+  activities followed, the project's early finish among them. Measured on ZZ-CPP-HLX K1, K3 and K6 and ZZ-CPP-H12C
+  A1230 (H23-12's file renamed), against ZZ-CPP-HLA Q1, -HLX K0, K2, K4 and K5, and -HLN. ZZ-CPP-XEU and -XEV measured
+  an expected finish on such work under way, and one earlier than the resource would finish the work: P6 finishes the
+  work at it, as the engine already did.
+
+*The shapes H24 found (H24 and its probes)*
+
+- **Work a finish requirement places starts on its resource's hours (QS).** In the hours pass, where a finish-to-finish
+  or start-to-finish requirement sets the start of resource dependent work, the work starts where its resource first
+  works at or after the activity calendar's opening, not at that opening. Before it the engine started such work at
+  the activity calendar's opening. Held-out H24 found it in two activities: H24-03 A1150, an As Late As Possible
+  restart (P6 08:00, when the resource first works; the engine 07:00), and H24-10 A1160, whose placement starts at
+  07:00, before its calendar's 08:00 opening (P6 Tue 9 Mar 08:00 to 12:00; the engine Fri 5 Mar 08:00 to Tue 9 Mar
+  11:00). Measured on ZZ-CPP-AVR A7 to A10; its As Late As Possible slides A1 to A6 and the ZZ-CPP-FPF neighbours print
+  as the engine already had them.
+- **The late finish of a lagged assignment with no work (ZL).** In the hours pass, under a start-to-start or
+  start-to-finish bound, the late finish an assignment with no work lands its lag on takes the activity calendar's last
+  working time at or before it. The late start is the earlier of the bound and the lag back from that finish on the
+  lagged assignment's calendar. Before it the engine put the late finish where the lag landed, off the activity's
+  calendar. Held-out case H24-12 A1180 found it (P6's late dates Mon 27 Jul 12:00 to Tue 28 Jul 16:00, the engine's
+  Mon 27 Jul 16:00 to Wed 29 Jul 08:00), and the three activities before it followed, 4 h earlier in P6. Measured on
+  ZZ-CPP-ZBS Z1, Z3 and Z5, against Z2 and Z4.
+- **An expected finish sizes resource dependent work once (XW).** In the hours pass, an expected finish sizes resource
+  dependent work from its first placement: each assignment by its resource's working hours from the activity's own
+  start to the expected finish, the lagged one less its lag. The remaining work runs that size from the activity
+  calendar's opening and is not sized again, so where the resources' hours run out it runs past the expected finish.
+  Before it the engine finished such work at the resources' last working time before the expected finish. Held-out
+  case H24-10 A1130 found it (P6 runs it to Mon 8 Mar 08:00, the engine to Thu 4 Mar 17:30, with the late dates two
+  days earlier), and three activities linked to it followed. Measured on ZZ-CPP-MXR X1 to X4, against X5 and X6.
+- **An assignment with no duration under a start-to-start bound (ZR).** In the hours pass, under a bound on the late
+  start that another assignment takes, an assignment with no duration and no lag runs back from the activity's late
+  finish to its resource's last working time at or before it, not to the bound. Before it the engine sat such an
+  assignment at the bound, which could pull the late start earlier. Held-out case H24-09 A1260 found it: resource
+  dependent work whose two assignments P6's import left with no units, one of them lagged (P6's late start Tue 28 Apr
+  17:00, the engine's Mon 27 Apr 17:00). Measured on ZZ-CPP-ZRA Z1 (A1260's shape), Z2, Z3 and Z7, against Z4 and
+  Z5, where no assignment lands a lag and the bound stands as before.
+- **An assignment with no units per hour keeps its own dates' hours (ZW).** With no units per hour there is no units
+  over units per hour to size an assignment. P6 schedules it for its resource's working hours between its own
+  remaining start and finish, as work, and keeps that span through an F9; the engine now does, in the hours pass, with
+  the parser handing each such assignment's remaining start and finish on (the planned ones when those are blank).
+  Before it the engine gave the assignment no duration. P6's import leaves an assignment written with no units in
+  this state wherever its planned window holds working hours; where the window holds none, the import keeps the units
+  per hour and the assignment still has no duration. Work under way keeps its remaining units per hour. Measured on
+  ZZ-CPP-ZWA W1 to W4, W6 and W7 (W6 with dates of its own three days apart: 24 hours), against W5, and on ZZ-CPP-ZBZ
+  Y1 to Y4, the probe of H24-09 A1260.
+
+*Resource dependent work held out on H25 (H25 and its probes)*
+
+- **A lagged assignment with no work under a bound another assignment takes (ZF).** In the hours pass, under a
+  start-to-start or start-to-finish bound, a lagged assignment with no work that took the bound runs back from the
+  activity's late finish, which an assignment with work can set later than its own landing. Its start is the earlier
+  of the bound and its lag back from there. Before it ZL placed it back from its own landing and pulled the late start
+  earlier. Held-out case H25-02 A1460 found it (P6 keeps the late start at the bound, Fri 29 May 17:00; the engine
+  pulled it to Thu 28 May 13:00), with the three activities before it, and H25-08 A1220. Measured on ZZ-CPP-ZLB B4,
+  against B3 and B5, where the landing is the late finish and ZL stands.
+- **A bound that moves no finish does not bind (BM).** In the hours pass, a start-to-start or start-to-finish bound
+  binds only where it moves an assignment's late finish earlier than its own calendar's last working time at or
+  before the late finish requirement. Where it moves none, the work is placed as with no bound, and its late start is
+  not printed at the bound's close. Measured on ZZ-CPP-ZLB B1 and B2 (the shapes of H25-02 A1460 and H25-08 A1220,
+  on the probe's dates), against B4. H25-02 A1460 itself binds: its lagged resource works past the close the bound
+  puts it at.
+- **No As Late As Possible slide without working time to gain (AG).** In the hours pass, the As Late As Possible slide
+  of resource dependent work does not move it where no working time of the activity calendar lies between its early
+  finish and the slide's bound. An assignment with no duration then stays where the early pass put it. Before it the
+  engine re-placed the work at the bound and moved its early start. Held-out case H25-01 A1310 found it (P6 keeps the
+  early start at Mon 23 Nov 11:30, the engine moved it to Tue 24 Nov 06:00), and A1290's free float followed. Measured
+  on ZZ-CPP-ALZ A1 and A5, against A2 to A4, where the slide gains working time and the assignment with no duration
+  moves with the work.
+
+The same round measured the four duration types on ZZ-CPP-DT1 to DT4 (108 rows). P6's import and its F9 give
+identical values under all four. The engine does not read the type, and it matches P6 on all 108.
+
+*The whole-day pass and the Python reference*
+
+- **A milestone with an expected finish keeps zero duration in the whole-day pass.** Under "Use Expected Finish
+  Dates" the whole-day pass now sits such a milestone at its expected finish, no earlier, with zero duration, as the
+  hours pass has since v2.10.4 (XM). Through v2.10.11 the whole-day pass stretched it to its expected finish as a
+  multi-day activity, which v2.10.4 disclosed under "Not claimed".
+- **The Python reference's input checks.** `python_reference/cpm.py` now raises the JS engine's activity-level input
+  alerts (`empty-schedule`, `activity-null`, `activity-missing-code`, `activity-name-control-chars`,
+  `activity-code-trimmed`, `duplicate-activity-code`) and trims activity codes and relationship endpoints as the JS
+  engine does. It had skipped a null or code-less activity silently and kept a padded code, so a relationship naming
+  the trimmed code dangled in Python and linked in JS.
+  - It also takes five more of the JS engine's whole-day checks, found by listing every alert `computeCPM` raises that
+    `compute_cpm` did not: a constraint dated on no real day is dropped loudly (`constraint-invalid-date`, primary and
+    secondary), an activity date that does not parse is alerted (`invalid-date-coerced`), actuals inverted on
+    completed work derive the early start back from the actual finish (`inverted-actuals`; Python had seeded it from
+    the inverted actual start, a value the JS engine never printed), a remaining duration longer than the duration is
+    flagged (`remaining-exceeds-duration`), and the As Late As Possible slide checks its successors
+    (`alap-slide-violates-succ`).
+  - Its whole-day pass gains the JS engine's v2.9.16 rule F5-A: each Finish On or Before and Mandatory Finish is
+    re-checked after both finish clamps. The F5-C port that came with it was withdrawn with PC.
+  - No value of the JS engine moves; fixtures F194 to F196 pin the checks. This closes the item ROADMAP_OPEN.md
+    recorded at v2.10.11.
+
+**Verified.**
+- **Held-out set H22** scored the released v2.10.11 once at 268 of 271 unfinished activities on all seven fields, 11 of
+  12 cases clean ([`validation/held-out/H22/RESULT.md`](validation/held-out/H22/RESULT.md)). Its three differences
+  are one: H22-06 A1120, a Mandatory Finish under an expected finish whose successor needs an earlier finish, and the
+  two activities that lead to it. v2.10.10, diagnosed after the score, gives 202. H22 is now fitted: 271 of 271 on
+  these bytes.
+  - It is the first set drawn with `--features wide4`. XL decided 4 activities, all matching; XC decided 4, 2 matching
+    (the other two are A1120 and A1100); OC's edges all match.
+- **Held-out set H23,** drawn after XP, MR, XC on finish milestones and PC (`--features wide5`), scored the candidate
+  once at 262 of 289, 5 of 12 cases clean ([`validation/held-out/H23/RESULT.md`](validation/held-out/H23/RESULT.md)).
+  - The four rules decided 43 activities and 39 match P6: XP 11 of 11, XC on finish milestones 8 of 8, MR 16 of 17, PC
+    9 of 12. The other four are SL and MX shapes, taken after.
+  - The 27 differences came from seven shapes new to the held-out sets, 15 of them from H23-12 A1230.
+  - v2.10.11, diagnosed after the score, gives 217: 45 activities moved onto P6 and none away.
+  - The production Python engine equals this engine on all 401 activities as P6's database holds them, and matches
+    P6 on the same 262 once the resource dependent sizing P6's F9 rewrote is set back to its import.
+  - H23 is now fitted: 289 of 289 on these bytes.
+- **Held-out set H24,** drawn after SL, MG, MX, FZ, FP, XO, AV, ZB and XE (`--features wide6`), and the first set to
+  draw "Calculate multiple float paths" (six cases, 1, 3 or 10 paths), scored the candidate once at 267 of 278, 8 of
+  12 cases clean ([`validation/held-out/H24/RESULT.md`](validation/held-out/H24/RESULT.md)).
+  - Outside five shapes of resource dependent work, every activity the rules' shapes drew matches P6: SL 16 of 18, MG
+    2 of 2, MX 2 of 2, XO 3 of 3, AV 3 of 3 under way and 4 of 5 not started, FZ 17 of 18, FP 14 of 16, ZB 5 of 7, XE
+    4 of 4. The free float of all 34 unfinished As Late As Possible activities matches P6, under the option and
+    without it.
+  - v2.10.11, diagnosed after the score, gives 178: 89 activities moved onto P6 and none away.
+  - The production Python engine equals this engine on all 379 activities as P6's database holds them, and matches P6
+    on the same 267 once the resource dependent sizing P6's F9 rewrote is set back to its import.
+  - H24 is now fitted: 278 of 278 on these bytes.
+- **Held-out set H25,** drawn after QS, ZL, XW, ZR and ZW (protocol `3ee5d17`, drand round 6566986, `--features
+  wide7`), scored once on the candidate before ZF, BM and AG: **384 of 391** unfinished activities match P6 on all
+  seven fields; 9 of 12 cases match on every field.
+  - Every activity QS, XW, ZR and ZW drew matches P6 (20, 17, 10 and 12), and so do the 12 assignments written with
+    no units and the 8 whose resource has no hours in its planned window. ZR and ZW decided 21 activities, all onto
+    P6.
+  - The 7 differences came from two shapes of resource dependent work, which gave ZF, BM and AG.
+  - v2.10.11, diagnosed after the score, gives 282: 102 activities moved onto P6 and none away.
+  - The production Python engine equals this engine on all 505 activities as P6's database holds them, and matches
+    P6 on the same 384 once the resource dependent sizing P6's F9 rewrote is set back to its import.
+  - H25 is now fitted: 391 of 391 on these bytes.
+  - Its P6 capture records each assignment's remaining start and finish after the import, and the scorers lay them
+    over the case files, as a P6 export carries them; the records of H1 to H24 have none, and nothing of theirs
+    moves.
+- **Held-out set H26,** drawn after ZF, BM and AG (protocol `b252355`, drand round 6567266, `--features wide8`),
+  scored once on these bytes: **407 of 407** unfinished activities match P6 on all seven fields, and all 12 cases match
+  on every field. This was reached through one deviation from the protocol, committed before any value was compared
+  (`validation/held-out/H26/DEVIATION.md`):
+  - Case H26-08 gives one activity two assignments of the same resource, a defect of the test generator. P6's import
+    kept one, and the registered overlay of P6's import refused the mismatch.
+  - The 11 other cases are scored exactly as frozen: 370 of 370. H26-08 is scored on the schedule P6 holds: 37 of 37.
+  - Every shape the draw gave the three rules matches P6: ZF 3, BM 5, AG 9, and AG with a slide 2. They moved 16
+    activities onto P6, none away; the candidate H25 scored gives 391.
+  - v2.10.11, diagnosed after the score, gives 217: 190 activities moved onto P6 and none away.
+  - The production Python engine equals this engine on all 562 activities in P6's database after the F9. It matches
+    P6 on 407 of 407 once the resource dependent sizing P6's F9 rewrote is set back to its import.
+  - A model of P6's import (`validation/held-out/model_p6_import.js`) was frozen with the cases. It predicted P6's
+    import of all 191 resource dependent activities and 283 assignments, apart from the duplicate P6 dropped.
+  - After H26, the overlay and the model keep one assignment per resource on an activity, as P6's import does. The
+    generator's `--features wide9` draws no activity two assignments of one resource. H24 and H25 score byte for byte
+    as before under the new scripts, and H26 scores whole, 407 of 407.
+- **Held-out sets H1 to H26,** re-scored on these bytes: all 6,412 unfinished activities match P6 on all seven
+  fields (H1 to H23 5,336; H24 278; H25 391, fitted; H26 407, held out). Printed values moved only in the sets that
+  found the rules, all onto P6: XP, MR and XC on finish milestones moved 12 of 35,329 across H1 to H22, all in H22-06
+  (A1090, A1100, A1120), and PC none; the H23 rules moved 73 of 37,352 across H1 to H23, all in H23; QS, ZL and XW
+  moved 28, all in H24 (10 activities); ZR 1, H24-09 A1260's late start; ZW none (the records of H1 to H24 carry no
+  assignment dates); ZF, BM and AG none of H1 to H24, and the 7 activities H25 found. The
+  held-out scorers now hand the multiple-float-path option on: every set H1 to H23 has it off, and none of 62,282
+  values compared moves.
+- **The whole-day pass** moved 6 of 20,188 values under XP, MR and XC, all in H22-06 (5 onto P6's day; A1090's late
+  finish moved off, as it now sits at the data date's 08:00 opening), and 10 of 21,344 under the H23 rules, all in H23
+  (6 onto P6's day, 4 moved but still off). F5-B's withdrawal moves none of H1 to H23, and QS, ZL and XW none of H1 to
+  H24. It puts on P6's day for all four dates 56 of H24's 278 (v2.10.11: 36), 84 of H25's 391 (73) and 74 of H26's
+  407 (60); on the probes, 283 of the xf-mandatory 307 (202), 158 of the h23-shapes 642 (129) and 28 of the
+  h24-shapes 89 (28). It schedules neither times of day nor the resources' own calendars.
+- **The probes:** 49 synthetic P6 probe projects, 1,254 rows, every one matching P6 on the four dates and both floats;
+  v2.10.11 matches 977 ([`validation/p6-probes/xf-mandatory-2026-10-18/`](validation/p6-probes/xf-mandatory-2026-10-18/),
+  8 probes, 307 rows, v2.10.11 202;
+  [`validation/p6-probes/h23-shapes-2026-10-19/`](validation/p6-probes/h23-shapes-2026-10-19/), 28 probes, 642 rows,
+  v2.10.11 555; [`validation/p6-probes/h24-shapes-2026-10-19/`](validation/p6-probes/h24-shapes-2026-10-19/), 4
+  probes, 89 rows, v2.10.11 58; [`validation/p6-probes/zero-units-2026-10-19/`](validation/p6-probes/zero-units-2026-10-19/),
+  3 probes, 61 rows, v2.10.11 29; [`validation/p6-probes/h25-shapes-2026-10-19/`](validation/p6-probes/h25-shapes-2026-10-19/),
+  2 probes, 47 rows, v2.10.11 33; [`validation/p6-probes/duration-types-2026-10-19/`](validation/p6-probes/duration-types-2026-10-19/),
+  4 probes, 108 rows, v2.10.11 100). All were imported into EPS ZZ-CPP-TEST except the first two rounds of
+  xf-mandatory (EPS XVA, 18 October 2026). The probes are fitted, not held out. The earlier probe sets (3,008 rows)
+  and the Larchmere capture (4,608 comparisons) still match.
+- **Against P6, through CPP's converters and the Python engine** (the measuring machine's P6 database, 717 projects,
+  106,400 unfinished activities): 763 rows moved against v2.10.11, all in synthetic projects: 486 in 44 cases of
+  held-out sets H22, H23, H24, H25 and H26, and 277 in 37 of the probe projects. 708 moved onto P6 and none away. 55
+  moved but stay off P6, in projects whose resource dependent sizing P6's F9 rewrote after its import (H23-02 1, H23-04
+  2, H23-05 1, H23-08 2, H25-05 6, H25-10 1, H25-12 19, H26-04 2, H26-06 15, ZZ-CPP-XQN 4, ZZ-CPP-XQO 2); with that
+  sizing set back to the import, all of them match P6 (the held-out sets run from their import records, the probes in
+  their replays). 106,242 match P6 on all four dates and both floats (v2.10.11: 105,534).
+- **CPP's analysis tools hand the engine the multiple-float-path option.** The converters of the time impact
+  analysis, collapsed as-built, critical path validator, forensic delay analysis, impacted-as-planned and path
+  explorer tools read P6's `enable_multiple_longest_path_calc` and hand it on, so FZ applies only where P6's option is
+  off. The database run above goes through that path: ZZ-CPP-RSRC H1-S, which FZ alone moved off P6, stays on it.
+- **JS against Python** on the database (717 projects, 188,576 activities): every field equal.
+  Through the production converter on 7,000 schedules from the held-out generator (260,175 activities, a third of
+  them drawn as H26 was), with some assignments emptied and some durations re-sized as P6's import does: every field
+  equal. The parity fuzz on the H24 generator (`--features wide6`) found F5-B's second half before H24 was drawn.
+- **A scope audit of the JS engine:** the same nine block-scoped declarations shadow a name of their function's
+  enclosing scope as in v2.10.11. The twenty-one rules add none.
+- **XER census on the measuring machine:** of 930 distinct XER files, 926 are readable through the JS engine
+  (225,346 activities), and all 930 compute through the Python engine and the production converter (334,760
+  activities). In the hours pass, values move on 312 activities: three exports of one schedule that carries a
+  Mandatory Start and a Mandatory Finish on every activity, where a later Mandatory Finish in the second slot is now a
+  floor (SL). The whole-day pass moves in 11 files, the same through both engines; the Python census, which computes
+  each project of a multi-project file on its own, also moves two milestones of one 27-project export onto its hours
+  pass. ZF, BM and AG move nothing in any file.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.11, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values.
+- **JS unit suite:** 1,498 checks green, as in v2.10.11. The two F5-C checks now pin what P6 does, the two F5-B checks
+  assert that a later second constraint moves the early start and raises no priority WARN, and the SL check also
+  asserts the constraint-violated alert. The rules are pinned by the P6 probe replays (`npm run test:p6-comparison`:
+  `tests/p6-xf-mandatory.test.js`, `tests/p6-h23-shapes.test.js`, `tests/p6-h24-shapes.test.js`,
+  `tests/p6-zero-units.test.js`, `tests/p6-h25-shapes.test.js`, `tests/p6-duration-types.test.js`).
+- **Cross-validation:** 207 fixtures, 17926 of 17926 executed, 0 skipped, 0 failures; alert parity on 205 of 207 (the
+  other 2 must throw). F188 to F193 hand both engines XP, MR and XC on finish milestones (F192 and F193 re-pinned for
+  PC); F194 to F196 the Python reference's input checks; F197 to F200 SL, MG, MX, FZ, XO, AV, ZB and XE; F201 and F202
+  F197 and F198 under "Calculate multiple float paths"; F203 and F204 the ZZ-CPP-MSS shapes, in hours and in whole
+  days; F205 to F207 QS, ZL and XW; F208 and F209 ZR and ZW, whose activities equal P6's round 9 values; F210 and
+  F211 ZF, BM and AG, whose activities equal P6's round 10 values.
+- **Coverage,** re-measured on these bytes: statements 94.16% (13,674 of 14,521), branches 82.70% (3,602 of 4,355),
+  functions 96.94% (222 of 229); cross-validation alone covers 60.07% of statements.
+
+**Who is affected.**
+- **XP.** Schedules under "Use Expected Finish Dates" with an expected finish on work not yet started that carries a
+  Mandatory Finish, where a successor needs the work earlier than that date. Its late finish comes no later than what
+  the successors need, so its late dates and float fall, it can print critical, and the work driving it follows.
+- **XC on finish milestones.** Schedules under "Use Expected Finish Dates" with a finish milestone carrying an
+  expected finish and a Finish On or After, Finish On or Mandatory Finish. The milestone sits at its expected finish, so
+  it and what it drives can move earlier.
+- **MR.** Schedules with a Mandatory Start or Mandatory Finish on resource dependent work not yet started. It is pinned
+  as a task is, whatever its successors need; its late dates, its float and the late dates of the work before it can
+  move.
+- **PC, SL and F5-B.** Schedules with a constraint in each slot where either is a Mandatory Start or Mandatory Finish.
+  A mandatory date in the second slot no longer pins: forward it moves the work only out to its date, and on the late
+  side it caps. A tighter second constraint caps a primary pin, and a later second constraint moves work off a primary
+  Mandatory Start. Early dates, late dates, free float, and the work before and after can move. The JS whole-day pass no
+  longer raises its priority-override WARN.
+- **MG.** Schedules with a Mandatory Start on work whose finish-to-finish or start-to-finish predecessors would hold
+  its finish later. Its finish no longer waits for them.
+- **MX.** Schedules with external early starts or late finishes on work carrying a Mandatory Start or Mandatory
+  Finish. The mandatory date holds.
+- **FZ and FP.** Schedules with unfinished As Late As Possible work. With "Calculate multiple float paths" off, or not
+  handed on, its free float prints zero; with the option handed on, it prints as it stands. A caller that does not
+  hand the option on gets zero on a schedule P6 computes with it on.
+- **XO, AV, ZB, XE, QS, ZL, XW, ZR, ZF, BM and AG** (hours pass). Schedules with resource dependent work whose
+  resources keep other days or hours than the activity's calendar, or with an expected finish on such work; with As Late As Possible on it;
+  or with an assignment with no work left and a lag. Its dates, the dates of the work it drives and the late dates of
+  the work before it can move. XO moves work under an expected finish passed by a finish requirement off working time.
+- **ZW** (hours pass). Schedules exported from P6 with resource dependent work carrying an assignment with no units
+  per hour. The assignment now runs for its resource's working hours between its remaining start and finish, so the
+  activity's finish, the work it drives and the late dates before it can move later.
+- **The whole-day pass.** A milestone with an expected finish prints at that date with zero duration.
+- **The Python reference's callers** receive the input alerts above, and completed work with inverted actuals gets its
+  early start from its actual finish. No value of the JS engine moves.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). Re-run a deliverable issued on an earlier version
+under §12.2 where its schedule carries any of these situations.
+
+**Not claimed.**
+- QS, XW, ZR and ZW are held out on H25, where every activity they drew matches P6 (20, 17, 10 and 12). ZL drew 12
+  and matched 10; its two misses are ZF's shape. ZF, BM and AG are held out on H26, where every shape they drew
+  matches P6 (ZF 3, BM 5, AG 9, and 2 with a slide of a day), through the deviation H26 records.
+- ZW is measured on work not yet started. An assignment with no units per hour on work under way is not measured:
+  P6's import kept the remaining units per hour of the one the probes drew (ZZ-CPP-ZWA W5).
+- XP, MR, XC on finish milestones and PC are held out on H23; the four activities there that differ are SL and MX
+  shapes, taken after. No held-out set has drawn a start milestone with an expected finish; the probes measured it
+  (G1, Q13, Q14).
+- SL, MG, MX, FZ, FP, XO, AV, ZB and XE are held out on H24, where every activity their shapes drew matches P6
+  outside its five shapes. Float paths ending at an activity chosen in P6 are not measured: P6's import does not carry
+  a file's key activity over (ZZ-CPP-HSK), so a probe built as a file cannot set one.
+- A second constraint on work under way beside a mandatory date is not measured (rule SC drops both on the late side).
+- The whole-day pass schedules neither times of day nor the resources' own calendars: XO, AV, ZB, XE, QS, ZL, XW, ZR,
+  ZW, ZF, BM and AG are not in it.
+
+
+---
+
 ## v2.10.11 - 2026-10-18 - "Make open-ended activities critical"; no expected finish on As Late As Possible work; an expected finish against a finish constraint on work not yet started
 
 **Computed values move (Class A): engine math changed.** Three rules in both engines, each measured on synthetic P6
