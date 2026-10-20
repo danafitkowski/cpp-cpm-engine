@@ -2520,10 +2520,13 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
 
 // [late start, late finish] of resource dependent work from its driving
 // assignments (RD). Python paired site: cpm_hours._rsrc_backward.
-function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt) {
+function _hrRsrcBackward(asg, actCal, lfReq, lsBoundIn, leadAt, lfAsIs) {
     const starts = [];
     const fins = [];
-    const lfAct = actCal.prevWorkEnd(lfReq);
+    // lfAsIs: each assignment runs back from the requirement on its own
+    // calendar, the requirement not first taken back to the activity
+    // calendar's close (AR's finish moved on to that calendar's next opening)
+    const lfAct = lfAsIs ? lfReq : actCal.prevWorkEnd(lfReq);
     // RA (H12, 17-Oct-2026): P6 holds an SS / SF bound, a lag's or a lead's,
     // against the activity's late start, the earliest of its assignments' own.
     // Where that start already meets it, no assignment takes it, not even one
@@ -3457,28 +3460,32 @@ function computeCPMHours(activities, relationships, o) {
             // (ZZ-CPP-ALZ A1 against A2; H25-01 A1310)
             if (cal.between(n.ef, efB) <= 0) continue;
             // RD: the assignments finish by the bound on their own calendars.
-            // AR (H27, 20-Oct-2026): an SS / SF bound is a bound on the start:
-            // the work starts there and runs forward on its own calendars, not
-            // back from that start carried to a finish on the activity
-            // calendar's remaining duration; the earlier of that start and the
-            // one the finish bounds give holds (ZZ-CPP-KC3, KC4, KC7;
-            // ZZ-CPP-KH1C, KH4C; H27-04 A1220). Measured only where the work so
-            // placed finishes on the activity calendar's working time; where it
-            // would finish off it, the old reading stands (H27-11 A1220; ZZ-CPP-
-            // KH2C matches neither). Tasks keep the old reading, which gives
-            // the same start (KC1, KC2, KC6)
-            let ne = null;
-            let nf = null;
+            // AR (H27 and rounds 15-16, 20-Oct-2026): an SS / SF bound is also
+            // a bound on the start: the work started there runs forward on its
+            // own calendars, the earlier of that start and the one the finish
+            // bounds give (ZZ-CPP-KC3, KC4, KC7; ZZ-CPP-KH1C, KH4C; H27-04
+            // A1220). Where that forward finish falls off the activity
+            // calendar's working time, the finish moves on to the calendar's
+            // next opening and the work is placed back from there (ZZ-CPP-KR1,
+            // KR2; ZZ-CPP-KH2, KH2C). The later of that placement and the old
+            // reading's, back from the start bound carried to a finish on the
+            // activity calendar's remaining duration, holds (ZZ-CPP-KR7 against
+            // KR4, KR5, KR6, KR8, KR10; H27-11 A1220). Tasks keep the old
+            // reading, which gives the same start (KC1, KC2, KC6)
+            let [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
             let ar = false;
             if (lsB !== null) {
-                const [se, sf] = _hrRsrcForward(n.asg, cal, lsB, null, null);
-                if (onWorkingTime(cal, sf)) {
+                let [se, sf] = _hrRsrcForward(n.asg, cal, lsB, null, null);
+                if (!onWorkingTime(cal, sf)) [se, sf] = _hrRsrcBackward(n.asg, cal, cal.nextWork(sf), null, null, true);
+                if (efFin !== null) {
+                    const [be, bf] = _hrRsrcBackward(n.asg, cal, efFin, null);
+                    if (be < se) [se, sf] = [be, bf];
+                }
+                if (sf > nf) {
+                    [ne, nf] = [se, sf];
                     ar = true;
-                    [ne, nf] = efFin === null ? [null, null] : _hrRsrcBackward(n.asg, cal, efFin, null);
-                    if (ne === null || se < ne) [ne, nf] = [se, sf];
                 }
             }
-            if (!ar) [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
             // AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
             // working time moves on to its next opening, as RU has it, and the
             // assignments run from there, past the bound if they must
@@ -11906,17 +11913,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '207 cross-validation fixtures. The harness defines 17926 ' +
+                '220 cross-validation fixtures. The harness defines 20338 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 17926 / 17926" is the whole comparison surface. ' +
+                'reported "Checks: 20338 / 20338" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 17926 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 20338 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 205 of the 207 fixtures: ' +
+                'severity-level alert parity, compared on 218 of the 220 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11955,18 +11962,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '17926 comparisons it defines over 207 fixtures and skips none; every ' +
+                '20338 comparisons it defines over 220 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '207 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '220 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 17926 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 20338 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 205 of the 207 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 218 of the 220 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +
