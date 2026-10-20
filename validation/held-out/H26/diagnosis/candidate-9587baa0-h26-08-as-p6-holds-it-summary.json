@@ -1,0 +1,90 @@
+{
+ "engine": {
+  "file": "cpm-engine.js",
+  "sha256": "9587baa06402f9cb06d8b376ecad7c3b8c8a0d346eaecd0500003ae6704abe0f"
+ },
+ "cases": {
+  "H26-08": {
+   "unfinished": 37,
+   "all_fields_match": 35,
+   "engine_unfinished": 37,
+   "hours_pass": true,
+   "out_of_scope": 1,
+   "p6_imported_overlay": {
+    "tasks": 17,
+    "assignments": 24
+   }
+  }
+ },
+ "fields": {
+  "early_start": {
+   "match": 36,
+   "differ": 1
+  },
+  "early_finish": {
+   "match": 37,
+   "differ": 0
+  },
+  "late_start": {
+   "match": 37,
+   "differ": 0
+  },
+  "late_finish": {
+   "match": 37,
+   "differ": 0
+  },
+  "total_float_hr": {
+   "match": 37,
+   "differ": 0
+  },
+  "free_float_hr": {
+   "match": 36,
+   "differ": 1
+  },
+  "critical": {
+   "match": 37,
+   "differ": 0
+  }
+ },
+ "rows": 37,
+ "rows_all_match": 35,
+ "left_out": {},
+ "differences": [
+  {
+   "case": "H26-08",
+   "task_code": "A1500",
+   "field": "free_float_hr",
+   "engine": 2,
+   "p6": 0
+  },
+  {
+   "case": "H26-08",
+   "task_code": "A1510",
+   "field": "early_start",
+   "engine": "2026-09-21 10:00",
+   "p6": "2026-09-21 08:00"
+  }
+ ],
+ "out_of_scope": [
+  {
+   "case": "H26-08",
+   "task_code": "A1300",
+   "task_type": "TT_LOE",
+   "p6": {
+    "status": "TK_Active",
+    "early_start": "2026-09-08 08:00",
+    "early_finish": "2026-09-29 16:00",
+    "late_start": "2026-10-06 13:30",
+    "late_finish": "2026-10-06 13:30",
+    "total_float_hr": 45.5,
+    "free_float_hr": 0,
+    "critical": false
+   },
+   "engine_node": false
+  }
+ ],
+ "all_rows": {
+  "rows": 38,
+  "all_fields_match": 35
+ }
+}

@@ -1,0 +1,144 @@
+{
+ "set": "H26",
+ "seed": "b014f3c98ef3a73b95a175f298bc17b6c2dc2742a786438f1f397b5393d21082",
+ "count": 12,
+ "cases": [
+  {
+   "case": "H26-08",
+   "file": "H26-08.xer",
+   "sha256": "a95dfe70095c5724bea0affe988ffeede5c9f1414367fc7ee53dd4a5dc9826c8",
+   "features": {
+    "activities": 53,
+    "unfinished": 38,
+    "completed": 15,
+    "in_progress": 6,
+    "relationships": {
+     "PR_FS": 67,
+     "PR_SS": 8,
+     "PR_FF": 10,
+     "PR_SF": 2
+    },
+    "lags": {
+     "zero": 71,
+     "positive": 14,
+     "negative": 2
+    },
+    "constraints": [
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_ALAP",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDFIN",
+     "CS_MANDSTART",
+     "CS_MANDSTART",
+     "CS_MEO",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MEOB",
+     "CS_MSOA",
+     "CS_MSOA"
+    ],
+    "secondary_constraints": 1,
+    "expected_finishes": 9,
+    "open_ends": 0,
+    "calendars": [
+     "H26-08 Mon-Thu 07:00-12:00 and 12:30-17:30",
+     "H26-08 Mon-Sat 08:00-16:00",
+     "H26-08 Every day 06:00-18:00"
+    ],
+    "data_date": "2026-09-08 00:00",
+    "must_finish_by": "",
+    "options": {
+     "sched_retained_logic": "N",
+     "sched_progress_override": "Y",
+     "sched_float_type": "FT_FF",
+     "sched_calendar_on_relationship_lag": "rcal_Predecessor",
+     "sched_lag_early_start_flag": "Y",
+     "sched_use_expect_end_flag": "Y"
+    },
+    "resource_dependent": 17,
+    "assignments": 25,
+    "assignment_lags": 7,
+    "resources": 12,
+    "resource_types": [
+     "RT_Equip",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor",
+     "RT_Labor"
+    ],
+    "level_of_effort": 1,
+    "level_of_effort_started": 1,
+    "wbs_summary": 0,
+    "wbs_nodes": 0,
+    "suspended": 3,
+    "resume": {
+     "after_data_date": 1,
+     "before_data_date": 1,
+     "blank": 1
+    },
+    "external_early_start": 2,
+    "external_late_finish": 2,
+    "outer_depend_type": "SD_Both",
+    "spurs": 3,
+    "open_critical": "Y",
+    "expected_finishes_added": 3,
+    "use_expected_finish": "Y",
+    "open_end_edges": {
+     "left_out": 1,
+     "alap": 2,
+     "under_way": 0,
+     "done": 2
+    },
+    "xp_mr_milestones": {
+     "xp": 1,
+     "mr": 1,
+     "milestones": 1,
+     "pairs": 1
+    },
+    "h23_shapes": {
+     "sl": 0,
+     "mg": 0,
+     "mx": 0,
+     "xo": 0,
+     "av": 1,
+     "alap_new": 1,
+     "fz": 1,
+     "zb": 1,
+     "xe": 0
+    },
+    "multiple_float_paths": "N",
+    "h24_shapes": {
+     "qs": 1,
+     "zl": 1,
+     "xw": 1,
+     "no_units": 1,
+     "no_hours": 1,
+     "zr": 1,
+     "zw": 1
+    },
+    "h25_shapes": {
+     "zf": 0,
+     "bm": 0,
+     "ag": 1,
+     "ag_slide": 0
+    }
+   }
+  }
+ ]
+}

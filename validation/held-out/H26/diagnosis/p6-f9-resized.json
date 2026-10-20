@@ -1,0 +1,165 @@
+{
+ "note": "Diagnosis after the score: what P6's F9 rewrote of the resource dependent sizing its import made (p6-imported/ against P6's database after the F9). Counts and activity codes of synthetic cases only.",
+ "cases": {
+  "H26-01": {
+   "tasks_resized": [
+    "A1060",
+    "A1080",
+    "A1110",
+    "A1120",
+    "A1140",
+    "A1150",
+    "A1230",
+    "A1240",
+    "A1300",
+    "A1320",
+    "A1340"
+   ],
+   "assignments_resized": 9
+  },
+  "H26-02": {
+   "tasks_resized": [
+    "A1110",
+    "A1200",
+    "A1240"
+   ],
+   "assignments_resized": 0
+  },
+  "H26-03": {
+   "tasks_resized": [
+    "A1040",
+    "A1060",
+    "A1110",
+    "A1160",
+    "A1200",
+    "A1220",
+    "A1240",
+    "A1350",
+    "A1360",
+    "A1380",
+    "A1390"
+   ],
+   "assignments_resized": 2
+  },
+  "H26-04": {
+   "tasks_resized": [
+    "A1200",
+    "A1230",
+    "A1240",
+    "A1250",
+    "A1300",
+    "A1430",
+    "A1490",
+    "A1530"
+   ],
+   "assignments_resized": 0
+  },
+  "H26-05": {
+   "tasks_resized": [
+    "A1090",
+    "A1130",
+    "A1200",
+    "A1250",
+    "A1290",
+    "A1300",
+    "A1310",
+    "A1500",
+    "A1520",
+    "A1540",
+    "A1550",
+    "A1570",
+    "A1640"
+   ],
+   "assignments_resized": 0
+  },
+  "H26-06": {
+   "tasks_resized": [
+    "A1140",
+    "A1200",
+    "A1230",
+    "A1270",
+    "A1320",
+    "A1390",
+    "A1500"
+   ],
+   "assignments_resized": 0
+  },
+  "H26-07": {
+   "tasks_resized": [
+    "A1040",
+    "A1070",
+    "A1110",
+    "A1250",
+    "A1380"
+   ],
+   "assignments_resized": 6
+  },
+  "H26-08": {
+   "tasks_resized": [
+    "A1050",
+    "A1200",
+    "A1230",
+    "A1240",
+    "A1250",
+    "A1410",
+    "A1470",
+    "A1490",
+    "A1510"
+   ],
+   "assignments_resized": 3
+  },
+  "H26-09": {
+   "tasks_resized": [
+    "A1210",
+    "A1490"
+   ],
+   "assignments_resized": 0
+  },
+  "H26-10": {
+   "tasks_resized": [
+    "A1040",
+    "A1120",
+    "A1140",
+    "A1150",
+    "A1160",
+    "A1170",
+    "A1290",
+    "A1330",
+    "A1360",
+    "A1380",
+    "A1390",
+    "A1430"
+   ],
+   "assignments_resized": 11
+  },
+  "H26-11": {
+   "tasks_resized": [
+    "A1090",
+    "A1130",
+    "A1170",
+    "A1410",
+    "A1420",
+    "A1480",
+    "A1550"
+   ],
+   "assignments_resized": 5
+  },
+  "H26-12": {
+   "tasks_resized": [
+    "A1080",
+    "A1120",
+    "A1130",
+    "A1140",
+    "A1170",
+    "A1250",
+    "A1290",
+    "A1300",
+    "A1330",
+    "A1370"
+   ],
+   "assignments_resized": 3
+  }
+ },
+ "tasks_resized": 98,
+ "assignments_resized": 39
+}

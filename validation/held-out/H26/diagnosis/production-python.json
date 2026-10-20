@@ -1,0 +1,20 @@
+{
+ "note": "Diagnosis after the score (PROTOCOL.md step 7). The production Python engine of the candidate's canonical tree (_cpp_common 54a4cdb: cpm.py with python_reference/cpm_hours.py c116fdd3; xer-parser 59e1e4e), through the production converter, run on H26's 12 projects as P6's database holds them after the F9. Counts only.",
+ "js_equals_python": {
+  "projects": 12,
+  "activities": 562,
+  "equal": 562,
+  "differ": 0
+ },
+ "against_p6": {
+  "projects": 12,
+  "unfinished_activities": 407,
+  "on_p6_all_four_dates_and_both_floats": 366,
+  "note": "P6's F9 rewrote the remaining duration of 98 resource dependent activities and the remaining units of 39 assignments (p6-f9-resized.json)"
+ },
+ "against_p6_import_sizing": {
+  "unfinished_activities": 407,
+  "on_p6_all_four_dates_and_both_floats": 407,
+  "note": "the same projects with the resource dependent sizing P6's F9 rewrote set back to P6's import record (p6-imported/)"
+ }
+}
