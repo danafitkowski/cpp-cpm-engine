@@ -200,9 +200,29 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  b06d14f35684e94b713249b6ed5cd09da737f7ec8c8f1c087b0998a14b04ff91
+cpm.py          SHA-256:  1be1edef3a69c6d4f264571144c251720ec115374e1a0b4a01ff6cb1cd4a276e
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  c116fdd3e84566a04744cf1e345c4149d8d4255f5dc31b77a32c513ccd7eacdf
+cpm_hours.py    SHA-256:  c03f8f3b6c78f18a0a3519dabdf608c7c5543c09dfd6aef359a57d8fb4075192
+
+(v2.10.13 candidate, unreleased, 2026-10-20 - cpm.py bumped from b06d14f3...:
+compute_cpm takes float_path_end, the activity P6's "Calculate multiple
+float paths" ends at (SCHEDOPTIONS key_activity_for_multiple_longest_paths):
+under it As Late As Possible work that is neither that activity nor leads
+into it holds no free float, as with the option off (FK; P6 probe rounds
+11 to 14, validation/p6-probes/key-activity-2026-10-20); and on work
+under way a Mandatory Finish, in either slot, takes its partner off the
+late side (UM). cpm_hours.py bumped from c116fdd3...: FK and UM in the
+hours pass; a finish milestone sits at the 24:00 close of a day before
+one not worked (MZ); on work under way the lag of an assignment with no
+units counts from the actual start (ZU); As Late As Possible resource
+dependent work under a start-to-start or start-to-finish bound starts at
+the bound, the finish moving on to the activity calendar's next opening
+where it would fall off it, and the later of that placement and the old
+reading's holds (AR); and an assignment with no work and a lag bounds the
+start placed back from a finish requirement (ZQ). Measured on P6 probe
+rounds 15 and 16 (validation/p6-probes/h27-causes-2026-10-20 and
+alap-rd-2026-10-20), after held-out H27. The harness gains 13 fixtures
+(F212-F224): 220 fixtures, 20338 of 20338 executed.)
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -873,15 +893,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 320301
-  sha-256:  b06d14f35684e94b713249b6ed5cd09da737f7ec8c8f1c087b0998a14b04ff91
+  bytes: 323123
+  sha-256:  1be1edef3a69c6d4f264571144c251720ec115374e1a0b4a01ff6cb1cd4a276e
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 207 passed, 0 failed
-  Checks:   17926 / 17926 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 220 passed, 0 failed
+  Checks:   20338 / 20338 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

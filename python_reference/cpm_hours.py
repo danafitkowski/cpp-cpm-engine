@@ -198,7 +198,7 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
     return min(starts), ef
 
 
-def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
+def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None, lf_as_is=False):
     """(late start, late finish) of resource dependent work from its driving assignments (RD).
 
     The late finish requirement first takes the activity's own calendar's last close at or before it (ZZ-CPP-RSRC
@@ -206,10 +206,12 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
     of the forward start. Each assignment then finishes at its own calendar's last close at or before that and
     starts its remaining duration earlier; an SS / SF bound or a start constraint caps the start as it caps a task's;
     the assignment's lag comes off the activity's late start. The activity runs from the earliest of those starts to
-    the latest assignment finish.
+    the latest assignment finish. With lf_as_is each assignment runs back from the requirement on its own calendar,
+    the requirement not first taken back to the activity calendar's close (AR's finish moved on to that calendar's
+    next opening).
     """
     starts, fins = [], []
-    lf_act = act_cal.prev_work_end(lf_req)
+    lf_act = lf_req if lf_as_is else act_cal.prev_work_end(lf_req)
     # RA (H12, 17-Oct-2026): P6 holds an SS / SF bound, a lag's or a lead's,
     # against the activity's late start, the earliest of its assignments' own.
     # Where that start already meets it, no assignment takes it, not even one
@@ -1136,25 +1138,28 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if cal.between(n['ef'], ef_b) <= 0:
                 continue
             # RD: the assignments finish by the bound on their own calendars,
-            # as on the backward pass (ZZ-CPP-RSRC H1). AR (H27, 20-Oct-2026): an SS / SF bound is a bound on the
-            # start: the work starts there and runs forward on its own calendars, and the earlier of that start and
-            # the one the finish bounds give holds, where the work so placed finishes on the activity calendar's
-            # working time (ZZ-CPP-KC3, KC4, KC7; ZZ-CPP-KH1C, KH4C; H27-04 A1220); elsewhere the old reading stands
-            # (H27-11 A1220; ZZ-CPP-KH2C matches neither). JS paired site: the ALAP block of computeCPMHours
+            # as on the backward pass (ZZ-CPP-RSRC H1). AR (H27 and rounds 15-16, 20-Oct-2026): an SS / SF bound is
+            # also a bound on the start: the work started there runs forward on its own calendars, the earlier of that
+            # start and the one the finish bounds give (ZZ-CPP-KC3, KC4, KC7; ZZ-CPP-KH1C, KH4C; H27-04 A1220). Where
+            # that forward finish falls off the activity calendar's working time, the finish moves on to the
+            # calendar's next opening and the work is placed back from there (ZZ-CPP-KR1, KR2; ZZ-CPP-KH2, KH2C). The
+            # later of that placement and the old reading's, back from the start bound carried to a finish on the
+            # activity calendar's remaining duration, holds (ZZ-CPP-KR7 against KR4, KR5, KR6, KR8, KR10; H27-11
+            # A1220). JS paired site: the ALAP block of computeCPMHours
+            new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)
             ar = False
             if ls_b is not None:
                 se, sf = _rsrc_forward(n['asg'], cal, ls_b, None, None)
                 sday, sm = divmod(sf, cm.DAY)
-                if any(a0 <= sm <= f0 for a0, f0 in cal.slots(sday)):
+                if not any(a0 <= sm <= f0 for a0, f0 in cal.slots(sday)):
+                    se, sf, _ = _rsrc_backward(n['asg'], cal, cal.next_work(sf), None, lf_as_is=True)
+                if ef_fin is not None:
+                    be, bf, _ = _rsrc_backward(n['asg'], cal, ef_fin, None)
+                    if be < se:
+                        se, sf = be, bf
+                if sf > new_ef:
+                    new_es, new_ef = se, sf
                     ar = True
-                    if ef_fin is None:
-                        new_es = new_ef = None
-                    else:
-                        new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_fin, None)
-                    if new_es is None or se < new_es:
-                        new_es, new_ef = se, sf
-            if not ar:
-                new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)
             # AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
             # working time moves on to its next opening, as RU has it, and the
             # assignments run from there, past the bound if they must
