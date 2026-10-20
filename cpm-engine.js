@@ -1840,8 +1840,11 @@ const _UNDERWAY_DROPPED_FINISH_TYPES = ['FNET', 'FO', 'MS_Finish', 'MFO'];
 // Start On and Mandatory Start from the late side (ZZ-CPP-H1S K1-K6), and a
 // Start On or Before or Mandatory Start in either slot takes the other
 // constraint with it (_UNDERWAY_LATE_DROP_ALL; ZZ-CPP-H1S-P P7 P10 P14).
+// UM (H27, 20-Oct-2026): so does a Mandatory Finish, in either slot, beside a
+// Finish On or Before, the same minute or not (ZZ-CPP-KB1-KB5 against KB6,
+// KB7, KB8; H27-07 A1550, H27-08 A1070).
 const _UNDERWAY_DROPPED_LATE_TYPES = ['MS_Finish', 'MFO', 'MS_Start', 'SNLT', 'SO'];
-const _UNDERWAY_LATE_DROP_ALL = ['SNLT', 'MS_Start'];
+const _UNDERWAY_LATE_DROP_ALL = ['SNLT', 'MS_Start', 'MS_Finish', 'MFO'];
 const _FINISH_TYPE_NAMES = { FNET: 'Finish On or After', FO: 'Finish On',
     MS_Finish: 'Mandatory Finish', MFO: 'Mandatory Finish' };
 
@@ -2446,8 +2449,13 @@ function _hrRsrcForward(asg, actCal, startReq, finishReq, xf) {
     if (req) {
         frA = actCal.isFinish(finishReq) ? finishReq : actCal.nextWork(finishReq);
         let first = null;
+        // ZQ (H27, 20-Oct-2026): beside work, an assignment with no work and a
+        // lag reaches the requirement too, its lag before it on its own
+        // calendar, and bounds the start (ZZ-CPP-KD2, KD3, KD4 against KD1;
+        // H27-08 A1260)
+        const anyWork = asg.some((h) => h.rem > 0);
         for (const g of asg) {
-            if (!(g.rem > 0)) continue;
+            if (!(g.rem > 0) && !(g.lag > 0 && anyWork)) continue;
             const gc = g.cal;
             const sg = gc.sub(gc.prevWorkEnd(frA), g.rem);
             const ag = g.lag ? gc.sub(sg, g.lag) : sg;
@@ -2790,6 +2798,7 @@ function computeCPMHours(activities, relationships, o) {
                     Object.prototype.hasOwnProperty.call(calMap, gid);
                 const gc = known ? calOf(gid) : n.cal;
                 let rem = _hrRound(g.remaining_minutes || 0);
+                let zw = false;
                 // ZW (round 9, 19-Oct-2026): an assignment with no units and
                 // no units per hour keeps the working hours of its resource
                 // between its own remaining start and finish, as work. One
@@ -2798,12 +2807,16 @@ function computeCPMHours(activities, relationships, o) {
                 if (!(rem > 0) && g.window_start && g.window_finish) {
                     const ws = _hrInst(g.window_start);
                     const wf = _hrInst(g.window_finish);
-                    if (ws !== null && wf !== null && wf > ws) rem = gc.between(ws, wf);
+                    if (ws !== null && wf !== null && wf > ws) {
+                        rem = gc.between(ws, wf);
+                        zw = true;
+                    }
                 }
                 n.asg.push({
                     cal: gc,
                     rem,
                     lag: _hrRound(g.lag_minutes || 0),
+                    zw,
                 });
             }
         }
@@ -2911,6 +2924,18 @@ function computeCPMHours(activities, relationships, o) {
         return cal.slots(day).some((sf) => sf[0] <= m && m <= sf[1]);
     };
 
+    // ZU (H27, 20-Oct-2026): on work under way the lag of an assignment with no
+    // units and no units per hour counts from the actual start, so only its
+    // unexpired part, on the assignment's calendar to the data date, runs from
+    // the restart, before its window's working time (ZZ-CPP-KA1-KA6; H27-06
+    // A1420, H27-10 A1420, H27-11 A1660)
+    for (const n of nodes.values()) {
+        if (!n.started || n.complete) continue;
+        for (const g of n.asg) {
+            if (g.zw && g.lag > 0) g.lag = unexpired(n.as, g.lag, g.cal, n);
+        }
+    }
+
     // ---------------------------------------------------------------- forward
     for (const c of order) {
         const n = nodes.get(c);
@@ -2993,7 +3018,11 @@ function computeCPMHours(activities, relationships, o) {
         if (n.xf !== null && !n.started && (tt === 'TT_Mile' || tt === 'TT_FinMile')) startReq = Math.max(startReq, n.xf);
         if (tt === 'TT_FinMile') {
             const t = finishReq === null ? startReq : Math.max(startReq, finishReq);
-            const inst = onWorkingTime(cal, t) ? t : cal.nextWork(t);
+            // MZ (H27, 20-Oct-2026): midnight is also the close of a day worked
+            // to 24:00, and a finish milestone sits there though the next day
+            // is not worked (ZZ-CPP-KE1, KE2, KE4 against KE3, KE5; H27-09 A1300)
+            const atClose = t % _HR_DAY === 0 && cal.slots(Math.floor(t / _HR_DAY) - 1).some((sf) => sf[1] === _HR_DAY);
+            const inst = (onWorkingTime(cal, t) || atClose) ? t : cal.nextWork(t);
             n.es = inst;
             n.ef = inst;
         } else if (n.asg.length) {
@@ -3193,8 +3222,9 @@ function computeCPMHours(activities, relationships, o) {
         if (n.ext_lf !== null) lf = Math.min(lf, cal.prevWorkEnd(n.ext_lf));
         // SC (H1, 13-Oct-2026): on work under way a Start On or Before or a
         // Mandatory Start in either slot takes the other constraint with it:
-        // P6 applies neither on the late side (ZZ-CPP-H1S-P P7, P10, P14)
-        const dropAll = n.started && [n.c1, n.c2].some((cs) => cs && (cs.type === 'SNLT' || cs.type === 'MS_Start'));
+        // P6 applies neither on the late side (ZZ-CPP-H1S-P P7, P10, P14).
+        // UM (H27, 20-Oct-2026): so does a Mandatory Finish (ZZ-CPP-KB1-KB5)
+        const dropAll = n.started && [n.c1, n.c2].some((cs) => cs && _UNDERWAY_LATE_DROP_ALL.indexOf(cs.type) !== -1);
         for (const cs of [n.c1, n.c2]) {
             if (!cs || cs.at === null) continue;
             // UW (v2.9.52): the mandatory pins drop on work under way. SC: so do
@@ -3412,6 +3442,7 @@ function computeCPMHours(activities, relationships, o) {
             else efB = (efB === null) ? t : Math.min(efB, t);
         }
         if (!seen) efB = projEf;
+        const efFin = efB;
         if (lsB !== null) {
             const fromLs = n.rem > 0 ? cal.add(lsB, n.rem) : lsB;
             efB = (efB === null) ? fromLs : Math.min(efB, fromLs);
@@ -3425,8 +3456,29 @@ function computeCPMHours(activities, relationships, o) {
             // assignment with no duration stays where the early pass put it
             // (ZZ-CPP-ALZ A1 against A2; H25-01 A1310)
             if (cal.between(n.ef, efB) <= 0) continue;
-            // RD: the assignments finish by the bound on their own calendars
-            let [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
+            // RD: the assignments finish by the bound on their own calendars.
+            // AR (H27, 20-Oct-2026): an SS / SF bound is a bound on the start:
+            // the work starts there and runs forward on its own calendars, not
+            // back from that start carried to a finish on the activity
+            // calendar's remaining duration; the earlier of that start and the
+            // one the finish bounds give holds (ZZ-CPP-KC3, KC4, KC7;
+            // ZZ-CPP-KH1C, KH4C; H27-04 A1220). Measured only where the work so
+            // placed finishes on the activity calendar's working time; where it
+            // would finish off it, the old reading stands (H27-11 A1220; ZZ-CPP-
+            // KH2C matches neither). Tasks keep the old reading, which gives
+            // the same start (KC1, KC2, KC6)
+            let ne = null;
+            let nf = null;
+            let ar = false;
+            if (lsB !== null) {
+                const [se, sf] = _hrRsrcForward(n.asg, cal, lsB, null, null);
+                if (onWorkingTime(cal, sf)) {
+                    ar = true;
+                    [ne, nf] = efFin === null ? [null, null] : _hrRsrcBackward(n.asg, cal, efFin, null);
+                    if (ne === null || se < ne) [ne, nf] = [se, sf];
+                }
+            }
+            if (!ar) [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
             // AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
             // working time moves on to its next opening, as RU has it, and the
             // assignments run from there, past the bound if they must
@@ -3437,6 +3489,10 @@ function computeCPMHours(activities, relationships, o) {
                 if (n.started) n.restart = ne; else n.es = ne;
                 n.ef = nf;
                 delete n.rem_dates;
+                // AR: P6 runs start float from the slid start to the late finish
+                // less the remaining duration it had before the slide, not the
+                // span the slide gives (H27-04 A1220, "Start Float")
+                if (ar) n.ar_rem = n.rem;
                 n.rem = cal.between(ne, nf);
             }
             continue;
@@ -3477,7 +3533,9 @@ function computeCPMHours(activities, relationships, o) {
             // A1160; H11-02, H11-03, H11-10). Under retained logic work under way
             // keeps its own late start (ZZ-CPP-RDTR T1-T11; H11-07 A1260), as
             // does work not started under "Smallest" (T9; H9-01 A1060)
-            if (n.asg.length && (floatType === 'FT_Start' || (n.started && po))) tfSta = tfFin;
+            if (n.asg.length && (floatType === 'FT_Start' || (n.started && po))) {
+                tfSta = n.ar_rem !== undefined ? cal.between(rEs, cal.sub(n.lf, n.ar_rem)) : tfFin;
+            }
             tf = floatType === 'FT_Start' ? tfSta : (floatType === 'FT_Min' ? Math.min(tfFin, tfSta) : tfFin);
             const cands = [];
             for (const r of succs.get(c)) {
