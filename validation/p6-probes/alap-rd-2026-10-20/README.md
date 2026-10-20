@@ -54,3 +54,5 @@ and KR4), the candidate all 40. With it round 14's KH2 and KH2C match too (`key-
 (`p6-imported-*`, laid over the file as the held-out scorer lays it) and P6's values for every unfinished activity.
 `tests/p6-alap-rd.test.js` replays them. The rule is fitted on these probes and rounds 14 and 15; no held-out set is
 used to fit it. A new held-out set scores it.
+
+**Since replaced.** Held-out H28 showed "the later of the two" does not hold (H28-02 A1410, A1430, H28-09 A1580). P6 probe rounds 17 and 18 ([`../h28-causes-2026-10-20/`](../h28-causes-2026-10-20/), [`../round18-2026-10-20/`](../round18-2026-10-20/)) measured rule AW in its place: the work placed back from the bound carried to a finish on its remaining duration, and where it then starts before the bound, placed back once more from the bound carried the span that placement gives (or the stored remaining duration where longer). AW gives all 40 rows here too: KR1 and KR2 through the second placement, KR7 and KR9 likewise, KR4-KR6, KR8 and KR10 through AV.

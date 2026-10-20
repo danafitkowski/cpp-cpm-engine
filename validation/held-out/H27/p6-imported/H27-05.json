@@ -1,6 +1,7 @@
 {
  "case": "H27-05",
  "proj_id": 5468,
+ "float_path_end": null,
  "differences": [
   "TASK A1060 remain_drtn_hr_cnt: xer '6' p6 7.0",
   "TASK A1060 target_drtn_hr_cnt: xer '8' p6 1.0",

@@ -63,3 +63,7 @@ The protocol's diagnoses ran after the score committed ([`diagnosis/`](diagnosis
 - P6 probes for each of the five causes: Finish On or Before beside a Mandatory Finish on work under way, the same minute and not; an assignment with no units on work under way, its window after, across and before the restart; a finish milestone, and a task, at a 24-hour close before a non-working day, early and late; As Late As Possible work led out start-to-start and start-to-finish, with and without lags, resource dependent and not; and resource dependent work after a lagged start-to-finish link.
 - The import model learns the remaining window P6's import gives an assignment with no units on work under way.
 - The rules the probes support go into a candidate, which a new held-out set then scores.
+
+## Records amended after the score
+
+20-Oct-2026, after H28: the import records of H27-05 and H27-07 ([`p6-imported/`](p6-imported/)) gained `"float_path_end": null`. P6 held both ends as ids that resolve to no activity, as the table above records. Without the field the overlay kept the file's id, which an engine that reads the option (the v2.10.13 candidate, rule FK) resolves to A1180 and A1540. Nothing else in the records changed, and the score above, run on v2.10.12, which does not read the option, is unchanged.

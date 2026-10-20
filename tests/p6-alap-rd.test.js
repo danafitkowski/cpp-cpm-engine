@@ -4,7 +4,8 @@
 // import record laid over each file, and compare with P6's own values: the four dates to the minute and total and
 // free float in hours, every unfinished activity the engine schedules.
 // Fitted: AR's placement where the work started at the bound would finish off the activity calendar, and the later of
-// AR's and the old reading's placement, were taken on these answers (see the folder's README).
+// AR's and the old reading's placement, were taken on these answers (see the folder's README). AW (rounds 17-18) has
+// since replaced AR and gives the same 40 rows.
 'use strict';
 const fs = require('fs');
 const path = require('path');

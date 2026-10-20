@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  aa0132b23a6f1e9692272432044810db60932f277844b88360dfd1006c71d316
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  c03f8f3b6c78f18a0a3519dabdf608c7c5543c09dfd6aef359a57d8fb4075192
+cpm_hours.py    SHA-256:  71c4f651bb31857466cca4b9d92ecf76dbbea09659029017aed013271b02d1c3
 
 (v2.10.13 candidate, unreleased, 2026-10-20 - cpm.py bumped from b06d14f3...:
 ENGINE_VERSION reads 2.10.13. compute_cpm takes float_path_end, the
@@ -215,15 +215,24 @@ under way a Mandatory Finish, in either slot, takes its partner off the
 late side (UM). cpm_hours.py bumped from c116fdd3...: FK and UM in the
 hours pass; a finish milestone sits at the 24:00 close of a day before
 one not worked (MZ); on work under way the lag of an assignment with no
-units counts from the actual start (ZU); As Late As Possible resource
-dependent work under a start-to-start or start-to-finish bound starts at
-the bound, the finish moving on to the activity calendar's next opening
-where it would fall off it, and the later of that placement and the old
-reading's holds (AR); and an assignment with no work and a lag bounds the
-start placed back from a finish requirement (ZQ). Measured on P6 probe
-rounds 15 and 16 (validation/p6-probes/h27-causes-2026-10-20 and
-alap-rd-2026-10-20), after held-out H27. The harness gains 13 fixtures
-(F212-F224): 220 fixtures, 20338 of 20338 executed.)
+units counts from the actual start (ZU); an assignment with no work and a
+lag bounds the start placed back from a finish requirement (ZQ), measured
+on P6 probe rounds 15 and 16 (validation/p6-probes/h27-causes-2026-10-20
+and alap-rd-2026-10-20), after held-out H27. After held-out H28, P6
+probe rounds 17 and 18 (validation/p6-probes/h28-causes-2026-10-20 and
+round18-2026-10-20): As Late As Possible resource dependent work under a
+start-to-start or start-to-finish bound is placed back from the bound
+carried to a finish on its remaining duration, and where it then starts
+before the bound, placed back once more from the bound carried the span
+that placement gives, or the stored remaining duration where longer (AW,
+in place of AR); such work with no work left sits at its resources' next
+opening at or after the bound (AZ); a finish floor on resource dependent
+work is compared by start (MW); the late pin of resource dependent work
+is placed on its resources before a second constraint caps it (LR);
+under "Start Float" start float of work AW moved runs from the bound
+unless "Calculate multiple float paths" is on (AT), and where the paths
+end at an activity set in P6, RT is set aside (ET). The harness gains 21
+fixtures (F212-F232): 228 fixtures, 21644 of 21644 executed.)
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -901,8 +910,8 @@ Python reference: <repo>/python_reference/cpm.py
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 220 passed, 0 failed
-  Checks:   20338 / 20338 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 228 passed, 0 failed
+  Checks:   21644 / 21644 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

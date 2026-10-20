@@ -198,7 +198,7 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
     return min(starts), ef
 
 
-def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None, lf_as_is=False):
+def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None):
     """(late start, late finish) of resource dependent work from its driving assignments (RD).
 
     The late finish requirement first takes the activity's own calendar's last close at or before it (ZZ-CPP-RSRC
@@ -206,12 +206,10 @@ def _rsrc_backward(asg, act_cal, lf_req, ls_bound_in, lead_at=None, lf_as_is=Fal
     of the forward start. Each assignment then finishes at its own calendar's last close at or before that and
     starts its remaining duration earlier; an SS / SF bound or a start constraint caps the start as it caps a task's;
     the assignment's lag comes off the activity's late start. The activity runs from the earliest of those starts to
-    the latest assignment finish. With lf_as_is each assignment runs back from the requirement on its own calendar,
-    the requirement not first taken back to the activity calendar's close (AR's finish moved on to that calendar's
-    next opening).
+    the latest assignment finish.
     """
     starts, fins = [], []
-    lf_act = lf_req if lf_as_is else act_cal.prev_work_end(lf_req)
+    lf_act = act_cal.prev_work_end(lf_req)
     # RA (H12, 17-Oct-2026): P6 holds an SS / SF bound, a lag's or a lead's,
     # against the activity's late start, the earliest of its assignments' own.
     # Where that start already meets it, no assignment takes it, not even one
@@ -745,15 +743,19 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 # A1220 against H23-02 A1230, H23-03 A1280, H23-08 A1250, H23-12
                 # A1150); on the late side PC caps
                 pin = cs['type'] == 'MS_Finish' and k == 'c1'
-                if pin or fin > n['ef']:
+                # RD: the activity's own remaining duration back from the
+                # constraint on its calendar sets the start, and the
+                # assignments run from there (4898 54: FNET on a Sunday, 7 h
+                # back from Friday 17:00 is 09:00, the 8 h assignment then
+                # finishes Monday 09:00). MW (rounds 17-18, 20-Oct-2026): so a
+                # floor on resource dependent work moves it where that start is
+                # later than the work's start, compared by start, not by finish
+                # (ZZ-CPP-QD1, RD1-RD3 against QD4; H28-09 A1220)
+                rin = n['rem_in']
+                rd_st = (cal.sub(cal.prev_work_end(fin), rin) if rin > 0 else fin) if n['asg'] else None
+                if pin or (rd_st > n['es'] if n['asg'] else fin > n['ef']):
                     if n['asg']:
-                        # RD: the activity's own remaining duration back from
-                        # the constraint on its calendar sets the start, and
-                        # the assignments run from there (4898 54: FNET on a
-                        # Sunday, 7 h back from Friday 17:00 is 09:00, the 8 h
-                        # assignment then finishes Monday 09:00)
-                        rin = n['rem_in']
-                        st = cal.sub(cal.prev_work_end(fin), rin) if rin > 0 else fin
+                        st = rd_st
                         if pin and dd is not None and st < dd:
                             st = dd     # MD: no work before the data date
                         n['es'], n['ef'] = _rsrc_place(n, cal, st, None)
@@ -1037,6 +1039,15 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                     pin = (cal.sub(cap, n['rem']), cap) if n['rem'] > 0 else (cap, cap)
                 # PC: the second constraint caps the pin
                 c2 = n['c2']
+                # LR (round 18, 20-Oct-2026): on resource dependent work the pin
+                # is placed on the assignments' calendars first, and the second
+                # constraint caps it with the span that placement gives
+                # (ZZ-CPP-RE1, RE2 against RE3, RE4, QE1-QE5; H28-11 A1210)
+                rem_pin = n['rem']
+                if n['asg'] and n['rem'] > 0 and c2 and c2['at'] is not None:
+                    rb0 = _rsrc_backward(n['asg'], cal, pin[1], None)
+                    pin = (rb0[0], rb0[1])
+                    rem_pin = cal.between(rb0[0], rb0[1])
                 if c2 and c2['at'] is not None:
                     if c2['type'] in ('FNLT', 'FO', 'MS_Finish'):
                         if n['rem'] <= 0:
@@ -1046,7 +1057,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         else:
                             f = cal.prev_work_end(c2['at'])
                             if f < pin[1]:
-                                pin = (cal.sub(f, n['rem']), f)
+                                pin = (cal.sub(f, rem_pin), f)
                     elif c2['type'] in ('SNLT', 'SO', 'MS_Start'):
                         if n['rem'] <= 0:
                             z = zero(min(pin[1], c2['at']))
@@ -1055,7 +1066,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         else:
                             s2 = cal.next_work(c2['at'])
                             if s2 < pin[0]:
-                                pin = (s2, cal.add(s2, n['rem']))
+                                pin = (s2, cal.add(s2, rem_pin))
                 if n['asg']:
                     rb = _rsrc_backward(n['asg'], cal, pin[1], None)
                     pin = (rb[0], rb[1])
@@ -1138,28 +1149,34 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if cal.between(n['ef'], ef_b) <= 0:
                 continue
             # RD: the assignments finish by the bound on their own calendars,
-            # as on the backward pass (ZZ-CPP-RSRC H1). AR (H27 and rounds 15-16, 20-Oct-2026): an SS / SF bound is
-            # also a bound on the start: the work started there runs forward on its own calendars, the earlier of that
-            # start and the one the finish bounds give (ZZ-CPP-KC3, KC4, KC7; ZZ-CPP-KH1C, KH4C; H27-04 A1220). Where
-            # that forward finish falls off the activity calendar's working time, the finish moves on to the
-            # calendar's next opening and the work is placed back from there (ZZ-CPP-KR1, KR2; ZZ-CPP-KH2, KH2C). The
-            # later of that placement and the old reading's, back from the start bound carried to a finish on the
-            # activity calendar's remaining duration, holds (ZZ-CPP-KR7 against KR4, KR5, KR6, KR8, KR10; H27-11
-            # A1220). JS paired site: the ALAP block of computeCPMHours
+            # as on the backward pass (ZZ-CPP-RSRC H1): an SS / SF bound carried to a finish on the activity
+            # calendar's remaining duration, or an FS / FF one, the work placed back from there. AZ (rounds 17-18,
+            # 20-Oct-2026): work with no work left runs forward from the bound instead, each assignment at its own
+            # calendar's next opening at or after it (ZZ-CPP-QF1, QF3, QF4, RF1, RF2 against QF2; H28-12 A1080).
+            # AW (rounds 17-18, 20-Oct-2026), in place of AR: where that work starts before the SS / SF bound on the
+            # activity calendar, its remaining duration becomes the span the placement gives, or the duration stored
+            # for it where that is longer, and it is placed back once more from the bound carried that far, no later
+            # than an FS / FF bound; AV below then runs a start off the activity calendar on from its next opening
+            # (ZZ-CPP-QB1-QB10, QG1-QG8, RB1-RB5, QC1-QC6, RC1-RC3; the AR probes ZZ-CPP-KR1-KR10, KC3, KC4, KC7,
+            # KH1, KH1C, KH2, KH2C, KH4, KH4C; H27-04 A1220, H28-02 A1410, A1430, H28-03 A1140, A1450, H28-07 A1680,
+            # H28-09 A1580). JS paired site: the ALAP block of computeCPMHours
             new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)
             ar = False
-            if ls_b is not None:
-                se, sf = _rsrc_forward(n['asg'], cal, ls_b, None, None)
-                sday, sm = divmod(sf, cm.DAY)
-                if not any(a0 <= sm <= f0 for a0, f0 in cal.slots(sday)):
-                    se, sf, _ = _rsrc_backward(n['asg'], cal, cal.next_work(sf), None, lf_as_is=True)
-                if ef_fin is not None:
-                    be, bf, _ = _rsrc_backward(n['asg'], cal, ef_fin, None)
-                    if be < se:
-                        se, sf = be, bf
-                if sf > new_ef:
-                    new_es, new_ef = se, sf
+            if not any(g['rem'] > 0 for g in n['asg']):
+                new_es, new_ef = _rsrc_forward(n['asg'], cal, ef_b, None, None)
+            elif ls_b is not None and cal.between(new_es, ls_b) > 0:
+                span = max(cal.between(new_es, new_ef), n['rem_in'])
+                ef2 = cal.add(ls_b, span)
+                if ef_fin is not None and ef_fin < ef2:
+                    ef2 = ef_fin
+                if ef2 > ef_b:
+                    new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef2, None)
                     ar = True
+                    # AT (round 18, 20-Oct-2026): under "Start Float" start float of work AW moved runs from the bound,
+                    # not from its start, unless "Calculate multiple float paths" is on (ZZ-CPP-QG6, RG1-RG3 against
+                    # QG5, QG7, QG8)
+                    if not multiple_float_paths:
+                        n['at_from'] = cal.next_work(ls_b)
             # AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
             # working time moves on to its next opening, as RU has it, and the
             # assignments run from there, past the bound if they must
@@ -1170,7 +1187,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if new_es > cur:
                 n['restart' if n['started'] else 'es'], n['ef'] = new_es, new_ef
                 n.pop('rem_dates', None)
-                # AR: start float of work so slid runs to the late finish less its remaining duration before the
+                # AW: start float of work so slid runs to the late finish less its remaining duration before the
                 # slide (H27-04 A1220, "Start Float")
                 if ar:
                     n['ar_rem'] = n['rem']
@@ -1207,9 +1224,15 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # finish float (ZZ-CPP-RDTF T1-T11; H9-01 A1280; HW-07 A1090, A1100,
             # A1160; H11-02, H11-03, H11-10). Under retained logic work under way
             # keeps its own late start (ZZ-CPP-RDTR T1-T11; H11-07 A1260), as
-            # does work not started under "Smallest" (T9; H9-01 A1060)
-            if n['asg'] and (float_type == 'FT_Start' or (n['started'] and po)):
-                tf_sta = cal.between(r_es, cal.sub(n['lf'], n['ar_rem'])) if 'ar_rem' in n else tf_fin
+            # does work not started under "Smallest" (T9; H9-01 A1060).
+            # ET (rounds 17-18, 20-Oct-2026): not under "Start Float" where
+            # "Calculate multiple float paths" ends at an activity set in P6, on
+            # every activity, on either basis of the paths (ZZ-CPP-QA5, RA1, RA2,
+            # RA4B against QA1-QA4, QA7; H28-07); under "Smallest" RT stands (RA3)
+            et_aside = float_type == 'FT_Start' and multiple_float_paths and _fp_lead is not None
+            if n['asg'] and not et_aside and (float_type == 'FT_Start' or (n['started'] and po)):
+                tf_sta = (cal.between(n.get('at_from', r_es), cal.sub(n['lf'], n['ar_rem'])) if 'ar_rem' in n
+                          else tf_fin)
             tf = tf_sta if float_type == 'FT_Start' else (min(tf_fin, tf_sta) if float_type == 'FT_Min' else tf_fin)
         ff = ff_signed = None
         if not n['complete']:

@@ -4330,9 +4330,115 @@ compareFixture('F223 - AR: work started at the bound that would finish off the a
     activities: arActsOf(hA, AR16A), relationships: arRelsOf(hR, AR16A), data_date: '2026-12-07 08:00', cal_map: ARCAL,
     project_calendar: 'AW', relationship_lag_calendar: 'rcal_Successor',
 }, { hours: true });
-compareFixture('F224 - AR: the later of AR\'s placement and the old reading\'s holds, in hours', {
+compareFixture('F224 - AW: the shapes of round 16, under AW, in hours', {
     activities: arActsOf(hA, AR16B), relationships: arRelsOf(hR, AR16B), data_date: '2026-12-07 08:00', cal_map: ARCAL,
     project_calendar: 'AW', relationship_lag_calendar: 'rcal_Successor',
+}, { hours: true });
+// Rounds 17-18 (ZZ-CPP-Q*, ZZ-CPP-R*): AW, AZ, MW, LR, ET and AT. Each entry of R17 is F's activity calendar, its
+// assignments ([resource calendar, hours]), its remaining duration, the link into S, its lag, S's calendar, S's hold
+// and the hours of a predecessor P that holds F's early start back (0 for none).
+const R17CAL = Object.assign({}, ARCAL, {
+    W: rawCal(MONFRI, [['07:00', '17:00']]), E: rawCal(EVERYDAY, [['06:00', '18:00']]),
+    S6: rawCal(MONSAT, [['08:00', '16:00']]), MT8: rawCal(MONTHU, [['08:00', '16:00']]),
+    MS8: rawCal(MONSAT, [['08:00', '16:00']]), MT10: rawCal(MONTHU, [['07:00', '12:00'], ['12:30', '17:30']]),
+    RXH: Object.assign({}, ARCAL.AX, { holidays: ['2026-12-14'] }),
+});
+const R17 = {
+    B1: ['W', [['MT8', 7]], 7, 'SS', 4, 'W', ['11', '02:30'], 0],
+    B2: ['W', [['MT8', 7]], 7, 'SS', 4, 'W', ['10', '02:30'], 0],
+    B3: ['W', [['MS8', 7]], 7, 'SS', 4, 'W', ['11', '02:30'], 0],
+    B4: ['E', [['RT', 6]], 6, 'SS', 0, 'AX', ['08', '13:00'], 0],
+    B5: ['E', [['RT', 6]], 6, 'SS', 0, 'AX', ['08', '15:00'], 0],
+    B7: ['AW', [['MS8', 2]], 2, 'SF', 0, 'AW', ['10', '09:15'], 0],
+    G1: ['AX', [['MT8', 20]], 23, 'SS', 0, 'W', ['14', '07:00'], 0],
+    G5: ['W', [['MT8', 13]], 15, 'SS', 0, 'E', ['14', '06:00'], 0],
+    G9: ['E', [['MT8', 11]], 15, 'SS', 0, 'E', ['14', '06:00'], 0],
+    G8: ['W', [['MT8', 8], ['RT', 8]], 8, 'SS', 0, 'W', ['14', '07:00'], 0],
+    C2: ['AX', [['RE', 130.5]], 80, 'SS', 0, 'AX', ['28', '10:30'], 24],
+    C6: ['AX', [['RE', 130.5]], 80, 'SS', 0, 'AX', ['09', '17:00'], 24],
+};
+const r17Acts = (A, T) => [A('L', 200, { clndr_id: 'W' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'W' })].concat(
+    ...Object.entries(T).map(([k, [ac, asg, rem, , , sc, held, p]]) => [
+        A(k, rem, { clndr_id: ac, task_type: 'TT_Rsrc', resource_assignments: asg.length,
+            assignments: asg.map(([r, h]) => zrAsg(r, h)), constraint: { type: 'CS_ALAP' } }),
+        A('S' + k, 4, { clndr_id: sc, constraint: { type: 'CS_MSOA', date: slD(held[0], held[1]) } })]
+        .concat(p ? [A('P' + k, p, { clndr_id: ac })] : [])));
+const r17Rels = (R, T) => [R('L', 'FIN')].concat(...Object.entries(T).map(([k, [, , , t, lag, , , p]]) => [
+    R(k, 'S' + k, t, lag), R('S' + k, 'FIN'), R(k, 'FIN')].concat(p ? [R('P' + k, k)] : [])));
+compareFixture('F225 - AW: As Late As Possible resource dependent work placed back twice from a start bound, in hours', {
+    activities: r17Acts(hA, R17), relationships: r17Rels(hR, R17), data_date: '2026-12-07 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F226 - AT: F225 under "Start Float" and progress override, start float from the bound', {
+    activities: r17Acts(hA, R17), relationships: r17Rels(hR, R17), data_date: '2026-12-07 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_24Hour', float_type: 'FT_Start',
+    schedule_mode: 'progress_override',
+}, { hours: true });
+compareFixture('F227 - AW: F226 with "Calculate multiple float paths", start float from the start', {
+    activities: r17Acts(hA, R17), relationships: r17Rels(hR, R17), data_date: '2026-12-07 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_24Hour', float_type: 'FT_Start',
+    schedule_mode: 'progress_override', multiple_float_paths: true,
+}, { hours: true });
+// AZ: As Late As Possible resource dependent work with no work left, finish-to-start and start-to-start, one
+// assignment and two on calendars that open at different hours
+const azActs = (A) => [A('L', 200, { clndr_id: 'D24' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'D24' })].concat(
+    ...[['Z1', 'FS', ['13', '12:00'], ['MS8']], ['Z2', 'SS', ['13', '12:00'], ['MS8']],
+        ['Z3', 'FS', ['11', '12:00'], ['MS8']], ['Z4', 'FS', ['13', '12:00'], ['MS8', 'MT10']]].map(([k, , held, rs]) => [
+        A(k, 0, { clndr_id: 'D24', task_type: 'TT_Rsrc', resource_assignments: rs.length,
+            assignments: rs.map((r) => zrAsg(r, 0)), constraint: { type: 'CS_ALAP' } }),
+        A('S' + k, 12, { clndr_id: 'D24', constraint: { type: 'CS_MSOA', date: slD(held[0], held[1]) } })]));
+const azRels = (R) => [R('L', 'FIN')].concat(...[['Z1', 'FS'], ['Z2', 'SS'], ['Z3', 'FS'], ['Z4', 'FS']].map(([k, t]) => [
+    R(k, 'S' + k, t), R('S' + k, 'FIN')]));
+compareFixture('F228 - AZ: As Late As Possible resource dependent work with no work left sits at its resources\' next opening, in hours', {
+    activities: azActs(hA), relationships: azRels(hR), data_date: '2026-12-07 00:00', cal_map: R17CAL,
+    project_calendar: 'D24', relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+// MW and LR: a finish floor on resource dependent work compared by start (M1 a second Mandatory Finish, M2 a Finish
+// On or After, M3 a Finish On), and a late pin on a resource with the pinned day off (E1 a Start On or Before second,
+// E2 a Finish On or Before second)
+const mwActs = (A) => [A('L', 200, { clndr_id: 'AW' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AW' })].concat(
+    ...[['M1', { constraint: { type: 'CS_MSOA', date: slD('07', '08:00') },
+        constraint2: { type: 'CS_MANDFIN', date: slD('14', '12:00') } }],
+    ['M2', { constraint: { type: 'CS_MEOA', date: slD('14', '12:00') } }],
+    ['M3', { constraint: { type: 'CS_MEO', date: slD('14', '12:00') } }]].map(([k, cs]) => [
+        A(k, 32, Object.assign({ clndr_id: 'AW', task_type: 'TT_Rsrc', resource_assignments: 1,
+            assignments: [zrAsg('MT10', 38.5)] }, cs)),
+        A('P' + k, 24, { clndr_id: 'AX', constraint: { type: 'CS_MANDFIN', date: slD('11', '11:00') } })]),
+    [A('E1', 4, { clndr_id: 'S6', task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('RXH', 4)],
+        constraint: { type: 'CS_MANDSTART', date: slD('14', '08:00') },
+        constraint2: { type: 'CS_MSOB', date: slD('09', '08:00') } }),
+    A('E2', 4, { clndr_id: 'S6', task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('RXH', 4)],
+        constraint: { type: 'CS_MANDSTART', date: slD('14', '08:00') },
+        constraint2: { type: 'CS_MEOB', date: slD('09', '16:00') } })]);
+const mwRels = (R) => [R('L', 'FIN'), R('E1', 'FIN'), R('E2', 'FIN')].concat(...['M1', 'M2', 'M3'].map((k) => [
+    R('P' + k, k, 'FF', 8), R(k, 'FIN'), R('P' + k, 'FIN')]));
+compareFixture('F229 - MW and LR: finish floors compared by start and the late pin placed on the resources first, in hours', {
+    activities: mwActs(hA), relationships: mwRels(hR), data_date: '2026-12-03 17:00', cal_map: R17CAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Predecessor', schedule_mode: 'progress_override',
+}, { hours: true });
+// ET: under "Start Float" with the float paths ending at an activity set in P6, start float on resource dependent work
+// not started and under way runs to the late start its assignments set, on work that leads into the end and on work
+// that does not
+const etActs = (A) => [A('L', 184, { clndr_id: 'W' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'W' }),
+    A('A', 8, { clndr_id: 'W' }), A('X1', 8, { clndr_id: 'W' }), A('E2', 0, { task_type: 'TT_FinMile', clndr_id: 'W' }),
+    A('R', 14, { clndr_id: 'W', task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('MT8', 14)] }),
+    A('U', 16, { clndr_id: 'W', task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('MT8', 16)],
+        actual_start: '2026-12-07 08:00', remaining_duration: 2 })];
+const etRels = (R) => [R('L', 'FIN'), R('A', 'R'), R('R', 'FIN'), R('U', 'FIN'), R('X1', 'E2'), R('E2', 'FIN')];
+compareFixture('F230 - ET: "Start Float" with the float paths ending at FIN, in hours', {
+    activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Start',
+    schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'FIN',
+}, { hours: true });
+compareFixture('F231 - ET: F230 with the paths ending at E2, a branch R and U do not lead into', {
+    activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Start',
+    schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'E2',
+}, { hours: true });
+compareFixture('F232 - ET: F230 under "Smallest", where RT stands', {
+    activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Min',
+    schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'FIN',
 }, { hours: true });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

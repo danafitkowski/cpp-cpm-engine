@@ -1,0 +1,31 @@
+{
+ "case": "ZZ-CPP-QE4",
+ "proj_id": 5576,
+ "differences": [],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "resource_dependent": {
+  "tasks": {
+   "R": {
+    "remain_drtn_hr_cnt": 4.0,
+    "target_drtn_hr_cnt": 4.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "R",
+    "rsrc_short_name": "ZZ-CPP-QE4-RX",
+    "remain_qty": 4.0,
+    "target_qty": 4.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-04 08:00",
+    "reend_date": "2027-03-04 12:00"
+   }
+  ]
+ }
+}
