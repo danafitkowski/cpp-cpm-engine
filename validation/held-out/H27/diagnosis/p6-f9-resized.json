@@ -1,0 +1,139 @@
+{
+ "note": "Diagnosis after the score: what P6's F9 rewrote of the resource dependent sizing its import made (p6-imported/ against P6's database after the F9). Counts and activity codes of synthetic cases only.",
+ "cases": {
+  "H27-01": {
+   "tasks_resized": [
+    "A1300",
+    "A1400",
+    "A1410",
+    "A1430",
+    "A1440",
+    "A1450",
+    "A1490"
+   ],
+   "assignments_resized": 2
+  },
+  "H27-02": {
+   "tasks_resized": [
+    "A1030",
+    "A1340",
+    "A1350",
+    "A1360",
+    "A1380",
+    "A1440",
+    "A1480"
+   ],
+   "assignments_resized": 0
+  },
+  "H27-03": {
+   "tasks_resized": [
+    "A1060",
+    "A1080",
+    "A1150",
+    "A1220",
+    "A1440",
+    "A1470",
+    "A1490"
+   ],
+   "assignments_resized": 0
+  },
+  "H27-04": {
+   "tasks_resized": [
+    "A1200",
+    "A1220",
+    "A1460",
+    "A1470",
+    "A1580"
+   ],
+   "assignments_resized": 1
+  },
+  "H27-05": {
+   "tasks_resized": [
+    "A1220",
+    "A1240",
+    "A1270"
+   ],
+   "assignments_resized": 2
+  },
+  "H27-06": {
+   "tasks_resized": [
+    "A1050",
+    "A1100",
+    "A1290",
+    "A1320",
+    "A1340",
+    "A1360",
+    "A1380"
+   ],
+   "assignments_resized": 3
+  },
+  "H27-07": {
+   "tasks_resized": [
+    "A1060",
+    "A1080",
+    "A1220",
+    "A1250",
+    "A1430",
+    "A1460",
+    "A1510"
+   ],
+   "assignments_resized": 3
+  },
+  "H27-08": {
+   "tasks_resized": [
+    "A1260",
+    "A1450",
+    "A1460",
+    "A1500",
+    "A1520",
+    "A1590"
+   ],
+   "assignments_resized": 2
+  },
+  "H27-09": {
+   "tasks_resized": [
+    "A1480",
+    "A1490",
+    "A1550",
+    "A1620"
+   ],
+   "assignments_resized": 4
+  },
+  "H27-10": {
+   "tasks_resized": [
+    "A1120",
+    "A1260",
+    "A1290",
+    "A1340",
+    "A1380"
+   ],
+   "assignments_resized": 2
+  },
+  "H27-11": {
+   "tasks_resized": [
+    "A1080",
+    "A1230",
+    "A1310",
+    "A1480",
+    "A1530",
+    "A1550",
+    "A1590"
+   ],
+   "assignments_resized": 5
+  },
+  "H27-12": {
+   "tasks_resized": [
+    "A1160",
+    "A1310",
+    "A1340",
+    "A1530",
+    "A1580",
+    "A1620",
+    "A1670"
+   ],
+   "assignments_resized": 3
+  }
+ },
+ "tasks_resized": 72,
+ "assignments_resized": 27
+}

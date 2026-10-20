@@ -1,0 +1,13 @@
+H27: 12 cases recorded; activities 168 of 171, assignments 262 of 271 (dates 262 of 271) as P6 imported them
+  H27-02 A1550/H27-02-R14: reend_date P6 2026-12-15 08:30 model 2026-12-14 08:00
+  H27-04 A1650: remain_drtn_hr_cnt P6 20 model 16
+  H27-04 A1650/H27-04-R13: reend_date P6 2026-07-08 03:00 model 2026-07-06 07:00
+  H27-05 A1420/H27-05-R6: reend_date P6 2027-02-01 16:00 model 2027-02-01 08:00
+  H27-06 A1420: remain_drtn_hr_cnt P6 53 model 40
+  H27-06 A1420/H27-06-R11: restart_date P6 2026-10-19 08:00 model 2026-10-19 12:00; reend_date P6 2026-10-20 13:00 model 2026-10-19 12:00
+  H27-07 A1560/H27-07-R14: reend_date P6 2027-01-09 09:00 model 2027-01-08 08:00
+  H27-08 A1320/H27-08-R14: reend_date P6 2026-04-02 16:00 model 2026-04-02 08:00
+  H27-10 A1420: remain_drtn_hr_cnt P6 23 model 27
+  H27-10 A1420/H27-10-R11: restart_date P6 2026-05-25 08:00 model 2026-05-26 08:00; reend_date P6 2026-05-25 16:00 model 2026-05-26 08:00
+  H27-11 A1660/H27-11-R14: restart_date P6 2026-08-14 06:00 model 2026-08-14 10:00; reend_date P6 2026-08-14 18:00 model 2026-08-14 10:00
+  H27-12 A1710/H27-12-R14: reend_date P6 2026-09-09 16:00 model 2026-09-07 08:00
