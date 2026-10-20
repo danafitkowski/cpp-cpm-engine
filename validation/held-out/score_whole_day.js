@@ -40,9 +40,11 @@
 // does not. So where <set>/p6-imported/<case>.json exists (import_p6_sqlite.py, run after the case's import and before
 // its F9), p6_imported_overlay.js lays P6's values over the case text before parseXER: the remaining and planned
 // duration of each resource dependent activity and the quantities, units per hour, lags and actual units of each of
-// its assignments; nothing else changes. The SHA-256 check stays on the frozen file. Each case laid over gets
-// p6_imported_overlay (tasks, assignments) in summary.json and the counts are printed. A set without p6-imported/ is
-// scored as before and its results are unchanged.
+// its assignments, and, from H27 on, the activity P6 held as the end of the float paths (P6's import does not map the
+// file's SCHEDOPTIONS key_activity_for_multiple_longest_paths to the activity it imports); nothing else changes. The
+// SHA-256 check stays on the frozen file. Each case laid over gets p6_imported_overlay (tasks, assignments, and
+// float_path_end where recorded) in summary.json and the counts are printed. A set without p6-imported/ is scored as
+// before and its results are unchanged.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -112,7 +114,7 @@ function runEngine(text) {
         relationshipLagCalendar: p.sched_calendar_on_relationship_lag,
         useExpectedFinish: p.use_expected_finish, projectFinish: p.project_finish || '',
         useExternalDates: p.use_external_dates, openCritical: p.open_critical,
-        multipleFloatPaths: p.multiple_float_paths,
+        multipleFloatPaths: p.multiple_float_paths, floatPathEnd: p.float_path_end,
     };
     const res = E.computeCPM(acts, rels, opts);
     const crit = new Set(res.criticalCodes || []);
@@ -190,7 +192,8 @@ for (const c of cases) {
     if (fs.existsSync(importedPath)) {
         const o = overlay(text, JSON.parse(fs.readFileSync(importedPath, 'utf8')));
         text = o.text;
-        laid = Object.assign({ tasks: o.tasks, assignments: o.assignments }, o.dropped ? { dropped: o.dropped } : {});
+        laid = Object.assign({ tasks: o.tasks, assignments: o.assignments }, o.dropped ? { dropped: o.dropped } : {},
+            'float_path_end' in o ? { float_path_end: o.float_path_end } : {});
     }
     const { res, out } = runEngine(text);
     const types = taskTypes(text);

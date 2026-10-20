@@ -17,6 +17,14 @@
 // on an activity: where P6's record holds one and the case file more (H26-08 A1490), the others are dropped and
 // r.dropped counts them. It throws when a listed activity is not exactly one TASK row, when the case file holds a
 // different number of rows for an assignment's task code and resource otherwise, or when a column or value is missing.
+//
+// From H27 on the record also holds float_path_end: the activity P6 held as the end of its float paths (Schedule
+// Options, Advanced tab; PROJPROP 'scheduling' key_activity_for_multiple_longest_paths), resolved among the project's
+// activities, or null where it held none of them. P6's import keeps the file's SCHEDOPTIONS
+// key_activity_for_multiple_longest_paths, a task id, without mapping it to the activity it imports (P6 probes, rounds
+// 7 and 11 to 13, 20-Oct-2026), so the case file's key can name an activity P6 does not hold: the key is set to the
+// case file's task id of the activity P6 holds, or emptied, and r.float_path_end says which (rule FK). A record
+// without float_path_end leaves the key as it is.
 // Nothing else changes, byte for byte.
 'use strict';
 
@@ -133,8 +141,25 @@ function overlay(text, imported) {
             assignments++;
         });
     }
+    // the end of the float paths, as P6 held it (from H27 on)
+    let end;
+    if (Object.prototype.hasOwnProperty.call(imported, 'float_path_end')) {
+        end = imported.float_path_end === null ? null : String(imported.float_path_end);
+        const so = rows.SCHEDOPTIONS || [];
+        if (so.length !== 1) throw new Error('p6-imported: the case file has ' + so.length + ' SCHEDOPTIONS rows, not 1');
+        let id = '';
+        if (end !== null) {
+            const found = byCode[end] || [];
+            if (found.length !== 1) throw new Error('p6-imported: the float-path end ' + end + ' matches ' + found.length + ' TASK rows of the case file, not 1');
+            id = get(found[0], 'task_id');
+        }
+        if (id || get(so[0], 'key_activity_for_multiple_longest_paths') !== undefined) {
+            set('SCHEDOPTIONS', so[0], { key_activity_for_multiple_longest_paths: id }, 'SCHEDOPTIONS', (v) => v);
+        }
+    }
     const out = { text: lines.filter((l, i) => !drop.has(i)).join('\r\n'), tasks, assignments };
     if (dropped) out.dropped = dropped;
+    if (end !== undefined) out.float_path_end = end;
     return out;
 }
 

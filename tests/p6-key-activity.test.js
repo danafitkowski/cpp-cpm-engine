@@ -32,6 +32,8 @@ function table(text, name) {
     return out;
 }
 
+// run(text, FROM_FILE) hands on the end parseXER resolves from the file, as the scorers do
+const FROM_FILE = Symbol('from the file');
 function run(text, floatPathEnd) {
     E.resetMC();
     const p = E.parseXER(text);
@@ -60,12 +62,27 @@ function run(text, floatPathEnd) {
         floatType: p.sched_float_type || 'FT_FF', relationshipLagCalendar: p.sched_calendar_on_relationship_lag,
         useExpectedFinish: p.use_expected_finish, projectFinish: p.project_finish || '',
         useExternalDates: p.use_external_dates, openCritical: p.open_critical,
-        multipleFloatPaths: p.multiple_float_paths, floatPathEnd: floatPathEnd || undefined,
+        multipleFloatPaths: p.multiple_float_paths,
+        floatPathEnd: floatPathEnd === FROM_FILE ? p.float_path_end : (floatPathEnd || undefined),
     });
+}
+
+function offRows(name, res, want) {
+    const bad = [];
+    for (const [code, w] of Object.entries(want)) {
+        const n = res.nodes[code] || {};
+        const got = { es: n.early_start_dt, ef: n.early_finish_dt, ls: n.late_start_dt, lf: n.late_finish_dt };
+        const f = ['es', 'ef', 'ls', 'lf'].filter((k) => got[k] !== w[k]);
+        if (!(typeof n.tf_hours === 'number' && Math.abs(n.tf_hours - w.tf_hr) < 0.01)) f.push('tf');
+        if (!(typeof n.ff_hours === 'number' && Math.abs(n.ff_hours - w.ff_hr) < 0.01)) f.push('ff');
+        if (f.length) bad.push(name + ' ' + code + ': ' + f.join(', '));
+    }
+    return bad;
 }
 
 let rows = 0, match = 0;
 const off = [];
+const texts = {};
 for (const [name, proj] of Object.entries(P6.projects)) {
     const buf = fs.readFileSync(path.join(DIR, proj.file));
     if (crypto.createHash('sha256').update(buf).digest('hex') !== proj.sha256) {
@@ -74,27 +91,64 @@ for (const [name, proj] of Object.entries(P6.projects)) {
         continue;
     }
     const imported = JSON.parse(fs.readFileSync(path.join(DIR, proj.p6_imported), 'utf8'));
-    const res = run(overlay(buf.toString('latin1'), imported).text, proj.float_path_end);
-    for (const [code, want] of Object.entries(proj.rows)) {
-        const n = res.nodes[code] || {};
-        const got = { es: n.early_start_dt, ef: n.early_finish_dt, ls: n.late_start_dt, lf: n.late_finish_dt };
-        const bad = ['es', 'ef', 'ls', 'lf'].filter((f) => got[f] !== want[f]);
-        if (!(typeof n.tf_hours === 'number' && Math.abs(n.tf_hours - want.tf_hr) < 0.01)) bad.push('tf');
-        if (!(typeof n.ff_hours === 'number' && Math.abs(n.ff_hours - want.ff_hr) < 0.01)) bad.push('ff');
-        rows++;
-        if (bad.length) off.push(name + ' ' + code + ': ' + bad.join(', '));
-        else match++;
-    }
+    texts[name] = { text: buf.toString('latin1'), imported };
+    const bad = offRows(name, run(overlay(buf.toString('latin1'), imported).text, proj.float_path_end), proj.rows);
+    rows += Object.keys(proj.rows).length;
+    match += Object.keys(proj.rows).length - bad.length;
+    off.push(...bad);
 }
 if (rows !== 182) {
     console.error('p6-key-activity.test.js: expected 182 probe rows, read ' + rows);
     process.exitCode = 1;
 }
+
+// The scorers' path (score_held_out.js and score_whole_day.js, from H27 on): import_p6_sqlite.py records the end P6
+// held as float_path_end, p6_imported_overlay.js writes the case file's task id of that activity into SCHEDOPTIONS
+// key_activity_for_multiple_longest_paths (or empties it where P6 held none), and the scorer hands parseXER's
+// float_path_end on. P6's import does not map the file's key to the activity it imports, so a file's key can name an
+// activity P6 does not hold: each probe is run with its file's key set to another activity first (SB0, or SG1 where
+// P6 held SB0), and must still give P6's values. The probe files have LF lines; the overlay reads CRLF, as P6's export
+// and the held-out generator write.
+let rows2 = 0, match2 = 0;
+for (const [name, proj] of Object.entries(P6.projects)) {
+    if (!texts[name]) continue;
+    let text = texts[name].text.replace(/\r?\n/g, '\r\n');
+    const ids = {};
+    for (const r of table(text, 'TASK')) ids[r.task_code] = r.task_id;
+    const decoy = proj.float_path_end === 'SB0' ? 'SG1' : 'SB0';
+    const lines = text.split('\r\n');
+    let on = false, fields = null;
+    for (let i = 0; i < lines.length; i++) {
+        const p = lines[i].split('\t');
+        if (p[0] === '%T') { on = p[1] === 'SCHEDOPTIONS'; continue; }
+        if (on && p[0] === '%F') fields = p.slice(1);
+        else if (on && p[0] === '%R') {
+            p[fields.indexOf('key_activity_for_multiple_longest_paths') + 1] = ids[decoy];
+            lines[i] = p.join('\t');
+        }
+    }
+    text = lines.join('\r\n');
+    const o = overlay(text, Object.assign({}, texts[name].imported, { float_path_end: proj.float_path_end }));
+    const key = (table(o.text, 'SCHEDOPTIONS')[0] || {}).key_activity_for_multiple_longest_paths;
+    if (o.float_path_end !== proj.float_path_end || key !== (proj.float_path_end ? ids[proj.float_path_end] : '')) {
+        off.push(name + ': the overlay wrote the float-path end ' + JSON.stringify(key) + ' for ' + JSON.stringify(proj.float_path_end));
+        continue;
+    }
+    const bad = offRows(name + ' (scorer path)', run(o.text, FROM_FILE), proj.rows);
+    rows2 += Object.keys(proj.rows).length;
+    match2 += Object.keys(proj.rows).length - bad.length;
+    off.push(...bad);
+}
+if (rows2 !== 182) {
+    console.error('p6-key-activity.test.js: expected 182 probe rows on the scorer path, read ' + rows2);
+    process.exitCode = 1;
+}
 if (off.length) {
-    console.error('p6-key-activity.test.js: FAIL, ' + match + ' of ' + rows + ' probe rows match P6');
+    console.error('p6-key-activity.test.js: FAIL, ' + match + ' of ' + rows + ' probe rows match P6, ' + match2 + ' of ' +
+        rows2 + ' on the scorer path');
     off.slice(0, 60).forEach((x) => console.error('  ' + x));
     process.exitCode = 1;
 } else if (!process.exitCode) {
-    console.log('p6-key-activity.test.js: PASS (' + match + ' of ' + rows + ' P6 probe rows on the four dates and both floats; ' +
-        Object.keys(P6.projects).length + ' probes)');
+    console.log('p6-key-activity.test.js: PASS (' + match + ' of ' + rows + ' P6 probe rows on the four dates and both floats, ' +
+        match2 + ' of ' + rows2 + ' on the scorer path; ' + Object.keys(P6.projects).length + ' probes)');
 }

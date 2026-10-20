@@ -185,6 +185,19 @@ def main():
         if (xr_name.get(t.get('rsrc_id', '')) or '') != (pr_name.get(q['rsrc_id']) or ''):
             d('TASK ' + c, 'rsrc', xr_name.get(t.get('rsrc_id', '')), pr_name.get(q['rsrc_id']))
 
+    # The activity the float paths end at (Schedule Options, Advanced tab, "Display multiple float paths ending with
+    # activity"; SCHEDOPTIONS key_activity_for_multiple_longest_paths, a task id; P6 holds -99 for none). P6's import
+    # keeps the file's id without mapping it to the activity it imports (P6 probes, rounds 7 and 11 to 13,
+    # 20-Oct-2026), so the id P6 holds is recorded as stored and resolved among this project's activities: rule FK
+    # reads the end P6 holds, and p6_imported_overlay.js hands it to the engine (recorded from H27 on)
+    xkey = str(xso.get('key_activity_for_multiple_longest_paths') or '').strip()
+    pkey = str(pso.get('key_activity_for_multiple_longest_paths') or '').strip()
+    xend = xt_code.get(xkey)
+    pend = pt_code.get(int(pkey)) if re.match(r'^\d+$', pkey) else None
+    if xend != pend:
+        d('SCHEDOPTIONS', 'key_activity_for_multiple_longest_paths', '%s (%s)' % (xkey, xend or 'no activity'),
+          '%s (%s)' % (pkey, pend or 'no activity of the project'))
+
     # Relationships
     xl = sorted((xt_code[r['pred_task_id']], xt_code[r['task_id']], r['pred_type'], nd(r['lag_hr_cnt']))
                 for r in xer.get('TASKPRED', []))
@@ -223,6 +236,7 @@ def main():
     # recorded from H25 on)
     minute = lambda v: (raw(v) or '')[:16] or None
     out = {'case': short, 'proj_id': pid, 'differences': diffs,
+           'float_path_end': pend, 'float_path_end_stored': pkey,
            'resource_dependent': {
                'tasks': {c: {f: raw(pt[c][f]) for f in ('remain_drtn_hr_cnt', 'target_drtn_hr_cnt')} for c in sorted(rd)},
                'assignments': [dict({'task_code': k[0], 'rsrc_short_name': k[1]},

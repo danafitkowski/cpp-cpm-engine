@@ -32,6 +32,10 @@
 //   resource's next working time from there, after its remaining lag, for its remaining units at its rate; the
 //   remaining duration runs from the earliest of its resources' next working times from that restart to the latest
 //   finish. An activity with no assignments keeps its durations.
+// - The end of the float paths (from H27 on): P6's import keeps the file's SCHEDOPTIONS
+//   key_activity_for_multiple_longest_paths, a task id, without mapping it to the activity it imports (P6 probes,
+//   rounds 7 and 11 to 13, 20-Oct-2026), so after the import P6 holds none of the project's activities as the end
+//   (float_path_end null). It is compared where P6's record holds it.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -136,7 +140,7 @@ function model(text) {
         out.tasks[k.task_code] = { remain_drtn_hr_cnt: remaining, target_drtn_hr_cnt: planned };
         for (const x of recs) out.assignments.push(x.o);
     }
-    return { resource_dependent: out };
+    return { float_path_end: null, resource_dependent: out };
 }
 
 // --- compare with P6's records (p6-imported/), or write the model's
@@ -163,8 +167,15 @@ function main() {
         const recPath = path.join(SET, 'p6-imported', c.case + '.json');
         if (!fs.existsSync(recPath)) continue;
         n.cases++;
-        const rec = JSON.parse(fs.readFileSync(recPath, 'utf8')).resource_dependent;
-        const m = model(fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1')).resource_dependent;
+        const full = JSON.parse(fs.readFileSync(recPath, 'utf8'));
+        const rec = full.resource_dependent;
+        const mf = model(fs.readFileSync(path.join(SET, 'cases', c.file), 'latin1'));
+        const m = mf.resource_dependent;
+        if (Object.prototype.hasOwnProperty.call(full, 'float_path_end')) {
+            n.ends = (n.ends || 0) + 1;
+            if (full.float_path_end === mf.float_path_end) n.ends_match = (n.ends_match || 0) + 1;
+            else misses.push(c.case + ' float-path end: P6 ' + JSON.stringify(full.float_path_end) + ' model ' + JSON.stringify(mf.float_path_end));
+        }
         for (const [code, v] of Object.entries(rec.tasks)) {
             n.tasks++;
             const x = m.tasks[code];
@@ -201,7 +212,8 @@ function main() {
     }
     console.log(path.basename(SET) + ': ' + n.cases + ' cases recorded; activities ' + n.tasks_match + ' of ' + n.tasks +
         ', assignments ' + n.assignments_match + ' of ' + n.assignments +
-        (n.dated ? ' (dates ' + n.dates_match + ' of ' + n.dated + ')' : '') + ' as P6 imported them' +
+        (n.dated ? ' (dates ' + n.dates_match + ' of ' + n.dated + ')' : '') +
+        (n.ends ? ', float-path ends ' + (n.ends_match || 0) + ' of ' + n.ends : '') + ' as P6 imported them' +
         (n.extra ? '; ' + n.extra + ' assignments kept by the model and not by P6' : ''));
     for (const x of misses) console.log('  ' + x);
     if (misses.length) process.exitCode = 1;
