@@ -8,19 +8,22 @@ before AR). These 10 probes were built for them, committed with v2.10.12's and t
 saw them, imported once into EPS ZZ-CPP-TEST (projects 5515 to 5524), each recorded before its F9, opened alone and
 scheduled once.
 
-Each probe: F (As Late As Possible, resource dependent, one assignment at 1 an hour) start-to-start into S (4 h on M
-unless named, held by a Start On or After; KR9 start-to-finish) and finish-to-start into FIN, with L (200 h on X) into
-FIN. Data date Mon 1-Mar-27 08:00; lags on the successor's calendar. Calendars: X Mon-Thu 07:00-12:00 and 13:00-17:30,
-Fri 07:00-11:00; M Mon-Fri 08:00-12:00 and 13:00-17:00; T Mon-Thu 07:00-17:00. Resources: RT Mon-Fri 08:00-16:00, RE
-every day 06:00-18:00. Where RE works more than the activity calendar, P6's import keeps the activity's duration and
-lowers the units an hour, so the assignment runs longer on RE (KR4: 38 h of work, 44 h on RE).
+Each probe: F (As Late As Possible, resource dependent, one assignment at 1 an hour) start-to-start into S (4 h, held
+by a Start On or After; on M, but every day 00:00-24:00 in KR4, KR5, KR6 and KR10; KR9 start-to-finish) and
+finish-to-start into FIN, with L (200 h on X) into FIN. Data date Mon 1-Mar-27 08:00; lags on the successor's calendar.
+Calendars: X Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00; M Mon-Fri 08:00-12:00 and 13:00-17:00; T Mon-Thu
+07:00-17:00. Resources: RT Mon-Fri 08:00-16:00, RE every day 06:00-18:00. Where RE works more than the activity
+calendar, P6's import keeps the activity's duration and lowers the units an hour, so the assignment runs longer on RE
+(KR4: 38 h of work, 44 h on RE). Where RT works through the activity calendar's 12:00-13:00 break (KR1, KR2, KR7,
+KR9, on X or M), the import sets the activity's duration to the activity calendar's working time that RT's 8 h span,
+Mon 08:00-16:00: 7 h. The assignment keeps its 8 h.
 
 | Probe | F: calendar, resource, work | Start bound | Started there, the work finishes | P6 places F |
 |---|---|---|---|---|
 | KR1 | X, RT, 8 h | Thu 4-Mar 13:00 | Fri 5-Mar 13:00, off X | Fri 5-Mar 08:00-16:00 |
 | KR2 | X, RT, 8 h, a 4 h lag (KH2C's network) | Thu 4-Mar 13:00 | Fri 5-Mar 13:00, off X | Fri 5-Mar 08:00-16:00 |
 | KR3 | X, RT, 3 h | Thu 4-Mar 13:00 | Thu 4-Mar 16:00, on X | Thu 4-Mar 13:00-16:00 |
-| KR4 | T, RE, 38 h (H27-11 A1220's shape) | Thu 4-Mar 16:00 (S on every-day 24 h) | Mon 8-Mar 12:00, on T | Mon 8-Mar 07:00 to Thu 11-Mar 15:00 |
+| KR4 | T, RE, 38 h (H27-11 A1220's shape) | Thu 4-Mar 16:00 | Mon 8-Mar 12:00, on T | Mon 8-Mar 07:00 to Thu 11-Mar 15:00 |
 | KR5 | T, RE, 12 h | Thu 4-Mar 16:00 | Fri 5-Mar 18:00, off T | Mon 8-Mar 07:00 to Tue 9-Mar 09:00 |
 | KR6 | T, RE, 2 h | Thu 4-Mar 16:00 | Thu 4-Mar 18:00, off T | Mon 8-Mar 07:00-09:00 |
 | KR7 | M, RT, 8 h | Fri 5-Mar 15:00 | Mon 8-Mar 15:00, on M | Fri 5-Mar 15:00 to Mon 8-Mar 15:00 |
