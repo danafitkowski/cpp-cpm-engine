@@ -1,0 +1,31 @@
+{
+ "case": "ZZ-CPP-KD1",
+ "proj_id": 5511,
+ "differences": [],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "resource_dependent": {
+  "tasks": {
+   "R": {
+    "remain_drtn_hr_cnt": 16.0,
+    "target_drtn_hr_cnt": 16.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "R",
+    "rsrc_short_name": "ZZ-CPP-KD1-RE",
+    "remain_qty": 16.0,
+    "target_qty": 16.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-04-01 08:00",
+    "reend_date": "2027-04-02 12:00"
+   }
+  ]
+ }
+}

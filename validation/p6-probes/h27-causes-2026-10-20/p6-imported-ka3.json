@@ -1,0 +1,48 @@
+{
+ "case": "ZZ-CPP-KA3",
+ "proj_id": 5500,
+ "differences": [
+  "TASK U remain_drtn_hr_cnt: xer '16' p6 15.0",
+  "TASK U target_drtn_hr_cnt: xer '32' p6 31.0"
+ ],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "resource_dependent": {
+  "tasks": {
+   "U": {
+    "remain_drtn_hr_cnt": 15.0,
+    "target_drtn_hr_cnt": 31.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "U",
+    "rsrc_short_name": "ZZ-CPP-KA3-RS",
+    "remain_qty": 0.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 0.0,
+    "target_qty_per_hr": 0.0,
+    "target_lag_drtn_hr_cnt": 4.0,
+    "relag_drtn_hr_cnt": 4.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-03 08:00",
+    "reend_date": "2027-03-04 12:00"
+   },
+   {
+    "task_code": "U",
+    "rsrc_short_name": "ZZ-CPP-KA3-RT",
+    "remain_qty": 16.0,
+    "target_qty": 32.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 16.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-03 08:00",
+    "reend_date": "2027-03-04 16:00"
+   }
+  ]
+ }
+}

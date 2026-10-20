@@ -1,4 +1,4 @@
-# P6 probes, rounds 11 to 13 (20 October 2026): the activity the float paths end at
+# P6 probes, rounds 11 to 14 (20 October 2026): the activity the float paths end at
 
 v2.10.12 listed "float paths ending at an activity chosen in P6" as not measured. An XER cannot carry it: P6's import
 keeps the file's task id in SCHEDOPTIONS `key_activity_for_multiple_longest_paths` without mapping it to the activity it
@@ -29,17 +29,29 @@ FB0, FG0 and FG1 keep their free float because they lead into FIN), nor does the
 set, nothing changes, even with a second open end (KF6). Every other field of every activity is the same with and
 without an end activity.
 
-**Not measured:** a start-to-start or finish-to-finish link into the end activity. In KG3 and KG4 the linked
-activity's free float is already 0 without an end activity (KG3C, KG4C), so they show only that the other chains are
-zeroed.
+**Round 14 (KH1-KH5, controls KH1C-KH4C):** a finish-to-finish link into the end activity leads into it (KH3: FG1
+reaches SG1 only finish-to-finish and keeps its 2 h, as FK's walk over every relationship type has it), and work after
+the end activity holds none (KH5, ending at PG1: FG1 follows it and is zeroed). Here the end activity was set, the
+options saved and the Schedule dialog cancelled; `import_p6_sqlite.py` then recorded the end P6 held with the project
+still unscheduled, before the one F9.
+
+**Not measured:** a start-to-start or start-to-finish link into the end activity. P6 prints the linked As Late As
+Possible activity's free float as 0 without an end activity too (KG3C, KG4C; KH1C, KH2C, KH4C), so these show only
+that the other chains are zeroed.
+
+**Open:** round 14's controls also measured where P6 places As Late As Possible resource dependent work led out
+start-to-start or start-to-finish (rule AR, `h27-causes-2026-10-20`). KH2 and KH2C (FB0 on X, a 4 h start-to-start
+lag) match neither reading of AR: P6 places FB0 on Fri 5-Mar-27 08:00-16:00, the engine on Thu 4-Mar 09:30 to Fri
+09:30. `tests/p6-key-activity.test.js` lists those two rows as open and fails if either matches or another differs.
 
 `p6-values.json` holds, for each probe, the file, its SHA-256, P6's record of the import before the F9 (`p6-imported-*`,
 laid over the file as the held-out scorer lays it), the end activity P6 held (`float_path_end`, null for none) and P6's
 values for every unfinished activity. `tests/p6-key-activity.test.js` replays them with the end activity handed on as
-`opts.floatPathEnd`: v2.10.12 matches 167 of the 182 rows, and the FK candidate all 182. The rule is fitted on these
+`opts.floatPathEnd`, and again on the scorer's path (each file's key set to another activity first, P6's end laid over
+it): v2.10.12 matches 267 of the 299 rows; the candidate 297, the two open rows apart. The rules are fitted on these
 probes.
 
-Capture: P6 Professional 23.12.1, EPS ZZ-CPP-TEST, projects 5450 to 5463. Each round imported once with the Default
+Capture: P6 Professional 23.12.1, EPS ZZ-CPP-TEST, projects 5450 to 5463 and 5476 to 5484. Each round imported once with the Default
 Configuration; each project opened alone, its end activity set where one is named, scheduled once with F9, and closed;
 the values read back from the database (none left out: no row was edited after its F9). The end activity P6 stored,
 read from PROJPROP 'scheduling': KEA 352523 (SG1), KEB 352533 (SB0), KF1 352561 (FG1), KF2 352569 (L), KF3 352583 (FIN),

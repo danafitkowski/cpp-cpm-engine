@@ -1,0 +1,11 @@
+{
+ "case": "ZZ-CPP-KC6",
+ "proj_id": 5509,
+ "differences": [],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "resource_dependent": {
+  "tasks": {},
+  "assignments": []
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "case": "ZZ-CPP-KH1",
+ "proj_id": 5476,
+ "differences": [
+  "TASK FB0 remain_drtn_hr_cnt: xer '8' p6 7.0",
+  "TASK FB0 target_drtn_hr_cnt: xer '8' p6 7.0",
+  "SCHEDOPTIONS key_activity_for_multiple_longest_paths: xer ' (no activity)' p6 '353378 (SB0)'"
+ ],
+ "float_path_end": "SB0",
+ "float_path_end_stored": "353378",
+ "resource_dependent": {
+  "tasks": {
+   "FB0": {
+    "remain_drtn_hr_cnt": 7.0,
+    "target_drtn_hr_cnt": 7.0
+   },
+   "FG0": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "FG1": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   },
+   "FG7": {
+    "remain_drtn_hr_cnt": 3.0,
+    "target_drtn_hr_cnt": 3.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "FB0",
+    "rsrc_short_name": "ZZ-CPP-KH1-RT",
+    "remain_qty": 8.0,
+    "target_qty": 8.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-01 08:00",
+    "reend_date": "2027-03-01 16:00"
+   },
+   {
+    "task_code": "FG0",
+    "rsrc_short_name": "ZZ-CPP-KH1-RS",
+    "remain_qty": 3.0,
+    "target_qty": 3.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-01 08:00",
+    "reend_date": "2027-03-01 11:00"
+   },
+   {
+    "task_code": "FG1",
+    "rsrc_short_name": "ZZ-CPP-KH1-RS",
+    "remain_qty": 3.0,
+    "target_qty": 3.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-01 08:00",
+    "reend_date": "2027-03-01 11:00"
+   },
+   {
+    "task_code": "FG7",
+    "rsrc_short_name": "ZZ-CPP-KH1-RS",
+    "remain_qty": 3.0,
+    "target_qty": 3.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-01 08:00",
+    "reend_date": "2027-03-01 11:00"
+   }
+  ]
+ }
+}
