@@ -213,6 +213,14 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # finishing at the 24:00 close of a day before a day off, a finish milestone after it (MZ); and resource dependent work
 # placed back from a finish requirement beside an assignment with no work and a lag (ZQ). The activity wide10 names as
 # the end of the float paths is set in P6 before the F9 from H28 on (the protocol's capture), so it reaches FK.
+# 'wide12' (H29 on) draws exactly what wide11 draws and then, from the same stream, the shapes of the rules taken
+# after H28 ('h28s': chance; see draw_h28s): As Late As Possible resource dependent work under a start-to-start or
+# start-to-finish bound, its resource working Mon-Thu on a calendar that works Fridays, or every day, or other hours,
+# with a lag on its assignment and a finish-to-start bound beside the start bound in some (AW, AT); such work with no
+# work left (AZ); a finish floor on resource dependent work (MW); a Mandatory Start on resource dependent work with a
+# second constraint, its resource's holiday on the Mandatory Start's day (LR); and "Start Float" in place of the
+# default stream's float type in about 40 cases in 100, with an end of the float paths named more often where
+# "Calculate multiple float paths" is on (ET).
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
@@ -261,6 +269,11 @@ WIDE_PROFILES = {
                'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
                'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85, 'h23s': 0.9,
                'mfp': 0.5, 'h24s': 0.9, 'h25s': 0.9, 'one_per_rsrc': True, 'unm': 0.9, 'h27s': 0.9},
+    'wide12': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                          'external': 0.55},
+               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
+               'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85, 'h23s': 0.9,
+               'mfp': 0.5, 'h24s': 0.9, 'h25s': 0.9, 'one_per_rsrc': True, 'unm': 0.9, 'h27s': 0.9, 'h28s': 0.9},
 }
 
 # The values P6 23.12 writes for a project created with its defaults.
@@ -720,6 +733,9 @@ def draw_wide(rng, short, pid, start, span, dd_day, data_date, acts, rels, cals,
     # wide11: the shapes of the rules taken after H27, drawn after everything wide10 draws.
     if pf.get('h27s') is not None:
         draw_h27s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0)
+    # wide12: the shapes of the rules taken after H28, drawn after everything wide11 draws.
+    if pf.get('h28s') is not None:
+        draw_h28s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0)
     return w
 
 
@@ -1779,6 +1795,242 @@ def draw_h27s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0):
     w['h27s']['mz'].append(m['code'])
 
 
+def draw_h28s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0):
+    """wide12 (H29 on): the shapes of the rules taken after H28 (P6 probe rounds 17 and 18,
+    validation/p6-probes/h28-causes-2026-10-20 and round18-2026-10-20), each new work not yet started hung into the
+    network, drawn from the same stream after everything wide11 draws. With its chance:
+    a) one or two As Late As Possible resource dependent activities after the project's start milestone (AW, AT), on a
+    calendar of the case's that works Fridays or, about half the time, on a new calendar that works Mon-Thu
+    07:00-12:00 and 13:00-17:30 and Fri 07:00-11:00, with one resource at 1 an hour (2 about one time in five) that
+    works Mon-Thu 08:00-16:00, Mon-Thu 07:00-12:00 and 12:30-17:30, every day 06:00-18:00, Mon-Fri 08:00-16:00 or
+    Mon-Sat 08:00-16:00, 8 to 80 h of work, a 4 or 8 h lag on the assignment about one time in four. Each leads
+    start-to-start (no lag, or 2, 4 or 8 h about a third of the time) or, about one time in four, start-to-finish into
+    a 4 h task held by a Start On or After two to eight days after the data date (on a shift edge, mid-shift or off
+    working time), or, about one time in five, start-to-start into a 4 h task that is As Late As Possible itself and
+    held by nothing; about one time in three, beside a held task, also finish-to-start into a second task held a few
+    hours to two days later; and finish-to-start into the project's finish milestone.
+    b) one As Late As Possible resource dependent activity with no work left (AZ): 8 h planned on a Sunday on a
+    calendar of the case's that works it every day, or a new one that works around the clock, its one assignment with
+    no units at 1 an hour on a resource that works Mon-Sat, Mon-Fri or Mon-Thu 08:00-16:00, so P6's import finds no
+    hours of the resource in the planned window and leaves the assignment no units and its units per hour;
+    finish-to-start or start-to-start into a task held by a Start On or After on a calendar of the case's, one that
+    works every day about three times in five where the case has one.
+    c) one resource dependent activity of 16 to 40 h with a finish floor, a Finish On or After, a Finish On, or a Start
+    On or After with a Mandatory Finish second, after a task held by a Start On or After, finish-to-finish with an 8 h
+    lag or none, or finish-to-start (MW).
+    d) one resource dependent activity of 4 to 24 h held by a Mandatory Start with a Start On or Before, a Finish On or
+    Before or a Mandatory Finish second, its one resource on Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00,
+    with a holiday on the Mandatory Start's day about three times in five and on the day before about one time in five
+    (LR).
+    e) "Start Float" as the float type about 45 times in 100, in place of the option the default stream drew, and,
+    where "Calculate multiple float paths" is on and wide10 named no end of the float paths, about one time in two an
+    unfinished activity of the network named as that end (set in P6 before the F9, as from H28) (ET, AT).
+    The shapes' resources are one per week pattern with no holidays, LR's one of its own with its holiday, their
+    resource and calendar ids from pid * 1000 + 901 on; the new calendars take pid * 1000 + 951 (AW's) and 952 (AZ's),
+    clear of every earlier profile's."""
+    w['h28s'] = {'aw': [], 'aw_sf': [], 'aw_alap': [], 'aw_fs': [], 'aw_lag': [], 'az': [], 'mw': [], 'lr': [],
+                 'lr_holiday': [], 'mfk': [], 'start_float': []}
+    w['ft'] = None
+    if rng.random() >= pf['h28s']:
+        return
+    made = {}
+    end = acts[n0 - 1]
+    first = acts[0]
+    base = list(cals)       # the case's calendars, before AW's and AZ's are added
+    xcal = []
+
+    def cdays(cal, h):
+        return h / max(cal.week_hours() / 7.0, 0.1)
+
+    def day(dt):
+        return (dt - at(0)).total_seconds() / 86400.0
+
+    def week_of(key):
+        for weeks in (WEEKS, H24_WEEKS, H27_WEEKS):
+            if key in weeks:
+                return weeks[key]
+        raise KeyError(key)
+
+    def resource(key, holiday=None):
+        # one resource per week pattern, on a calendar of its own with no holidays; with a holiday, one of its own
+        k = key if holiday is None else (key, holiday, len(made))
+        if k not in made:
+            i = len(w['resources']) + 1
+            num = pid * 1000 + 901 + len(made)
+            desc, week = week_of(key)
+            rid = '%s-R%d' % (short, i)
+            hours = [sum(b - a for a, b in sl) / 60.0 for sl in week.values()]
+            made[k] = {'id': num, 'seq': i, 'short': rid, 'type': 'RT_Labor', 'name': '%s synthetic crew' % rid,
+                       'cal': Cal(str(num), '%s %s%s' % (rid, desc, ', %s off' % holiday.isoformat() if holiday else ''),
+                                  week, {holiday} if holiday else set(), {}, hours[0] if len(set(hours)) == 1 else 8.0),
+                       'guid': guid(short, pid, 'RSRC', i)}
+            w['resources'].append(made[k])
+        return made[k]
+
+    def x_calendar():
+        if not xcal:
+            desc, week = WEEKS['MFU']
+            xcal.append(Cal(str(pid * 1000 + 951), '%s %s' % (short, desc), week, set(), {}, 8.0))
+            cals.append(xcal[0])
+        return xcal[0]
+
+    def add_link(p, s, typ, lag):
+        rels.append({'pred': p['i'], 'succ': s['i'], 'type': typ, 'lag': lag})
+        s['preds'].append(rels[-1])
+
+    def into_end(a):
+        if end['status'] != 'TK_Complete':
+            add_link(a, end, 'PR_FS', 0)
+
+    def new(typ, cal, hours, tag, e0, cstr='', cstr_date=None, cstr2='', cstr_date2=None):
+        i = len(acts)
+        es[i] = e0
+        ef[i] = e0 + cdays(cal, hours)
+        a = {'i': i, 'code': 'A%d' % (1000 + 10 * i), 'type': typ, 'cal': cal, 'hours': hours, 'preds': [],
+             'status': 'TK_NotStart', 'act_start': None, 'act_end': None, 'remain': hours, 'xf': None, 'pct': 0,
+             'cstr': cstr, 'cstr_date': cstr_date, 'cstr2': cstr2, 'cstr_date2': cstr_date2, 'tags': [tag]}
+        acts.append(a)
+        return a
+
+    def make_rd(a, parts):
+        # resource dependent work on the given assignments: (resource, units per hour, lag, no units)
+        a['type'] = 'TT_Rsrc'
+        for res, rate, lag, empty in parts:
+            target_q = 0 if empty else (a['hours'] - lag) * rate
+            remain_q = 0 if empty else (a['remain'] - lag) * rate
+            w['assignments'].append({'act': a, 'res': res, 'rate': rate, 'lag': lag, 'remain_q': remain_q,
+                                     'target_q': target_q, 'act_q': target_q - remain_q})
+
+    # a) AW
+    fri = [c for c in base if c.week.get(4)]
+    for _ in range(rng.randint(1, 2)):
+        cal = x_calendar() if rng.random() < 0.5 or not fri else rng.choice(fri)
+        key = pick(rng, [('MT8', 35), ('MT10', 20), ('D12', 25), ('MF8C', 10), ('MS8', 10)])
+        hours = rng.choice([8, 16, 24, 40, 60, 80])
+        rate = 2 if rng.random() < 0.2 else 1
+        alag = rng.choice([4, 8]) if rng.random() < 0.25 else 0
+        kind = pick(rng, [('ss', 55), ('sf', 25), ('alap', 20)])
+        lag = rng.choice([2, 4, 8]) if kind == 'ss' and rng.random() < 1 / 3.0 else 0
+        scal = rng.choice(base)
+        held = place(rng, scal, at(dd_day + rng.uniform(2, 8)), 'start')
+        link = {'ss': 'start-to-start' + (', a %d h lag,' % lag if lag else ''), 'sf': 'start-to-finish',
+                'alap': 'start-to-start'}[kind]
+        f = new('TT_Task', cal, hours, 'As Late As Possible, %s into a task %s, its resource %s%s%s' % (
+            link, 'As Late As Possible' if kind == 'alap' else 'held by a Start On or After', week_of(key)[0],
+            ' at %d an hour' % rate if rate != 1 else '', ', a %d h lag on the assignment' % alag if alag else ''),
+            es[first['i']], cstr='CS_ALAP')
+        add_link(first, f, 'PR_FS', 0)
+        make_rd(f, [(resource(key), rate, alag, False)])
+        if kind == 'alap':
+            s = new('TT_Task', scal, 4, 'As Late As Possible, after %s (start-to-start)' % f['code'], day(held),
+                    cstr='CS_ALAP')
+        else:
+            s = new('TT_Task', scal, 4, 'held by a Start On or After, after %s (%s)' % (f['code'], link.rstrip(',')),
+                    day(held), cstr='CS_MSOA', cstr_date=held)
+        add_link(f, s, 'PR_SF' if kind == 'sf' else 'PR_SS', lag)
+        into_end(s)
+        if kind != 'alap' and rng.random() < 1 / 3.0:
+            s2cal = rng.choice(base)
+            held2 = place(rng, s2cal, held + timedelta(hours=rng.uniform(2, 48)), 'start')
+            s2 = new('TT_Task', s2cal, 4, 'held by a Start On or After, finish-to-start after %s' % f['code'],
+                     day(held2), cstr='CS_MSOA', cstr_date=held2)
+            add_link(f, s2, 'PR_FS', 0)
+            into_end(s2)
+            w['h28s']['aw_fs'].append(f['code'])
+        into_end(f)
+        w['h28s']['aw_sf' if kind == 'sf' else ('aw_alap' if kind == 'alap' else 'aw')].append(f['code'])
+        if alag:
+            w['h28s']['aw_lag'].append(f['code'])
+    # b) AZ: planned on a Sunday on a calendar that works it, so the resource, which works no Sunday, has no hours in
+    # the planned window, and P6's import leaves the assignment no units and its units per hour: no work left
+    key = pick(rng, [('MS8', 40), ('MF8C', 30), ('MT8', 30)])
+    every = [c for c in base if all(c.week.get(d) for d in range(7))]
+    zcal = rng.choice(every) if every and rng.random() < 0.6 else rng.choice(base)
+    typ = 'PR_FS' if rng.random() < 0.5 else 'PR_SS'
+    held = place(rng, zcal, at(dd_day + rng.uniform(2, 8)), 'start')
+    sun = (at(dd_day) + timedelta(days=rng.uniform(2, 8))).date()
+    sun += timedelta(days=(6 - sun.weekday()) % 7)
+    sundays = [c for c in every if c.slots(sun)]
+    if sundays:
+        acal_z = rng.choice(sundays)
+    else:
+        desc, week = WEEKS['D24']
+        acal_z = Cal(str(pid * 1000 + 952), '%s %s' % (short, desc), week, set(), {}, 24.0)
+        cals.append(acal_z)
+    plan = acal_z.first_start_at_or_after(datetime(sun.year, sun.month, sun.day))
+    z = new('TT_Task', acal_z, 8, 'As Late As Possible, no work left, %s into a task held by a Start On or '
+            'After, its resource %s' % ('finish-to-start' if typ == 'PR_FS' else 'start-to-start', week_of(key)[0]),
+            day(plan), cstr='CS_ALAP')
+    add_link(first, z, 'PR_FS', 0)
+    make_rd(z, [(resource(key), 1, 0, True)])
+    s = new('TT_Task', zcal, 4, 'held by a Start On or After, after %s' % z['code'], day(held), cstr='CS_MSOA',
+            cstr_date=held)
+    add_link(z, s, typ, 0)
+    into_end(s)
+    into_end(z)
+    w['h28s']['az'].append(z['code'])
+    # c) MW
+    key = pick(rng, [('MT10', 30), ('MT8', 25), ('MS8', 20), ('D12', 25)])
+    rcal = rng.choice(base)
+    pcal = rng.choice(base)
+    held = pcal.first_start_at_or_after(at(dd_day + rng.uniform(1, 6)))
+    p = new('TT_Task', pcal, 8, 'held by a Start On or After, a finish requirement for the work after it', day(held),
+            cstr='CS_MSOA', cstr_date=held)
+    add_link(first, p, 'PR_FS', 0)
+    into_end(p)
+    typ, lag = pick(rng, [(('PR_FF', 8), 45), (('PR_FF', 0), 25), (('PR_FS', 0), 30)])
+    floor = place(rng, rcal, held + timedelta(days=rng.uniform(0.5, 4)), 'finish')
+    how = pick(rng, [('CS_MEOA', 35), ('CS_MEO', 25), ('CS_MANDFIN', 40)])
+    if how == 'CS_MANDFIN':
+        soa = place(rng, rcal, at(dd_day + rng.uniform(0, 3)), 'start')
+        cs = ('CS_MSOA', soa, 'CS_MANDFIN', floor)
+        what = 'a Start On or After, a Mandatory Finish second'
+    else:
+        cs = (how, floor, '', None)
+        what = 'a Finish On or After' if how == 'CS_MEOA' else 'a Finish On'
+    r = new('TT_Task', rcal, rng.choice([16, 24, 40]), 'a finish floor: %s, %s after %s%s, its resource %s' % (
+        what, 'finish-to-finish' if typ == 'PR_FF' else 'finish-to-start', p['code'],
+        ', an %d h lag' % lag if lag else '', week_of(key)[0]), day(held), cstr=cs[0], cstr_date=cs[1],
+        cstr2=cs[2], cstr_date2=cs[3])
+    make_rd(r, [(resource(key), 1, 0, False)])
+    add_link(p, r, typ, lag)
+    into_end(r)
+    w['h28s']['mw'].append(r['code'])
+    # d) LR
+    acal = rng.choice(base)
+    ms = acal.first_start_at_or_after(at(dd_day + rng.uniform(3, 10)))
+    where = pick(rng, [('on', 60), ('before', 20), ('none', 20)])
+    holiday = {'on': ms.date(), 'before': ms.date() - timedelta(days=1), 'none': None}[where]
+    c2 = pick(rng, [('CS_MSOB', 50), ('CS_MEOB', 30), ('CS_MANDFIN', 20)])
+    hours = rng.choice([4, 8, 16, 24])
+    if c2 == 'CS_MSOB':
+        d2 = acal.first_start_at_or_after(ms - timedelta(days=rng.uniform(0, 4)))
+    else:
+        d2 = acal.last_end_at_or_before(ms + timedelta(hours=cdays(acal, hours) * 24 + rng.uniform(-72, 24)))
+    second = {'CS_MSOB': 'a Start On or Before', 'CS_MEOB': 'a Finish On or Before', 'CS_MANDFIN': 'a Mandatory Finish'}
+    off = {'on': ", off on the Mandatory Start's day", 'before': ', off the day before', 'none': ''}
+    lr = new('TT_Task', acal, hours, 'a Mandatory Start, %s second, its resource Mon-Thu 07:00-17:30, Fri '
+             '07:00-11:00%s' % (second[c2], off[where]), day(ms), cstr='CS_MANDSTART', cstr_date=ms, cstr2=c2,
+             cstr_date2=d2)
+    add_link(first, lr, 'PR_FS', 0)
+    make_rd(lr, [(resource('MFU', holiday), 1, 0, False)])
+    into_end(lr)
+    w['h28s']['lr'].append(lr['code'])
+    if holiday:
+        w['h28s']['lr_holiday'].append(lr['code'])
+    # e) "Start Float", and an end of the float paths named more often
+    if rng.random() < 0.45:
+        w['ft'] = 'FT_Start'
+        w['h28s']['start_float'].append('FT_Start')
+    if w.get('mfp') and w.get('mfk') is None and rng.random() < 0.5:
+        pool = [a for a in acts if a['type'] in ('TT_Task', 'TT_Rsrc', 'TT_Mile', 'TT_FinMile')
+                and a['status'] != 'TK_Complete' and a is not end]
+        if pool:
+            k = rng.choice(pool)
+            w['mfk'] = k['i']
+            w['h28s']['mfk'].append(k['code'])
+
+
 def wide_task_fields(a, pid, assignments):
     # --features wide: the TASK fields a drawn feature sets (each blank or the default mode's value otherwise).
     f = {'wbs_id': a.get('wbs', pid * 10), 'suspend_date': fmt(a.get('suspend')), 'resume_date': fmt(a.get('resume')),
@@ -1986,6 +2238,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             opts['sched_progress_override'] = 'Y' if wide['po'] else 'N'
         if wide.get('xf_on') is not None:  # wide4: so does "Use Expected Finish Dates"
             opts['sched_use_expect_end_flag'] = 'Y' if wide['xf_on'] else 'N'
+        if wide.get('ft') is not None:     # wide12: "Start Float" in place of the default stream's float type
+            opts['sched_float_type'] = wide['ft']
 
     # Write the XER
     def row(table, values):
@@ -2152,6 +2406,9 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             summary.update({'unmeasured_shapes': {k: len(v) for k, v in wide['unm'].items()}})
         if wide.get('h27s') is not None:
             summary.update({'h27_shapes': {k: len(v) for k, v in wide['h27s'].items()}})
+        if wide.get('h28s') is not None:
+            summary.update({'h28_shapes': {k: len(v) for k, v in wide['h28s'].items()},
+                            'float_type': so['sched_float_type']})
     return short, text, summary
 
 
