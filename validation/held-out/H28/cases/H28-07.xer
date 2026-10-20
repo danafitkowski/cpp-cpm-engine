@@ -1,0 +1,309 @@
+ERMHDR	23.12	2026-10-13	Project	admin	admin	dbxDatabaseNoName	Project Management	USD
+%T	CURRTYPE
+%F	curr_id	decimal_digit_cnt	curr_symbol	decimal_symbol	digit_group_symbol	pos_curr_fmt_type	neg_curr_fmt_type	curr_type	curr_short_name	group_digit_cnt	base_exch_rate
+%R	1	2	$	.	,	#1.1	(#1.1)	US Dollar	USD	3	1
+%T	PROJECT
+%F	proj_id	fy_start_month_num	rsrc_self_add_flag	allow_complete_flag	rsrc_multi_assign_flag	checkout_flag	project_flag	step_complete_flag	cost_qty_recalc_flag	batch_sum_flag	name_sep_char	def_complete_pct_type	proj_short_name	acct_id	orig_proj_id	source_proj_id	base_type_id	clndr_id	sum_base_proj_id	task_code_base	task_code_step	priority_num	wbs_max_sum_level	strgy_priority_num	last_checksum	critical_drtn_hr_cnt	def_cost_per_qty	last_recalc_date	plan_start_date	plan_end_date	scd_end_date	add_date	last_tasksum_date	fcst_start_date	def_duration_type	task_code_prefix	guid	def_qty_type	add_by_name	web_local_root_path	proj_url	def_rate_type	add_act_remain_flag	act_this_per_link_flag	def_task_type	act_pct_link_flag	critical_path_type	task_code_prefix_flag	def_rollup_dates_flag	use_project_baseline_flag	rem_target_link_flag	reset_planned_flag	allow_neg_act_flag	sum_assign_level	last_fin_dates_id	fintmpl_id	last_baseline_update_date	cr_external_key	apply_actuals_date	location_id	last_schedule_date	loaded_scope_level	export_flag	new_fin_dates_id	baselines_to_export	baseline_names_to_export	next_data_date	close_period_flag	sum_refresh_date	trsrcsum_loaded	sumtask_loaded
+%R	9107	1	N	Y	Y	N	Y	N	N	N	.	CP_Drtn	H28-07					91070		1000	10	10	0	500		0	0	2026-04-27 08:00	2026-03-02 07:00						DT_FixedDrtn	A		QT_Hour	admin			COST_PER_QTY	N	Y	TT_Task	N	CT_TotFloat	Y	Y	Y	Y	N	N	SL_Taskrsrc								7	Y								
+%T	CALENDAR
+%F	clndr_id	default_flag	clndr_name	proj_id	base_clndr_id	last_chng_date	clndr_type	day_hr_cnt	week_hr_cnt	month_hr_cnt	year_hr_cnt	rsrc_private	clndr_data
+%R	91070	N	H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00	9107			CA_Project	8	42	181	2184	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||6()((0||0(s|07:00|f|11:00)())))(0||7()())))(0||Exceptions()((0||0(d|46168)())(0||1(d|46205)())(0||2(d|46172)((0||0(s|08:00|f|12:00)())))))))
+%R	91071	N	H28-07 Mon-Fri 07:00-17:00	9107			CA_Project	10	50	215	2600	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|17:00)())))(0||3()((0||0(s|07:00|f|17:00)())))(0||4()((0||0(s|07:00|f|17:00)())))(0||5()((0||0(s|07:00|f|17:00)())))(0||6()((0||0(s|07:00|f|17:00)())))(0||7()())))(0||Exceptions()((0||0(d|46162)())(0||1(d|46282)())))))
+%R	91072	N	H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00	9107			CA_Project	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()((0||0(d|46114)())(0||1(d|46147)())))))
+%R	91073	N	H28-07 Mon-Sat 08:00-16:00	9107			CA_Project	8	48	206	2496	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()((0||0(s|08:00|f|16:00)())))(0||7()((0||0(s|08:00|f|16:00)())))))(0||Exceptions()())))
+%R	910799	N	H28-07 Every day 06:00-18:00	9107			CA_Project	12	84	361	4368	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|06:00|f|18:00)())))(0||2()((0||0(s|06:00|f|18:00)())))(0||3()((0||0(s|06:00|f|18:00)())))(0||4()((0||0(s|06:00|f|18:00)())))(0||5()((0||0(s|06:00|f|18:00)())))(0||6()((0||0(s|06:00|f|18:00)())))(0||7()((0||0(s|06:00|f|18:00)())))))(0||Exceptions()())))
+%R	910798	N	H28-07 Every day 00:00-24:00, 2026-05-04 off	9107			CA_Project	24	168	722	8736	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|00:00|f|00:00)())))(0||2()((0||0(s|00:00|f|00:00)())))(0||3()((0||0(s|00:00|f|00:00)())))(0||4()((0||0(s|00:00|f|00:00)())))(0||5()((0||0(s|00:00|f|00:00)())))(0||6()((0||0(s|00:00|f|00:00)())))(0||7()((0||0(s|00:00|f|00:00)())))))(0||Exceptions()((0||0(d|46146)())))))
+%R	91075	N	H28-07-R1 Mon-Fri 07:00-17:00				CA_Base	10	50	215	2600	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|17:00)())))(0||3()((0||0(s|07:00|f|17:00)())))(0||4()((0||0(s|07:00|f|17:00)())))(0||5()((0||0(s|07:00|f|17:00)())))(0||6()((0||0(s|07:00|f|17:00)())))(0||7()())))(0||Exceptions()((0||0(d|46087)())(0||1(d|46097)())(0||2(d|46098)())(0||3(d|46139)())(0||4(d|46141)())(0||5(d|46143)())(0||6(d|46148)())(0||7(d|46167)())(0||8(d|46198)())(0||9(d|46206)())(0||10(d|46232)())(0||11(d|46267)())(0||12(d|46256)((0||0(s|08:00|f|12:00)())))))))
+%R	91076	N	H28-07-R2 Every day 06:00-18:00				CA_Base	12	84	361	4368	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|06:00|f|18:00)())))(0||2()((0||0(s|06:00|f|18:00)())))(0||3()((0||0(s|06:00|f|18:00)())))(0||4()((0||0(s|06:00|f|18:00)())))(0||5()((0||0(s|06:00|f|18:00)())))(0||6()((0||0(s|06:00|f|18:00)())))(0||7()((0||0(s|06:00|f|18:00)())))))(0||Exceptions()((0||0(d|46096)())(0||1(d|46194)())(0||2(d|46204)())(0||3(d|46210)())(0||4(d|46267)())))))
+%R	91077	N	H28-07-R3 Mon-Sat 08:00-16:00				CA_Base	8	48	206	2496	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()((0||0(s|08:00|f|16:00)())))(0||7()((0||0(s|08:00|f|16:00)())))))(0||Exceptions()((0||0(d|46092)())(0||1(d|46113)())(0||2(d|46128)())(0||3(d|46142)())(0||4(d|46253)())(0||5(d|46201)((0||0(s|06:00|f|10:00)())(0||1(s|11:00|f|15:00)())))))))
+%R	91078	N	H28-07-R4 Every day 06:00-18:00				CA_Base	12	84	361	4368	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|06:00|f|18:00)())))(0||2()((0||0(s|06:00|f|18:00)())))(0||3()((0||0(s|06:00|f|18:00)())))(0||4()((0||0(s|06:00|f|18:00)())))(0||5()((0||0(s|06:00|f|18:00)())))(0||6()((0||0(s|06:00|f|18:00)())))(0||7()((0||0(s|06:00|f|18:00)())))))(0||Exceptions()())))
+%R	91079	N	H28-07-R5 Mon-Sat 08:00-16:00				CA_Base	8	48	206	2496	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()((0||0(s|08:00|f|16:00)())))(0||7()((0||0(s|08:00|f|16:00)())))))(0||Exceptions()())))
+%R	910761	N	H28-07-R6 Mon-Thu 07:00-12:00 and 12:30-17:30				CA_Base	10	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|12:30|f|17:30)())))(0||6()())(0||7()())))(0||Exceptions()())))
+%R	910762	N	H28-07-R7 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				CA_Base	8	42	181	2184	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||6()((0||0(s|07:00|f|11:00)())))(0||7()())))(0||Exceptions()())))
+%R	910763	N	H28-07-R8 Every day 06:00-18:00				CA_Base	12	84	361	4368	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|06:00|f|18:00)())))(0||2()((0||0(s|06:00|f|18:00)())))(0||3()((0||0(s|06:00|f|18:00)())))(0||4()((0||0(s|06:00|f|18:00)())))(0||5()((0||0(s|06:00|f|18:00)())))(0||6()((0||0(s|06:00|f|18:00)())))(0||7()((0||0(s|06:00|f|18:00)())))))(0||Exceptions()())))
+%R	910764	N	H28-07-R9 Every day 10:00-18:00				CA_Base	8	56	241	2912	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|10:00|f|18:00)())))(0||2()((0||0(s|10:00|f|18:00)())))(0||3()((0||0(s|10:00|f|18:00)())))(0||4()((0||0(s|10:00|f|18:00)())))(0||5()((0||0(s|10:00|f|18:00)())))(0||6()((0||0(s|10:00|f|18:00)())))(0||7()((0||0(s|10:00|f|18:00)())))))(0||Exceptions()())))
+%R	910765	N	H28-07-R10 Mon-Sat 08:00-16:00				CA_Base	8	48	206	2496	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()((0||0(s|08:00|f|16:00)())))(0||7()((0||0(s|08:00|f|16:00)())))))(0||Exceptions()())))
+%R	910766	N	H28-07-R11 Tue-Sat 08:00-16:00				CA_Base	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()())(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()((0||0(s|08:00|f|16:00)())))(0||7()((0||0(s|08:00|f|16:00)())))))(0||Exceptions()())))
+%R	910767	N	H28-07-R12 Every day 00:00-24:00				CA_Base	24	168	722	8736	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|00:00|f|00:00)())))(0||2()((0||0(s|00:00|f|00:00)())))(0||3()((0||0(s|00:00|f|00:00)())))(0||4()((0||0(s|00:00|f|00:00)())))(0||5()((0||0(s|00:00|f|00:00)())))(0||6()((0||0(s|00:00|f|00:00)())))(0||7()((0||0(s|00:00|f|00:00)())))))(0||Exceptions()())))
+%R	910768	N	H28-07-R13 Mon-Fri 07:00-17:00				CA_Base	10	50	215	2600	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|17:00)())))(0||3()((0||0(s|07:00|f|17:00)())))(0||4()((0||0(s|07:00|f|17:00)())))(0||5()((0||0(s|07:00|f|17:00)())))(0||6()((0||0(s|07:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	910769	N	H28-07-R14 Mon-Thu 08:00-16:00				CA_Base	8	32	138	1664	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()())(0||7()())))(0||Exceptions()())))
+%R	910770	N	H28-07-R15 Mon-Fri 08:00-12:00 and 13:00-17:00				CA_Base	8	40	172	2080	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||3()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||4()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||5()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||6()((0||0(s|08:00|f|12:00)())(0||1(s|13:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%R	910781	N	H28-07-R16 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				CA_Base	8	42	181	2184	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||3()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||4()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||5()((0||0(s|07:00|f|12:00)())(0||1(s|13:00|f|17:30)())))(0||6()((0||0(s|07:00|f|11:00)())))(0||7()())))(0||Exceptions()())))
+%R	910782	N	H28-07-R17 Mon-Sat 08:00-16:00				CA_Base	8	48	206	2496	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()((0||0(s|08:00|f|16:00)())))(0||7()((0||0(s|08:00|f|16:00)())))))(0||Exceptions()())))
+%R	910791	N	H28-07-R18 Every day 06:00-18:00				CA_Base	12	84	361	4368	N	(0||CalendarData()((0||DaysOfWeek()((0||1()((0||0(s|06:00|f|18:00)())))(0||2()((0||0(s|06:00|f|18:00)())))(0||3()((0||0(s|06:00|f|18:00)())))(0||4()((0||0(s|06:00|f|18:00)())))(0||5()((0||0(s|06:00|f|18:00)())))(0||6()((0||0(s|06:00|f|18:00)())))(0||7()((0||0(s|06:00|f|18:00)())))))(0||Exceptions()())))
+%R	910792	N	H28-07-R19 Mon-Thu 08:00-16:00				CA_Base	8	32	138	1664	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|08:00|f|16:00)())))(0||3()((0||0(s|08:00|f|16:00)())))(0||4()((0||0(s|08:00|f|16:00)())))(0||5()((0||0(s|08:00|f|16:00)())))(0||6()())(0||7()())))(0||Exceptions()())))
+%R	910793	N	H28-07-R20 Mon-Fri 07:00-17:00				CA_Base	10	50	215	2600	N	(0||CalendarData()((0||DaysOfWeek()((0||1()())(0||2()((0||0(s|07:00|f|17:00)())))(0||3()((0||0(s|07:00|f|17:00)())))(0||4()((0||0(s|07:00|f|17:00)())))(0||5()((0||0(s|07:00|f|17:00)())))(0||6()((0||0(s|07:00|f|17:00)())))(0||7()())))(0||Exceptions()())))
+%T	SCHEDOPTIONS
+%F	schedoptions_id	proj_id	sched_outer_depend_type	sched_open_critical_flag	sched_lag_early_start_flag	sched_retained_logic	sched_setplantoforecast	sched_float_type	sched_calendar_on_relationship_lag	sched_use_expect_end_flag	sched_progress_override	level_float_thrs_cnt	level_outer_assign_flag	level_outer_assign_priority	level_over_alloc_pct	level_within_float_flag	level_keep_sched_date_flag	level_all_rsrc_flag	sched_use_project_end_date_for_float	enable_multiple_longest_path_calc	limit_multiple_longest_path_calc	max_multiple_longest_path	use_total_float_multiple_longest_paths	key_activity_for_multiple_longest_paths	LevelPriorityList
+%R	109107	9107	SD_Both	Y	Y	N	N	FT_Start	rcal_24Hour	Y	Y	0	N	5	25	N	Y	Y	Y	Y	Y	3	N	9107027	
+%T	PROJWBS
+%F	wbs_id	proj_id	obs_id	seq_num	est_wt	proj_node_flag	sum_data_flag	status_code	wbs_short_name	wbs_name	phase_id	parent_wbs_id	ev_user_pct	ev_etc_user_value	orig_cost	indep_remain_total_cost	ann_dscnt_rate_pct	dscnt_period_type	indep_remain_work_qty	anticip_start_date	anticip_end_date	ev_compute_type	ev_etc_compute_type	guid	tmpl_guid	plan_open_state
+%R	91070	9107		1	1	Y	N	WS_Open	H28-07	Held-out P6 comparison case H28-07 (synthetic)			0.06	0.88	0	0			0			EC_Cmp_pct	EE_Rem_hr			
+%T	RSRC
+%F	rsrc_id	parent_rsrc_id	clndr_id	role_id	shift_id	user_id	pobs_id	guid	rsrc_seq_num	email_addr	employee_code	office_phone	other_phone	rsrc_name	rsrc_short_name	rsrc_title_name	def_qty_per_hr	cost_qty_type	ot_factor	active_flag	auto_compute_act_flag	def_cost_qty_link_flag	ot_flag	curr_id	unit_id	rsrc_type	location_id	rsrc_notes	load_tasks_flag	level_flag	last_checksum
+%R	91071		91075					ZctdhBI68ZmrY4H5nXgWaQ	1					H28-07-R1 synthetic crew	H28-07-R1		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	91072		91076					0SPgzChA+Ggxq8S/h6xM7Q	2					H28-07-R2 synthetic equipment	H28-07-R2		1	QT_Hour		Y	N	Y	N	1		RT_Equip					
+%R	91073		91077					3WtE/MQsEQAQ+Q287y+j6Q	3					H28-07-R3 synthetic crew	H28-07-R3		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	91074		91078					m3Jd7dqg2OINsTVnnB6dQg	4					H28-07-R4 synthetic crew	H28-07-R4		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	91075		91079					5X/hnioV0oYS8cJBoQBhtQ	5					H28-07-R5 synthetic crew	H28-07-R5		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910761		910761					2Qi2P1HVzOZsOO1+FvbeSA	6					H28-07-R6 synthetic crew	H28-07-R6		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910762		910762					XKQ9Cu96DfgU0fP0Rud2uA	7					H28-07-R7 synthetic crew	H28-07-R7		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910763		910763					Otc4mnxth0RnGp+C9wimTw	8					H28-07-R8 synthetic crew	H28-07-R8		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910764		910764					KKFcFtpVMpD+bUXctAKeSg	9					H28-07-R9 synthetic crew	H28-07-R9		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910765		910765					aayTDMjy5arcsVWqLPJCWA	10					H28-07-R10 synthetic crew	H28-07-R10		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910766		910766					axseyOTaS0FENUCPhvXc4w	11					H28-07-R11 synthetic crew	H28-07-R11		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910767		910767					56IkQdlEOjqD6VkTVGIq0w	12					H28-07-R12 synthetic crew	H28-07-R12		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910768		910768					iGr6zTy/Djif7zZ/mH5waA	13					H28-07-R13 synthetic crew	H28-07-R13		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910769		910769					bocj3DSmO+c8yV0ERpsLig	14					H28-07-R14 synthetic crew	H28-07-R14		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910770		910770					MKP2Vtdu+4lZTdttkfN5Hg	15					H28-07-R15 synthetic crew	H28-07-R15		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910781		910781					iEgH5xnqPDpc0yu4c7aGzA	16					H28-07-R16 synthetic crew	H28-07-R16		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910782		910782					z2ShCVLuPxpV78M+YUYMHw	17					H28-07-R17 synthetic crew	H28-07-R17		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910791		910791					3ykYB6Li4GN1GS7JBRC9Qg	18					H28-07-R18 synthetic crew	H28-07-R18		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910792		910792					2bcNtYXwLHa0eZo0Yi+Wgw	19					H28-07-R19 synthetic crew	H28-07-R19		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%R	910793		910793					lz6PzmzUGEkBsi62Mxv75w	20					H28-07-R20 synthetic crew	H28-07-R20		1	QT_Hour		Y	N	Y	N	1		RT_Labor					
+%T	TASK
+%F	task_id	proj_id	wbs_id	clndr_id	phys_complete_pct	rev_fdbk_flag	est_wt	lock_plan_flag	auto_compute_act_flag	complete_pct_type	task_type	duration_type	status_code	task_code	task_name	rsrc_id	total_float_hr_cnt	free_float_hr_cnt	remain_drtn_hr_cnt	act_work_qty	remain_work_qty	target_work_qty	target_drtn_hr_cnt	target_equip_qty	act_equip_qty	remain_equip_qty	cstr_date	act_start_date	act_end_date	late_start_date	late_end_date	expect_end_date	early_start_date	early_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	cstr_type	priority_type	suspend_date	resume_date	float_path	float_path_order	guid	tmpl_guid	cstr_date2	cstr_type2	driving_path_flag	act_this_per_work_qty	act_this_per_equip_qty	external_early_start_date	external_late_end_date	create_date	update_date	create_user	update_user	location_id	crt_path_num
+%R	9107000	9107	91070	91072	100	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_Complete	A1000	Activity A1000, 0 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	0	0	0	0		2026-03-05 08:00	2026-03-05 08:00								2026-03-05 08:00					PT_Normal										0	0					admin	admin		
+%R	9107001	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_Complete	A1010	Activity A1010, 0 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	0	0	0	0		2026-03-05 07:00	2026-03-05 07:00								2026-03-05 07:00					PT_Normal										0	0					admin	admin		
+%R	9107002	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1020	Activity A1020, 12 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	12	0	0	0		2026-03-03 13:00	2026-03-04 17:30								2026-03-03 13:00					PT_Normal										0	0					admin	admin		
+%R	9107003	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1030	Activity A1030, 16 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	16	0	0	0		2026-03-05 07:00	2026-03-06 11:00								2026-03-05 07:00					PT_Normal										0	0					admin	admin		
+%R	9107004	9107	91070	91072	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1040	Activity A1040, 56 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	56	0	0	0		2026-03-02 13:00	2026-03-11 17:00								2026-03-02 13:00					PT_Normal										0	0					admin	admin		
+%R	9107005	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1050	Activity A1050, 4 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	4	0	0	0		2026-03-03 07:00	2026-03-03 17:30								2026-03-03 07:00					PT_Normal										0	0					admin	admin		
+%R	9107006	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1060	Activity A1060, 24 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	24	0	0	0		2026-03-03 07:00	2026-03-06 11:00								2026-03-03 07:00					PT_Normal										0	0					admin	admin		
+%R	9107007	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1070	Activity A1070, 24 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	24	0	0	0		2026-03-13 07:00	2026-03-16 17:30								2026-03-13 07:00					PT_Normal										0	0					admin	admin		
+%R	9107008	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1080	Activity A1080, 40 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	40	0	0	0		2026-03-02 07:00	2026-03-06 11:00								2026-03-02 07:00					PT_Normal										0	0					admin	admin		
+%R	9107009	9107	91070	91071	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1090	Activity A1090, 120 h on H28-07 Mon-Fri 07:00-17:00				0	0	0	0	120	0	0	0		2026-03-11 07:00	2026-03-26 17:00								2026-03-11 07:00					PT_Normal										0	0					admin	admin		
+%R	9107010	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1100	Activity A1100, 8 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	8	0	0	0		2026-03-09 07:00	2026-03-09 12:00								2026-03-09 07:00					PT_Normal										0	0					admin	admin		
+%R	9107011	9107	91070	91070	71	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	A1110	Activity A1110 (suspended), 56 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				16	0	0	0	56	0	0	0		2026-03-31 07:00									2026-03-31 07:00					PT_Normal	2026-04-24 11:00	2026-05-06 07:00								0	0					admin	admin		
+%R	9107012	9107	91070	91071	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1120	Activity A1120, 16 h on H28-07 Mon-Fri 07:00-17:00				0	0	0	0	16	0	0	0		2026-04-01 07:00	2026-04-02 17:00								2026-04-01 07:00					PT_Normal										0	0					admin	admin		
+%R	9107013	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1130	Activity A1130, 32 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	32	0	0	0		2026-04-09 07:00	2026-04-13 17:30								2026-04-09 07:00					PT_Normal										0	0					admin	admin		
+%R	9107014	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1140	Activity A1140, 40 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	40	0	0	0		2026-03-16 07:00	2026-03-20 11:00								2026-03-16 07:00					PT_Normal										0	0					admin	admin		
+%R	9107015	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1150	Activity A1150, 40 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	40	0	0	0		2026-04-09 07:00	2026-04-14 17:30								2026-04-09 07:00					PT_Normal										0	0					admin	admin		
+%R	9107016	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1160	Activity A1160, 40 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	40	0	0	0		2026-04-16 07:00	2026-04-22 17:30								2026-04-16 07:00					PT_Normal										0	0					admin	admin		
+%R	9107017	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1170	Activity A1170, 16 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	16	0	0	0		2026-04-14 13:00	2026-04-16 17:30								2026-04-14 13:00					PT_Normal										0	0					admin	admin		
+%R	9107018	9107	91070	91072	65	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_Active	A1180	Activity A1180 (resource dependent; suspended; expected finish and CS_ALAP), 40 h on H28-07 Mon-Fri 08:00-12:00 and 13:0	91071			14	26	14	40	40	0	0	0		2026-04-22 08:00				2026-04-28 17:00					2026-04-22 08:00				CS_ALAP	PT_Normal	2026-04-24 17:00	2026-05-04 08:00								0	0					admin	admin		
+%R	9107019	9107	91070	91071	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1190	Activity A1190 (Mandatory Finish and an expected finish), 8 h on H28-07 Mon-Fri 07:00-17:00				8	0	0	0	8	0	0	0	2026-05-01 17:00					2026-04-27 17:00					2026-04-29 07:00				CS_MANDFIN	PT_Normal										0	0					admin	admin		
+%R	9107020	9107	91070	91071	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1200	Activity A1200, 8 h on H28-07 Mon-Fri 07:00-17:00				0	0	0	0	8	0	0	0		2026-04-22 07:00	2026-04-22 17:00								2026-04-22 07:00					PT_Normal										0	0					admin	admin		
+%R	9107021	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1210	Activity A1210 (CS_MSOA then CS_MANDFIN), 120 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				120	0	0	0	120	0	0	0	2026-04-30 07:00										2026-04-30 07:00				CS_MSOA	PT_Normal							2026-05-21 17:30	CS_MANDFIN		0	0					admin	admin		
+%R	9107022	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	A1220	Activity A1220, 0 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	0	0	0	0											2026-04-30 07:00					PT_Normal										0	0					admin	admin		
+%R	9107023	9107	91070	91070	20	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	A1230	Activity A1230 (expected finish and CS_MSOA), 40 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				32	0	0	0	40	0	0	0	2026-04-22 13:00	2026-04-20 07:00				2026-05-07 17:30					2026-04-20 07:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9107024	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1240	Activity A1240 (CS_MANDSTART then CS_MSOA), 56 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				56	0	0	0	56	0	0	0	2026-05-27 07:00										2026-05-27 07:00				CS_MANDSTART	PT_Normal							2026-05-30 08:00	CS_MSOA		0	0					admin	admin		
+%R	9107025	9107	91070	91070	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1250	Activity A1250, 24 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	24	0	0	0		2026-04-20 13:00	2026-04-23 17:30								2026-04-20 13:00					PT_Normal										0	0					admin	admin		
+%R	9107026	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1260	Activity A1260 (As Late As Possible, its resource every day), 8 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00	91074			8	0	8	8	8	0	0	0											2026-04-30 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9107027	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1270	Activity A1270 (Finish On or Before: needs its predecessor earlier), 8 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, 				8	0	0	0	8	0	0	0	2026-05-01 11:00										2026-04-29 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107028	9107	91070	91071	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1280	Activity A1280 (an expected finish, its resource every day), 40 h on H28-07 Mon-Fri 07:00-17:00	91074			40	0	40	40	40	0	0	0						2026-04-30 17:00					2026-04-28 07:00					PT_Normal										0	0					admin	admin		
+%R	9107029	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1290	Activity A1290 (external dates; Mandatory Start, a later finish-to-finish or start-to-finish predecessor), 40 h on H28-0				40	0	0	0	40	0	0	0	2026-05-11 07:00										2026-05-07 07:00				CS_MANDSTART	PT_Normal										0	0		2026-05-15 11:00			admin	admin		
+%R	9107030	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1300	Activity A1300 (an assignment with no work left and a 24 h lag), 40 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri	91073			40	0	0	0	40	80	0	80											2026-04-27 07:00					PT_Normal										0	0					admin	admin		
+%R	9107031	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1310	Activity A1310 (expected finish, a later finish-to-finish or start-to-finish requirement), 8 h on H28-07 Mon-Thu 07:00-1				8	0	0	0	8	0	0	0						2026-06-05 11:00					2026-06-08 07:00					PT_Normal										0	0					admin	admin		
+%R	9107032	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1320	Activity A1320 (resource dependent; Mandatory Finish and an expected finish), 56 h on H28-07 Mon-Fri 08:00-12:00 and 13:				56	0	0	0	56	0	0	0	2026-06-08 17:00					2026-06-05 17:00					2026-05-27 08:00				CS_MANDFIN	PT_Normal										0	0					admin	admin		
+%R	9107033	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1330	Activity A1330 (resource dependent; Finish On or Before: needs its predecessor earlier), 16 h on H28-07 Mon-Thu 07:00-12	91073			16	0	16	16	16	16	0	16	2026-06-08 17:30										2026-06-08 07:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107034	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1340	Activity A1340 (Mandatory Finish and an expected finish), 4 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-1				4	0	0	0	4	0	0	0	2026-05-07 17:30					2026-05-01 11:00					2026-05-04 07:00				CS_MANDFIN	PT_Normal										0	0					admin	admin		
+%R	9107035	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1350	Activity A1350 (Finish On or Before: needs its predecessor earlier), 80 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30,				80	0	0	0	80	0	0	0	2026-05-06 17:30										2026-05-30 08:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107036	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1360	Activity A1360 (As Late As Possible, its resource closing at 16:00), 56 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00	91075			56	0	56	56	56	0	0	0											2026-06-12 08:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9107037	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1370	Activity A1370 (CS_MANDSTART then CS_MANDFIN), 8 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				8	0	0	0	8	0	0	0	2026-06-08 08:00										2026-06-03 08:00				CS_MANDSTART	PT_Normal							2026-06-04 12:00	CS_MANDFIN		0	0					admin	admin		
+%R	9107038	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1380	Activity A1380, 0 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	0	0	0	0											2026-06-22 07:00					PT_Normal										0	0					admin	admin		
+%R	9107039	9107	91070	91072	100	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Complete	A1390	Activity A1390 (complete, no successor, after work not finished), 40 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	40	0	0	0		2026-04-22 08:00	2026-04-22 17:00								2026-04-22 08:00					PT_Normal										0	0					admin	admin		
+%R	9107040	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	A1400	Activity A1400 (start milestone, an expected finish), 0 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	0	0	0	0						2026-06-12 17:00					2026-06-09 08:00					PT_Normal										0	0					admin	admin		
+%R	9107041	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1410	Activity A1410 (after a milestone with an expected finish), 16 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				16	0	0	0	16	0	0	0	2026-06-12 17:00										2026-06-09 08:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107042	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1420	Activity A1420 (finish milestone, an expected finish and CS_MEO), 0 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri				0	0	0	0	0	0	0	0	2026-05-01 11:00					2026-05-01 11:00					2026-04-29 13:00				CS_MEO	PT_Normal										0	0					admin	admin		
+%R	9107043	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1430	Activity A1430 (after a milestone with an expected finish), 8 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00				8	0	0	0	8	0	0	0	2026-05-01 11:00										2026-04-29 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107044	9107	91070	91073	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1440	Activity A1440 (an expected finish on a weekday, its resources Mon-Thu), 80 h on H28-07 Mon-Sat 08:00-16:00	910761			80	0	160	160	80	0	0	0						2026-05-18 16:00					2026-05-04 08:00					PT_Normal										0	0					admin	admin		
+%R	9107045	9107	91070	91073	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1450	Activity A1450 (an expected finish on a Saturday, its resources Mon-Thu), 40 h on H28-07 Mon-Sat 08:00-16:00	910761			40	0	40	40	40	0	0	0						2026-05-09 16:00					2026-03-16 08:00					PT_Normal										0	0					admin	admin		
+%R	9107046	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1460	Activity A1460 (an assignment with no work and a 16 h lag on a resource every day 06:00-18:00), 8 h on H28-07 Mon-Thu 07	910762			8	0	16	16	8	0	0	0											2026-05-04 07:00					PT_Normal										0	0					admin	admin		
+%R	9107047	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1470	Activity A1470 (finish milestone, Finish On or Before at a close, start-to-start after A1460), 0 h on H28-07 Mon-Thu 07:				0	0	0	0	0	0	0	0	2026-05-07 12:00										2026-05-04 07:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107048	9107	91070	91071	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1480	Activity A1480 (placed back from a finish-to-finish requirement, its resource Every day 10:00-18:00), 4 h on H28-07 Mon-	910764			4	0	8	8	4	0	0	0											2026-04-30 07:00					PT_Normal										0	0					admin	admin		
+%R	9107049	9107	91070	91071	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1490	Activity A1490 (placed back from a finish-to-finish requirement, its resource Mon-Sat 08:00-16:00), 8 h on H28-07 Mon-Fr	910765			8	0	8	8	8	0	0	0											2026-03-31 07:00					PT_Normal										0	0					admin	admin		
+%R	9107050	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1500	Activity A1500 (an assignment with no units and a 4 h lag), 16 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:0	910761			16	0	0	0	16	0	0	0											2026-06-15 07:00					PT_Normal										0	0					admin	admin		
+%R	9107051	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1510	Activity A1510 (assignments with no units and no hours in the planned window, one with a 14 h lag, under a start-to-star	910766			8	0	0	0	8	0	0	0											2026-05-04 07:00					PT_Normal										0	0					admin	admin		
+%R	9107052	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1520	Activity A1520 (finish milestone, Finish On or Before at a close, start-to-start after A1510), 0 h on H28-07 Mon-Thu 07:				0	0	0	0	0	0	0	0	2026-05-08 11:00										2026-05-04 07:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107053	9107	91070	91071	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1530	Activity A1530 (an assignment with no units on a Mon-Thu resource with a 8 h lag beside one with work, planned before it	910768			8	0	8	8	8	0	0	0											2026-04-28 07:00					PT_Normal										0	0					admin	admin		
+%R	9107054	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1540	Activity A1540 (work beside an assignment with no work and a 16 h lag, under a start-to-start bound at a Friday close), 	910770			4	0	4	4	4	0	0	0											2026-04-29 13:00					PT_Normal										0	0					admin	admin		
+%R	9107055	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1550	Activity A1550 (finish milestone, Finish On or Before at a Friday close, start-to-start after A1540), 0 h on H28-07 Mon-				0	0	0	0	0	0	0	0	2026-05-01 17:00										2026-04-29 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107056	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1560	Activity A1560 (finish milestone, Finish On or Before where the work under the bound ends, finish-to-start after A1540),				0	0	0	0	0	0	0	0	2026-05-04 12:00										2026-04-29 13:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107057	9107	91070	910799	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1570	Activity A1570 (held by a Start On or After, so the work after it starts at 08:00), 2 h on H28-07 Every day 06:00-18:00				2	0	0	0	2	0	0	0	2026-05-04 06:00										2026-04-16 06:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9107058	9107	91070	910799	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1580	Activity A1580 (As Late As Possible beside an assignment with no duration, a 4 h lag), 12 h on H28-07 Every day 06:00-18	910764			12	0	8	8	12	0	0	0											2026-06-06 06:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9107059	9107	91070	910799	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1590	Activity A1590 (held by a Start On or After at a day past the next opening after the work it follows), 8 h on H28-07 Eve				8	0	0	0	8	0	0	0	2026-05-06 06:00										2026-05-04 06:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9107060	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	A1600	Activity A1600 (start milestone, an expected finish), 0 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fri 07:00-11:00				0	0	0	0	0	0	0	0						2026-04-28 17:30					2026-04-28 07:00					PT_Normal										0	0					admin	admin		
+%R	9107061	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1610	Activity A1610 (after a start milestone with an expected finish), 16 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30, Fr				16	0	0	0	16	0	0	0	2026-04-28 17:30										2026-04-28 07:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107062	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Mile	DT_FixedDrtn	TK_NotStart	A1620	Activity A1620 (start milestone, an expected finish and CS_MANDSTART), 0 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				0	0	0	0	0	0	0	0	2026-06-09 08:00					2026-06-09 17:00					2026-06-08 08:00				CS_MANDSTART	PT_Normal										0	0					admin	admin		
+%R	9107063	9107	91070	91072	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1630	Activity A1630 (after a start milestone with an expected finish), 8 h on H28-07 Mon-Fri 08:00-12:00 and 13:00-17:00				8	0	0	0	8	0	0	0	2026-06-11 17:00										2026-06-08 08:00				CS_MEOB	PT_Normal										0	0					admin	admin		
+%R	9107064	9107	91070	91070	68	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_Active	A1640	Activity A1640 (added under way; under way, CS_MEOB then CS_MANDFIN), 40 h on H28-07 Mon-Thu 07:00-12:00 and 13:00-17:30				13	0	0	0	40	0	0	0	2026-05-01 11:00	2026-04-24 07:00									2026-04-24 07:00				CS_MEOB	PT_Normal							2026-04-27 17:30	CS_MANDFIN		0	0					admin	admin		
+%R	9107065	9107	91070	91070	46	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_Active	A1650	Activity A1650 (added under way; under way, beside an assignment with no units per hour), 24 h on H28-07 Mon-Thu 07:00-1	910781			13	11	13	24	24	0	0	0		2026-03-09 13:00									2026-03-09 13:00					PT_Normal										0	0					admin	admin		
+%R	9107066	9107	91070	91071	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1660	Activity A1660 (As Late As Possible, start-to-finish into a task held by a Start On or After, its resource Every day 06:	910791			24	0	24	24	24	0	0	0											2026-03-02 07:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9107067	9107	91070	910799	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1670	Activity A1670 (held by a Start On or After, after A1660 (start-to-finish)), 4 h on H28-07 Every day 06:00-18:00				4	0	0	0	4	0	0	0	2026-05-02 06:00										2026-05-02 06:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9107068	9107	91070	91071	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1680	Activity A1680 (As Late As Possible, start-to-start into a task held by a Start On or After, its resource Mon-Thu 08:00-	910792			16	0	16	16	16	0	0	0											2026-03-02 07:00				CS_ALAP	PT_Normal										0	0					admin	admin		
+%R	9107069	9107	91070	910799	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1690	Activity A1690 (held by a Start On or After, after A1680 (start-to-start)), 4 h on H28-07 Every day 06:00-18:00				4	0	0	0	4	0	0	0	2026-05-04 06:00										2026-05-04 06:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9107070	9107	91070	910799	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1700	Activity A1700 (held by a Start On or After, a finish requirement for the work after it), 8 h on H28-07 Every day 06:00-				8	0	0	0	8	0	0	0	2026-05-06 06:00										2026-05-06 06:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9107071	9107	91070	91070	0	N	1	N	N	CP_Phys	TT_Rsrc	DT_FixedRate	TK_NotStart	A1710	Activity A1710 (placed back from a finish-to-finish requirement with an 8 h lag, beside an assignment with no work and a	910791			16	0	16	16	16	0	0	0											2026-05-06 07:00					PT_Normal										0	0					admin	admin		
+%R	9107072	9107	91070	910798	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1720	Activity A1720 (held by a Start On or After at midnight, finishing at the 24:00 close before a day off), 48 h on H28-07 				48	0	0	0	48	0	0	0	2026-05-02 00:00										2026-05-02 00:00				CS_MSOA	PT_Normal										0	0					admin	admin		
+%R	9107073	9107	91070	910798	0	N	1	N	N	CP_Phys	TT_FinMile	DT_FixedDrtn	TK_NotStart	A1730	Activity A1730 (finish milestone, finish-to-finish after A1720), 0 h on H28-07 Every day 00:00-24:00, 2026-05-04 off				0	0	0	0	0	0	0	0											2026-05-05 00:00					PT_Normal										0	0					admin	admin		
+%R	9107074	9107	91070	910798	0	N	1	N	N	CP_Phys	TT_Task	DT_FixedDrtn	TK_NotStart	A1740	Activity A1740 (after the finish milestone A1730), 24 h on H28-07 Every day 00:00-24:00, 2026-05-04 off				24	0	0	0	24	0	0	0											2026-05-05 00:00					PT_Normal										0	0					admin	admin		
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	proj_id	pred_proj_id	pred_type	lag_hr_cnt	comments	float_path	aref	arls
+%R	9107500	9107001	9107000	9107	9107	PR_FS	-8				
+%R	9107501	9107002	9107000	9107	9107	PR_FS	-16				
+%R	9107502	9107003	9107002	9107	9107	PR_FS	-16				
+%R	9107503	9107004	9107002	9107	9107	PR_SF	0				
+%R	9107504	9107005	9107003	9107	9107	PR_FS	0				
+%R	9107505	9107006	9107001	9107	9107	PR_FF	0				
+%R	9107506	9107007	9107004	9107	9107	PR_FS	0				
+%R	9107507	9107007	9107006	9107	9107	PR_SS	0				
+%R	9107508	9107008	9107006	9107	9107	PR_SS	0				
+%R	9107509	9107008	9107005	9107	9107	PR_FS	-16				
+%R	9107510	9107009	9107008	9107	9107	PR_FS	16				
+%R	9107511	9107009	9107003	9107	9107	PR_FS	8				
+%R	9107512	9107009	9107006	9107	9107	PR_FS	4				
+%R	9107513	9107010	9107002	9107	9107	PR_FS	16				
+%R	9107514	9107011	9107009	9107	9107	PR_FS	16				
+%R	9107515	9107011	9107003	9107	9107	PR_FS	8				
+%R	9107516	9107012	9107005	9107	9107	PR_FS	40				
+%R	9107517	9107012	9107011	9107	9107	PR_SF	0				
+%R	9107518	9107012	9107009	9107	9107	PR_FF	-8				
+%R	9107519	9107013	9107012	9107	9107	PR_FS	0				
+%R	9107520	9107013	9107011	9107	9107	PR_FS	-8				
+%R	9107521	9107014	9107007	9107	9107	PR_FS	-16				
+%R	9107522	9107015	9107011	9107	9107	PR_FS	0				
+%R	9107523	9107016	9107013	9107	9107	PR_FS	0				
+%R	9107524	9107017	9107013	9107	9107	PR_SS	8				
+%R	9107525	9107017	9107015	9107	9107	PR_FS	0				
+%R	9107526	9107018	9107014	9107	9107	PR_FS	0				
+%R	9107527	9107018	9107016	9107	9107	PR_FS	8				
+%R	9107528	9107019	9107016	9107	9107	PR_SS	8				
+%R	9107529	9107019	9107018	9107	9107	PR_FS	0				
+%R	9107530	9107019	9107017	9107	9107	PR_SF	4				
+%R	9107531	9107020	9107016	9107	9107	PR_FS	0				
+%R	9107532	9107021	9107019	9107	9107	PR_FS	4				
+%R	9107533	9107022	9107021	9107	9107	PR_SS	0				
+%R	9107534	9107023	9107020	9107	9107	PR_FS	0				
+%R	9107535	9107023	9107015	9107	9107	PR_FS	-8				
+%R	9107536	9107024	9107021	9107	9107	PR_FS	40				
+%R	9107537	9107024	9107017	9107	9107	PR_FF	0				
+%R	9107538	9107025	9107017	9107	9107	PR_FS	16				
+%R	9107539	9107026	9107022	9107	9107	PR_FS	0				
+%R	9107540	9107026	9107023	9107	9107	PR_FS	0				
+%R	9107541	9107027	9107020	9107	9107	PR_FS	40				
+%R	9107542	9107027	9107019	9107	9107	PR_FS	0				
+%R	9107543	9107028	9107023	9107	9107	PR_FS	0				
+%R	9107544	9107029	9107021	9107	9107	PR_SS	40				
+%R	9107545	9107030	9107025	9107	9107	PR_FS	0				
+%R	9107546	9107031	9107024	9107	9107	PR_FS	16				
+%R	9107547	9107032	9107024	9107	9107	PR_SS	0				
+%R	9107548	9107032	9107028	9107	9107	PR_SF	0				
+%R	9107549	9107033	9107032	9107	9107	PR_FS	0				
+%R	9107550	9107033	9107028	9107	9107	PR_FF	0				
+%R	9107551	9107034	9107028	9107	9107	PR_FF	0				
+%R	9107552	9107035	9107032	9107	9107	PR_FF	40				
+%R	9107553	9107035	9107034	9107	9107	PR_FS	0				
+%R	9107554	9107036	9107031	9107	9107	PR_FS	16				
+%R	9107555	9107037	9107035	9107	9107	PR_SS	24				
+%R	9107556	9107038	9107010	9107	9107	PR_FS	-4				
+%R	9107557	9107038	9107026	9107	9107	PR_FS	0				
+%R	9107558	9107038	9107027	9107	9107	PR_FS	0				
+%R	9107559	9107038	9107029	9107	9107	PR_FS	0				
+%R	9107560	9107038	9107030	9107	9107	PR_FS	0				
+%R	9107561	9107038	9107033	9107	9107	PR_FS	0				
+%R	9107562	9107038	9107036	9107	9107	PR_FF	0				
+%R	9107563	9107038	9107037	9107	9107	PR_FS	0				
+%R	9107564	9107039	9107023	9107	9107	PR_FS	0				
+%R	9107565	9107040	9107031	9107	9107	PR_FS	0				
+%R	9107566	9107041	9107040	9107	9107	PR_FS	0				
+%R	9107567	9107038	9107041	9107	9107	PR_FS	0				
+%R	9107568	9107042	9107019	9107	9107	PR_FS	0				
+%R	9107569	9107043	9107042	9107	9107	PR_FS	0				
+%R	9107570	9107038	9107043	9107	9107	PR_FS	0				
+%R	9107571	9107031	9107030	9107	9107	PR_SS	0				
+%R	9107572	9107031	9107026	9107	9107	PR_SF	6				
+%R	9107573	9107029	9107024	9107	9107	PR_FF	0				
+%R	9107574	9107044	9107034	9107	9107	PR_FS	0				
+%R	9107575	9107038	9107044	9107	9107	PR_FS	0				
+%R	9107576	9107045	9107007	9107	9107	PR_FS	0				
+%R	9107577	9107038	9107045	9107	9107	PR_FS	0				
+%R	9107578	9107046	9107028	9107	9107	PR_FS	0				
+%R	9107579	9107038	9107046	9107	9107	PR_FS	0				
+%R	9107580	9107047	9107046	9107	9107	PR_SS	0				
+%R	9107581	9107038	9107047	9107	9107	PR_FS	0				
+%R	9107582	9107048	9107022	9107	9107	PR_FS	0				
+%R	9107583	9107038	9107048	9107	9107	PR_FS	0				
+%R	9107584	9107048	9107036	9107	9107	PR_FF	-8				
+%R	9107585	9107049	9107012	9107	9107	PR_FS	0				
+%R	9107586	9107038	9107049	9107	9107	PR_FS	0				
+%R	9107587	9107049	9107035	9107	9107	PR_FF	-16				
+%R	9107588	9107050	9107035	9107	9107	PR_FS	0				
+%R	9107589	9107038	9107050	9107	9107	PR_FS	0				
+%R	9107590	9107051	9107018	9107	9107	PR_FS	0				
+%R	9107591	9107038	9107051	9107	9107	PR_FS	0				
+%R	9107592	9107052	9107051	9107	9107	PR_SS	0				
+%R	9107593	9107038	9107052	9107	9107	PR_FS	0				
+%R	9107594	9107053	9107018	9107	9107	PR_FS	0				
+%R	9107595	9107038	9107053	9107	9107	PR_FS	0				
+%R	9107596	9107054	9107019	9107	9107	PR_FS	0				
+%R	9107597	9107038	9107054	9107	9107	PR_FS	0				
+%R	9107598	9107038	9107055	9107	9107	PR_FS	0				
+%R	9107599	9107055	9107054	9107	9107	PR_SS	0				
+%R	9107600	9107038	9107056	9107	9107	PR_FS	0				
+%R	9107601	9107056	9107054	9107	9107	PR_FS	0				
+%R	9107602	9107057	9107015	9107	9107	PR_FS	0				
+%R	9107603	9107038	9107057	9107	9107	PR_FS	0				
+%R	9107604	9107038	9107058	9107	9107	PR_FS	0				
+%R	9107605	9107058	9107057	9107	9107	PR_FS	0				
+%R	9107606	9107038	9107059	9107	9107	PR_FS	0				
+%R	9107607	9107059	9107058	9107	9107	PR_FS	0				
+%R	9107608	9107060	9107023	9107	9107	PR_FS	0				
+%R	9107609	9107061	9107060	9107	9107	PR_FS	0				
+%R	9107610	9107038	9107061	9107	9107	PR_FS	0				
+%R	9107611	9107062	9107033	9107	9107	PR_FS	0				
+%R	9107612	9107063	9107062	9107	9107	PR_FS	0				
+%R	9107613	9107038	9107063	9107	9107	PR_FS	0				
+%R	9107614	9107064	9107018	9107	9107	PR_SS	0				
+%R	9107615	9107038	9107064	9107	9107	PR_FS	0				
+%R	9107616	9107065	9107010	9107	9107	PR_SS	0				
+%R	9107617	9107038	9107065	9107	9107	PR_FS	0				
+%R	9107618	9107066	9107000	9107	9107	PR_FS	0				
+%R	9107619	9107067	9107066	9107	9107	PR_SF	0				
+%R	9107620	9107038	9107067	9107	9107	PR_FS	0				
+%R	9107621	9107038	9107066	9107	9107	PR_FS	0				
+%R	9107622	9107068	9107000	9107	9107	PR_FS	0				
+%R	9107623	9107069	9107068	9107	9107	PR_SS	0				
+%R	9107624	9107038	9107069	9107	9107	PR_FS	0				
+%R	9107625	9107038	9107068	9107	9107	PR_FS	0				
+%R	9107626	9107070	9107000	9107	9107	PR_FS	0				
+%R	9107627	9107038	9107070	9107	9107	PR_FS	0				
+%R	9107628	9107071	9107070	9107	9107	PR_FF	8				
+%R	9107629	9107038	9107071	9107	9107	PR_FS	0				
+%R	9107630	9107072	9107000	9107	9107	PR_FS	0				
+%R	9107631	9107073	9107072	9107	9107	PR_FF	0				
+%R	9107632	9107074	9107073	9107	9107	PR_FS	0				
+%R	9107633	9107038	9107074	9107	9107	PR_FS	0				
+%T	TASKRSRC
+%F	taskrsrc_id	task_id	proj_id	cost_qty_link_flag	role_id	acct_id	rsrc_id	pobs_id	skill_level	remain_qty	target_qty	remain_qty_per_hr	target_lag_drtn_hr_cnt	target_qty_per_hr	act_ot_qty	act_reg_qty	relag_drtn_hr_cnt	ot_factor	cost_per_qty	target_cost	act_reg_cost	act_ot_cost	remain_cost	act_start_date	act_end_date	restart_date	reend_date	target_start_date	target_end_date	rem_late_start_date	rem_late_end_date	rollup_dates_flag	target_crv	remain_crv	actual_crv	ts_pend_act_end_flag	guid	rate_type	act_this_per_cost	act_this_per_qty	curv_id	rsrc_type	cost_per_qty_source_type	create_user	create_date	has_rsrchours	taskrsrc_sum_id
+%R	9107800	9107018	9107	Y			91071			7	20	0.5	0	0.5	0	13	0		0	0	0	0	0	2026-04-22 08:00				2026-04-22 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107801	9107018	9107	Y			91073			7	20	0.5	0	0.5	0	13	0		0	0	0	0	0	2026-04-22 08:00				2026-04-22 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107802	9107033	9107	Y			91072			16	16	1	0	1	0	0	0		0	0	0	0	0					2026-06-08 07:00				Y				N		COST_PER_QTY	0	0		RT_Equip	ST_Rsrc	admin			
+%R	9107803	9107033	9107	Y			91073			16	16	1	0	1	0	0	0		0	0	0	0	0					2026-06-08 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107804	9107026	9107	Y			91074			8	8	1	0	1	0	0	0		0	0	0	0	0					2026-04-30 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107805	9107036	9107	Y			91075			56	56	1	0	1	0	0	0		0	0	0	0	0					2026-06-12 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107806	9107030	9107	Y			91072			80	80	2	0	2	0	0	0		0	0	0	0	0					2026-04-27 07:00				Y				N		COST_PER_QTY	0	0		RT_Equip	ST_Rsrc	admin			
+%R	9107807	9107030	9107	Y			91073			0	0	1	24	1	0	0	24		0	0	0	0	0					2026-04-27 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107808	9107028	9107	Y			91074			40	40	1	0	1	0	0	0		0	0	0	0	0					2026-04-28 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107809	9107044	9107	Y			910761			160	160	2	0	2	0	0	0		0	0	0	0	0					2026-05-04 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107810	9107045	9107	Y			910761			40	40	1	0	1	0	0	0		0	0	0	0	0					2026-03-16 08:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107811	9107046	9107	Y			910762			16	16	2	0	2	0	0	0		0	0	0	0	0					2026-05-04 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107812	9107046	9107	Y			910763			0	0	1	16	1	0	0	16		0	0	0	0	0					2026-05-04 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107813	9107048	9107	Y			910764			8	8	2	0	2	0	0	0		0	0	0	0	0					2026-04-30 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107814	9107049	9107	Y			910765			8	8	1	0	1	0	0	0		0	0	0	0	0					2026-03-31 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107815	9107050	9107	Y			910761			0	0	1	4	1	0	0	4		0	0	0	0	0					2026-06-15 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107816	9107051	9107	Y			910766			0	0	1	0	1	0	0	0		0	0	0	0	0					2026-05-04 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107817	9107051	9107	Y			910767			0	0	1	14	1	0	0	14		0	0	0	0	0					2026-05-04 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107818	9107053	9107	Y			910768			8	8	1	0	1	0	0	0		0	0	0	0	0					2026-04-28 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107819	9107053	9107	Y			910769			0	0	1	8	1	0	0	8		0	0	0	0	0					2026-04-28 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107820	9107054	9107	Y			910770			4	4	1	0	1	0	0	0		0	0	0	0	0					2026-04-29 13:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107821	9107054	9107	Y			910763			0	0	1	16	1	0	0	16		0	0	0	0	0					2026-04-29 13:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107822	9107058	9107	Y			910764			8	8	1	4	1	0	0	4		0	0	0	0	0					2026-06-06 06:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107823	9107058	9107	Y			910770			0	0	1	0	1	0	0	0		0	0	0	0	0					2026-06-06 06:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107824	9107065	9107	Y			910781			13	24	1	0	1	0	11	0		0	0	0	0	0	2026-03-09 13:00				2026-03-09 13:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107825	9107065	9107	Y			910782			0	0	0	0	0	0	0	0		0	0	0	0	0	2026-03-09 13:00				2026-03-09 13:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107826	9107066	9107	Y			910791			24	24	1	0	1	0	0	0		0	0	0	0	0					2026-03-02 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107827	9107068	9107	Y			910792			16	16	1	0	1	0	0	0		0	0	0	0	0					2026-03-02 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107828	9107071	9107	Y			910791			16	16	1	0	1	0	0	0		0	0	0	0	0					2026-05-06 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%R	9107829	9107071	9107	Y			910793			0	0	1	24	1	0	0	24		0	0	0	0	0					2026-05-06 07:00				Y				N		COST_PER_QTY	0	0		RT_Labor	ST_Rsrc	admin			
+%E
