@@ -2725,6 +2725,9 @@ function computeCPMHours(activities, relationships, o) {
     // FP: "Calculate multiple float paths" (SCHEDOPTIONS
     // enable_multiple_longest_path_calc); off unless the caller hands it on
     const multipleFloatPaths = !!o.multiple_float_paths;
+    // FK: the activity those float paths end at and every activity leading
+    // into it (computeCPM hands them on); null where no end activity is set
+    const floatPathLead = Array.isArray(o.float_path_lead) ? new Set(o.float_path_lead) : null;
     // OC: work whose successor was left out of this network (level of effort,
     // WBS summary) is not open-ended (ZZ-CPP-OER / -OEP / -OEL E2, E2B, E2C,
     // E3); computeCPM hands the codes on
@@ -3534,9 +3537,13 @@ function computeCPMHours(activities, relationships, o) {
             // ZZ-CPP-AFX, -AFP, -AF4, -HSR, -HSB). FP (19-Oct-2026): not
             // under "Calculate multiple float paths", where P6 prints the free
             // float as it stands (ZZ-CPP-HSM; ZZ-CPP-RSRCR H1-S against
-            // ZZ-CPP-RSRCN)
+            // ZZ-CPP-RSRCN). FK (20-Oct-2026): where those paths end at an
+            // activity set in P6, only that activity and the work leading into
+            // it keep theirs (ZZ-CPP-KEA, -KEB, -KF1 to -KF4, -KG1 to -KG4)
             const alapFf = (n.c1 && n.c1.type === 'ALAP') || (n.c2 && n.c2.type === 'ALAP');
-            if (alapFf && ffSigned > 0 && !multipleFloatPaths) ffSigned = 0;
+            if (alapFf && ffSigned > 0 && (!multipleFloatPaths || (floatPathLead && !floatPathLead.has(c)))) {
+                ffSigned = 0;
+            }
             ff = Math.max(0, ffSigned);
         }
         const pDates = n.rem_dates || [n.es, n.ef];
@@ -3746,7 +3753,7 @@ function _hoursPass(activities, relationships, nodes, p) {
             ss_lag_from: p.ssLagFrom, use_expected_finish: p.useExpectedFinish,
             use_external_dates: p.useExternalDates, float_type: p.floatType,
             open_critical: p.openCritical, open_critical_linked: p.openCriticalLinked || [],
-            multiple_float_paths: p.multipleFloatPaths,
+            multiple_float_paths: p.multipleFloatPaths, float_path_lead: p.floatPathLead || null,
         });
     } catch (e) {
         p.alerts.push({
@@ -4580,6 +4587,47 @@ function computeCPM(activities, relationships, opts) {
     // compute_cpm.
     const _mfpOpt = (opts.multipleFloatPaths !== undefined) ? opts.multipleFloatPaths : opts.multiple_float_paths;
     const _multipleFloatPaths = _mfpOpt === true || _mfpOpt === 'Y';
+    // FK (20-Oct-2026) — the activity "Calculate multiple float paths" ends at,
+    // set in P6's Schedule Options (Advanced tab, "Display multiple float paths
+    // ending with activity"; SCHEDOPTIONS key_activity_for_multiple_longest_paths,
+    // which parseXER resolves to an activity code as float_path_end):
+    // opts.floatPathEnd, alias float_path_end. Under it P6 holds no free float on
+    // As Late As Possible work that is neither that activity nor leads into it,
+    // as with the option off; the end activity and every activity leading into
+    // it keep theirs, whatever the number of paths or their basis (P6 rounds
+    // 11-13: ZZ-CPP-KEA, -KEB, -KF1 to -KF4, -KG1 to -KG4; ZZ-CPP-KG1, one path,
+    // keeps the free float of work off its one path that leads into the end).
+    // With no end activity, or one that is not an activity of this network (as
+    // P6 leaves an id it cannot resolve), nothing changes. Python paired site:
+    // the float_path_end parameter of compute_cpm.
+    const _fpEndOpt = (opts.floatPathEnd !== undefined) ? opts.floatPathEnd : opts.float_path_end;
+    const _fpEndCode = (_fpEndOpt === undefined || _fpEndOpt === null) ? '' : String(_fpEndOpt).trim();
+    let _floatPathEnd = null;
+    let _fpLead = null;
+    if (_multipleFloatPaths && _fpEndCode) {
+        if (Object.prototype.hasOwnProperty.call(nodes, _fpEndCode)) {
+            _floatPathEnd = _fpEndCode;
+            _fpLead = new Set([_fpEndCode]);
+            const stack = [_fpEndCode];
+            while (stack.length) {
+                const at = stack.pop();
+                for (const r of (predMap[at] || [])) {
+                    if (!_fpLead.has(r.from_code)) {
+                        _fpLead.add(r.from_code);
+                        stack.push(r.from_code);
+                    }
+                }
+            }
+        } else {
+            alerts.push({
+                severity: 'INFO',
+                context: 'float-path-end-not-in-network',
+                message: 'The float paths end at ' + JSON.stringify(_fpEndCode) +
+                    ', which is not an activity of this network; no free float was held for it, ' +
+                    'as P6 does with an end activity it cannot resolve.',
+            });
+        }
+    }
 
     // The calendar a lag between predNode and succNode is walked on.
     function lagCalFor(predNode, succNode) {
@@ -7281,8 +7329,11 @@ function computeCPM(activities, relationships, opts) {
     // FZ (H23, 19-Oct-2026) — As Late As Possible work holds no free float, as
     // P6 prints it on every unfinished As Late As Possible activity (see the
     // hours pass; ZZ-CPP-AFF F1); FP: not under "Calculate multiple float
-    // paths" (ZZ-CPP-HSM). Python paired site: the same block in compute_cpm.
-    for (const c in (_multipleFloatPaths ? {} : nodes)) {
+    // paths" (ZZ-CPP-HSM), except, where the paths end at an activity set in
+    // P6, on work that is neither it nor leads into it (FK, ZZ-CPP-KEA). Python
+    // paired site: the same block in compute_cpm.
+    for (const c in nodes) {
+        if (_multipleFloatPaths && !(_fpLead && !_fpLead.has(c))) continue;
         const n = nodes[c];
         if (n.is_complete || ![n.constraint, n.constraint2].some((k) => k && k.type === 'ALAP')) continue;
         if (n.ff_signed > 0) n.ff_signed = 0;
@@ -7498,7 +7549,7 @@ function computeCPM(activities, relationships, opts) {
         floatType: _floatType, ssLagFrom: _ssLagFrom, projectFinish: _projectFinishOpt,
         useExpectedFinish: _useExpectedFinish, useExternalDates: _useExternalDates,
         openCritical: _openCritical, openCriticalLinked: Array.from(_ocLinked),
-        multipleFloatPaths: _multipleFloatPaths, alerts,
+        multipleFloatPaths: _multipleFloatPaths, floatPathLead: _fpLead ? Array.from(_fpLead) : null, alerts,
     });
     if (_lagCalAlert) {
         // LA (13-Oct-2026): now that the hours pass has run, say which figures
@@ -8650,6 +8701,16 @@ function parseXER(content) {
         // or a missing table is P6's default, off.
         enable_multiple_longest_path_calc: String(_MC.schedOptions.enable_multiple_longest_path_calc || '').trim(),
         multiple_float_paths: String(_MC.schedOptions.enable_multiple_longest_path_calc || '').trim() === 'Y',
+        // FK (20-Oct-2026) — the activity those float paths end at
+        // (key_activity_for_multiple_longest_paths, a task_id), to hand
+        // computeCPM as opts.floatPathEnd: its code where the id is an activity
+        // of this file, else null (blank, P6's -99 for none, or an id P6's
+        // import kept without mapping it to the activity it imported).
+        key_activity_for_multiple_longest_paths: String(_MC.schedOptions.key_activity_for_multiple_longest_paths || '').trim(),
+        float_path_end: (() => {
+            const k = String(_MC.schedOptions.key_activity_for_multiple_longest_paths || '').trim();
+            return (k && _MC.tasks[k]) ? _MC.tasks[k].code : null;
+        })(),
         use_external_dates: String(_MC.schedOptions.sched_outer_depend_type || '').trim() !== 'SD_None',
         use_external_dates_source: !_soPresent
             ? 'SCHEDOPTIONS table absent; P6 default (relationships to other projects not ignored, SD_Both)'
