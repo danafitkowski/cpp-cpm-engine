@@ -4200,6 +4200,111 @@ compareFixture('F215 - FK: F202 with the float paths ending at an activity not i
     relationship_lag_calendar: 'rcal_Predecessor', multiple_float_paths: true, float_path_end: 'NOT-HERE',
 });
 
+// v2.10.13 candidate (P6 probe round 15, ZZ-CPP-KE / KB / KA / KC / KD, for held-out H27's differences). MZ, a finish
+// milestone at the 24:00 close of a day before one not worked (F216); UM, a Mandatory Finish on work under way takes
+// its partner off the late side, both passes (F217, F218); ZU, the lag of an assignment with no units on work under
+// way counts from the actual start (F219); AR, As Late As Possible resource dependent work under an SS / SF bound
+// starts at the bound where the work so placed finishes on working time, with the old reading off it (F220) and the
+// start float of work so slid (F221); ZQ, an assignment with no work and a lag bounds the start placed back from an
+// FF / SF requirement (F222).
+const MZCAL = { D24H: Object.assign(rawCal(EVERYDAY, H24), { holidays: ['2026-12-10'] }), D24: rawCal(EVERYDAY, H24) };
+compareFixture('F216 - MZ: a finish milestone at the 24:00 close of a day before one not worked, in hours', {
+    activities: [hA('A', 72, { clndr_id: 'D24H' }), hA('M1', 0, { task_type: 'TT_FinMile', clndr_id: 'D24H' }),
+        hA('M2', 0, { task_type: 'TT_FinMile', clndr_id: 'D24H' }), hA('M3', 0, { task_type: 'TT_FinMile', clndr_id: 'D24' }),
+        hA('Z', 24, { clndr_id: 'D24H' })],
+    relationships: [hR('A', 'M1'), hR('A', 'M2', 'FF'), hR('A', 'M3'), hR('M1', 'Z')],
+    data_date: '2026-12-07 00:00', cal_map: MZCAL, project_calendar: 'D24H',
+    relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+const UMCAL = { AW: rawCal(MONFRI, SPLIT) };
+const UM = {
+    U1: [['CS_MEOB', '11', '17:00'], ['CS_MANDFIN', '11', '17:00']],
+    U2: [['CS_MEOB', '11', '17:00'], ['CS_MANDFIN', '14', '17:00']],
+    U3: [['CS_MEOB', '14', '17:00'], ['CS_MANDFIN', '11', '17:00']],
+    U4: [['CS_MANDFIN', '11', '17:00'], ['CS_MEOB', '11', '17:00']],
+    U5: [['CS_MEOB', '11', '17:00'], null],
+    U6: [['CS_MANDFIN', '11', '17:00'], null],
+};
+const umActs = (A, hrs) => [A('L', 160, { clndr_id: 'AW' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AW' })].concat(
+    ...Object.entries(UM).map(([k, [c1, c2]]) => [
+        A(k, 16, Object.assign({ clndr_id: 'AW', actual_start: hrs ? '2026-12-07 08:00' : '2026-12-07', remaining_duration: 2,
+            constraint: { type: c1[0], date: slD(c1[1], hrs ? c1[2] : undefined) } },
+        c2 ? { constraint2: { type: c2[0], date: slD(c2[1], hrs ? c2[2] : undefined) } } : {})),
+        A('S' + k.slice(1), 8, { clndr_id: 'AW' })]));
+const umRels = (R) => [R('L', 'FIN')].concat(...Object.keys(UM).map((k) => [R(k, 'S' + k.slice(1)), R('S' + k.slice(1), 'FIN')]));
+compareFixture('F217 - UM: a Mandatory Finish on work under way takes its partner off the late side, in hours', {
+    activities: umActs(hA, true), relationships: umRels(hR), data_date: '2026-12-09 08:00', cal_map: UMCAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F218 - UM: F217 in whole days', {
+    activities: umActs(dA, false), relationships: umRels(dR), data_date: '2026-12-09', cal_map: UMCAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Predecessor',
+});
+const ZUCAL = { AW: rawCal(MONFRI, SPLIT), RT: rawCal(MONFRI, [['08:00', '16:00']]), RS: rawCal(MONSAT, [['08:00', '16:00']]) };
+const zuNil = (lag, ws, wf) => ({ clndr_id: 'RS', remaining_hours: 0, lag_hours: lag, driving: true,
+    window_start: ws, window_finish: wf });
+const ZU = {
+    U1: [zuNil(24, slD('10', '08:00'), slD('11', '12:00')), false],
+    U2: [zuNil(4, slD('09', '08:00'), slD('11', '12:00')), false],
+    U3: [zuNil(4, slD('09', '08:00'), slD('10', '16:00')), false],
+    U4: [zuNil(56, slD('15', '08:00'), slD('16', '12:00')), true],
+};
+const zuActs = (A) => [A('L', 160, { clndr_id: 'AW' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AW' }),
+    A('Q', 8, { clndr_id: 'AW', actual_start: '2026-12-07 08:00', remaining_duration: 1, suspend_date: '2026-12-08 08:00',
+        resume_date: '2026-12-14 08:00' })].concat(
+    ...Object.entries(ZU).map(([k, [nil]]) => [
+        A(k, 16, { clndr_id: 'AW', task_type: 'TT_Rsrc', actual_start: '2026-12-07 08:00', remaining_duration: 2,
+            resource_assignments: 2, assignments: [zrAsg('RT', 16), nil] }),
+        A('S' + k.slice(1), 8, { clndr_id: 'AW' })]));
+const zuRels = (R) => [R('L', 'FIN'), R('Q', 'FIN')].concat(...Object.entries(ZU).map(([k, [, held]]) =>
+    [R(k, 'S' + k.slice(1)), R('S' + k.slice(1), 'FIN')].concat(held ? [R('Q', k, 'SS')] : [])));
+compareFixture('F219 - ZU: the lag of an assignment with no units on work under way counts from the actual start, in hours', {
+    activities: zuActs(hA), relationships: zuRels(hR), data_date: '2026-12-09 08:00', cal_map: ZUCAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+const ARCAL = {
+    AW: rawCal(MONFRI, SPLIT), AX: { work_days: [1, 2, 3, 4, 5], holidays: [], raw: rawWeek(Object.assign(
+        wk([2, 3, 4, 5], [['07:00', '12:00'], ['13:00', '17:30']]), { 6: [['07:00', '11:00']] })) },
+    AT: rawCal(MONTHU, [['07:00', '12:00'], ['12:30', '17:30']]), D24: rawCal(EVERYDAY, H24),
+    RT: rawCal(MONFRI, [['08:00', '16:00']]), RE: rawCal(EVERYDAY, [['06:00', '18:00']]),
+};
+const AR = {
+    F1: ['AW', 'RT', 8, 'SS', 0, 'AW', ['11', '13:00']],
+    F2: ['AW', 'RT', 8, 'SS', 4, 'AW', ['11', '08:00']],
+    F3: ['AW', 'RT', 8, 'SF', 0, 'AW', ['11', '08:00']],
+    F4: ['AX', 'RT', 8, 'SS', 0, 'AW', ['11', '13:00']],
+    F5: ['AT', 'RE', 38, 'SS', 0, 'D24', ['10', '16:00']],
+};
+const arActs = (A) => [A('L', 200, { clndr_id: 'AW' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AW' })].concat(
+    ...Object.entries(AR).map(([k, [ac, rc, h, , , sc, held]]) => [
+        A(k, h, { clndr_id: ac, task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg(rc, h)],
+            constraint: { type: 'CS_ALAP' } }),
+        A('S' + k.slice(1), 4, { clndr_id: sc, constraint: { type: 'CS_MSOA', date: slD(held[0], held[1]) } })]));
+const arRels = (R) => [R('L', 'FIN')].concat(...Object.entries(AR).map(([k, [, , , t, lag]]) => [
+    R(k, 'S' + k.slice(1), t, lag), R('S' + k.slice(1), 'FIN')].concat(k === 'F5' ? [] : [R(k, 'FIN')])));
+compareFixture('F220 - AR: As Late As Possible resource dependent work under a start-to-start or start-to-finish bound, in hours', {
+    activities: arActs(hA), relationships: arRels(hR), data_date: '2026-12-07 08:00', cal_map: ARCAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Successor',
+}, { hours: true });
+compareFixture('F221 - AR: F220 under "Start Float", the start float of work so slid', {
+    activities: arActs(hA), relationships: arRels(hR), data_date: '2026-12-07 08:00', cal_map: ARCAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Successor', float_type: 'FT_Start',
+}, { hours: true });
+const ZQCAL = { AV: rawCal(MONFRI, [['07:00', '17:00']]), AE: rawCal(EVERYDAY, [['06:00', '18:00']]),
+    RE: rawCal(EVERYDAY, [['06:00', '18:00']]), RW: rawCal(MONFRI, [['07:00', '17:00']]) };
+const ZQ = { R1: ['SF', 8, true], R2: ['FF', 8, true], R3: ['SF', 0, true], R4: ['SF', 8, false] };
+const zqActs = (A) => [A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AE' })].concat(
+    ...Object.entries(ZQ).map(([k, [, , z]]) => [
+        A('P' + k.slice(1), 8, { clndr_id: 'AV', constraint: { type: 'CS_MSOA', date: slD('18', '08:00') } }),
+        A(k, 16, { clndr_id: 'AE', task_type: 'TT_Rsrc', resource_assignments: z ? 2 : 1,
+            assignments: [zrAsg('RE', 16)].concat(z ? [zrAsg('RW', 0, 24)] : []) })]));
+const zqRels = (R) => [].concat(...Object.entries(ZQ).map(([k, [t, lag]]) => [R('P' + k.slice(1), k, t, lag),
+    R(k, 'FIN'), R('P' + k.slice(1), 'FIN')]));
+compareFixture('F222 - ZQ: an assignment with no work and a lag bounds the start placed back from a finish requirement, in hours', {
+    activities: zqActs(hA), relationships: zqRels(hR), data_date: '2026-12-07 08:00', cal_map: ZQCAL,
+    project_calendar: 'AE', relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
     ' comparisons executed (the denominator is checks run, not the full field surface:' +
