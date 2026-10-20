@@ -4,9 +4,9 @@
 // Options on most) through the engine's public API, each with the end activity P6 held handed on as
 // opts.floatPathEnd and P6's imported sizing laid over the file, and compare with P6's own values: the four dates to
 // the minute and total and free float in hours, every unfinished activity the engine schedules.
-// Fitted: FK was taken on these answers (see the folder's README); AR on round 14's KH1C and KH4C among others. Two
-// rows are open, listed in OPEN: As Late As Possible FB0 on X with a 4 h start-to-start lag (ZZ-CPP-KH2, -KH2C), which
-// neither reading of AR gives; the test fails if either matches or another row differs.
+// Fitted: FK was taken on these answers (see the folder's README); AR on round 14's KH1C, KH2C and KH4C among others
+// (KH2 and KH2C, As Late As Possible FB0 on X with a 4 h start-to-start lag, with round 16's
+// validation/p6-probes/alap-rd-2026-10-20/).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -82,7 +82,6 @@ function offRows(name, res, want) {
     return bad;
 }
 
-const OPEN = new Set(['ZZ-CPP-KH2 FB0', 'ZZ-CPP-KH2C FB0']);
 let rows = 0, match = 0;
 const off = [];
 const texts = {};
@@ -145,21 +144,6 @@ if (rows2 !== 299) {
     console.error('p6-key-activity.test.js: expected 299 probe rows on the scorer path, read ' + rows2);
     process.exitCode = 1;
 }
-// the open rows: each must still differ, on both paths, and nothing else may
-const openSeen = new Map();
-for (const x of off) {
-    const key = x.replace(' (scorer path)', '').split(':')[0];
-    if (OPEN.has(key)) openSeen.set(key, (openSeen.get(key) || 0) + 1);
-}
-for (const k of OPEN) {
-    if (openSeen.get(k) !== 2) {
-        console.error('p6-key-activity.test.js: open row ' + k + ' no longer differs on both paths; take it out of OPEN');
-        process.exitCode = 1;
-    }
-}
-const offOther = off.filter((x) => !OPEN.has(x.replace(' (scorer path)', '').split(':')[0]));
-off.length = 0;
-off.push(...offOther);
 if (off.length) {
     console.error('p6-key-activity.test.js: FAIL, ' + match + ' of ' + rows + ' probe rows match P6, ' + match2 + ' of ' +
         rows2 + ' on the scorer path');
@@ -167,6 +151,5 @@ if (off.length) {
     process.exitCode = 1;
 } else if (!process.exitCode) {
     console.log('p6-key-activity.test.js: PASS (' + match + ' of ' + rows + ' P6 probe rows on the four dates and both floats, ' +
-        match2 + ' of ' + rows2 + ' on the scorer path, the ' + OPEN.size + ' open rows apart; ' +
-        Object.keys(P6.projects).length + ' probes)');
+        match2 + ' of ' + rows2 + ' on the scorer path; ' + Object.keys(P6.projects).length + ' probes)');
 }

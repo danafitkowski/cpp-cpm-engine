@@ -13,11 +13,12 @@ alone and scheduled once. v2.10.12 matches 81 of the 109 unfinished activities; 
 | KC1-KC7 | As Late As Possible resource dependent work led out start-to-start (H27-04 A1220) | Under a start-to-start or start-to-finish bound P6 starts the work at the bound and places it forward (KC3, KC4: a 4 h lag on M), where the work so placed finishes on the activity calendar's working time; tasks (KC1, KC2, KC6), start-to-finish (KC5) and work on X held to Monday (KC7) as before. | **AR** |
 | KD1-KD4 | resource dependent work after a lagged start-to-finish link (H27-08 A1260) | Placed back from a finish-to-finish or start-to-finish requirement, an assignment with no work and a 24 h lag reaches the requirement too, so it bounds the start (KD2, KD3, KD4); without it (KD1), as before. | **ZQ** |
 
-AR is measured where the work placed forward from the bound finishes on the activity calendar's working time. Where it
-would finish off it, P6 does not start at the bound: held-out H27-11 A1220 then follows the old reading, and round
-14's ZZ-CPP-KH2C (a 4 h start-to-start lag, on X) matches neither (`key-activity-2026-10-20`). The start float of work
-AR slides runs to the late finish less the remaining duration it had before the slide (H27-04 A1220, under "Start
-Float").
+Round 15 measured AR where the work placed forward from the bound finishes on the activity calendar's working time.
+Round 16 (`alap-rd-2026-10-20`) measured the rest: where that forward finish falls off the activity calendar, the
+finish moves on to the calendar's next opening and the work is placed back from there, and P6 keeps the later of AR's
+placement and the old reading's. Round 14's ZZ-CPP-KH2C (a 4 h start-to-start lag, on X) and held-out H27-11 A1220
+follow from that. The start float of work AR slides runs to the late finish less the remaining duration it had before
+the slide (H27-04 A1220, under "Start Float").
 
 `p6-values.json` holds, for each probe, the file, its SHA-256, P6's record of the import before the F9
 (`p6-imported-*`, laid over the file as the held-out scorer lays it) and P6's values for every unfinished activity.

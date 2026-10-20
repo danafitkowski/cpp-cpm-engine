@@ -39,17 +39,17 @@ still unscheduled, before the one F9.
 Possible activity's free float as 0 without an end activity too (KG3C, KG4C; KH1C, KH2C, KH4C), so these show only
 that the other chains are zeroed.
 
-**Open:** round 14's controls also measured where P6 places As Late As Possible resource dependent work led out
-start-to-start or start-to-finish (rule AR, `h27-causes-2026-10-20`). KH2 and KH2C (FB0 on X, a 4 h start-to-start
-lag) match neither reading of AR: P6 places FB0 on Fri 5-Mar-27 08:00-16:00, the engine on Thu 4-Mar 09:30 to Fri
-09:30. `tests/p6-key-activity.test.js` lists those two rows as open and fails if either matches or another differs.
+**As Late As Possible placement:** round 14's controls also measured where P6 places As Late As Possible resource
+dependent work led out start-to-start or start-to-finish (rule AR, `h27-causes-2026-10-20`). KH2 and KH2C (FB0 on X,
+a 4 h start-to-start lag) matched neither reading of AR as round 15 took it: P6 places FB0 on Fri 5-Mar-27
+08:00-16:00. Round 16 (`alap-rd-2026-10-20`) measured why: the work started at the bound would finish off X, so the
+finish moves on to X's next opening and the work is placed back from there.
 
 `p6-values.json` holds, for each probe, the file, its SHA-256, P6's record of the import before the F9 (`p6-imported-*`,
 laid over the file as the held-out scorer lays it), the end activity P6 held (`float_path_end`, null for none) and P6's
 values for every unfinished activity. `tests/p6-key-activity.test.js` replays them with the end activity handed on as
 `opts.floatPathEnd`, and again on the scorer's path (each file's key set to another activity first, P6's end laid over
-it): v2.10.12 matches 267 of the 299 rows; the candidate 297, the two open rows apart. The rules are fitted on these
-probes.
+it): v2.10.12 matches 267 of the 299 rows; the candidate all 299. The rules are fitted on these probes.
 
 Capture: P6 Professional 23.12.1, EPS ZZ-CPP-TEST, projects 5450 to 5463 and 5476 to 5484. Each round imported once with the Default
 Configuration; each project opened alone, its end activity set where one is named, scheduled once with F9, and closed;

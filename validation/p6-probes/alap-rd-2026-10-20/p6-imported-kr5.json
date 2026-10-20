@@ -1,0 +1,34 @@
+{
+ "case": "ZZ-CPP-KR5",
+ "proj_id": 5519,
+ "differences": [
+  "TASKRSRC F/ZZ-CPP-KR5-R remain_qty_per_hr: xer '1' p6 0.857142857142857",
+  "TASKRSRC F/ZZ-CPP-KR5-R target_qty_per_hr: xer '1' p6 0.857142857142857"
+ ],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "resource_dependent": {
+  "tasks": {
+   "F": {
+    "remain_drtn_hr_cnt": 12.0,
+    "target_drtn_hr_cnt": 12.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "F",
+    "rsrc_short_name": "ZZ-CPP-KR5-R",
+    "remain_qty": 12.0,
+    "target_qty": 12.0,
+    "remain_qty_per_hr": 0.857142857142857,
+    "target_qty_per_hr": 0.857142857142857,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-01 08:00",
+    "reend_date": "2027-03-02 10:00"
+   }
+  ]
+ }
+}
