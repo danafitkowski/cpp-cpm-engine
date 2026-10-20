@@ -4304,6 +4304,36 @@ compareFixture('F222 - ZQ: an assignment with no work and a lag bounds the start
     activities: zqActs(hA), relationships: zqRels(hR), data_date: '2026-12-07 08:00', cal_map: ZQCAL,
     project_calendar: 'AE', relationship_lag_calendar: 'rcal_Predecessor',
 }, { hours: true });
+// AR, round 16 (ZZ-CPP-KR1 to KR10): where the work started at the bound would finish off the activity calendar, the
+// finish moves on to the calendar's next opening and the work is placed back from there (F223: KR1, KR2, KR3, KR9);
+// the later of AR's placement and the old reading's holds (F224: KR4, KR5, KR7, KR8).
+const arActsOf = (A, T) => [A('L', 200, { clndr_id: 'AW' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'AW' })].concat(
+    ...Object.entries(T).map(([k, [ac, rc, h, , , sc, held]]) => [
+        A(k, h, { clndr_id: ac, task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg(rc, h)],
+            constraint: { type: 'CS_ALAP' } }),
+        A('S' + k, 4, { clndr_id: sc, constraint: { type: 'CS_MSOA', date: slD(held[0], held[1]) } })]));
+const arRelsOf = (R, T) => [R('L', 'FIN')].concat(...Object.entries(T).map(([k, [, , , t, lag]]) => [
+    R(k, 'S' + k, t, lag), R('S' + k, 'FIN'), R(k, 'FIN')]));
+const AR16A = {
+    G1: ['AX', 'RT', 8, 'SS', 0, 'AW', ['10', '13:00']],
+    G2: ['AX', 'RT', 8, 'SS', 4, 'AW', ['11', '08:00']],
+    G3: ['AX', 'RT', 3, 'SS', 0, 'AW', ['10', '13:00']],
+    G4: ['AX', 'RT', 8, 'SF', 0, 'AW', ['11', '08:00']],
+};
+const AR16B = {
+    H1: ['AT', 'RE', 44, 'SS', 0, 'D24', ['10', '16:00']],
+    H2: ['AT', 'RE', 14, 'SS', 0, 'D24', ['10', '16:00']],
+    H3: ['AW', 'RT', 8, 'SS', 0, 'AW', ['11', '15:00']],
+    H4: ['AW', 'RE', 8, 'SS', 0, 'AW', ['11', '15:00']],
+};
+compareFixture('F223 - AR: work started at the bound that would finish off the activity calendar is placed back from its next opening, in hours', {
+    activities: arActsOf(hA, AR16A), relationships: arRelsOf(hR, AR16A), data_date: '2026-12-07 08:00', cal_map: ARCAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Successor',
+}, { hours: true });
+compareFixture('F224 - AR: the later of AR\'s placement and the old reading\'s holds, in hours', {
+    activities: arActsOf(hA, AR16B), relationships: arRelsOf(hR, AR16B), data_date: '2026-12-07 08:00', cal_map: ARCAL,
+    project_calendar: 'AW', relationship_lag_calendar: 'rcal_Successor',
+}, { hours: true });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
