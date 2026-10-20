@@ -13,9 +13,11 @@
 // task_code to the activity's TASK values, resource_dependent.assignments lists one entry per TASKRSRC row of those
 // activities, each found by task_id (TASK's task_code) and rsrc_id (RSRC's rsrc_short_name); entries with the same
 // task code and resource are matched to the case file's rows in order. Each value is written as String(Number(v)), a
-// null (P6 holds no value) as an empty field, as P6's export writes it. It throws when a listed activity is not
-// exactly one TASK row, when the case file holds a different number of rows for an assignment's task code and
-// resource, or when a column or value is missing. Nothing else changes, byte for byte.
+// null (P6 holds no value) as an empty field, as P6's export writes it. P6's import keeps one assignment per resource
+// on an activity: where P6's record holds one and the case file more (H26-08 A1490), the others are dropped and
+// r.dropped counts them. It throws when a listed activity is not exactly one TASK row, when the case file holds a
+// different number of rows for an assignment's task code and resource otherwise, or when a column or value is missing.
+// Nothing else changes, byte for byte.
 'use strict';
 
 const TASK_FIELDS = ['remain_drtn_hr_cnt', 'target_drtn_hr_cnt'];
@@ -107,12 +109,22 @@ function overlay(text, imported) {
         const k = JSON.stringify([a.task_code, a.rsrc_short_name]);
         (listed[k] = listed[k] || []).push(a);
     }
-    let assignments = 0;
+    let assignments = 0, dropped = 0;
+    const drop = new Set();
     for (const [k, list] of Object.entries(listed)) {
-        const found = byKey[k] || [];
+        let found = byKey[k] || [];
         const where = 'TASKRSRC ' + JSON.parse(k).join('/');
         if (found.length !== list.length) {
-            throw new Error('p6-imported: ' + where + ' is ' + list.length + ' assignments in P6 and ' + found.length + ' rows in the case file');
+            // P6's import keeps one assignment per resource on an activity, the first (P6 probe ZZ-CPP-ZLB B6, 19-Oct-2026;
+            // held-out case H26-08 A1490): where P6 holds one and the case file more, P6's values go over the first row
+            // and the others are dropped, as the import dropped them
+            if (list.length === 1 && found.length > 1) {
+                for (const r of found.slice(1)) drop.add(r.i);
+                dropped += found.length - 1;
+                found = found.slice(0, 1);
+            } else {
+                throw new Error('p6-imported: ' + where + ' is ' + list.length + ' assignments in P6 and ' + found.length + ' rows in the case file');
+            }
         }
         list.forEach((a, n) => {
             set('TASKRSRC', found[n], pick(a, ASSIGNMENT_FIELDS, where), where);
@@ -121,7 +133,9 @@ function overlay(text, imported) {
             assignments++;
         });
     }
-    return { text: lines.join('\r\n'), tasks, assignments };
+    const out = { text: lines.filter((l, i) => !drop.has(i)).join('\r\n'), tasks, assignments };
+    if (dropped) out.dropped = dropped;
+    return out;
 }
 
 module.exports = { overlay, TASK_FIELDS, ASSIGNMENT_FIELDS, ASSIGNMENT_DATE_FIELDS };

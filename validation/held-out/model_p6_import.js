@@ -24,6 +24,8 @@
 //   works from the planned start, each assignment starts at its resource's next working time, after its lag on the
 //   resource's calendar, and works its hours in the window (work under way: to the window's end). An assignment with
 //   no units and no units per hour written with its own remaining dates keeps them.
+// - One assignment per resource on an activity: where the file gives an activity the same resource twice, the first
+//   is kept and the others dropped (P6 probe ZZ-CPP-ZLB B6; held-out case H26-08 A1490).
 // - Durations: the planned duration is the activity calendar's working time from the earliest assignment start
 //   (before its lag) to the latest assignment finish, and so is the remaining duration of work not yet started. Work
 //   under way restarts at the activity calendar's next working time at or after the data date, each assignment at its
@@ -70,7 +72,9 @@ function model(text) {
     const out = { tasks: {}, assignments: [] };
     for (const k of t.TASK || []) {
         if (k.task_type !== 'TT_Rsrc' || k.status_code === 'TK_Complete') continue;
-        const rows = byTask[k.task_id] || [];
+        // P6's import keeps one assignment per resource on an activity, the first (ZZ-CPP-ZLB B6; H26-08 A1490)
+        const seen = new Set();
+        const rows = (byTask[k.task_id] || []).filter((r) => !seen.has(r.rsrc_id) && seen.add(r.rsrc_id));
         const ac = cal(k.clndr_id || proj.clndr_id);
         const started = k.status_code !== 'TK_NotStart';
         const ps = at(k.target_start_date);
@@ -186,10 +190,19 @@ function main() {
             if (bad.length) misses.push(c.case + ' ' + a.task_code + '/' + a.rsrc_short_name + ': ' + bad.join('; '));
             else n.assignments_match++;
         }
+        // and every assignment the model keeps that P6's import did not
+        const rdCodes = new Set(Object.keys(rec.tasks));
+        m.assignments.forEach((b, j) => {
+            if (!used.has(j) && rdCodes.has(b.task_code)) {
+                n.extra = (n.extra || 0) + 1;
+                misses.push(c.case + ' ' + b.task_code + '/' + b.rsrc_short_name + ': kept by the model, not by P6');
+            }
+        });
     }
     console.log(path.basename(SET) + ': ' + n.cases + ' cases recorded; activities ' + n.tasks_match + ' of ' + n.tasks +
         ', assignments ' + n.assignments_match + ' of ' + n.assignments +
-        (n.dated ? ' (dates ' + n.dates_match + ' of ' + n.dated + ')' : '') + ' as P6 imported them');
+        (n.dated ? ' (dates ' + n.dates_match + ' of ' + n.dated + ')' : '') + ' as P6 imported them' +
+        (n.extra ? '; ' + n.extra + ' assignments kept by the model and not by P6' : ''));
     for (const x of misses) console.log('  ' + x);
     if (misses.length) process.exitCode = 1;
 }

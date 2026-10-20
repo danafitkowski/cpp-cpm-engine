@@ -190,7 +190,7 @@ for (const c of cases) {
     if (fs.existsSync(importedPath)) {
         const o = overlay(text, JSON.parse(fs.readFileSync(importedPath, 'utf8')));
         text = o.text;
-        laid = { tasks: o.tasks, assignments: o.assignments };
+        laid = Object.assign({ tasks: o.tasks, assignments: o.assignments }, o.dropped ? { dropped: o.dropped } : {});
     }
     const { res, out } = runEngine(text);
     const types = taskTypes(text);

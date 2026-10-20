@@ -197,7 +197,10 @@ WIDE_CHANCE = {'resource_dependent': 0.55, 'level_of_effort': 0.5, 'wbs_summary'
 # ('h25s': chance; see draw_h24s): an assignment with no work and a lag under a start-to-start bound at a Friday
 # close, beside work whose finish-to-start successor holds it either where the work under the bound ends (the bound
 # moves no finish: BM) or later (ZF); and As Late As Possible work beside an assignment with no duration, its slide's
-# bound at the next opening after its early finish (AG) or a day later.
+# bound at the next opening after its early finish (AG) or a day later. 'wide9' (H27 on) draws exactly what wide8 draws,
+# from the same stream, except that no activity gets two assignments of one resource: where wide7's ZW shape draws the
+# Mon-Thu resource the work already has, it takes the other one, and any other repeat is dropped, keeping the first, as
+# P6's import keeps (H26-08 A1490).
 WIDE_PROFILES = {
     'wide': {'chance': WIDE_CHANCE, 'resources': (1, 3), 'rd_acts': (2, 5), 'holidays': (0, 6),
              'suspended': (1, 2), 'po': None},
@@ -231,6 +234,11 @@ WIDE_PROFILES = {
               'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
               'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85, 'h23s': 0.9,
               'mfp': 0.5, 'h24s': 0.9, 'h25s': 0.9},
+    'wide9': {'chance': {'resource_dependent': 0.9, 'level_of_effort': 0.5, 'wbs_summary': 0.5, 'suspended': 0.9,
+                         'external': 0.55},
+              'resources': (2, 3), 'rd_acts': (3, 7), 'holidays': (3, 12), 'suspended': (1, 3), 'po': 0.5,
+              'spurs': (0.6, 1, 3), 'oc': 0.5, 'xfx': (0.8, 2, 5, 0.8), 'oe': 0.8, 'xpm': 0.85, 'h23s': 0.9,
+              'mfp': 0.5, 'h24s': 0.9, 'h25s': 0.9, 'one_per_rsrc': True},
 }
 
 # The values P6 23.12 writes for a project created with its defaults.
@@ -869,6 +877,11 @@ def draw_h23s(rng, pf, w, short, pid, acts, rels, es, ef, at, dd_day, n0):
         # resource dependent work on the given assignments: (resource, units per hour, lag, no work left)
         w['assignments'][:] = [g for g in w['assignments'] if g['act'] is not a]
         a['type'] = 'TT_Rsrc'
+        if pf.get('one_per_rsrc'):
+            # wide9: one assignment per resource on an activity, the first, as P6's import keeps
+            kept = [g for k, g in enumerate(parts) if all(g[0] is not h[0] for h in parts[:k])]
+            w['one_per_rsrc_dropped'] = w.get('one_per_rsrc_dropped', 0) + len(parts) - len(kept)
+            parts = kept
         for res, rate, lag, empty in parts:
             target_q = 0 if empty else (a['hours'] - lag) * rate
             remain_q = 0 if empty else (a['remain'] - lag) * rate
@@ -1120,6 +1133,11 @@ def draw_h24s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0):
     def make_rd(a, parts, tag):
         # resource dependent work on the given assignments: (resource, units per hour, lag, no units)
         a['type'] = 'TT_Rsrc'
+        if pf.get('one_per_rsrc'):
+            # wide9: one assignment per resource on an activity, the first, as P6's import keeps
+            kept = [g for k, g in enumerate(parts) if all(g[0] is not h[0] for h in parts[:k])]
+            w['one_per_rsrc_dropped'] = w.get('one_per_rsrc_dropped', 0) + len(parts) - len(kept)
+            parts = kept
         for res, rate, lag, empty in parts:
             target_q = 0 if empty else (a['hours'] - lag) * rate
             remain_q = 0 if empty else (a['remain'] - lag) * rate
@@ -1314,7 +1332,12 @@ def draw_h24s(rng, pf, w, short, pid, acts, rels, cals, es, ef, at, dd_day, n0):
     plan_at(a, cal, cal.first_start_at_or_after(at(max(dd_day + 0.5, es[a['i']] - rng.uniform(2, 4)))))
     own = next((k for k in sorted(WEEKS) if WEEKS[k][1] is cal.week), 'MF8S')
     lag = rng.choice([4, 8]) if rng.random() < 0.5 else 0
-    make_rd(a, [(resource(own), rng.choice([1, 2]), 0, False), (resource(rng.choice(['MT8', 'MT10'])), 1, lag, True)],
+    r_own, rate = resource(own), rng.choice([1, 2])
+    mt = rng.choice(['MT8', 'MT10'])
+    if pf.get('one_per_rsrc') and mt == own:
+        # wide9: not the resource the work already has (H26-08 A1490 drew MT10 twice; P6's import kept one)
+        mt = 'MT8' if mt == 'MT10' else 'MT10'
+    make_rd(a, [(r_own, rate, 0, False), (resource(mt), 1, lag, True)],
             'an assignment with no units on a Mon-Thu resource%s beside one with work, planned before its '
             'predecessor lets it start' % (' with a %g h lag' % lag if lag else ''))
     w['h24s']['zw'].append(a['code'])
@@ -1782,6 +1805,8 @@ def make_case(seed, set_name, k, dates='default', features='default'):
             summary.update({'h24_shapes': {k: len(v) for k, v in wide['h24s'].items()}})
         if wide.get('h25s') is not None:
             summary.update({'h25_shapes': {k: len(v) for k, v in wide['h25s'].items()}})
+        if wide.get('one_per_rsrc_dropped'):
+            summary.update({'one_per_resource_dropped': wide['one_per_rsrc_dropped']})
     return short, text, summary
 
 
