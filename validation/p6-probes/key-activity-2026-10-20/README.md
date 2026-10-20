@@ -35,9 +35,10 @@ the end activity holds none (KH5, ending at PG1: FG1 follows it and is zeroed). 
 options saved and the Schedule dialog cancelled; `import_p6_sqlite.py` then recorded the end P6 held with the project
 still unscheduled, before the one F9.
 
-**Not measured:** a start-to-start or start-to-finish link into the end activity. P6 prints the linked As Late As
+**Not measured here:** a start-to-start or start-to-finish link into the end activity. P6 prints the linked As Late As
 Possible activity's free float as 0 without an end activity too (KG3C, KG4C; KH1C, KH2C, KH4C), so these show only
-that the other chains are zeroed.
+that the other chains are zeroed. Round 19 ([`../round19-2026-10-20/`](../round19-2026-10-20/)) has since measured
+both on work that keeps free float with no end set: the link leads into the end and the work keeps its free float.
 
 **As Late As Possible placement:** round 14's controls also measured where P6 places As Late As Possible resource
 dependent work led out start-to-start or start-to-finish (rule AR, `h27-causes-2026-10-20`). KH2 and KH2C (FB0 on X,
