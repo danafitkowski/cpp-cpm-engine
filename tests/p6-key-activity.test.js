@@ -107,12 +107,11 @@ if (rows !== 182) {
 // key_activity_for_multiple_longest_paths (or empties it where P6 held none), and the scorer hands parseXER's
 // float_path_end on. P6's import does not map the file's key to the activity it imports, so a file's key can name an
 // activity P6 does not hold: each probe is run with its file's key set to another activity first (SB0, or SG1 where
-// P6 held SB0), and must still give P6's values. The probe files have LF lines; the overlay reads CRLF, as P6's export
-// and the held-out generator write.
+// P6 held SB0), and must still give P6's values.
 let rows2 = 0, match2 = 0;
 for (const [name, proj] of Object.entries(P6.projects)) {
     if (!texts[name]) continue;
-    let text = texts[name].text.replace(/\r?\n/g, '\r\n');
+    let text = texts[name].text;
     const ids = {};
     for (const r of table(text, 'TASK')) ids[r.task_code] = r.task_id;
     const decoy = proj.float_path_end === 'SB0' ? 'SG1' : 'SB0';
