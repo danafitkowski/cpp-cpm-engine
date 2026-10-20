@@ -1680,8 +1680,11 @@ _UNDERWAY_DROPPED_FINISH_TYPES = ('FNET', 'FO', 'MS_Finish', 'MFO')
 # Start On and Mandatory Start from the late side (ZZ-CPP-H1S K1-K6), and a
 # Start On or Before or Mandatory Start in either slot takes the other
 # constraint with it (_UNDERWAY_LATE_DROP_ALL; ZZ-CPP-H1S-P P7 P10 P14).
+# UM (H27, 20-Oct-2026): so does a Mandatory Finish, in either slot, beside a
+# Finish On or Before, the same minute or not (ZZ-CPP-KB1-KB5 against KB6,
+# KB7, KB8; H27-07 A1550, H27-08 A1070).
 _UNDERWAY_DROPPED_LATE_TYPES = ('MS_Finish', 'MFO', 'MS_Start', 'SNLT', 'SO')
-_UNDERWAY_LATE_DROP_ALL = ('SNLT', 'MS_Start')
+_UNDERWAY_LATE_DROP_ALL = ('SNLT', 'MS_Start', 'MS_Finish', 'MFO')
 _FINISH_TYPE_NAMES = {'FNET': 'Finish On or After', 'FO': 'Finish On',
                       'MS_Finish': 'Mandatory Finish', 'MFO': 'Mandatory Finish'}
 

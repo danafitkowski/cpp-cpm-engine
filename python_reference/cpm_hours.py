@@ -132,8 +132,11 @@ def _rsrc_forward(asg, act_cal, start_req, finish_req, xf=None):
     if req:
         fr_a = finish_req if act_cal.is_finish(finish_req) else act_cal.next_work(finish_req)
         first = None
+        # ZQ (H27, 20-Oct-2026): beside work, an assignment with no work and a lag reaches the requirement too, its
+        # lag before it on its own calendar, and bounds the start (ZZ-CPP-KD2, KD3, KD4 against KD1; H27-08 A1260)
+        any_work = any(h['rem'] > 0 for h in asg)
         for g in asg:
-            if not g['rem'] > 0:
+            if not g['rem'] > 0 and not (g['lag'] > 0 and any_work):
                 continue
             gc = g['cal']
             sg = gc.sub(gc.prev_work_end(fr_a), g['rem'])
@@ -450,11 +453,13 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 # ZW (round 9, 19-Oct-2026): an assignment with no units and no units per hour keeps the working
                 # hours of its resource between its own remaining start and finish, as work. One whose units per
                 # hour P6 kept has no duration, as before (ZZ-CPP-ZWA W1-W4, W6, W7 against W5; ZZ-CPP-ZBZ Y1-Y4)
+                zw = False
                 if not rem > 0 and g.get('window_start') and g.get('window_finish'):
                     ws, wf = _inst(g['window_start']), _inst(g['window_finish'])
                     if ws is not None and wf is not None and wf > ws:
                         rem = gc.between(ws, wf)
-                n['asg'].append({'cal': gc, 'rem': rem, 'lag': int(round(g.get('lag_minutes') or 0))})
+                        zw = True
+                n['asg'].append({'cal': gc, 'rem': rem, 'lag': int(round(g.get('lag_minutes') or 0)), 'zw': zw})
         nodes[a['code']] = n
     preds, succs = defaultdict(list), defaultdict(list)
     for r in relationships:
@@ -570,6 +575,16 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             return kind, lag_fwd(src, unexpired(p['as'], r['lag'], lc, p), lc)
         return kind, lag_fwd(p.get('restart', p['es']), r['lag'], lc)
 
+    # ZU (H27, 20-Oct-2026): on work under way the lag of an assignment with no units and no units per hour counts
+    # from the actual start, so only its unexpired part, on the assignment's calendar to the data date, runs from the
+    # restart, before its window's working time (ZZ-CPP-KA1-KA6; H27-06 A1420, H27-10 A1420, H27-11 A1660)
+    for n in nodes.values():
+        if not n['started'] or n['complete']:
+            continue
+        for g in n['asg']:
+            if g.get('zw') and g['lag'] > 0:
+                g['lag'] = unexpired(n['as'], g['lag'], g['cal'], n)
+
     for c in order:
         n = nodes[c]
         cal = n['cal']
@@ -655,6 +670,10 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             t = start_req if finish_req is None else max(start_req, finish_req)
             day, m = divmod(t, cm.DAY)
             on = any(s <= m <= f for s, f in cal.slots(day))
+            # MZ (H27, 20-Oct-2026): midnight is also the close of a day worked to 24:00, and a finish milestone
+            # sits there though the next day is not worked (ZZ-CPP-KE1, KE2, KE4 against KE3, KE5; H27-09 A1300)
+            if not on and m == 0 and any(f == cm.DAY for _s, f in cal.slots(day - 1)):
+                on = True
             inst = t if on else cal.next_work(t)
             n['es'] = n['ef'] = inst
         elif n['asg']:
@@ -860,7 +879,9 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         # P6 applies neither on the late side (ZZ-CPP-H1S-P P7, P10, P14; a
         # Finish On or Before beside Start On or After, Start On, ALAP or Finish
         # On or After still caps it: P8, P9, P13, P17, H1-01 A1080)
-        drop_all = n['started'] and any((n[k] or {}).get('type') in ('SNLT', 'MS_Start') for k in ('c1', 'c2'))
+        # UM (H27, 20-Oct-2026): so does a Mandatory Finish, in either slot (ZZ-CPP-KB1-KB5 against KB6, KB7, KB8)
+        drop_all = n['started'] and any((n[k] or {}).get('type') in ('SNLT', 'MS_Start', 'MS_Finish', 'MFO')
+                                        for k in ('c1', 'c2'))
         for k in ('c1', 'c2'):
             cs = n[k]
             if cs and cs['at'] is not None:
@@ -1099,6 +1120,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 ef_b = t if ef_b is None else min(ef_b, t)
         if not seen:
             ef_b = proj_ef
+        ef_fin = ef_b
         if ls_b is not None:
             from_ls = cal.add(ls_b, n['rem']) if n['rem'] > 0 else ls_b
             ef_b = from_ls if ef_b is None else min(ef_b, from_ls)
@@ -1114,8 +1136,25 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if cal.between(n['ef'], ef_b) <= 0:
                 continue
             # RD: the assignments finish by the bound on their own calendars,
-            # as on the backward pass (ZZ-CPP-RSRC H1)
-            new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)
+            # as on the backward pass (ZZ-CPP-RSRC H1). AR (H27, 20-Oct-2026): an SS / SF bound is a bound on the
+            # start: the work starts there and runs forward on its own calendars, and the earlier of that start and
+            # the one the finish bounds give holds, where the work so placed finishes on the activity calendar's
+            # working time (ZZ-CPP-KC3, KC4, KC7; ZZ-CPP-KH1C, KH4C; H27-04 A1220); elsewhere the old reading stands
+            # (H27-11 A1220; ZZ-CPP-KH2C matches neither). JS paired site: the ALAP block of computeCPMHours
+            ar = False
+            if ls_b is not None:
+                se, sf = _rsrc_forward(n['asg'], cal, ls_b, None, None)
+                sday, sm = divmod(sf, cm.DAY)
+                if any(a0 <= sm <= f0 for a0, f0 in cal.slots(sday)):
+                    ar = True
+                    if ef_fin is None:
+                        new_es = new_ef = None
+                    else:
+                        new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_fin, None)
+                    if new_es is None or se < new_es:
+                        new_es, new_ef = se, sf
+            if not ar:
+                new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)
             # AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
             # working time moves on to its next opening, as RU has it, and the
             # assignments run from there, past the bound if they must
@@ -1126,6 +1165,10 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             if new_es > cur:
                 n['restart' if n['started'] else 'es'], n['ef'] = new_es, new_ef
                 n.pop('rem_dates', None)
+                # AR: start float of work so slid runs to the late finish less its remaining duration before the
+                # slide (H27-04 A1220, "Start Float")
+                if ar:
+                    n['ar_rem'] = n['rem']
                 n['rem'] = cal.between(new_es, new_ef)
             continue
         if n['rem'] > 0:
@@ -1161,7 +1204,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # keeps its own late start (ZZ-CPP-RDTR T1-T11; H11-07 A1260), as
             # does work not started under "Smallest" (T9; H9-01 A1060)
             if n['asg'] and (float_type == 'FT_Start' or (n['started'] and po)):
-                tf_sta = tf_fin
+                tf_sta = cal.between(r_es, cal.sub(n['lf'], n['ar_rem'])) if 'ar_rem' in n else tf_fin
             tf = tf_sta if float_type == 'FT_Start' else (min(tf_fin, tf_sta) if float_type == 'FT_Min' else tf_fin)
         ff = ff_signed = None
         if not n['complete']:
