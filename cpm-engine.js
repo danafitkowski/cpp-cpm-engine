@@ -4621,6 +4621,14 @@ function computeCPM(activities, relationships, opts) {
     const _FLOAT_TYPE_ALIASES = {
         'finish': 'FT_FF', 'FT_Finish': 'FT_FF',
         'start': 'FT_Start', 'FT_start': 'FT_Start',
+        // FT (21-Oct-2026): P6's own Schedule Options dialog stores "Start
+        // Float" as FT_SS; an XER's FT_Start is kept as written on import. P6
+        // schedules both as start float: the P6 probe projects whose options
+        // were saved through the dialog hold FT_SS (ZZ-CPP-QA5, RA1, RA2, RA4,
+        // RA4B and held-out H28-07), and P6's values there are the start-float
+        // values. Through v2.10.13 FT_SS fell back to finish float with an
+        // ALERT
+        'FT_SS': 'FT_Start',
         'min': 'FT_Min', 'FT_min': 'FT_Min', 'smallest': 'FT_Min',
     };
     if (Object.prototype.hasOwnProperty.call(_FLOAT_TYPE_ALIASES, _floatType)) {
@@ -11946,17 +11954,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '228 cross-validation fixtures. The harness defines 21644 ' +
+                '229 cross-validation fixtures. The harness defines 21721 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 21644 / 21644" is the whole comparison surface. ' +
+                'reported "Checks: 21721 / 21721" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 21644 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 21721 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 226 of the 228 fixtures: ' +
+                'severity-level alert parity, compared on 227 of the 229 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11995,18 +12003,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '21644 comparisons it defines over 228 fixtures and skips none; every ' +
+                '21721 comparisons it defines over 229 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '228 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '229 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 21644 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 21721 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 226 of the 228 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 227 of the 229 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

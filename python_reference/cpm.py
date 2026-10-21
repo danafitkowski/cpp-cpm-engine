@@ -2898,6 +2898,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     _FLOAT_TYPE_ALIASES = {
         'finish': 'FT_FF', 'FT_Finish': 'FT_FF',
         'start': 'FT_Start', 'FT_start': 'FT_Start',
+        # FT (21-Oct-2026): P6's Schedule Options dialog stores "Start Float" as FT_SS; P6 schedules it as start float
+        # (ZZ-CPP-QA5, RA1, RA2, RA4, RA4B, H28-07). JS paired site: _FLOAT_TYPE_ALIASES in computeCPM
+        'FT_SS': 'FT_Start',
         'min': 'FT_Min', 'FT_min': 'FT_Min', 'smallest': 'FT_Min',
     }
     _float_type = _FLOAT_TYPE_ALIASES.get(_float_type, _float_type)

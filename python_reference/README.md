@@ -200,7 +200,7 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  aa0132b23a6f1e9692272432044810db60932f277844b88360dfd1006c71d316
+cpm.py          SHA-256:  d65d15c79660ab91581623b1495cc004be72b83dcab7ce8e603c977165b53f8b
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  71c4f651bb31857466cca4b9d92ecf76dbbea09659029017aed013271b02d1c3
 
@@ -231,8 +231,10 @@ work is compared by start (MW); the late pin of resource dependent work
 is placed on its resources before a second constraint caps it (LR);
 under "Start Float" start float of work AW moved runs from the bound
 unless "Calculate multiple float paths" is on (AT), and where the paths
-end at an activity set in P6, RT is set aside (ET). The harness gains 21
-fixtures (F212-F232): 228 fixtures, 21644 of 21644 executed.)
+end at an activity set in P6, RT is set aside (ET). P6's own Schedule
+Options dialog stores "Start Float" as FT_SS; both engines read it as
+FT_Start (FT; ZZ-CPP-QA5, RA1, RA2, RA4B hold FT_SS in P6). The harness
+gains 22 fixtures (F212-F233): 229 fixtures, 21721 of 21721 executed.)
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -903,15 +905,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 323123
-  sha-256:  aa0132b23a6f1e9692272432044810db60932f277844b88360dfd1006c71d316
+  bytes: 323374
+  sha-256:  d65d15c79660ab91581623b1495cc004be72b83dcab7ce8e603c977165b53f8b
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 228 passed, 0 failed
-  Checks:   21644 / 21644 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 229 passed, 0 failed
+  Checks:   21721 / 21721 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

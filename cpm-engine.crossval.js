@@ -4440,6 +4440,12 @@ compareFixture('F232 - ET: F230 under "Smallest", where RT stands', {
     project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Min',
     schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'FIN',
 }, { hours: true });
+// FT: P6's own Schedule Options dialog stores "Start Float" as FT_SS; both engines read it as FT_Start
+compareFixture('F233 - FT: F230 with "Start Float" written as P6\'s dialog stores it (FT_SS)', {
+    activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_SS',
+    schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'FIN',
+}, { hours: true });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +
