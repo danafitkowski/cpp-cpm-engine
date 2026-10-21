@@ -200,9 +200,9 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  aa0132b23a6f1e9692272432044810db60932f277844b88360dfd1006c71d316
+cpm.py          SHA-256:  300f75489fdcc150aa4efa649cd1286e465ce7b6930dc74fb30bd138c9c52f4e
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  71c4f651bb31857466cca4b9d92ecf76dbbea09659029017aed013271b02d1c3
+cpm_hours.py    SHA-256:  7ca3e494f2e3d72289993b696546b7227d5f10cbc444d957ed72228c8fa22452
 
 (v2.10.13 candidate, unreleased, 2026-10-20 - cpm.py bumped from b06d14f3...:
 ENGINE_VERSION reads 2.10.13. compute_cpm takes float_path_end, the
@@ -230,9 +230,14 @@ opening at or after the bound (AZ); a finish floor on resource dependent
 work is compared by start (MW); the late pin of resource dependent work
 is placed on its resources before a second constraint caps it (LR);
 under "Start Float" start float of work AW moved runs from the bound
-unless "Calculate multiple float paths" is on (AT), and where the paths
-end at an activity set in P6, RT is set aside (ET). The harness gains 21
-fixtures (F212-F232): 228 fixtures, 21644 of 21644 executed.)
+unless "Calculate multiple float paths" is on (AT). After P6 probe round
+21 (validation/p6-probes/round21-2026-10-21), compute_cpm reads FT_Total
+as FT_Start, and FT_SS, the code P6's own Schedule Options dialog writes
+for "Start Float", is start float from early start to late start with
+RT and AT set aside (FT). FT replaces ET, which had set RT aside where
+the paths end at an activity set in P6: the probes it was taken on held
+FT_SS once their options were saved there. The harness gains 24
+fixtures (F212-F235): 231 fixtures, 21875 of 21875 executed.)
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -903,15 +908,15 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 323123
-  sha-256:  aa0132b23a6f1e9692272432044810db60932f277844b88360dfd1006c71d316
+  bytes: 324096
+  sha-256:  300f75489fdcc150aa4efa649cd1286e465ce7b6930dc74fb30bd138c9c52f4e
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 228 passed, 0 failed
-  Checks:   21644 / 21644 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 231 passed, 0 failed
+  Checks:   21875 / 21875 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

@@ -14,7 +14,8 @@ Inputs (all optional fields may be absent):
   schedule_mode: 'retained_logic' | 'progress_override'
   lag_calendar: 'predecessor' | 'successor' | '24h' | 'project'; project_calendar: clndr_id
   project_finish: Must Finish By (instant or string), seeding the late dates instead of the early finish.
-  float_type: 'FT_FF' (finish float, P6's default) | 'FT_Start' | 'FT_Min'.
+  float_type: 'FT_FF' (finish float, P6's default) | 'FT_Start' | 'FT_SS' | 'FT_Min' (cpm.compute_cpm reads
+  FT_Total as FT_Start).
 Output: {code: {es, ef, ls, lf (instants), restart, tf_minutes, ff_minutes, tf_start_minutes, tf_finish_minutes,
         ff_signed_minutes, status}} plus 'project_finish'.
 """
@@ -1225,15 +1226,20 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # A1160; H11-02, H11-03, H11-10). Under retained logic work under way
             # keeps its own late start (ZZ-CPP-RDTR T1-T11; H11-07 A1260), as
             # does work not started under "Smallest" (T9; H9-01 A1060).
-            # ET (rounds 17-18, 20-Oct-2026): not under "Start Float" where
-            # "Calculate multiple float paths" ends at an activity set in P6, on
-            # every activity, on either basis of the paths (ZZ-CPP-QA5, RA1, RA2,
-            # RA4B against QA1-QA4, QA7; H28-07); under "Smallest" RT stands (RA3)
-            et_aside = float_type == 'FT_Start' and multiple_float_paths and _fp_lead is not None
-            if n['asg'] and not et_aside and (float_type == 'FT_Start' or (n['started'] and po)):
+            # FT (round 21, 21-Oct-2026): not under FT_SS, the code P6's own
+            # Schedule Options dialog writes for "Start Float": there start float
+            # runs to the late start the assignments set, on work not started and
+            # on work under way, under progress override and under retained logic
+            # (ZZ-CPP-FA2, FA5; QA5, RA1, RA2, RA4B). It replaces ET (rounds
+            # 17-18), which took those four and H28-07 for an effect of the end of
+            # the float paths set in P6: their options held FT_SS once saved there,
+            # and an end set with FT_FF or "Smallest" changes no float definition
+            # (round 14's KH1-KH5, round 19, RA3)
+            if n['asg'] and float_type != 'FT_SS' and (float_type == 'FT_Start' or (n['started'] and po)):
                 tf_sta = (cal.between(n.get('at_from', r_es), cal.sub(n['lf'], n['ar_rem'])) if 'ar_rem' in n
                           else tf_fin)
-            tf = tf_sta if float_type == 'FT_Start' else (min(tf_fin, tf_sta) if float_type == 'FT_Min' else tf_fin)
+            tf = (tf_sta if float_type in ('FT_Start', 'FT_SS')
+                  else (min(tf_fin, tf_sta) if float_type == 'FT_Min' else tf_fin))
         ff = ff_signed = None
         if not n['complete']:
             # Free float (day engine FF rules, in working minutes): the least

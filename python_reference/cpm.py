@@ -2895,26 +2895,39 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # and the residual 0.5% is what the definition actually decides.
     # Default FT_FF keeps every existing result byte-identical.
     _float_type = str(float_type or 'FT_FF').strip()
+    # FT (P6 probe round 21, 21-Oct-2026): P6 23.12.1 keeps sched_float_type as
+    # the file gives it and schedules three behaviours. FT_FF is finish float.
+    # FT_Start is start float with RT and AT (cpm_hours), and FT_Total is read
+    # the same way. FT_SS, the code P6's own Schedule Options dialog writes for
+    # "Start Float" (over an imported FT_Start too, when the options are saved),
+    # is start float from early start to late start, with neither (ZZ-CPP-FA1 to
+    # FA6). Until the next release FT_SS and FT_Total raised the ALERT below and
+    # took the finish definition. JS paired site: computeCPM's _floatType.
     _FLOAT_TYPE_ALIASES = {
         'finish': 'FT_FF', 'FT_Finish': 'FT_FF',
-        'start': 'FT_Start', 'FT_start': 'FT_Start',
+        'start': 'FT_Start', 'FT_start': 'FT_Start', 'FT_Total': 'FT_Start',
         'min': 'FT_Min', 'FT_min': 'FT_Min', 'smallest': 'FT_Min',
     }
     _float_type = _FLOAT_TYPE_ALIASES.get(_float_type, _float_type)
-    if _float_type not in ('FT_FF', 'FT_Start', 'FT_Min'):
+    if _float_type not in ('FT_FF', 'FT_Start', 'FT_Min', 'FT_SS'):
         alerts.append({
             'severity': 'ALERT',
             'context': 'float-type-unsupported',
             'message': (
                 'sched_float_type=%r is not one of the implemented definitions '
-                '(FT_FF = finish float LF-EF, P6 default; FT_Start = start float '
-                'LS-ES; FT_Min = smallest of the two). Total float was computed '
+                '(FT_FF = finish float LF-EF, P6 default; FT_Start and FT_Total = '
+                'start float LS-ES as P6 reads an imported code; FT_SS = start '
+                "float as P6's Schedule Options dialog stores it; FT_Min = "
+                'smallest of start and finish float). Total float was computed '
                 'on the FINISH definition. Disclosed, not substituted silently — '
                 'read SCHEDOPTIONS.sched_float_type from the source XER and pass '
-                'it through if it is one of the three.' % (float_type,)
+                'it through if it is one of these.' % (float_type,)
             ),
         })
         _float_type = 'FT_FF'
+    # the day-based passes have one start float; RT and AT, which FT_SS sets
+    # aside, live in the hours pass
+    _start_float_type = _float_type in ('FT_Start', 'FT_SS')
 
     # SSL (P6 parity 2026-09-23) — SCHEDOPTIONS.sched_lag_early_start_flag,
     # P6's "Calculate start-to-start lag from": 'early_start' (flag Y, P6's
@@ -4908,7 +4921,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # SR (v2.9.55) — start float of work under way runs from the restart.
         node['tf_finish'] = _round_half_up_to(node['lf'] - node['ef'], 3)
         node['tf_start'] = _round_half_up_to(node['ls'] - _start_float_from(node), 3)
-        if _float_type == 'FT_Start':
+        if _start_float_type:
             node['tf'] = node['tf_start']
         elif _float_type == 'FT_Min':
             node['tf'] = min(node['tf_start'], node['tf_finish'])
@@ -5043,7 +5056,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             n['_ms_disp'], n['_ms_open'] = n['ef_instant'], False
         n['tf_finish'] = _round_half_up_to(n['lf'] - n['ef'], 3)
         n['tf_start'] = _round_half_up_to(n['ls'] - _start_float_from(n), 3)
-        if _float_type == 'FT_Start':
+        if _start_float_type:
             n['tf'] = n['tf_start']
         elif _float_type == 'FT_Min':
             n['tf'] = min(n['tf_start'], n['tf_finish'])
@@ -5166,7 +5179,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             n['tf_finish_working_days'] = _count_float_days(n['ef'], n['lf'], n_cal)
             n['tf_start_working_days'] = _count_float_days(
                 _start_float_from(n), n['ls'], n_cal)
-            if _float_type == 'FT_Start':
+            if _start_float_type:
                 n['tf_working_days'] = n['tf_start_working_days']
             elif _float_type == 'FT_Min':
                 n['tf_working_days'] = min(n['tf_start_working_days'],

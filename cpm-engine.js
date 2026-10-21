@@ -3565,18 +3565,21 @@ function computeCPMHours(activities, relationships, o) {
             // A1160; H11-02, H11-03, H11-10). Under retained logic work under way
             // keeps its own late start (ZZ-CPP-RDTR T1-T11; H11-07 A1260), as
             // does work not started under "Smallest" (T9; H9-01 A1060).
-            // ET (rounds 17-18, 20-Oct-2026): not under "Start Float" where
-            // "Calculate multiple float paths" ends at an activity set in P6:
-            // there start float runs to the late start the assignments set, on
-            // every activity, whether it leads into that one or not, on either
-            // basis of the paths (ZZ-CPP-QA5, RA1, RA2, RA4B against QA1-QA4,
-            // QA7; H28-07). Under "Smallest" RT stands (RA3)
-            const etAside = floatType === 'FT_Start' && multipleFloatPaths && floatPathLead !== null;
-            if (n.asg.length && !etAside && (floatType === 'FT_Start' || (n.started && po))) {
+            // FT (round 21, 21-Oct-2026): not under FT_SS, the code P6's own
+            // Schedule Options dialog writes for "Start Float": there start
+            // float runs to the late start the assignments set, on work not
+            // started and on work under way, under progress override and under
+            // retained logic (ZZ-CPP-FA2, FA5; QA5, RA1, RA2, RA4B). It replaces
+            // ET (rounds 17-18), which took those four and H28-07 for an effect
+            // of the end of the float paths set in P6: their options held FT_SS
+            // once saved there, and an end set with FT_FF or "Smallest" changes
+            // no float definition (round 14's KH1-KH5, round 19, RA3)
+            if (n.asg.length && floatType !== 'FT_SS' && (floatType === 'FT_Start' || (n.started && po))) {
                 tfSta = n.ar_rem !== undefined
                     ? cal.between(n.at_from !== undefined ? n.at_from : rEs, cal.sub(n.lf, n.ar_rem)) : tfFin;
             }
-            tf = floatType === 'FT_Start' ? tfSta : (floatType === 'FT_Min' ? Math.min(tfFin, tfSta) : tfFin);
+            tf = (floatType === 'FT_Start' || floatType === 'FT_SS')
+                ? tfSta : (floatType === 'FT_Min' ? Math.min(tfFin, tfSta) : tfFin);
             const cands = [];
             for (const r of succs.get(c)) {
                 const s = nodes.get(r.to_code);
@@ -4618,28 +4621,43 @@ function computeCPM(activities, relationships, opts) {
     let _floatType = opts.floatType || opts.float_type ||
                      opts.schedFloatType || opts.sched_float_type || 'FT_FF';
     _floatType = String(_floatType).trim();
+    // FT (P6 probe round 21, 21-Oct-2026): P6 23.12.1 keeps sched_float_type
+    // as the file gives it and schedules three behaviours. FT_FF is finish
+    // float. FT_Start is start float with RT and AT (computeCPMHours), and
+    // FT_Total is read the same way. FT_SS, the code P6's own Schedule Options
+    // dialog writes for "Start Float" (over an imported FT_Start too, when the
+    // options are saved), is start float from early start to late start, with
+    // neither (ZZ-CPP-FA1 to FA6: F's total float 134 / 124 h under FT_Total,
+    // as under FT_Start; 132 / 112 h under FT_SS, as under FT_FF there). Until
+    // the next release FT_SS and FT_Total raised the ALERT below and took the
+    // finish definition.
     const _FLOAT_TYPE_ALIASES = {
         'finish': 'FT_FF', 'FT_Finish': 'FT_FF',
-        'start': 'FT_Start', 'FT_start': 'FT_Start',
+        'start': 'FT_Start', 'FT_start': 'FT_Start', 'FT_Total': 'FT_Start',
         'min': 'FT_Min', 'FT_min': 'FT_Min', 'smallest': 'FT_Min',
     };
     if (Object.prototype.hasOwnProperty.call(_FLOAT_TYPE_ALIASES, _floatType)) {
         _floatType = _FLOAT_TYPE_ALIASES[_floatType];
     }
-    if (_floatType !== 'FT_FF' && _floatType !== 'FT_Start' && _floatType !== 'FT_Min') {
+    if (_floatType !== 'FT_FF' && _floatType !== 'FT_Start' && _floatType !== 'FT_Min' && _floatType !== 'FT_SS') {
         alerts.push({
             severity: 'ALERT',
             context: 'float-type-unsupported',
             message: 'sched_float_type=' + JSON.stringify(_floatType) +
                 ' is not one of the implemented definitions (FT_FF = finish ' +
-                'float LF-EF, P6 default; FT_Start = start float LS-ES; ' +
-                'FT_Min = smallest of the two). Total float was computed on ' +
+                'float LF-EF, P6 default; FT_Start and FT_Total = start float ' +
+                'LS-ES as P6 reads an imported code; FT_SS = start float as ' +
+                "P6's Schedule Options dialog stores it; FT_Min = smallest of " +
+                'start and finish float). Total float was computed on ' +
                 'the FINISH definition. Disclosed, not substituted silently — ' +
                 'read SCHEDOPTIONS.sched_float_type from the source XER and ' +
-                'pass it through if it is one of the three.',
+                'pass it through if it is one of these.',
         });
         _floatType = 'FT_FF';
     }
+    // the day-based passes have one start float; RT and AT, which FT_SS sets
+    // aside, live in the hours pass
+    const _startFloatType = _floatType === 'FT_Start' || _floatType === 'FT_SS';
 
     // SSL (P6 parity 2026-09-23) — SCHEDOPTIONS.sched_lag_early_start_flag,
     // P6's "Calculate start-to-start lag from": 'early_start' (flag Y, P6's
@@ -6866,7 +6884,7 @@ function computeCPM(activities, relationships, opts) {
         // SR (v2.9.55) — start float of work under way runs from the restart.
         node.tf_finish = _roundHalfUpTo(node.lf - node.ef, 3);
         node.tf_start = _roundHalfUpTo(node.ls - _startFloatFrom(node), 3);
-        node.tf = (_floatType === 'FT_Start')
+        node.tf = _startFloatType
             ? node.tf_start
             : (_floatType === 'FT_Min')
                 ? Math.min(node.tf_start, node.tf_finish)
@@ -7035,7 +7053,7 @@ function computeCPM(activities, relationships, opts) {
         }
         n.tf_finish = _roundHalfUpTo(n.lf - n.ef, 3);
         n.tf_start = _roundHalfUpTo(n.ls - _startFloatFrom(n), 3);
-        n.tf = (_floatType === 'FT_Start')
+        n.tf = _startFloatType
             ? n.tf_start
             : (_floatType === 'FT_Min')
                 ? Math.min(n.tf_start, n.tf_finish)
@@ -7158,7 +7176,7 @@ function computeCPM(activities, relationships, opts) {
         n.tf_start_working_days = n.is_complete ? 0 : _countWorkDaysBetween(_startFloatFrom(n), n.ls, nCal);
         n.tf_working_days = n.is_complete
             ? 0
-            : ((_floatType === 'FT_Start')
+            : (_startFloatType
                 ? n.tf_start_working_days
                 : (_floatType === 'FT_Min')
                     ? Math.min(n.tf_start_working_days, n.tf_finish_working_days)
@@ -11946,17 +11964,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '228 cross-validation fixtures. The harness defines 21644 ' +
+                '231 cross-validation fixtures. The harness defines 21875 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 21644 / 21644" is the whole comparison surface. ' +
+                'reported "Checks: 21875 / 21875" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 21644 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 21875 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 226 of the 228 fixtures: ' +
+                'severity-level alert parity, compared on 229 of the 231 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -11995,18 +12013,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '21644 comparisons it defines over 228 fixtures and skips none; every ' +
+                '21875 comparisons it defines over 231 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '228 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '231 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 21644 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 21875 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 226 of the 228 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 229 of the 231 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

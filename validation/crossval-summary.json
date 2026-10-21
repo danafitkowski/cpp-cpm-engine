@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.13",
-  "generated_utc": "2026-10-20T12:01:57.837Z",
+  "generated_utc": "2026-10-21T11:25:54.412Z",
   "fixtures": {
-    "total": 228,
-    "passed": 228,
+    "total": 231,
+    "passed": 231,
     "failed": 0
   },
   "checks": {
-    "executed": 21644,
+    "executed": 21875,
     "failed": 0,
-    "passed": 21644,
+    "passed": 21875,
     "skipped": 0,
-    "surface": 21644
+    "surface": 21875
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 226,
-    "project_finish": 226,
-    "critical_codes": 226,
-    "topo_order": 226,
-    "alert_count": 226,
-    "alert_severity_counts": 226,
-    "node <id>": 20211,
+    "project_finish_num": 229,
+    "project_finish": 229,
+    "critical_codes": 229,
+    "topo_order": 229,
+    "alert_count": 229,
+    "alert_severity_counts": 229,
+    "node <id>": 20421,
     "threw (both engines)": 2,
-    "hours": 75
+    "hours": 78
   },
   "rows": [
     {
@@ -1832,7 +1832,7 @@
     },
     {
       "id": "F230",
-      "name": "F230 - ET: \"Start Float\" with the float paths ending at FIN, in hours",
+      "name": "F230 - FT: FT_Start with the float paths ending at FIN, where RT stands, in hours",
       "checks": 77,
       "fails": 0,
       "skips": 0,
@@ -1840,7 +1840,7 @@
     },
     {
       "id": "F231",
-      "name": "F231 - ET: F230 with the paths ending at E2, a branch R and U do not lead into",
+      "name": "F231 - FT: F230 with the paths ending at E2, a branch R and U do not lead into",
       "checks": 77,
       "fails": 0,
       "skips": 0,
@@ -1848,7 +1848,31 @@
     },
     {
       "id": "F232",
-      "name": "F232 - ET: F230 under \"Smallest\", where RT stands",
+      "name": "F232 - FT: F230 under \"Smallest\", where RT stands",
+      "checks": 77,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F233",
+      "name": "F233 - FT: F230 under FT_SS, the code the P6 dialog writes for \"Start Float\", where RT is set aside",
+      "checks": 77,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F234",
+      "name": "F234 - FT: FT_SS under retained logic, no end and no multiple float paths",
+      "checks": 77,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F235",
+      "name": "F235 - FT: F230 written FT_Total with no end, read as FT_Start",
       "checks": 77,
       "fails": 0,
       "skips": 0,

@@ -25,6 +25,14 @@
 // 7 and 11 to 13, 20-Oct-2026), so the case file's key can name an activity P6 does not hold: the key is set to the
 // case file's task id of the activity P6 holds, or emptied, and r.float_path_end says which (rule FK). A record
 // without float_path_end leaves the key as it is.
+//
+// The float type is laid as P6 held it too. P6 keeps an imported sched_float_type as written, but its Schedule Options
+// dialog writes FT_SS for "Start Float" when the options are saved there, over an imported FT_Start too, and P6
+// schedules FT_SS apart from FT_Start (P6 probe round 21, 21-Oct-2026; rule FT). From H30 on the record holds
+// sched_float_type, P6's stored code; an earlier record names it among its differences where it is not the case
+// file's ("SCHEDOPTIONS sched_float_type: xer 'FT_Start' p6 'FT_SS'": the probes and held-out cases whose end of the
+// float paths was set in P6). SCHEDOPTIONS sched_float_type is set to that code, and r.sched_float_type says which; a
+// record with neither leaves it as it is.
 // Nothing else changes, byte for byte.
 'use strict';
 
@@ -157,9 +165,25 @@ function overlay(text, imported) {
             set('SCHEDOPTIONS', so[0], { key_activity_for_multiple_longest_paths: id }, 'SCHEDOPTIONS', (v) => v);
         }
     }
+    // the float type, as P6 held it (rule FT)
+    let ft = null;
+    if (typeof imported.sched_float_type === 'string' && imported.sched_float_type) {
+        ft = imported.sched_float_type;
+    } else {
+        for (const x of imported.differences || []) {
+            const m = /^SCHEDOPTIONS sched_float_type: xer '[A-Za-z_]*' p6 '([A-Za-z_]+)'$/.exec(x);
+            if (m) ft = m[1];
+        }
+    }
+    if (ft !== null) {
+        const so = rows.SCHEDOPTIONS || [];
+        if (so.length !== 1) throw new Error('p6-imported: the case file has ' + so.length + ' SCHEDOPTIONS rows, not 1');
+        set('SCHEDOPTIONS', so[0], { sched_float_type: ft }, 'SCHEDOPTIONS', (v) => v);
+    }
     const out = { text: lines.filter((l, i) => !drop.has(i)).join('\r\n'), tasks, assignments };
     if (dropped) out.dropped = dropped;
     if (end !== undefined) out.float_path_end = end;
+    if (ft !== null) out.sched_float_type = ft;
     return out;
 }
 

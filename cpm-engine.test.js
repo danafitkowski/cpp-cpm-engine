@@ -9817,11 +9817,24 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
         mn.nodes.A.tf === Math.min(mn.nodes.A.tf_start, mn.nodes.A.tf_finish));
     check('V2942-8: the manifest declares which float definition produced tf',
         ff.manifest.float_type === 'FT_FF' && st.manifest.float_type === 'FT_Start');
-    const bad = E.computeCPM(acts, rels, Object.assign({}, base, { floatType: 'FT_Total' }));
+    const bad = E.computeCPM(acts, rels, Object.assign({}, base, { floatType: 'FT_Unknown' }));
     check('V2942-8: an unimplemented float type is disclosed, not silently substituted',
         bad.alerts.some(a => a.context === 'float-type-unsupported') &&
         bad.nodes.A.tf === bad.nodes.A.tf_finish,
         JSON.stringify(bad.alerts.map(a => a.context)));
+    // FT (P6 probe round 21, 21-Oct-2026): FT_Total is read as FT_Start, and
+    // FT_SS, the code P6's own Schedule Options dialog writes for "Start
+    // Float", is start float; neither is disclosed as unsupported
+    const tot = E.computeCPM(acts, rels, Object.assign({}, base, { floatType: 'FT_Total' }));
+    const ss = E.computeCPM(acts, rels, Object.assign({}, base, { floatType: 'FT_SS' }));
+    check('FT: FT_Total is read as FT_Start',
+        tot.nodes.A.tf === tot.nodes.A.tf_start && tot.manifest.float_type === 'FT_Start' &&
+        !tot.alerts.some(a => a.context === 'float-type-unsupported'),
+        'tf ' + tot.nodes.A.tf + ' ' + tot.manifest.float_type);
+    check('FT: FT_SS reports start float under its own code',
+        ss.nodes.A.tf === ss.nodes.A.tf_start && ss.nodes.A.tf !== ss.nodes.A.tf_finish &&
+        ss.manifest.float_type === 'FT_SS' && !ss.alerts.some(a => a.context === 'float-type-unsupported'),
+        'tf ' + ss.nodes.A.tf + ' ' + ss.manifest.float_type);
 }
 
 // ---------------------------------------------------------------------------

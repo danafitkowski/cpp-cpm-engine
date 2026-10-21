@@ -1,0 +1,31 @@
+{
+ "case": "ZZ-CPP-LG6",
+ "proj_id": 5632,
+ "differences": [],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "resource_dependent": {
+  "tasks": {
+   "F": {
+    "remain_drtn_hr_cnt": 4.0,
+    "target_drtn_hr_cnt": 4.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "F",
+    "rsrc_short_name": "ZZ-CPP-LG6-MS8",
+    "remain_qty": 2.0,
+    "target_qty": 2.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 2.0,
+    "relag_drtn_hr_cnt": 2.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-01 10:00",
+    "reend_date": "2027-03-01 12:00"
+   }
+  ]
+ }
+}

@@ -4416,29 +4416,46 @@ compareFixture('F229 - MW and LR: finish floors compared by start and the late p
     activities: mwActs(hA), relationships: mwRels(hR), data_date: '2026-12-03 17:00', cal_map: R17CAL,
     project_calendar: 'AW', relationship_lag_calendar: 'rcal_Predecessor', schedule_mode: 'progress_override',
 }, { hours: true });
-// ET: under "Start Float" with the float paths ending at an activity set in P6, start float on resource dependent work
-// not started and under way runs to the late start its assignments set, on work that leads into the end and on work
-// that does not
+// FT (round 21): the float type decides start float, not the end of the float paths set in P6. Under FT_Start RT
+// stands with the paths ending at an activity, as under "Smallest". Under FT_SS, the code P6's own Schedule Options
+// dialog writes for "Start Float", start float on resource dependent work not started and under way runs to the late
+// start its assignments set, with or without an end and multiple float paths, under either schedule mode; FT_Total is
+// read as FT_Start (F230-F232 tested ET, which FT replaces, on these inputs)
 const etActs = (A) => [A('L', 184, { clndr_id: 'W' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'W' }),
     A('A', 8, { clndr_id: 'W' }), A('X1', 8, { clndr_id: 'W' }), A('E2', 0, { task_type: 'TT_FinMile', clndr_id: 'W' }),
     A('R', 14, { clndr_id: 'W', task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('MT8', 14)] }),
     A('U', 16, { clndr_id: 'W', task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('MT8', 16)],
         actual_start: '2026-12-07 08:00', remaining_duration: 2 })];
 const etRels = (R) => [R('L', 'FIN'), R('A', 'R'), R('R', 'FIN'), R('U', 'FIN'), R('X1', 'E2'), R('E2', 'FIN')];
-compareFixture('F230 - ET: "Start Float" with the float paths ending at FIN, in hours', {
+compareFixture('F230 - FT: FT_Start with the float paths ending at FIN, where RT stands, in hours', {
     activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
     project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Start',
     schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'FIN',
 }, { hours: true });
-compareFixture('F231 - ET: F230 with the paths ending at E2, a branch R and U do not lead into', {
+compareFixture('F231 - FT: F230 with the paths ending at E2, a branch R and U do not lead into', {
     activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
     project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Start',
     schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'E2',
 }, { hours: true });
-compareFixture('F232 - ET: F230 under "Smallest", where RT stands', {
+compareFixture('F232 - FT: F230 under "Smallest", where RT stands', {
     activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
     project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Min',
     schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'FIN',
+}, { hours: true });
+compareFixture('F233 - FT: F230 under FT_SS, the code the P6 dialog writes for "Start Float", where RT is set aside', {
+    activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_SS',
+    schedule_mode: 'progress_override', multiple_float_paths: true, float_path_end: 'FIN',
+}, { hours: true });
+compareFixture('F234 - FT: FT_SS under retained logic, no end and no multiple float paths', {
+    activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_SS',
+    schedule_mode: 'retained_logic',
+}, { hours: true });
+compareFixture('F235 - FT: F230 written FT_Total with no end, read as FT_Start', {
+    activities: etActs(hA), relationships: etRels(hR), data_date: '2026-12-09 08:00', cal_map: R17CAL,
+    project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Total',
+    schedule_mode: 'progress_override', multiple_float_paths: true,
 }, { hours: true });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');

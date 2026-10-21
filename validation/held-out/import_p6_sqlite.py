@@ -235,8 +235,12 @@ def main():
     # P6 schedules the assignment for the working hours between them (rule ZW, P6 probe ZZ-CPP-ZWA, 19-Oct-2026;
     # recorded from H25 on)
     minute = lambda v: (raw(v) or '')[:16] or None
+    # the float type P6 holds: its Schedule Options dialog writes FT_SS for "Start Float" when the options are saved
+    # there, over an imported FT_Start too, and P6 schedules FT_SS apart from FT_Start (P6 probe round 21,
+    # 21-Oct-2026; rule FT); p6_imported_overlay.js lays it over the case (recorded from H30 on)
     out = {'case': short, 'proj_id': pid, 'differences': diffs,
            'float_path_end': pend, 'float_path_end_stored': pkey,
+           'sched_float_type': (pso.get('sched_float_type') or '').strip() or None,
            'resource_dependent': {
                'tasks': {c: {f: raw(pt[c][f]) for f in ('remain_drtn_hr_cnt', 'target_drtn_hr_cnt')} for c in sorted(rd)},
                'assignments': [dict({'task_code': k[0], 'rsrc_short_name': k[1]},
