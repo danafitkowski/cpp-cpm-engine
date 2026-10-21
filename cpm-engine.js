@@ -3353,6 +3353,37 @@ function computeCPMHours(activities, relationships, o) {
                 } else if (cs.type === 'MS_Start') {
                     const s0 = cal.nextWork(cs.at);
                     pin = [s0, cal.add(s0, n.rem)];
+                    // MO (round 22, 21-Oct-2026): resource dependent work whose
+                    // resources have the Mandatory Start's day off as a holiday
+                    // runs, on the late side, from each resource's opening on
+                    // its last working day before, and the pin finishes where
+                    // that work does, whatever the second constraint
+                    // (ZZ-CPP-LC1, LC2, LC5, LC6 against LC3, LC4; H29-05
+                    // A1710). Not where the day is off in the resources' week
+                    // and an expected finish is in force: there the pin stands
+                    // (ZZ-CPP-MXR X1, X3, P6 probe round 9). Which of the two
+                    // sets it aside is not yet measured, so MO takes neither
+                    const md = Math.floor(cs.at / _HR_DAY);
+                    const work = n.asg.filter((g) => g.rem > 0);
+                    const weekWorks = (g) => {
+                        const dow = new Date(_HR_EPOCH_MS + md * 86400000).getUTCDay();
+                        return g.cal.week !== null ? !!(g.cal.week[dow] && g.cal.week[dow].length)
+                            : g.cal.workDays.has(dow);
+                    };
+                    if (work.length && n.xf === null &&
+                            work.every((g) => g.cal.slots(md).length === 0 && weekWorks(g))) {
+                        let lo = null;
+                        let hi = null;
+                        for (const g of work) {
+                            let d = md - 1;
+                            for (let i = 0; i < _HR_SEARCH_DAYS && g.cal.slots(d).length === 0; i++) d--;
+                            const s = d * _HR_DAY + g.cal.slots(d)[0][0];
+                            const f = g.cal.add(g.lag ? g.cal.add(s, g.lag) : s, g.rem);
+                            if (lo === null || s < lo) lo = s;
+                            if (hi === null || f > hi) hi = f;
+                        }
+                        pin = [lo, hi];
+                    }
                 } else {
                     const f0 = cal.prevWorkEnd(cs.at);
                     pin = [cal.sub(f0, n.rem), f0];
@@ -3483,7 +3514,8 @@ function computeCPMHours(activities, relationships, o) {
             // pass (ZZ-CPP-QF1, QF3, QF4, RF1, RF2 against QF2; H28-12 A1080)
             let [ne, nf] = _hrRsrcBackward(n.asg, cal, efB, null);
             let ar = false;
-            if (!n.asg.some((g) => g.rem > 0)) {
+            const noWork = !n.asg.some((g) => g.rem > 0);
+            if (noWork) {
                 [ne, nf] = _hrRsrcForward(n.asg, cal, efB, null, null);
             } else if (lsB !== null && cal.between(ne, lsB) > 0) {
                 // AW (rounds 17-18, 20-Oct-2026), in place of AR: where that
@@ -3514,9 +3546,13 @@ function computeCPMHours(activities, relationships, o) {
             // AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
             // working time moves on to its next opening, as RU has it, and the
             // assignments run from there, past the bound if they must
-            // (ZZ-CPP-ARU A1, A5 against A4; H23-05 A1060)
+            // (ZZ-CPP-ARU A1, A5 against A4; H23-05 A1060). Not work with no
+            // work left: AZ keeps it at its resources' opening, on a day the
+            // activity calendar has off or before that calendar opens (round
+            // 22, 21-Oct-2026: ZZ-CPP-ZB1, ZB2, ZB4 against ZB3, ZB5; H29-06
+            // A1700, H29-12 A1560)
             const rs = cal.nextWork(ne);
-            if (rs !== ne) [ne, nf] = _hrRsrcForward(n.asg, cal, rs, null, null);
+            if (rs !== ne && !noWork) [ne, nf] = _hrRsrcForward(n.asg, cal, rs, null, null);
             if (ne > cur) {
                 if (n.started) n.restart = ne; else n.es = ne;
                 n.ef = nf;
@@ -11964,17 +12000,17 @@ function buildDaubertDisclosure(result, opts) {
         prong_1_tested: {
             answer: 'Yes',
             evidence: 'Engine validated against Python compute_cpm reference implementation: ' +
-                '231 cross-validation fixtures. The harness defines 21875 ' +
+                '233 cross-validation fixtures. The harness defines 22149 ' +
                 'comparisons and executes all of them: since v2.10.1 both ' +
                 'implementations emit every compared field on every activity, the ' +
                 'signed free-float pair on completed activities included, so the ' +
-                'reported "Checks: 21875 / 21875" is the whole comparison surface. ' +
+                'reported "Checks: 22149 / 22149" is the whole comparison surface. ' +
                 'The 58 one-sided skips disclosed through v2.9.41 closed when the ' +
                 'Python reference began assigning ff_signed_working_days on the ' +
                 'has-successors branch; the 100 mutual skips on completed activities ' +
-                'disclosed through v2.10.0 closed in v2.10.1. All 21875 comparisons ' +
+                'disclosed through v2.10.0 closed in v2.10.1. All 22149 comparisons ' +
                 'are bit-identical (including ' +
-                'severity-level alert parity, compared on 229 of the 231 fixtures: ' +
+                'severity-level alert parity, compared on 231 of the 233 fixtures: ' +
                 'the other 2 are required to throw and have no output). ' +
                 'Real XER (282 activities) 0 mismatches ' +
                 '(single non-public reference XER, kept locally, not committed and not ' +
@@ -12013,18 +12049,18 @@ function buildDaubertDisclosure(result, opts) {
         prong_3_error_rate: {
             answer: 'Computational error rate: zero on every comparison the validation ' +
                 'suite defines. Coverage: the cross-validation harness executes all ' +
-                '21875 comparisons it defines over 231 fixtures and skips none; every ' +
+                '22149 comparisons it defines over 233 fixtures and skips none; every ' +
                 'ES/EF/LS/LF/TF, date, float-in-working-days, free-float and hours-pass ' +
                 'comparison is executed, on every activity comparison group. Epistemic ' +
                 '(analyst-judgment) error: not characterized by the engine and not zero.',
             evidence: 'COMPUTATIONAL error rate (engine math, not analyst inputs): engine ' +
                 'produces bit-identical output to the Python reference implementation on ' +
-                '231 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
+                '233 fixtures + 282-activity real XER (0 mismatches; that XER is a ' +
                 'single non-public reference file, not committed to this repository ' +
                 'and not independently reproducible from it). The harness executed ' +
-                'all 21875 comparisons it defines with 0 mismatches. Not compared: node ' +
+                'all 22149 comparisons it defines with 0 mismatches. Not compared: node ' +
                 'output on the 2 fixtures where both engines are required to throw. ' +
-                'Alert parity runs on 229 of the 231 fixtures. Through v2.10.0 it did not run on ' +
+                'Alert parity runs on 231 of the 233 fixtures. Through v2.10.0 it did not run on ' +
                 'ten of them (F65, F67, F96, F99, F101, F102, F126, F127, F129, F131), ' +
                 'where the JS engine alone emitted its future-actual-finish ALERT or its ' +
                 'notice that the day pass rounds a fractional lag or duration; the Python ' +

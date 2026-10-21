@@ -202,7 +202,7 @@ have been applied:
 ```
 cpm.py          SHA-256:  300f75489fdcc150aa4efa649cd1286e465ce7b6930dc74fb30bd138c9c52f4e
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  7ca3e494f2e3d72289993b696546b7227d5f10cbc444d957ed72228c8fa22452
+cpm_hours.py    SHA-256:  9da0a93029786a87b1a4ba4bea08581f8368757e74a7a31a4491e4ba8d1306aa
 
 (v2.10.13 candidate, unreleased, 2026-10-20 - cpm.py bumped from b06d14f3...:
 ENGINE_VERSION reads 2.10.13. compute_cpm takes float_path_end, the
@@ -236,8 +236,14 @@ as FT_Start, and FT_SS, the code P6's own Schedule Options dialog writes
 for "Start Float", is start float from early start to late start with
 RT and AT set aside (FT). FT replaces ET, which had set RT aside where
 the paths end at an activity set in P6: the probes it was taken on held
-FT_SS once their options were saved there. The harness gains 24
-fixtures (F212-F235): 231 fixtures, 21875 of 21875 executed.)
+FT_SS once their options were saved there. After P6 probe round 22
+(validation/p6-probes/round22-2026-10-21), cpm_hours.py leaves work with
+no work left at its resources' opening, where AV had run it on to the
+activity calendar's next opening (AZ), and runs resource dependent work
+whose resources have the Mandatory Start's day off as a holiday from
+their opening on their last working day before, on the late side (MO).
+The harness gains 26 fixtures (F212-F237): 233 fixtures, 22149 of 22149
+executed.)
 
 (v2.10.12 candidate, unreleased, 2026-10-18 - cpm.py bumped from a6bdc8dd...:
 ENGINE_VERSION reads 2.10.12. Under "Use Expected Finish Dates" an
@@ -915,8 +921,8 @@ Python reference: <repo>/python_reference/cpm.py
   PASS  project_finish
   ...
 =========================================
-  Fixtures: 231 passed, 0 failed
-  Checks:   21875 / 21875 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
+  Fixtures: 233 passed, 0 failed
+  Checks:   22149 / 22149 comparisons executed (the denominator is checks run, not the full field surface: a guarded field is skipped and not counted when either engine does not emit it, and the free-float guards on ff, ff_working_days, ff_signed and ff_signed_working_days also skip when either side is null)
 =========================================
 ```
 

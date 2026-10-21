@@ -4457,6 +4457,36 @@ compareFixture('F235 - FT: F230 written FT_Total with no end, read as FT_Start',
     project_calendar: 'W', relationship_lag_calendar: 'rcal_Predecessor', float_type: 'FT_Total',
     schedule_mode: 'progress_override', multiple_float_paths: true,
 }, { hours: true });
+// Round 22: AZ left at its resources' opening, where AV would have run it on to the activity calendar's next opening
+// (Y1 start-to-start and Y2 finish-to-start on a calendar off Mon 14-Dec, Y3 on a calendar opening at 09:00, Y4 with
+// work left); MO, a Mandatory Start on a day the resource has off, run from the resource's last working day before
+// (O1 with a Finish On or Before second, O2 alone, O3 the resource off the day before instead)
+const R22CAL = Object.assign({}, R17CAL, {
+    D24M: Object.assign({}, ARCAL.D24, { holidays: ['2026-12-14'] }), D9: rawCal(EVERYDAY, [['09:00', '17:00']]),
+    RXT: Object.assign({}, ARCAL.AX, { holidays: ['2026-12-15'] }),
+});
+const r22Acts = (A) => [A('L', 400, { clndr_id: 'D24' }), A('FIN', 0, { task_type: 'TT_FinMile', clndr_id: 'D24' })].concat(
+    ...[['Y1', 'D24M', 0, 'D24', ['13', '00:00']], ['Y2', 'D24M', 0, 'E', ['12', '06:00']],
+        ['Y3', 'D9', 0, 'D24', ['13', '00:00']], ['Y4', 'D24M', 8, 'D24', ['13', '00:00']]].map(([k, ac, h, sc, held]) => [
+        A(k, h, { clndr_id: ac, task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('MT8', h)],
+            constraint: { type: 'CS_ALAP' } }),
+        A('S' + k, 4, { clndr_id: sc, constraint: { type: 'CS_MSOA', date: slD(held[0], held[1]) } })]),
+    ...[['O1', 'RXH', '14', { type: 'CS_MEOB', date: slD('19', '16:00') }], ['O2', 'RXH', '14', null],
+        ['O3', 'RXT', '16', { type: 'CS_MEOB', date: slD('19', '16:00') }]].map(([k, rc, ms, c2]) =>
+        A(k, 24, Object.assign({ clndr_id: 'S6', task_type: 'TT_Rsrc', resource_assignments: 1,
+            assignments: [zrAsg(rc, 13.5)], constraint: { type: 'CS_MANDSTART', date: slD(ms, '08:00') } },
+        c2 ? { constraint2: c2 } : {}))));
+const r22Rels = (R) => [R('L', 'FIN'), R('O1', 'FIN'), R('O2', 'FIN'), R('O3', 'FIN')].concat(
+    ...[['Y1', 'SS'], ['Y2', 'FS'], ['Y3', 'SS'], ['Y4', 'SS']].map(([k, t]) => [R(k, 'S' + k, t), R(k, 'FIN'),
+        R('S' + k, 'FIN')]));
+compareFixture('F236 - AZ and MO: work with no work left kept at its resource\'s opening; a Mandatory Start on the resource\'s day off, in hours', {
+    activities: r22Acts(hA), relationships: r22Rels(hR), data_date: '2026-12-07 08:00', cal_map: R22CAL,
+    project_calendar: 'D24', relationship_lag_calendar: 'rcal_Predecessor',
+}, { hours: true });
+compareFixture('F237 - MO: F236 under "Start Float" and lags on 24 hours', {
+    activities: r22Acts(hA), relationships: r22Rels(hR), data_date: '2026-12-07 08:00', cal_map: R22CAL,
+    project_calendar: 'D24', relationship_lag_calendar: 'rcal_24Hour', float_type: 'FT_Start',
+}, { hours: true });
 
 console.log('  Fixtures: ' + fixturesPassed + ' passed, ' + fixturesFailed + ' failed');
 console.log('  Checks:   ' + (totalChecks - totalFails) + ' / ' + totalChecks +

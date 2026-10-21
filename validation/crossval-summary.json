@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.13",
-  "generated_utc": "2026-10-21T11:25:54.412Z",
+  "generated_utc": "2026-10-21T12:42:52.561Z",
   "fixtures": {
-    "total": 231,
-    "passed": 231,
+    "total": 233,
+    "passed": 233,
     "failed": 0
   },
   "checks": {
-    "executed": 21875,
+    "executed": 22149,
     "failed": 0,
-    "passed": 21875,
+    "passed": 22149,
     "skipped": 0,
-    "surface": 21875
+    "surface": 22149
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -19,15 +19,15 @@
     "mutual": 0
   },
   "checks_by_field": {
-    "project_finish_num": 229,
-    "project_finish": 229,
-    "critical_codes": 229,
-    "topo_order": 229,
-    "alert_count": 229,
-    "alert_severity_counts": 229,
-    "node <id>": 20421,
+    "project_finish_num": 231,
+    "project_finish": 231,
+    "critical_codes": 231,
+    "topo_order": 231,
+    "alert_count": 231,
+    "alert_severity_counts": 231,
+    "node <id>": 20681,
     "threw (both engines)": 2,
-    "hours": 78
+    "hours": 80
   },
   "rows": [
     {
@@ -1874,6 +1874,22 @@
       "id": "F235",
       "name": "F235 - FT: F230 written FT_Total with no end, read as FT_Start",
       "checks": 77,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F236",
+      "name": "F236 - AZ and MO: work with no work left kept at its resource's opening; a Mandatory Start on the resource's day off, in hours",
+      "checks": 137,
+      "fails": 0,
+      "skips": 0,
+      "skips_by_field": {}
+    },
+    {
+      "id": "F237",
+      "name": "F237 - MO: F236 under \"Start Float\" and lags on 24 hours",
+      "checks": 137,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

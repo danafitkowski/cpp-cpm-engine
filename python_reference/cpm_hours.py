@@ -20,6 +20,7 @@ Output: {code: {es, ef, ls, lf (instants), restart, tf_minutes, ff_minutes, tf_s
         ff_signed_minutes, status}} plus 'project_finish'.
 """
 from collections import defaultdict, deque
+from datetime import date
 
 import cpm_minutes as cm
 
@@ -1022,6 +1023,33 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 elif cs['type'] == 'MS_Start':
                     s0 = cal.next_work(cs['at'])
                     pin = (s0, cal.add(s0, n['rem']))
+                    # MO (round 22, 21-Oct-2026): resource dependent work whose resources have the Mandatory Start's
+                    # day off as a holiday runs, on the late side, from each resource's opening on its last working
+                    # day before, and the pin finishes where that work does, whatever the second constraint
+                    # (ZZ-CPP-LC1, LC2, LC5, LC6 against LC3, LC4; H29-05 A1710). Not where the day is off in the
+                    # resources' week and an expected finish is in force: there the pin stands (ZZ-CPP-MXR X1, X3,
+                    # P6 probe round 9). Which of the two sets it aside is not yet measured, so MO takes neither.
+                    # JS paired site: the MS_Start pin in computeCPMHours
+                    md = cs['at'] // cm.DAY
+                    work = [g for g in n['asg'] if g['rem'] > 0]
+                    dow = (date.fromordinal(md + cm.EPOCH_ORD).weekday() + 1) % 7
+
+                    def week_works(g):
+                        gc = g['cal']
+                        return bool(gc.week[dow]) if gc.week is not None else dow in gc.work_days
+                    if work and n['xf'] is None and all(not g['cal'].slots(md) and week_works(g) for g in work):
+                        lo = hi = None
+                        for g in work:
+                            d = md - 1
+                            for _ in range(cm._SEARCH_DAYS):
+                                if g['cal'].slots(d):
+                                    break
+                                d -= 1
+                            s = d * cm.DAY + g['cal'].slots(d)[0][0]
+                            f = g['cal'].add(g['cal'].add(s, g['lag']) if g.get('lag') else s, g['rem'])
+                            lo = s if lo is None or s < lo else lo
+                            hi = f if hi is None or f > hi else hi
+                        pin = (lo, hi)
                 else:
                     f0 = cal.prev_work_end(cs['at'])
                     pin = (cal.sub(f0, n['rem']), f0)
@@ -1163,7 +1191,8 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # H28-09 A1580). JS paired site: the ALAP block of computeCPMHours
             new_es, new_ef, _ = _rsrc_backward(n['asg'], cal, ef_b, None)
             ar = False
-            if not any(g['rem'] > 0 for g in n['asg']):
+            no_work = not any(g['rem'] > 0 for g in n['asg'])
+            if no_work:
                 new_es, new_ef = _rsrc_forward(n['asg'], cal, ef_b, None, None)
             elif ls_b is not None and cal.between(new_es, ls_b) > 0:
                 span = max(cal.between(new_es, new_ef), n['rem_in'])
@@ -1181,9 +1210,13 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
             # AV (H23, 19-Oct-2026): a slid restart off the activity calendar's
             # working time moves on to its next opening, as RU has it, and the
             # assignments run from there, past the bound if they must
-            # (ZZ-CPP-ARU A1, A5 against A4; H23-05 A1060)
+            # (ZZ-CPP-ARU A1, A5 against A4; H23-05 A1060). Not work with no
+            # work left: AZ keeps it at its resources' opening, on a day the
+            # activity calendar has off or before that calendar opens (round
+            # 22, 21-Oct-2026: ZZ-CPP-ZB1, ZB2, ZB4 against ZB3, ZB5; H29-06
+            # A1700, H29-12 A1560)
             rs = cal.next_work(new_es)
-            if rs != new_es:
+            if rs != new_es and not no_work:
                 new_es, new_ef = _rsrc_forward(n['asg'], cal, rs, None, None)
             if new_es > cur:
                 n['restart' if n['started'] else 'es'], n['ef'] = new_es, new_ef

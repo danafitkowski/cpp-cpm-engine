@@ -1,0 +1,37 @@
+{
+ "case": "ZZ-CPP-LC3",
+ "proj_id": 5646,
+ "differences": [
+  "TASK R remain_drtn_hr_cnt: xer '24' p6 19.0",
+  "TASK R target_drtn_hr_cnt: xer '24' p6 19.0",
+  "TASKRSRC R/ZZ-CPP-LC3-RX remain_qty_per_hr: xer '1' p6 1.09090909090909",
+  "TASKRSRC R/ZZ-CPP-LC3-RX target_qty_per_hr: xer '1' p6 1.09090909090909"
+ ],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "sched_float_type": "FT_Start",
+ "resource_dependent": {
+  "tasks": {
+   "R": {
+    "remain_drtn_hr_cnt": 19.0,
+    "target_drtn_hr_cnt": 19.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "R",
+    "rsrc_short_name": "ZZ-CPP-LC3-RX",
+    "remain_qty": 24.0,
+    "target_qty": 24.0,
+    "remain_qty_per_hr": 1.09090909090909,
+    "target_qty_per_hr": 1.09090909090909,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-10 08:00",
+    "reend_date": "2027-03-12 11:00"
+   }
+  ]
+ }
+}

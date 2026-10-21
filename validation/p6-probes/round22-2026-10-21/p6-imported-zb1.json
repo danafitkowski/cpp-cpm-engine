@@ -1,0 +1,35 @@
+{
+ "case": "ZZ-CPP-ZB1",
+ "proj_id": 5639,
+ "differences": [
+  "TASK F remain_drtn_hr_cnt: xer '8' p6 0.0",
+  "TASK F target_drtn_hr_cnt: xer '8' p6 0.0"
+ ],
+ "float_path_end": null,
+ "float_path_end_stored": "-99",
+ "sched_float_type": "FT_FF",
+ "resource_dependent": {
+  "tasks": {
+   "F": {
+    "remain_drtn_hr_cnt": 0.0,
+    "target_drtn_hr_cnt": 0.0
+   }
+  },
+  "assignments": [
+   {
+    "task_code": "F",
+    "rsrc_short_name": "ZZ-CPP-ZB1-MT8",
+    "remain_qty": 0.0,
+    "target_qty": 0.0,
+    "remain_qty_per_hr": 1.0,
+    "target_qty_per_hr": 1.0,
+    "target_lag_drtn_hr_cnt": 0.0,
+    "relag_drtn_hr_cnt": 0.0,
+    "act_reg_qty": 0.0,
+    "act_ot_qty": 0.0,
+    "restart_date": "2027-03-15 08:00",
+    "reend_date": "2027-03-15 08:00"
+   }
+  ]
+ }
+}
