@@ -44,17 +44,17 @@ or Before on Sat 13-Mar 16:00. The import fits the units over the resource's 13.
 | LC5 | Finish On or Before Fri 12-Mar 16:00 | the same as LC1 |
 | LC6 | Finish On or Before Mon 15-Mar 16:00 | the same as LC1 |
 
-Where the resource has the Mandatory Start's day off as a holiday, P6 runs R on the late side from the resource's
-opening on its last working day before (Tue 07:00), for its 13.5 h of work, to Thu 11:00. The engine had placed R back
-from the finish the pin gives on the activity calendar (Fri 16:00), at Thu 07:00 to Fri 11:00. The second constraint
-makes no difference (LC2, LC5 and LC6 equal LC1). Rule MO now places it as P6 does. Round 18's RE1 and RE2, a four-hour
-version of the same shape capped by a Start On or Before, come out the same under either reading.
+Where the resource has the Mandatory Start's day off as a holiday, P6 runs R on the late side from Tue 07:00, for its
+13.5 h of work, to Thu 11:00. The engine had placed R back from the finish the pin gives on the activity calendar with
+the stored duration (Fri 16:00), at Thu 07:00 to Fri 11:00. The second constraint makes no difference (LC2, LC5 and LC6
+equal LC1).
 
-MO does not cover every Mandatory Start on a resource's day off. In H24's probe ZZ-CPP-MXR
-([`../h24-shapes-2026-10-19/`](../h24-shapes-2026-10-19/)), X1 and X3 have a Mandatory Start on a Friday that their
-Mon-Thu resources never work, and an expected finish in force. There P6 keeps the pin's finish on the activity calendar
-and places the work back from it. MO therefore applies only where the day is a holiday in a week the resources work
-and no expected finish is in force. Which of the two differences sets it aside is a question for the next probe round.
+Round 23 ([`../round23-2026-10-21/`](../round23-2026-10-21/)) found the mechanism, rule MO. On resource dependent work
+with no expected finish in force, the pin runs from the Mandatory Start for the span, on the activity calendar, of the
+work placed forward from it on its resources' own calendars. Here that work runs Thu 07:00 to Fri 11:00, 11 h, so the
+pin ends Thu 11:00 and the work placed back from there starts Tue 07:00. An expected finish in force keeps the stored
+duration (H24's probe ZZ-CPP-MXR X1 and X3, [`../h24-shapes-2026-10-19/`](../h24-shapes-2026-10-19/)). Round 18's RE1
+and RE2, a four-hour version of the same shape capped by a Start On or Before, come out the same either way.
 
 ## FC: the float-type codes on round 17's QA1
 

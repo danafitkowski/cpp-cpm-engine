@@ -20,7 +20,6 @@ Output: {code: {es, ef, ls, lf (instants), restart, tf_minutes, ff_minutes, tf_s
         ff_signed_minutes, status}} plus 'project_finish'.
 """
 from collections import defaultdict, deque
-from datetime import date
 
 import cpm_minutes as cm
 
@@ -1023,33 +1022,19 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                 elif cs['type'] == 'MS_Start':
                     s0 = cal.next_work(cs['at'])
                     pin = (s0, cal.add(s0, n['rem']))
-                    # MO (round 22, 21-Oct-2026): resource dependent work whose resources have the Mandatory Start's
-                    # day off as a holiday runs, on the late side, from each resource's opening on its last working
-                    # day before, and the pin finishes where that work does, whatever the second constraint
-                    # (ZZ-CPP-LC1, LC2, LC5, LC6 against LC3, LC4; H29-05 A1710). Not where the day is off in the
-                    # resources' week and an expected finish is in force: there the pin stands (ZZ-CPP-MXR X1, X3,
-                    # P6 probe round 9). Which of the two sets it aside is not yet measured, so MO takes neither.
-                    # JS paired site: the MS_Start pin in computeCPMHours
-                    md = cs['at'] // cm.DAY
-                    work = [g for g in n['asg'] if g['rem'] > 0]
-                    dow = (date.fromordinal(md + cm.EPOCH_ORD).weekday() + 1) % 7
-
-                    def week_works(g):
-                        gc = g['cal']
-                        return bool(gc.week[dow]) if gc.week is not None else dow in gc.work_days
-                    if work and n['xf'] is None and all(not g['cal'].slots(md) and week_works(g) for g in work):
-                        lo = hi = None
-                        for g in work:
-                            d = md - 1
-                            for _ in range(cm._SEARCH_DAYS):
-                                if g['cal'].slots(d):
-                                    break
-                                d -= 1
-                            s = d * cm.DAY + g['cal'].slots(d)[0][0]
-                            f = g['cal'].add(g['cal'].add(s, g['lag']) if g.get('lag') else s, g['rem'])
-                            lo = s if lo is None or s < lo else lo
-                            hi = f if hi is None or f > hi else hi
-                        pin = (lo, hi)
+                    # MO (rounds 22-23, 21-Oct-2026): on resource dependent work with no expected finish in force the
+                    # pin runs the span, on the activity calendar, of the work placed forward from the Mandatory Start
+                    # on its resources' own calendars, not the stored remaining duration; the work is then placed back
+                    # from where that span ends, as below. Where the resource has the day off as a holiday that span
+                    # is shorter, and the work starts on its last working day before (ZZ-CPP-LC1, LC2, LC5, LC6, MM1,
+                    # MP1, MX3, MT2; H29-05 A1710); after its close on the day, the work ends at that close (MM2); a
+                    # day off in its week, a second resource working the day and no day off give the stored
+                    # duration's dates (MW1, MW2, MT1, LC3, LC4). An expected finish in force keeps the stored duration
+                    # (MX1, MX2; ZZ-CPP-MXR X1, X3, P6 probe round 9). JS paired site: the MS_Start pin in
+                    # computeCPMHours
+                    if any(g['rem'] > 0 for g in n['asg']) and n['xf'] is None:
+                        w0, w1 = _rsrc_forward(n['asg'], cal, cs['at'], None, None)
+                        pin = (s0, cal.add(s0, cal.between(w0, w1)))
                 else:
                     f0 = cal.prev_work_end(cs['at'])
                     pin = (cal.sub(f0, n['rem']), f0)

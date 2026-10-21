@@ -1,17 +1,17 @@
 {
   "engine_version": "2.10.13",
-  "generated_utc": "2026-10-21T12:42:52.561Z",
+  "generated_utc": "2026-10-21T13:10:25.112Z",
   "fixtures": {
     "total": 233,
     "passed": 233,
     "failed": 0
   },
   "checks": {
-    "executed": 22149,
+    "executed": 22189,
     "failed": 0,
-    "passed": 22149,
+    "passed": 22189,
     "skipped": 0,
-    "surface": 22149
+    "surface": 22189
   },
   "skips_by_field": {},
   "skips_by_kind": {
@@ -25,7 +25,7 @@
     "topo_order": 231,
     "alert_count": 231,
     "alert_severity_counts": 231,
-    "node <id>": 20681,
+    "node <id>": 20721,
     "threw (both engines)": 2,
     "hours": 80
   },
@@ -1880,8 +1880,8 @@
     },
     {
       "id": "F236",
-      "name": "F236 - AZ and MO: work with no work left kept at its resource's opening; a Mandatory Start on the resource's day off, in hours",
-      "checks": 137,
+      "name": "F236 - AZ and MO: work with no work left kept at its resource's opening; a Mandatory Start pinning the span of its work, in hours",
+      "checks": 157,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}
@@ -1889,7 +1889,7 @@
     {
       "id": "F237",
       "name": "F237 - MO: F236 under \"Start Float\" and lags on 24 hours",
-      "checks": 137,
+      "checks": 157,
       "fails": 0,
       "skips": 0,
       "skips_by_field": {}

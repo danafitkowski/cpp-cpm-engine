@@ -4459,8 +4459,9 @@ compareFixture('F235 - FT: F230 written FT_Total with no end, read as FT_Start',
 }, { hours: true });
 // Round 22: AZ left at its resources' opening, where AV would have run it on to the activity calendar's next opening
 // (Y1 start-to-start and Y2 finish-to-start on a calendar off Mon 14-Dec, Y3 on a calendar opening at 09:00, Y4 with
-// work left); MO, a Mandatory Start on a day the resource has off, run from the resource's last working day before
-// (O1 with a Finish On or Before second, O2 alone, O3 the resource off the day before instead)
+// work left); MO, the Mandatory Start's pin on resource dependent work running the span of the work placed forward
+// from it (O1 the resource's holiday on the day, with a Finish On or Before second, O2 alone, O3 the resource off the
+// day before instead, O4 the pin at 13:00 on the holiday, O5 after the resource's Friday close)
 const R22CAL = Object.assign({}, R17CAL, {
     D24M: Object.assign({}, ARCAL.D24, { holidays: ['2026-12-14'] }), D9: rawCal(EVERYDAY, [['09:00', '17:00']]),
     RXT: Object.assign({}, ARCAL.AX, { holidays: ['2026-12-15'] }),
@@ -4471,15 +4472,16 @@ const r22Acts = (A) => [A('L', 400, { clndr_id: 'D24' }), A('FIN', 0, { task_typ
         A(k, h, { clndr_id: ac, task_type: 'TT_Rsrc', resource_assignments: 1, assignments: [zrAsg('MT8', h)],
             constraint: { type: 'CS_ALAP' } }),
         A('S' + k, 4, { clndr_id: sc, constraint: { type: 'CS_MSOA', date: slD(held[0], held[1]) } })]),
-    ...[['O1', 'RXH', '14', { type: 'CS_MEOB', date: slD('19', '16:00') }], ['O2', 'RXH', '14', null],
-        ['O3', 'RXT', '16', { type: 'CS_MEOB', date: slD('19', '16:00') }]].map(([k, rc, ms, c2]) =>
+    ...[['O1', 'RXH', '14', '08:00', { type: 'CS_MEOB', date: slD('19', '16:00') }], ['O2', 'RXH', '14', '08:00', null],
+        ['O3', 'RXT', '16', '08:00', { type: 'CS_MEOB', date: slD('19', '16:00') }], ['O4', 'RXH', '14', '13:00', null],
+        ['O5', 'AX', '18', '12:00', null]].map(([k, rc, ms, at, c2]) =>
         A(k, 24, Object.assign({ clndr_id: 'S6', task_type: 'TT_Rsrc', resource_assignments: 1,
-            assignments: [zrAsg(rc, 13.5)], constraint: { type: 'CS_MANDSTART', date: slD(ms, '08:00') } },
+            assignments: [zrAsg(rc, 13.5)], constraint: { type: 'CS_MANDSTART', date: slD(ms, at) } },
         c2 ? { constraint2: c2 } : {}))));
-const r22Rels = (R) => [R('L', 'FIN'), R('O1', 'FIN'), R('O2', 'FIN'), R('O3', 'FIN')].concat(
+const r22Rels = (R) => [R('L', 'FIN'), R('O1', 'FIN'), R('O2', 'FIN'), R('O3', 'FIN'), R('O4', 'FIN'), R('O5', 'FIN')].concat(
     ...[['Y1', 'SS'], ['Y2', 'FS'], ['Y3', 'SS'], ['Y4', 'SS']].map(([k, t]) => [R(k, 'S' + k, t), R(k, 'FIN'),
         R('S' + k, 'FIN')]));
-compareFixture('F236 - AZ and MO: work with no work left kept at its resource\'s opening; a Mandatory Start on the resource\'s day off, in hours', {
+compareFixture('F236 - AZ and MO: work with no work left kept at its resource\'s opening; a Mandatory Start pinning the span of its work, in hours', {
     activities: r22Acts(hA), relationships: r22Rels(hR), data_date: '2026-12-07 08:00', cal_map: R22CAL,
     project_calendar: 'D24', relationship_lag_calendar: 'rcal_Predecessor',
 }, { hours: true });
