@@ -86,3 +86,7 @@ P6 probes for each of the six causes. The rules the probes support go into a can
 - **Cause 4:** resource dependent work with a start and a mandatory finish constraint, placed back from a lagged finish-to-finish requirement, on a resource that keeps other hours.
 - **Cause 5:** a Start On or Before, primary and second, on resource dependent work whose resource opens before the activity calendar.
 - **Cause 6:** As Late As Possible resource dependent work with no duration, its resource not working where the bound falls.
+
+## Note added after the score
+
+21-Oct-2026, after P6 probe round 21 (`round21_2026_10_21` in the P6 oracle; [`../H29/RESULT.md`](../H29/RESULT.md)): P6's Schedule Options dialog rewrites an imported FT_Start as FT_SS when the options are saved, and P6 schedules FT_SS as plain start float. H28-07's options were saved through the dialog when its end of the float paths was set before the F9, so cause 1 above is that rewrite, not an effect of the end activity or of the paths' basis. The score above is unchanged.
