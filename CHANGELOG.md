@@ -12,6 +12,295 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.13 - 2026-10-22 - The activity the float paths end at; P6's float-type codes; As Late As Possible work and mandatory dates on resource dependent work; a finish milestone at a 24:00 close; work under way with two finish constraints or an assignment with no units
+
+**Computed values move (Class A): engine math changed.** Twelve rules, each measured on synthetic P6 probe projects in
+Primavera P6 Professional 23.12.1 before it went in. FK, UM and FT are in both passes of both engines. MZ, ZU, ZQ, AW,
+AT, AZ, MW, LR and MO turn on times of day and on the resources' own calendars, and are in the hours pass only.
+
+How they were found:
+- **H27 and rounds 15 and 16.** Held-out set H27, drawn on the shapes v2.10.12 listed as not measured, scored the
+  released v2.10.12 at 507 of 524 and found five causes. P6 probe rounds 15 and 16 measured them and gave MZ, UM, ZU,
+  ZQ and a first reading of As Late As Possible resource dependent work under a start bound (AR).
+- **Rounds 11 to 14 and 19.** They measured the activity "Calculate multiple float paths" ends at, which v2.10.12
+  listed as not measured, and gave FK. Round 19 measured start-to-start and start-to-finish links into that activity:
+  nothing to change.
+- **H28 and rounds 17, 18 and 20.** Held-out set H28, drawn after those, scored the candidate at 537 of 563 and found
+  six causes. Rounds 17 and 18 measured them and gave AW in place of AR, with AT, AZ, MW, LR and a reading of start
+  float with an end set in P6 (ET). Round 20 measured AW with a lag on the assignment: nothing to change.
+- **H29 and rounds 21 to 23.** Held-out set H29, drawn after those, scored the candidate at 673 of 676 and found two
+  causes. Round 21 measured the float-type codes P6 reads and gave FT, which replaces ET. Rounds 22 and 23 measured the
+  two causes and gave AZ's exception to AV, and MO.
+- **H30.** Held-out set H30, drawn after all twelve, matches P6 on all 675 of its unfinished activities.
+
+*The activity the float paths end at (rounds 11 to 14 and 19)*
+
+- **FK.** Under "Calculate multiple float paths", with an end activity set in P6 (Schedule Options, Advanced, "Display
+  multiple float paths ending with activity"; SCHEDOPTIONS `key_activity_for_multiple_longest_paths`) that resolves to
+  an activity of the project:
+  - As Late As Possible work that neither is the end activity nor leads into it holds no free float, as with the
+    option off (FZ).
+  - The end activity and every activity leading into it keep theirs. Leading into it covers every link type:
+    finish-to-start (rounds 11 to 13), finish-to-finish (round 14, KH3), start-to-start and start-to-finish (round 19,
+    SK2, SK5, SK6).
+  - As Late As Possible work after the end activity holds none (KH5).
+  - The number of paths and their basis make no difference (KG1, KF4), and on the probes every other field of every
+    activity is the same with and without an end.
+  - With no end set, or an id P6 cannot resolve, nothing changes (KF6; round 7's HSK). P6's import keeps a file's key
+    as the file's task id without mapping it to the activity it imports, so an imported file's end resolves to no
+    activity in P6, where a P6 export carries an id that resolves.
+  - The engines take the end as `opts.floatPathEnd` (Python `float_path_end`), and `parseXER` resolves the file's key
+    to an activity code (`float_path_end`). An end that is not an activity of the network raises an INFO alert
+    (`float-path-end-not-in-network`) and changes nothing.
+
+*The causes H27 found (rounds 15 and 16)*
+
+- **A finish milestone at a 24:00 close (MZ).** On a calendar that works around the clock with a day off, a finish
+  milestone after work that finishes at the 24:00 close of the day before the day off sits at that close. It does not
+  wait for the next opening (ZZ-CPP-KE1, KE2, KE4 against KE3, KE5; H27-09 A1300 and the free float of eight of its
+  predecessors).
+- **A Finish On or Before and a Mandatory Finish on work under way (UM).** On work under way, the two together, in
+  either order and the same minute or not, are both left off the late side: the late finish comes from the network
+  (KB1 to KB5). Each alone (KB6, KB7) and the pair on work not yet started (KB8) are as before. v2.10.12 still capped
+  the late finish at the Finish On or Before in H27-07 A1550 and H27-08 A1070.
+- **An assignment with no units and no units per hour on work under way (ZU).** Its window is the time between its
+  remaining start and remaining finish.
+  - Where the file puts the remaining start before the data date, P6's import moves it to the data date and keeps the
+    window's working time.
+  - Where the file puts it after the data date, the import sets the assignment's remaining lag to the working time from
+    the activity's actual start.
+  - At the F9, only the unexpired part of that lag (the lag less the resource's working time from the actual start to
+    the data date) runs from the restart, followed by the window's working time. The engine counts the lag the same
+    way (KA1 to KA6; H27-06 A1420, H27-10 A1420, H27-11 A1660).
+- **An assignment with no work and a lag beside work (ZQ).** On resource dependent work placed back from a
+  finish-to-finish or start-to-finish requirement, such an assignment reaches the requirement too, so it bounds the
+  start (KD2 to KD4 against KD1; H27-08 A1260).
+
+*As Late As Possible resource dependent work under a start bound, and the shapes H28 found (rounds 16 to 18, 20 and 22)*
+
+- **AW.** Such work under a start-to-start or start-to-finish bound is placed in steps:
+  1. The start bound is carried to a finish on the work's remaining duration on the activity calendar, and the work is
+     placed back from that finish on its resources' own calendars.
+  2. Where that placement starts before the start bound on the activity calendar, the start bound is carried to a new
+     finish on the larger of the span that placement gives and the stored remaining duration. A finish-to-start or
+     finish-to-finish bound caps the new finish, and where it is later than the first, the work is placed back from it
+     again.
+  3. A start that falls off the activity calendar then runs on from its next opening (AV). The work's own calendars can
+     carry it past the bound.
+  - Measured on ZZ-CPP-QB1 to QB10, QG1 to QG8 and QC1 to QC6 (round 17), RB1 to RB5 and RC1 to RC3 (round 18), and
+    round 16's KR1 to KR10. With a lag on the assignment it holds unchanged (round 20, LG1 to LG6). Held-out cases:
+    H27-04 A1220, H27-11 A1220, H28-02 A1410, A1430, H28-03 A1140, A1450, H28-07 A1680 and H28-09 A1580.
+  - AW replaces AR, the reading rounds 15 and 16 gave after H27. AR took the later of two placements: the work started
+    at the bound and run forward, and the v2.10.12 placement. H28 showed it does not hold (H28-02 A1410, A1430, H28-09
+    A1580). AR was never released.
+- **Start float of work AW moved (AT).** Under `FT_Start` or `FT_Total` (not `FT_SS`; see FT) without multiple float
+  paths, it runs from the bound's next opening on the activity calendar to the late finish less the remaining duration
+  before the slide (QG6, RG1 to RG3); with multiple float paths, from the work's start (QG5, QG7, QG8).
+- **No work left (AZ).** Such work with no work left sits at its resources' next opening at or after the bound (QF1,
+  QF3, QF4, RF1, RF2 against QF2; H28-12 A1080). It stays there where the activity calendar has that day off or opens
+  later: AV no longer runs it on to the calendar's next opening (round 22: ZB1, ZB2, ZB4 against ZB3, ZB5; H29-06
+  A1700, H29-12 A1560). Work with work left is unchanged (ZB5).
+- **A finish floor on resource dependent work (MW).** A Finish On or After, a Finish On or a second Mandatory Finish
+  moves the work where the floor less its remaining duration starts it later than its early start. It is compared by
+  start, not by finish (QD1, RD1 to RD3 against QD4; H28-09 A1220).
+- **A late pin on resource dependent work under a second constraint (LR).** The pin of a Mandatory Start or Mandatory
+  Finish is placed on the assignments first, and the second constraint then caps it with the span that placement
+  gives (RE1 to RE4, QE1 to QE5; H28-11 A1210).
+
+*P6's float-type codes (rounds 21 and 22)*
+
+- **FT.** P6 keeps SCHEDOPTIONS `sched_float_type` as an imported file gives it, until the options are saved in its
+  Schedule Options dialog. Oracle's XER data map names the field but not its codes; what each code does was measured
+  on P6. It schedules three behaviours:
+  - `FT_FF` is finish float.
+  - `FT_Start`, and `FT_Total` read the same way, is start float, with rules RT (the start float of resource dependent
+    work taken as its finish float) and AT on resource dependent work (round 21: FA1, FA4; round 22: FC2).
+  - `FT_SS`, the code P6's own Schedule Options dialog writes for "Start Float", over an imported `FT_Start` too when
+    the options are saved there, is start float from early start to late start with neither RT nor AT. That holds on
+    work not yet started and under way, under either schedule mode, with or without multiple float paths (FA2, FA5;
+    FC1, FC5, FC6).
+  - Both engines read `FT_Total` as `FT_Start` and schedule `FT_SS` apart from it; the manifest names `FT_SS` as such.
+    Through v2.10.12 both codes raised the `float-type-unsupported` ALERT and took finish float.
+  - An end of the float paths set in P6 changes no float definition (FC4, FC7; round 14's KH1 to KH5; round 19; RA3).
+    The candidate's rule ET, from rounds 17 and 18, had read the probes whose ends were set in P6's dialog (QA5, RA1,
+    RA2, RA4B; held-out H28-07) as an effect of the end. Their options held `FT_SS` once saved there. FT replaces ET,
+    which was never released.
+
+*A Mandatory Start on resource dependent work (H29 and rounds 22 and 23)*
+
+- **MO.** With no expected finish in force, a Mandatory Start does not pin the stored remaining duration of resource
+  dependent work not yet started.
+  - The work is placed forward from the Mandatory Start on its resources' own calendars, as the early pass would. The
+    pin runs from the Mandatory Start for the span that work covers on the activity calendar, and the work is placed
+    back from the end of that span.
+  - Where the resource has the Mandatory Start's day off as a holiday, the span is shorter, and on the late side the
+    work starts on the resource's last working day before, so its late start falls before the Mandatory Start, as P6
+    prints it (probes LC1, LC2, LC5, LC6, MX3, MP1, MT2; H29-05 A1710). A Mandatory Start after the resource's close on
+    the day ends the work at that close (MM2). A Mandatory Start at 13:00 runs the span from 13:00 (MM1).
+  - A Mandatory Start on a day the resource never works (probes MW1, MW2), a holiday on another day (LC3), a second
+    resource that works the day (MT1) or no day off (LC4) give the stored duration's dates.
+  - An expected finish in force keeps the stored duration (probes MX1, MX2; H24's probe ZZ-CPP-MXR X1, X3).
+  - Round 22's first reading, that the work runs from the resource's last working day before, is what the span gives
+    on a holiday at the activity calendar's opening; it does not give MM1 or MM2. It was never released.
+
+**Held-out tooling.**
+- `import_p6_sqlite.py` records, before the F9, the end of the float paths P6 holds (`float_path_end`, resolved among
+  the project's activities; from H28) and the float type P6 holds (`sched_float_type`; from H30).
+  `p6_imported_overlay.js` lays both over the case file, and the scorers hand the end to the engine. A record made
+  before H30 that names a float-type difference is laid over the same way (H28-07, H29-02, H29-06 and H29-11; probes
+  QA5, RA1, RA2 and RA4B).
+- H27's import records for H27-05 and H27-07 gain `"float_path_end": null`, as P6 held them. H27's score, on v2.10.12,
+  which does not read the option, is unchanged.
+- `generate_held_out.py` gains `--features wide10` to `wide13` (H27 to H30). Regenerated from their seeds, every case of
+  the earlier sets matches its frozen file byte for byte.
+
+**Verified.**
+- **Held-out set H27,** drawn with `--features wide10` on the shapes v2.10.12 listed as not measured, scored the
+  released v2.10.12 once at 507 of 524 unfinished activities on all seven fields (the four dates, total float, free
+  float and the critical flag), 5 of 12 cases clean
+  ([`validation/held-out/H27/RESULT.md`](validation/held-out/H27/RESULT.md)). All 17 start milestones with an expected
+  finish match. The 17 differences fell under five causes, which gave MZ, UM, ZU, ZQ and AR. H27 is now fitted: 524 of
+  524 on these bytes.
+- **Held-out set H28,** drawn after FK, MZ, UM, ZU, AR and ZQ (`--features wide11`, the end of the float paths set in
+  P6 for the five cases that name one), scored the candidate (`b9f825d2`) once at 537 of 563, 6 of 12 cases clean
+  ([`validation/held-out/H28/RESULT.md`](validation/held-out/H28/RESULT.md)).
+  - MZ, UM, ZU and ZQ hold: every drawn activity they govern matches but one, which differs by another cause. None
+    differs by the end of the float paths.
+  - The 26 differences fell under six causes. 16 are the start float of resource dependent work in H28-07, whose
+    options P6's dialog had stored as `FT_SS`; 5 are AR's shape.
+  - v2.10.12, diagnosed after the score, gives 501. H28 is now fitted: 563 of 563 on these bytes.
+- **Held-out set H29,** drawn after AW, AT, AZ, MW, LR and ET (`--features wide12`, three ends set in P6), scored the
+  candidate (`e605a226`) once at 673 of 676, 9 of 12 cases clean
+  ([`validation/held-out/H29/RESULT.md`](validation/held-out/H29/RESULT.md)).
+  - AW and MW hold on every activity they govern (AW 35, MW 10).
+  - The 3 differences fell under two shapes no probe had measured, which gave AZ's exception to AV and MO.
+  - v2.10.12 gives 579, and the candidate H28 scored (`b9f825d2`) 625; neither moved any activity away from P6. H29 is
+    now fitted: 676 of 676 on these bytes.
+- **Held-out set H30,** drawn after FT, AZ's exception to AV and MO (protocol `7ed46c2`, drand round 6572006,
+  `--features wide13`, four ends set in P6), scored once on these bytes (engine `28c7db99`): **675 of 675**
+  unfinished activities match P6 on all seven fields, and all 12 cases match on every field
+  ([`validation/held-out/H30/RESULT.md`](validation/held-out/H30/RESULT.md)). It was run as its protocol set out, with
+  no deviation in what was scored. During the capture a project outside the test set was opened by mistake and closed
+  without scheduling; P6's database shows it unchanged, and the result records it.
+  - Every shape the draw gave the rules matches P6: 12 As Late As Possible activities with no work left on calendars
+    that have their resource's opening day off or open after it (v2.10.12: 1), 16 Mandatory Starts on resource
+    dependent work (v2.10.12: 11), and every activity in the four cases under `FT_SS` (213; v2.10.12: 144) and the two
+    under `FT_Total` (120; v2.10.12: 110). Two of the four `FT_SS` cases have no end set, so H30 tests FT apart from
+    the retired ET, which turned on an end.
+  - v2.10.12 gives 559, and the candidate H29 scored (`e605a226`) 625.
+  - The production Python engine (the canonical tree), run on H30's projects as P6's database holds them with the
+    sizing P6's F9 rewrote set back to its import, matches all 675 on the four dates and both floats.
+  - The model of P6's import, frozen with the cases, predicted P6's import of 296 of 298 resource dependent activities
+    and 391 of 402 assignments. Every miss is listed in the result; none enters the score.
+- **Held-out sets H1 to H30,** re-scored on these bytes: all 8,850 unfinished activities match P6 on all seven fields
+  (H1 to H26 6,412, as on v2.10.12, with H2 on the 11 cases its frozen read-back kept; H27 524, H28 563 and H29 676,
+  fitted; H30 675, held out). v2.10.12 gives 8,558.
+  Printed values moved only in H27 to H30, all onto P6.
+- **The whole-day pass** puts the same 1,186 of those 8,850 on P6's day for all four dates as v2.10.12 does. It
+  schedules neither times of day nor the resources' own calendars.
+- **The probes:** 179 synthetic P6 probe projects, 937 rows, every one matching P6 on the four dates and both floats
+  in both engines; v2.10.12 matches 800.
+  - [`validation/p6-probes/key-activity-2026-10-20/`](validation/p6-probes/key-activity-2026-10-20/), rounds 11 to 14:
+    23 probes, 299 rows, v2.10.12 267.
+  - [`h27-causes-2026-10-20/`](validation/p6-probes/h27-causes-2026-10-20/), round 15: 30 probes, 109 rows, v2.10.12 81.
+  - [`alap-rd-2026-10-20/`](validation/p6-probes/alap-rd-2026-10-20/), round 16: 10 probes, 40 rows, v2.10.12 37.
+  - [`h28-causes-2026-10-20/`](validation/p6-probes/h28-causes-2026-10-20/), round 17: 45 probes, 195 rows, v2.10.12
+    173.
+  - [`round18-2026-10-20/`](validation/p6-probes/round18-2026-10-20/): 25 probes, 112 rows, v2.10.12 90.
+  - [`round19-2026-10-20/`](validation/p6-probes/round19-2026-10-20/) and
+    [`round20-2026-10-21/`](validation/p6-probes/round20-2026-10-21/): 6 probes and 24 rows each, v2.10.12 23 and 20.
+    Nothing was fitted on either.
+  - [`round21-2026-10-21/`](validation/p6-probes/round21-2026-10-21/): 6 probes, 24 rows, v2.10.12 18.
+  - [`round22-2026-10-21/`](validation/p6-probes/round22-2026-10-21/): 18 probes, 80 rows, v2.10.12 66.
+  - [`round23-2026-10-21/`](validation/p6-probes/round23-2026-10-21/): 10 probes, 30 rows, v2.10.12 25.
+  - All were imported into EPS ZZ-CPP-TEST. The probes are fitted, not held out; rounds 19 and 20 changed no rule. The
+    earlier probe sets (4,262 rows) and the Larchmere capture (4,608 comparisons) still match.
+- **Against P6, through CPP's converters and the Python engine** (the measuring machine's P6 database, 946 projects,
+  110,419 unfinished activities): 424 rows moved against v2.10.12, all in synthetic projects: 291 in 43 cases of
+  held-out sets H27, H28, H29 and H30, and 133 in 95 of the probe projects. 411 moved onto P6 and none away. 13 moved
+  but stay off P6, in projects whose resource dependent sizing P6's F9 rewrote after its import (H28-01 1, H28-12 2,
+  H30-04 1, H30-05 1, H30-11 2, ZZ-CPP-QC1 2, ZZ-CPP-QC5 2, ZZ-CPP-RC2 2); with that sizing set back to the import, all
+  of them match P6 (the held-out sets run from their import records, the probes in their replays). 110,156 match P6 on
+  all four dates and both floats (v2.10.12: 109,745). Of the 263 that do not, 262 are in synthetic projects and 1 is in
+  a real project, off P6 in both releases.
+- **CPP's analysis tools hand the engine the end of the float paths and P6's float-type codes.** The converters of the
+  time impact analysis, collapsed as-built, critical path validator, forensic delay analysis, impacted-as-planned and
+  path explorer tools resolve P6's `key_activity_for_multiple_longest_paths` to an activity and hand it on, and hand
+  `FT_SS` and `FT_Total` on as P6 stores them. The database run above goes through that path.
+- **JS against Python** on the database (946 projects, 193,384 activities): every field equal. Through the production
+  converter on 7,000 schedules from the held-out generator (363,876 activities, a third of them drawn as H30 was, with
+  the end of the float paths the converter resolves handed to both engines), with some assignments emptied and some
+  durations re-sized as P6's import does: every field equal.
+- **A scope audit of the JS engine:** the same nine block-scoped declarations shadow a name of their function's
+  enclosing scope as in v2.10.12. The twelve rules add none.
+- **XER census on the measuring machine:** of 930 distinct XER files, 926 are readable through the JS engine (225,346
+  activities), and all 930 compute through the Python engine and the production converter (334,760 activities). Every
+  value that moves is in the 22 exports whose float type is `FT_Total`, and only the whole-day pass's total float in
+  days moves: on 1,288 tasks it is now their start float in days, 1 to 5 days from their finish float. In the hours
+  pass, where those tasks' start float and finish float are equal, no value moves, and no date and no critical set
+  changes. The Python census moves the same 1,288 values in the same 22 files.
+- **P6 comparison matrix:** regenerated under this release and under v2.10.12, the 16 engine outputs (the 13 cases and
+  the Larchmere capture cases 19-21) give the same 16,691 values.
+- **JS unit suite:** 1,500 checks green (1,498 in v2.10.12). Two check FT: `FT_Total` is read as `FT_Start`, and
+  `FT_SS` reports start float under its own code. The V2942-8 check of an unsupported float type now uses a code P6
+  does not write. The rules are pinned by the P6 probe replays (`npm run test:p6-comparison`:
+  `tests/p6-key-activity.test.js`, `tests/p6-h27-causes.test.js`, `tests/p6-alap-rd.test.js`,
+  `tests/p6-h28-causes.test.js` and `tests/p6-round18.test.js` to `tests/p6-round23.test.js`).
+- **Cross-validation:** 233 fixtures, 22189 of 22189 executed, 0 skipped, 0 failures; alert parity on 231 of 233 (the
+  other 2 must throw). F212 to F215 hand both engines FK: an end that F201's As Late As Possible work does not lead
+  into, one it does, and one not in the network, in hours and in whole days. F216 is MZ; F217 and F218 UM, in hours
+  and whole days; F219 ZU; F220, F221, F223 and F224 As Late As Possible resource dependent work under a start bound,
+  first taken as AR and now scheduled by AW in both engines; F222 ZQ; F225 to F227 AW's second placement and AT; F228
+  AZ; F229 MW and LR; F230 to F235 the float-type codes; F236 and F237 AZ's exception to AV and MO. All are in hours
+  but F213, F215 and F218.
+- **Coverage,** re-measured on these bytes: statements 93.87% (13,820 of 14,722), branches 82.26% (3,619 of 4,399),
+  functions 96.94% (222 of 229); cross-validation alone covers 60.57% of statements.
+
+**Who is affected.**
+- **FK.** Schedules with "Calculate multiple float paths" on and an end activity set in P6. As Late As Possible work
+  that neither is the end activity nor leads into it prints zero free float. A caller that hands no end gets the free
+  float as before. A P6 export carries an end that resolves, and the engine matches the P6 that exported it; imported
+  into another P6, the same file's end resolves to no activity there, and that P6 prints the free float as with no end.
+  Hand `opts.floatPathEnd` null to reproduce the importing P6.
+- **MZ** (hours pass). Schedules on a calendar that works around the clock with days off, where a finish milestone
+  follows work finishing at the close of the day before. The milestone and the work it drives move earlier, and the
+  free float of its predecessors falls.
+- **UM.** Schedules with work under way carrying a Finish On or Before and a Mandatory Finish. Their late dates come
+  from the network, so their float and the late dates of the work before them can rise.
+- **ZU** (hours pass). Schedules exported from P6 with resource dependent work under way carrying an assignment with
+  no units and no units per hour. Its finish, the work it drives and the late dates before it can move.
+- **ZQ** (hours pass). Resource dependent work placed back from a finish requirement beside an assignment with no
+  work and a lag. Its start can move earlier.
+- **AW, AT and AZ** (hours pass). Schedules with As Late As Possible resource dependent work under a start-to-start or
+  start-to-finish bound, or with no work left under a bound. Its dates, its float and the late dates of the work before
+  it can move.
+- **MW** (hours pass). Resource dependent work with a Finish On or After, a Finish On or a second Mandatory Finish.
+- **LR** (hours pass). Resource dependent work with a Mandatory Start or Mandatory Finish and a second constraint.
+- **MO** (hours pass). Resource dependent work with a Mandatory Start and no expected finish in force, where the work
+  placed forward from it on its resources' calendars spans another length of the activity calendar than its stored
+  remaining duration.
+- For MW, LR and MO: the work's dates, its float and the late dates of the work before it can move.
+- **FT.** Schedules whose float type is `FT_Total` or `FT_SS`. Total float, and with it the critical flag, follows
+  start float, where it took finish float with an ALERT through v2.10.12. Under `FT_SS` the start float of resource
+  dependent work is not set to its finish float.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). Re-run a deliverable issued on an earlier version
+under §12.2 where its schedule carries any of these situations.
+
+**Not claimed.**
+- FK is held out on H28, H29 and H30, where the capture set the end in P6 for 5, 3 and 4 cases; no activity of them
+  differs by the end. The end can be set only in P6 itself: an imported file's key resolves to no activity there.
+- UM is measured for a Finish On or Before beside a Mandatory Finish on work under way; H28 drew 18 pairs of a
+  constraint and a mandatory date on work under way, and all match. Other pairs have no probe.
+- A rule is held out on a set drawn after it and scored before any rule was taken from that set. On that reading MZ,
+  UM, ZU and ZQ are held out on H28; AW and MW on H29; FT, AZ's exception to AV and MO on H30. LR matched 9 of 10 of
+  H29's draws, the tenth MO's shape. No held-out result counts AT's shape apart from AW's; the probes measured it
+  (QG5 to QG8, RG1 to RG3).
+- The whole-day pass schedules neither times of day nor the resources' own calendars: MZ, ZU, ZQ, AW, AT, AZ, MW, LR
+  and MO are not in it.
+
+---
+
 ## v2.10.12 - 2026-10-19 - A Mandatory Finish under an expected finish caps; only the primary constraint pins; "Calculate multiple float paths"; resource dependent work on its resources' own hours; assignments with no units
 
 **Computed values move (Class A): engine math changed.** Twenty-one rules, each measured on synthetic P6 probe projects

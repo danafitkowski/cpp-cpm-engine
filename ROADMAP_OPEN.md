@@ -152,6 +152,18 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.13 (reviewed 2026-10-22)
+
+Held-out set H27 scored the released v2.10.12 at 507 of 524; its five causes are **CLOSED** (rules MZ, UM, ZU, ZQ, and AW in place of the first reading, AR). Held-out sets H28 and H29, each drawn after the rules the set before it gave, found eight more causes, all **CLOSED** by the twelve rules of v2.10.13, each measured on synthetic P6 probe projects (179 probes, 937 rows) and so fitted (see CHANGELOG.md). v2.10.13 moves computed values (change class A under the operator procedure). It also reads the activity "Calculate multiple float paths" ends at (rule FK), which no earlier version read, and schedules P6's float-type codes `FT_SS` and `FT_Total` (rule FT), which earlier versions met with an ALERT. Held-out set H30, drawn after all twelve, scored the release bytes once: 675 of 675, all 12 cases clean.
+- The unit suite grew from 1,498 to 1,500 (two FT checks); the rules are pinned by the P6 probe replays.
+- The cross-validation surface grew from 207 to 233 fixtures and from 17,926 of 17,926 to 22,189 of 22,189 comparisons, 0 skipped, still 0 failures.
+- Coverage was re-measured on the new bytes: 93.87% statements / 82.26% branches / 96.94% functions.
+- The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
+- No held-out difference is open: H1 to H30 match P6 on all 8,850 unfinished activities on these bytes.
+- **CLOSED:** v2.10.12's first OPEN item. H27 and H28 drew start milestones with an expected finish (17 and 24, all matching). A Finish On or Before beside a Mandatory Finish on work under way (UM), an assignment with no units and no units per hour on work under way (ZU) and float paths ending at an activity set in P6 (FK) are measured and held out; H28 drew 18 pairs of a constraint and a mandatory date on work under way, all matching.
+- **OPEN:** other pairs of a constraint and a mandatory date on work under way have no probe.
+- **OPEN:** the whole-day pass does not model times of day or the resources' own calendars, so the hours-pass rules on resource dependent work are not in it.
+
 ## Status at v2.10.12 (reviewed 2026-10-19)
 
 Held-out set H22 scored v2.10.11 at 268 of 271; its one difference, a Mandatory Finish under an expected finish (H22-06 A1120), is **CLOSED** (rule XP). Held-out sets H23, H24 and H25, each drawn after the rules the set before it gave, found 14 more shapes, all **CLOSED** by the twenty-one rules of v2.10.12, each measured on synthetic P6 probe projects (49 probes, 1,254 rows) and so fitted (see CHANGELOG.md). v2.10.12 moves computed values (change class A under the operator procedure). It also reads "Calculate multiple float paths" (rule FP), which no earlier version read. Held-out set H26, drawn after all twenty-one, scored the release bytes once: 407 of 407, all 12 cases clean, through one deviation from its protocol committed before any value was compared (a defect of the test generator, `validation/held-out/H26/DEVIATION.md`).
@@ -402,4 +414,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.12. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.13. Update on every release that closes or opens an audit item.

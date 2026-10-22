@@ -99,10 +99,15 @@ SCHEDOPTIONS and it decides which float the Total Float column reports.
 Across the validation corpus: `FT_FF` 170 files, `FT_Min` 19, `FT_Total` 4,
 `FT_Start` 2 — so 25 of 195 real schedules were computed under something
 other than the finish definition. Pass the file's own value through as
-`opts.floatType` (`FT_FF` | `FT_Start` | `FT_Min`); anything else raises a
-`float-type-unsupported` ALERT and computes on the finish definition rather
-than guessing. `node.tf_start` and `node.tf_finish` are always published so
-both definitions are visible regardless of which one `tf` carries.
+`opts.floatType` (`FT_FF` | `FT_Start` | `FT_Min` | `FT_Total` | `FT_SS`).
+Since v2.10.13 `FT_Total` reads as `FT_Start`, and `FT_SS`, the code P6's own
+Schedule Options dialog writes for "Start Float", is start float from early
+start to late start without the two adjustments `FT_Start` makes on resource
+dependent work (rules RT and AT; CHANGELOG v2.10.13), as P6 schedules them
+(P6 probe rounds 21 and 22). Anything else raises a `float-type-unsupported`
+ALERT and computes on the finish definition rather than guessing.
+`node.tf_start` and `node.tf_finish` are always published so both
+definitions are visible regardless of which one `tf` carries.
 
 How much it moves the number, measured rather than asserted: computing start
 float and finish float from P6's own stored ES/LS/EF/LF on each activity's
