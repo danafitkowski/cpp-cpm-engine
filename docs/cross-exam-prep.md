@@ -253,6 +253,16 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
+## Q18 — "Before v2.10.14 your engine named the wrong predecessor as the driver of work under way, correct?"
+
+**Quote source:** Historic — true through v2.10.13; closed in v2.10.14 ([`CHANGELOG.md`](../CHANGELOG.md) v2.10.14).
+
+**Response.** It named a different quantity, and a defined one. Through v2.10.13 the `driving_predecessor` of an activity under way recorded the predecessor that would have driven its actual start, and the two engines broke ties differently: the Python reference took the first such predecessor in list order, the JS engine the latest. v2.10.14 records what holds the remaining work, the same way in both engines. No date, float or critical flag moved in any measurement: on 949 projects in the measuring machine's P6 database every one is identical to v2.10.13. What can change is a driver trace or a longest-path chain through work under way. Against P6's own driving-path flag on the 1,208 flagged activities under way there, a predecessor P6 does not flag, named beside one it does, falls from 77 to 1, and a driver named where P6 flags no predecessor from 80 to 11. A record that names no predecessor beside a completed predecessor P6 flags rises from 111 to 218.
+
+**Concession to make.** "A driver trace through work under way issued on v2.10.13 or earlier can name a different chain; a re-run is expected to reproduce its dates and floats. Re-run it on v2.10.14 before relying on it. Where the data date holds the remaining work the engine records the data date. P6's flag often carries on into the completed work before it; the path-explorer's as-built step follows it part of the way (to P6's flagged predecessor on 79 of the 219 such cases on the measuring machine's database), outside the engine."
+
+---
+
 ## How to use this document at deposition / on the stand
 
 1. **Before testimony**, read the questions you expect to face based on your reliance on the engine. Mark the responses that match your case.

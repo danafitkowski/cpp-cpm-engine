@@ -44,7 +44,7 @@ ES = max(ES, activity.early_start)   # Cannot start before pinned ES
 EF = ES + duration                   # Calendar-aware: addWorkDays(ES, duration, calendar)
 ```
 
-The driving predecessor is the one whose contribution determined the ES. The engine records this as `node.driving_predecessor` for downstream path-explorer skills.
+The driving predecessor is the one whose contribution determined the ES. The engine records this as `node.driving_predecessor` for downstream path-explorer skills. For work under way it is what holds the remaining work, the restart, not the actual start (since v2.10.14): the predecessor whose restart drive lands on it, or the data date, an external early start or a resume date that holds it (see docs/api.md).
 
 **Calendar-aware variant.** The `+ duration` step is computed via `addWorkDays(ES, duration, calMap[clndr_id])` rather than naive integer addition. Lag is scheduled on the **successor's** calendar by default — but that is a measured default, **not** "P6 convention", and the previous wording claiming otherwise was wrong.
 

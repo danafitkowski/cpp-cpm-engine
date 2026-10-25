@@ -7419,6 +7419,51 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
         'driver=' + JSON.stringify(A.driving_predecessor));
 }
 
+// TD-1 (25-Oct-2026): the recorded driver of work UNDER WAY is what holds its
+// remaining work (the restart), not what would have driven its start. Python
+// paired tests: tests/test_started_driver_td1_2026_10_25.py.
+{
+    const MF = { work_days: [1, 2, 3, 4, 5], holidays: [], special_workdays: [] };
+    const act = (c, d, k) => Object.assign({ code: c, duration_days: d, clndr_id: 'MF' }, k || {});
+    const rel = (a, b, t) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: 0 });
+    const A = (k) => act('A', 10, Object.assign({ actual_start: '2026-01-05', remaining_duration: 5 }, k || {}));
+    const run = (acts, rels, mode) => E.computeCPM(acts.concat([act('Z', 0)]), rels.concat([rel('A', 'Z')]),
+        { dataDate: '2026-01-12', calMap: { MF: MF }, scheduleMode: mode || 'retained_logic' }).nodes.A;
+    const drv = (n) => JSON.stringify(n.driving_predecessor);
+    const twoFS = (earlyFirst) => [[act('PE', 3), act('PL', 15), A()],
+        earlyFirst ? [rel('PE', 'A'), rel('PL', 'A')] : [rel('PL', 'A'), rel('PE', 'A')]];
+    const fsFF = (ffFirst) => [[act('PFS', 4), act('PFF', 10), A()],
+        ffFirst ? [rel('PFF', 'A', 'FF'), rel('PFS', 'A')] : [rel('PFS', 'A'), rel('PFF', 'A', 'FF')]];
+    const PL = '{"code":"PL","type":"FS","lag_days":0}';
+    const PFF = '{"code":"PFF","type":"FF","lag_days":0}';
+    const DDS = '{"type":"DATA_DATE","date":"2026-01-12"}';
+    let n = run(...twoFS(true));
+    check('T-TD1-1: the later predecessor holds the restart, listed second', drv(n) === PL, 'driver=' + drv(n));
+    n = run(...twoFS(false));
+    check('T-TD1-2: the later predecessor holds the restart, listed first', drv(n) === PL, 'driver=' + drv(n));
+    n = run(...fsFF(false));
+    check('T-TD1-3: an FF link holding the remaining work drives (FS listed first)', drv(n) === PFF, 'driver=' + drv(n));
+    n = run(...fsFF(true));
+    check('T-TD1-4: an FF link holding the remaining work drives (FF listed first)', drv(n) === PFF, 'driver=' + drv(n));
+    n = run([act('C', 5, { actual_start: '2026-01-02', actual_finish: '2026-01-08', is_complete: true }), A()], [rel('C', 'A')]);
+    check('T-TD1-5: a predecessor that drove only the start is not the driver (data date holds it)',
+        drv(n) === DDS, 'driver=' + drv(n));
+    n = run([A()], []);
+    check('T-TD1-6: no predecessors, no driver', n.driving_predecessor === null, 'driver=' + drv(n));
+    n = run(...twoFS(false), 'progress_override');
+    check('T-TD1-7: progress override, FS links hold nothing under way (data date)', drv(n) === DDS, 'driver=' + drv(n));
+    n = run(...fsFF(false), 'progress_override');
+    check('T-TD1-8: progress override, an FF link still drives', drv(n) === PFF, 'driver=' + drv(n));
+    n = run([act('P', 3), act('A', 10, { actual_start: '2026-01-14', remaining_duration: 5 })], [rel('P', 'A')], 'progress_override');
+    check('T-TD1-9: progress override, an actual start after the data date holds itself',
+        n.driving_predecessor === null, 'driver=' + drv(n));
+    const lp = E.computeCPMWithStrategies(
+        [act('PE', 3), act('PL', 15), A(), act('Z', 0)], [rel('PE', 'A'), rel('PL', 'A'), rel('A', 'Z')],
+        { strategies: ['LPM'], dataDate: '2026-01-12', calMap: { MF: MF } });
+    const lpm = JSON.stringify(lp.strategy_summary && lp.strategy_summary.LPM && lp.strategy_summary.LPM.codes);
+    check('T-TD1-10: the LPM chain walks to the predecessor holding the restart', lpm === '["A","PL"]', 'lpm=' + lpm);
+}
+
 // v2.9.18 A3-HIGH: opts.projectFinish parameter forces backward-pass seed.
 // P6 "Must Finish By" — earlier deadline → global negative float.
 {

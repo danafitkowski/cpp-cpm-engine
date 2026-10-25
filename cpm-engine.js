@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.13';
+const ENGINE_VERSION = '2.10.14';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -3950,6 +3950,50 @@ function _hoursPass(activities, relationships, nodes, p) {
     };
 }
 
+// TD-1 — true when restart candidate `next` ([drive, type, lag, code, via
+// passthrough]) beats `inc`: the later drive, then on a tie the early-start
+// side's order (FS with zero lag first, then the lower code). Python paired
+// site: _restart_beats.
+function _restartBeats(next, inc) {
+    if (inc === null) return true;
+    if (next[0] !== inc[0]) return next[0] > inc[0];
+    const nextFS0 = next[1] === 'FS' && next[2] === 0;
+    const incFS0 = inc[1] === 'FS' && inc[2] === 0;
+    if (nextFS0 !== incFS0) return nextFS0;
+    return next[3] < inc[3];
+}
+
+// TD-1 (25-Oct-2026) — the driving_predecessor of work under way: what holds
+// the restart `anchor` (already snapped onto the activity calendar). A later
+// external early start or resume date: a CONSTRAINT sentinel
+// (EXTERNAL_EARLY_START, as on the early-start side, or RESUME_DATE); the
+// predecessor whose restart drive lands on it (`best`), carrying passthrough
+// when that drive was a date carried through completed work; the data date,
+// when nothing later holds it and the activity has predecessors (the
+// DATA_DATE sentinel, as for work not started); otherwise null, nothing but
+// its own actual start holds it. A predecessor whose drive ties the data date
+// takes the tie. Python paired site: _restart_driver_record.
+function _restartDriverRecord(best, anchor, heldBy, node, nodeCal, ddNum, dataDate, hasPreds) {
+    if (heldBy === 'external') {
+        return { type: 'CONSTRAINT', constraint_type: 'EXTERNAL_EARLY_START',
+                 date: node.external_early_start };
+    }
+    if (heldBy === 'resume') {
+        return { type: 'CONSTRAINT', constraint_type: 'RESUME_DATE',
+                 date: node.resume_date === undefined ? null : node.resume_date };
+    }
+    const snap = (x) => (nodeCal ? _advanceWithAlerts(x, 0, nodeCal, [], 'td1-snap') : x);
+    if (best !== null && snap(best[0]) === anchor) {
+        const rec = { code: best[3], type: best[1], lag_days: best[2] };
+        if (best[4]) rec.passthrough = true;
+        return rec;
+    }
+    if (ddNum > 0 && hasPreds && anchor === snap(ddNum)) {
+        return { type: 'DATA_DATE', date: dataDate };
+    }
+    return null;
+}
+
 function computeCPM(activities, relationships, opts) {
     opts = opts || {};
     // v2.9.22 — typed validation of input arrays. Previously passing
@@ -5201,6 +5245,15 @@ function computeCPM(activities, relationships, opts) {
         // WD (P6 parity 2026-10-12) — the FF / SF part of that drive, which
         // progress override still honours (see the efAnchor block).
         let _restartFFDrive = 0;
+        // TD-1 (25-Oct-2026) — the predecessor that holds the RESTART of work
+        // under way: [drive, type, lag, code, via passthrough], the latest
+        // drive winning, ties as on the early-start side (FS with zero lag,
+        // then the lower code). _restartBestFF keeps FF / SF only, the links
+        // progress override still honours. Read once the restart is fixed,
+        // in the efAnchor block. Python paired site: _restart_best /
+        // _restart_best_ff.
+        let _restartBest = null;
+        let _restartBestFF = null;
         // v2.9.44 — [snapped drive, instant] per relationship, so a finish
         // milestone can sit at the instant that actually drove it.
         const _driveInstants = [];
@@ -5431,6 +5484,11 @@ function computeCPM(activities, relationships, opts) {
                     }
                     if (_rDrive > _restartMaxDrive) _restartMaxDrive = _rDrive;
                     if ((p.type === 'FF' || p.type === 'SF') && _rDrive > _restartFFDrive) _restartFFDrive = _rDrive;
+                    const _rCand = [_rDrive, p.type, lag, pnode.code, _viaPt];
+                    if (_restartBeats(_rCand, _restartBest)) _restartBest = _rCand;
+                    if ((p.type === 'FF' || p.type === 'SF') && _restartBeats(_rCand, _restartBestFF)) {
+                        _restartBestFF = _rCand;
+                    }
                 }
                 continue;
             }
@@ -5641,6 +5699,9 @@ function computeCPM(activities, relationships, opts) {
             // data date is progress-override behavior, which the engine
             // previously produced regardless of mode.
             let efAnchor = (ddNum > 0 && ddNum > maxES) ? ddNum : maxES;
+            // TD-1 — what set the restart when it is not a predecessor or the
+            // data date: 'external' or 'resume' (the last floor to win).
+            let _restartHeldBy = null;
             if (_scheduleMode === 'retained_logic') {
                 // F4 (retained-logic P6 semantics wave 2026-09-02) — an
                 // actual_start recorded AFTER the data date does NOT floor
@@ -5670,12 +5731,14 @@ function computeCPM(activities, relationships, opts) {
                             ' (P6 TASK.external_early_start_date)',
                     });
                     efAnchor = _extESNum;
+                    _restartHeldBy = 'external';
                 }
                 // RES — no remaining work before the resume date.
                 const _rf = _resumeFloorOf(node);
                 if (_rf > efAnchor) {
                     efAnchor = _rf;
                     _resumeHeld.push(node);
+                    _restartHeldBy = 'resume';
                 }
                 // D3 (retained-logic P6 semantics wave 2026-09-02) — snap the
                 // restart anchor FORWARD on the ACTIVITY calendar, the same
@@ -5708,6 +5771,7 @@ function computeCPM(activities, relationships, opts) {
                 if (_rfPO > efAnchor) {
                     efAnchor = _rfPO;
                     _resumeHeld.push(node);
+                    _restartHeldBy = 'resume';
                 }
                 // PO_SNAP (P6 parity 2026-09-21) — progress_override applies
                 // the same D3 snap. Measured on a real-file oracle: a data
@@ -5720,6 +5784,18 @@ function computeCPM(activities, relationships, opts) {
                         'restart-snap ' + code);
                     if (_snapped !== efAnchor) efAnchor = _snapped;
                 }
+            }
+            // TD-1 (25-Oct-2026) — the driver of work under way is what holds
+            // its REMAINING work, the restart just fixed: before this the
+            // record was the predecessor that would have driven the actual
+            // start, so a backward trace through work under way followed
+            // history, not the link holding the forecast. Metadata only: no
+            // date moves. Python paired site: _restart_driver_record.
+            if (_scheduleMode === 'retained_logic' || _scheduleMode === 'progress_override') {
+                drivingPred = _restartDriverRecord(
+                    _scheduleMode === 'retained_logic' ? _restartBest : _restartBestFF,
+                    efAnchor, _restartHeldBy, node, nodeCal, ddNum, dataDate,
+                    (predMap[code] || []).length > 0);
             }
             node.restart = efAnchor;
             node.ef = _advanceWithAlerts(efAnchor, _remRaw, nodeCal, alerts,

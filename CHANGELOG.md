@@ -12,6 +12,100 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.14 - 2026-10-25 - The driver of work under way is what holds its remaining work
+
+**Class A: engine math changed in the driver record; no date, float or critical flag moved in any measurement.**
+For an activity under way, `driving_predecessor` now records what holds its remaining work (the restart: where its
+remaining work starts) instead of the predecessor that would have driven its actual start. A longest path or driver
+trace that runs through work under way can change.
+
+What was wrong (TD-1). It was found on a real delay claim. There the trace back from the contract milestone through
+work under way named the predecessor that had driven an activity's actual start, not the ones that held its
+remaining work.
+- **The Python reference took the first predecessor in list order** whose drive passed the actual start, which fixes
+  the early start of work under way. The JS engine took the latest such drive (v2.9.18, never ported), so the two
+  engines could name different drivers. The dates were equal; `driving_predecessor` is not a cross-validated field.
+- **Both engines read the start drive, not the restart drive.** A link holding the remaining work (an FF link, whose
+  restart drive is its finish less the work left, or the later of two FS links) could lose to one that only drove the
+  start.
+- **Under progress override the record could name an FS or SS predecessor,** a link P6 ignores for work under way.
+
+The rule, in both engines, once the restart is fixed, in this order:
+- An external early start or resume date that holds the restart later than the links and the data date would: a
+  `CONSTRAINT` sentinel, `constraint_type` `EXTERNAL_EARLY_START` (as on the early-start side) or `RESUME_DATE`
+  (new). On a tie the predecessor or the data date is recorded.
+- Otherwise the predecessor with the latest restart drive, if that drive lands on the restart. Ties go to an FS link
+  with zero lag, then to the lower activity code, as on the early-start side. Under retained logic every link
+  counts; under progress override, FF and SF only.
+- Otherwise, where the data date holds the restart and the activity has predecessors: the `DATA_DATE` sentinel, as
+  for work not started.
+- Otherwise `null`. An activity with no predecessors records `null` even where the data date holds it, as for work
+  not started.
+- Work under way with no remaining duration in the input (the field missing, not zero) keeps the predecessor that
+  drove its actual start: the latest drive past the actual start, as the JS engine already took it.
+
+**In CPP's path-explorer, released beside this engine (the as-built step, AB).** CPP is Critical Path Partners, the
+engine's author; path-explorer is its driver-trace tool. Where the engine records `DATA_DATE` on work under way, the
+backward trace now carries on into the predecessor that drove the actual start. It reads that link as it reads
+completed work: each predecessor's recorded dates plus the whole lag, and the latest such drive, taken only where it
+lands no more than one working day either side of the actual start on the activity's calendar. The link is marked
+`as_built`. The engine's own longest-path (LPM) strategy still stops at the data date.
+
+**Verified.**
+- **No date moved.** On the measuring machine's P6 database (949 projects with no activity or relationship updated
+  after P6's last schedule run), every early and late date, restart, total and free float and critical flag is
+  identical to v2.10.13, and no project fails in either version.
+- **Held-out sets H1 to H30,** re-scored on these bytes through the public scorer in diagnosis mode (not a new score):
+  8,850 of 8,850 unfinished activities on all seven fields, as on v2.10.13; none moved.
+- **Against P6's own driving-path flag,** on the 1,208 activities under way that P6 flags in those projects: a
+  predecessor P6 does not flag, named beside one it does, falls from 77 to 1; a driver named where P6's path starts
+  (P6 flags none of the predecessors) falls from 80 to 11. In return, a record that names no predecessor (the data
+  date, a constraint or `null`) beside a completed predecessor P6 flags, with no flagged predecessor under way, rises
+  from 111 to 218: there P6's flag runs on into the as-built history, and the record stops at what holds the
+  remaining work.
+- **Where the data date holds the remaining work** (284 of those 1,208), the engine records the data date. On 219
+  of the 284 P6 flags one of the predecessors: its flag goes on into the as-built history. From the 284 the
+  path-explorer's as-built step takes a further step 104 times: onto a predecessor P6 flags 79 times, onto one it
+  does not flag beside one it does once, and onto a predecessor where P6 flags none 24 times. It stops 180 times,
+  because no predecessor's drive lands within a working day of the actual start: beside a flagged predecessor 139
+  times, and where P6 flags none 41 times. The trace agrees with P6's flag on 120 of the 284 (79 + 41), against 65
+  (24 + 41) had it stopped at the data date.
+- **JS = Python on the record,** compared for the first time: the P6 database (949 projects,
+  193,868 activities) and 7,000 generated schedules (363,876 activities; the parity fuzz from seed 120000, each
+  schedule read through CPP's production XER converter), every compared field and every `driving_predecessor` equal.
+- **JS unit suite:** 1,510 checks green (1,500 in v2.10.13); T-TD1-1 to T-TD1-10 pin the rule. The Python
+  reference's own tests of it (11; 8 of them fail against the v2.10.13 reference, as a test of the fix should) run in
+  CPP's internal suite with its other Python tests, not in this repository.
+- **P6 probe replays** (`npm run test:p6-comparison`, the JS engine in hours): all 36 sets pass as before. The
+  Larchmere capture (3 P6 F9 exports, 4,608 open-activity comparisons on 6 fields) matches P6; its engine outputs
+  change only in the engine version.
+- **Cross-validation:** 233 fixtures, 22189 of 22189 executed, 0 skipped, 0 failures; alert parity on 231 of 233 (the
+  other 2 must throw). No fixture was added: `driving_predecessor` is not a compared field.
+- **Coverage,** re-measured on these bytes: statements 93.88% (13,893 of 14,798), branches 82.25%
+  (3,643 of 4,429), functions 96.98% (225 of 232); cross-validation alone covers
+  60.76% of statements.
+
+**Who is affected.**
+- Any reading of `driving_predecessor` on work under way: a driver trace, a longest path walked by drivers, and any
+  report that prints the driver of an activity under way. No date, float or critical flag moved in any measurement
+  above.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational): driving-path membership. Re-run under §12.2 a
+deliverable issued on an earlier version that printed a driver trace or a longest-path chain through work under way.
+A re-run is expected to reproduce its dates and floats, as every measurement above did.
+
+**Not claimed.**
+- `driving_predecessor` is not a cross-validated field; JS = Python on it rests on the two parity runs above. JS =
+  Python is a consistency check between two implementations by the same author, not a check against P6.
+- Where the data date holds the remaining work the engine records `DATA_DATE`; it does not follow P6's flag into the
+  as-built history. The path-explorer's as-built step does, outside the engine, and only part of the way: it reaches
+  the predecessor P6 flags on 79 of the 219 where P6 flags one. What P6 reads to flag the rest is
+  not measured.
+- No held-out set was drawn: a held-out case scores dates and floats, and none moved. The rule was written from the
+  restart P6 schedules, before the P6-database measurement, but that measurement is not a held-out test.
+
+---
+
 ## v2.10.13 - 2026-10-22 - The activity the float paths end at; P6's float-type codes; As Late As Possible work and mandatory dates on resource dependent work; a finish milestone at a 24:00 close; work under way with two finish constraints or an assignment with no units
 
 **Computed values move (Class A): engine math changed.** Twelve rules, each measured on synthetic P6 probe projects in

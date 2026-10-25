@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.13'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.14'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `1900` — the epoch anchor for internal day-offset arithmetic (since v2.10.7; 2020 before). |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -291,6 +291,14 @@ below, which schedules those lags to the minute; the alert is then an INFO.
                                                  //     predecessor drives (activity has preds but they finished earlier
                                                  //     than data_date, so the schedule update date is the actual driver).
                                                  //   null  — true source activity (no preds, no constraint, no data-date floor).
+                                                 //   Work under way (v2.10.14): what holds its REMAINING work, the restart,
+                                                 //     not what would have driven its actual start: the predecessor whose
+                                                 //     restart drive lands on the restart (retained logic: every link;
+                                                 //     progress override: FF / SF only; ties FS+0 first, then the lower code);
+                                                 //     {type:'CONSTRAINT', constraint_type:'EXTERNAL_EARLY_START' | 'RESUME_DATE', date}
+                                                 //     when a later external early start or resume date holds it;
+                                                 //     {type:'DATA_DATE', date} when the data date holds it and it has
+                                                 //     predecessors; null when only its own actual start holds it.
             is_complete, actual_start, actual_finish,
             clndr_id, duration_days,
         },

@@ -152,6 +152,28 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.14 (reviewed 2026-10-25)
+
+v2.10.14 closes TD-1, found on a real delay claim: the recorded driver of work under way named what would have
+driven its actual start, chosen in list order in the Python reference. It now names what holds the remaining
+work, in both engines. No date, float or critical flag moved in any measurement; driving-path membership does
+(change class A under the operator procedure).
+- **CLOSED:** TD-1, the driver of work under way (CHANGELOG.md v2.10.14).
+- The unit suite grew from 1,500 to 1,510 (T-TD1-1 to T-TD1-10).
+- The cross-validation surface stays at 233 fixtures and 22,189 of 22,189 comparisons. `driving_predecessor` is not a
+  compared field, so JS = Python on it was measured apart: the P6 database (949 projects, 193,868
+  activities) and 7,000 generated schedules (363,876 activities), every record equal.
+- Coverage re-measured on the new bytes: 93.88% statements / 82.25% branches / 96.98% functions.
+- **OPEN:** where the data date holds the remaining work of an activity under way (284 of the 1,208 flagged
+  activities under way on the measuring machine's database), the engine records the data date and its LPM strategy
+  stops there; P6's driving-path flag goes on into one of the predecessors on 219 of them. CPP's path-explorer walks
+  on (its as-built step) and reaches the predecessor P6 flags on 79 of the 219. What P6 reads to flag the rest is
+  not measured.
+- **OPEN:** `driving_predecessor` is not among the cross-validated fields.
+- **OPEN (carried from v2.10.13):** other pairs of a constraint and a mandatory date on work under way have no probe.
+- **OPEN (carried from v2.10.13):** the whole-day pass does not model times of day or the resources' own calendars,
+  so the hours-pass rules on resource dependent work are not in it.
+
 ## Status at v2.10.13 (reviewed 2026-10-22)
 
 Held-out set H27 scored the released v2.10.12 at 507 of 524; its five causes are **CLOSED** (rules MZ, UM, ZU, ZQ, and AW in place of the first reading, AR). Held-out sets H28 and H29, each drawn after the rules the set before it gave, found eight more causes, all **CLOSED** by the twelve rules of v2.10.13, each measured on synthetic P6 probe projects (179 probes, 937 rows) and so fitted (see CHANGELOG.md). v2.10.13 moves computed values (change class A under the operator procedure). It also reads the activity "Calculate multiple float paths" ends at (rule FK), which no earlier version read, and schedules P6's float-type codes `FT_SS` and `FT_Total` (rule FT), which earlier versions met with an ALERT. Held-out set H30, drawn after all twelve, scored the release bytes once: 675 of 675, all 12 cases clean.
@@ -414,4 +436,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.13. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.14. Update on every release that closes or opens an audit item.

@@ -157,7 +157,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.13'
+ENGINE_VERSION = '2.10.14'
 
 
 # =============================================================================
@@ -2284,6 +2284,57 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             'sized_from_days': sized_from_days}
 
 
+def _restart_beats(new, inc):
+    """TD-1 — True when restart candidate ``new`` (drive, type, lag, code,
+    via passthrough) beats ``inc``: the later drive, then on a tie the
+    early-start side's order (FS with zero lag first, then the lower code).
+    JS paired site: _restartBeats."""
+    if inc is None:
+        return True
+    if new[0] != inc[0]:
+        return new[0] > inc[0]
+    new_fs0 = new[1] == 'FS' and new[2] == 0
+    inc_fs0 = inc[1] == 'FS' and inc[2] == 0
+    if new_fs0 != inc_fs0:
+        return new_fs0
+    return new[3] < inc[3]
+
+
+def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_date, has_preds):
+    """TD-1 (25-Oct-2026) — the driving_predecessor of work under way: what
+    holds the restart ``anchor`` (already snapped onto the activity calendar).
+
+    * a later external early start or resume date: a CONSTRAINT sentinel,
+      ``EXTERNAL_EARLY_START`` (as on the early-start side) or ``RESUME_DATE``;
+    * the predecessor whose restart drive lands on it (``best``: the latest,
+      ties as on the early-start side), carrying ``passthrough`` when that
+      drive was a date carried through completed work;
+    * the data date, when nothing later holds it and the activity has
+      predecessors: the DATA_DATE sentinel, as for work not started;
+    * otherwise None: nothing but its own actual start holds it.
+
+    A predecessor whose drive ties the data date takes the tie, as on the
+    early-start side. JS paired site: _restartDriverRecord."""
+    if held_by == 'external':
+        return {'type': 'CONSTRAINT', 'constraint_type': 'EXTERNAL_EARLY_START',
+                'date': node['external_early_start']}
+    if held_by == 'resume':
+        return {'type': 'CONSTRAINT', 'constraint_type': 'RESUME_DATE',
+                'date': node.get('resume_date')}
+
+    def _snap(x):
+        return _advance_workdays(x, 0, node_cal, alerts=[], ctx='td1-snap') if node_cal else x
+
+    if best is not None and _snap(best[0]) == anchor:
+        rec = {'code': best[3], 'type': best[1], 'lag_days': best[2]}
+        if best[4]:
+            rec['passthrough'] = True
+        return rec
+    if dd_num > 0 and has_preds and anchor == _snap(dd_num):
+        return {'type': 'DATA_DATE', 'date': data_date}
+    return None
+
+
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 project_calendar='', schedule_mode='retained_logic',
                 relationship_lag_calendar='successor',
@@ -3374,6 +3425,18 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # When pred logic pushes max_es later, we record which pred drove it.
         # Out: dict {code, type, lag_days} or None.
         driving_pred = None
+        # A4-HIGH port (TD-1, 25-Oct-2026) — work with an actual start keeps
+        # the predecessor with the LATEST drive past the pin, not the first
+        # one iterated. JS paired site: _shadowMaxDrive (v2.9.18).
+        _shadow_max_drive = max_es
+        # TD-1 (25-Oct-2026) — the predecessor that holds the RESTART of work
+        # under way: (drive, type, lag, code, via passthrough), the latest
+        # drive winning, ties as on the early-start side (FS with zero lag,
+        # then the lower code). _restart_best_ff keeps FF / SF only, the links
+        # progress override still honours. Read once the restart is fixed,
+        # below. JS paired site: _restartBest / _restartBestFF.
+        _restart_best = None
+        _restart_best_ff = None
         _restart_max_drive = 0
         # WD (P6 parity 2026-10-12) — the FF / SF part of that drive, which
         # progress override still honours (see the restart anchor below).
@@ -3562,9 +3625,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 continue
             # P6 forward-pass semantics: pred logic cannot override actual_start.
             if has_actual_start:
-                if drive > max_es and driving_pred is None:
+                if drive > _shadow_max_drive:
                     # Track which pred WOULD have driven (forensic visibility)
-                    # even though actual_start pins max_es.
+                    # even though actual_start pins max_es: the LATEST such
+                    # drive (A4-HIGH port, TD-1). Work under way replaces it
+                    # with its restart's driver once the restart is fixed.
+                    _shadow_max_drive = drive
                     driving_pred = {
                         'code': pnode['code'],
                         'type': t,
@@ -3606,6 +3672,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                         _restart_max_drive = _r_drive
                     if t in ('FF', 'SF') and _r_drive > _restart_ff_drive:
                         _restart_ff_drive = _r_drive
+                    _rcand = (_r_drive, t, lag, pnode['code'], _via_pt)
+                    if _restart_beats(_rcand, _restart_best):
+                        _restart_best = _rcand
+                    if t in ('FF', 'SF') and _restart_beats(_rcand, _restart_best_ff):
+                        _restart_best_ff = _rcand
                 continue
             if drive > max_es:
                 max_es = drive
@@ -3778,6 +3849,9 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             _ef_anchor = max(act_start_num, dd_num) if dd_num > 0 else act_start_num
             if max_es > _ef_anchor:
                 _ef_anchor = max_es
+            # TD-1 — what set the restart when it is not a predecessor or the
+            # data date: 'external' or 'resume' (the last floor to win).
+            _restart_held_by = None
             if schedule_mode == 'retained_logic':
                 # F4 (retained-logic P6 semantics wave 2026-09-02) — an
                 # actual_start recorded AFTER the data date does NOT floor
@@ -3805,11 +3879,13 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                                     f'TASK.external_early_start_date)'),
                     })
                     _ef_anchor = _ext_es_num
+                    _restart_held_by = 'external'
                 # RES — no remaining work before the resume date.
                 _rf = _resume_floor(node)
                 if _rf > _ef_anchor:
                     _ef_anchor = _rf
                     _resume_held.append(node)
+                    _restart_held_by = 'resume'
                 # D3 (retained-logic P6 semantics wave 2026-09-02) — snap the
                 # restart anchor FORWARD on the ACTIVITY calendar, the same
                 # treatment the not-started data-date floor already gets
@@ -3845,6 +3921,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 if _rf_po > _ef_anchor:
                     _ef_anchor = _rf_po
                     _resume_held.append(node)
+                    _restart_held_by = 'resume'
                 # PO_SNAP (P6 parity 2026-09-21) — progress_override applies
                 # the same D3 snap. Measured on a real P6 export: data date
                 # 2026-09-18 15:00 encodes as the open of Saturday Sep 19;
@@ -3855,6 +3932,17 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                     _ef_anchor = _advance_workdays(
                         _ef_anchor, 0, node_cal,
                         alerts=alerts, ctx=f'restart-snap {code}')
+            # TD-1 (25-Oct-2026) — the driver of work under way is what holds
+            # its REMAINING work, the restart just fixed: before this the
+            # record was the predecessor that would have driven the actual
+            # start (the first one past it, in list order), so a backward
+            # trace through work under way followed history, not the link
+            # holding the forecast. Metadata only: no date moves.
+            if schedule_mode in ('retained_logic', 'progress_override'):
+                driving_pred = _restart_driver_record(
+                    _restart_best if schedule_mode == 'retained_logic' else _restart_best_ff,
+                    _ef_anchor, _restart_held_by, node, node_cal, dd_num, data_date,
+                    len(pred_map.get(code, [])) > 0)
             node['restart'] = _ef_anchor
             node['ef'] = _advance_workdays(
                 _ef_anchor, _rem_dur, node_cal,
