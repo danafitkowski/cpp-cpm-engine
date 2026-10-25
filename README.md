@@ -10,7 +10,7 @@
 [![AACE: 29R--03 / 49R--06 / 52R--06](https://img.shields.io/badge/AACE-29R--03%20%7C%2049R--06%20%7C%2052R--06-orange.svg)](docs/citations.md)
 
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
-**Open source. AACE-aligned. Daubert-disclosed. 1,510 JS unit tests, plus JS/Python parity on all 22189 enumerated cross-validation comparisons, none skipped (see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)).**
+**1,510 JS unit tests. The JS engine and its Python reference agree on all 22189 enumerated cross-validation comparisons, none skipped. That is a consistency check between two implementations by the same author, not a check against P6; what a third party can reproduce is in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification).**
 
 Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/), and the held-out P6 comparison in [`validation/held-out/`](validation/held-out/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
@@ -153,15 +153,15 @@ This means a forensic analysis run in JavaScript (browser, Node) produces the sa
 
 ---
 
-## Independent verification
+## Third-party reproduction
 
-The same-author crossval is honest about its limit: both JS and Python implementations are maintained here. To close the Daubert "no independent testing" objection, the engine ships with a **one-command third-party reproduction harness**:
+Both the JS engine and its Python reference are maintained here, so their agreement is not independent testing. What a third party can do is reproduce the results on another machine, with a **one-command reproduction harness**:
 
 ```bash
 git clone https://github.com/danafitkowski/cpp-cpm-engine
 cd cpp-cpm-engine
 git checkout <commit-sha>     # the SHA cited in the disclosure
-npm run verify                # runs unit + crossval + citation tests
+npm run verify                # unit, crossval, citation, truncation and version-drift tests
 # → attestations/latest.json   ← machine-readable witness file
 ```
 
@@ -173,15 +173,15 @@ Engine has **zero npm dependencies**, so reproduction requires only Node 18+ and
 - Timestamp + Node version + platform
 - Verdict (PASS/FAIL)
 
-Compare your locally-generated witness against the CI-signed witness (published on every push as a workflow artifact + Sigstore-signed via `actions/attest-build-provenance`). Bit-identical SHA-256s + matching pass counts on a clean clone = third-party reproduction confirmed.
+Compare the engine and Python-reference SHA-256s and the pass counts inside your locally generated witness with those inside the CI-signed witness. CI publishes a witness on every push as a workflow artifact, Sigstore-signed via `actions/attest-build-provenance`; each release's signed witness is committed at `release-evidence/<version>/witness-<version>.json` and attached to the release as `latest.json`. Matching SHA-256s and pass counts on a clean clone show that the same bytes give the same results on your machine (the witness files themselves differ: each carries its own timestamp). That confirms reproduction, not independence: the tests and the reference are still the author's.
 
-Verify a signed CI attestation:
+Verify the CI-signed witness of a release. A witness you generate locally with `npm run verify` is unsigned, so verifying it finds no attestation; the signed one ships in the tree:
 
 ```bash
-gh attestation verify attestations/latest.json --owner danafitkowski
+gh attestation verify release-evidence/v2.10.14/witness-v2.10.14.json --owner danafitkowski
 ```
 
-See [DAUBERT.md §3.1 — Independent Verification](DAUBERT.md#31-independent-verification) for the full Daubert framing.
+See [DAUBERT.md §3.1, Independent Verification](DAUBERT.md#31-independent-verification), for the full Daubert framing: there the term means checks a party other than the author can run.
 
 ---
 
@@ -225,7 +225,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.10.14.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Forensic correctness is enforced — every commit must pass 1,510 unit tests and the cross-validation harness, in which all 22189 defined comparisons execute and are bit-identical with 0 failures across 233 fixtures, none skipped, plus the citation regression, truncation regression, and version-drift regression gates (all wired into `npm run test:all` and `npm run verify`). New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Every commit must pass 1,510 unit tests and the cross-validation harness, in which all 22189 defined comparisons execute and are bit-identical with 0 failures across 233 fixtures, none skipped, plus the citation regression, truncation regression, and version-drift regression gates: CI runs those five on every push, and `npm run verify` runs the same five. `npm run test:all`, which CONTRIBUTING asks for before every pull request, runs them and six more: client names, the SOP, the re-issue procedure, the crypto sign-off, the P6 comparison and the corpus fixture. New citations require WebSearch-verified URLs. No fabricated case names. No LLM-generated narratives in core engine paths.
 
 ---
 

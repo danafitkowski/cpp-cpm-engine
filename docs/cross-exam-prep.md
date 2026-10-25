@@ -1,4 +1,4 @@
-# Cross-Examination Prep — `cpm-engine` Defensive Responses
+# Cross-Examination Prep: `cpm-engine` Defensive Responses
 
 > **INTERNAL ANALYST RESOURCE — NOT CITED IN COURT-FACING REPORTS.**
 >
@@ -16,7 +16,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ---
 
-## Q1 — "Your engine's strict-mode fatal-alert list is your list, correct?"
+## Q1: "Your engine's strict-mode fatal-alert list is your list, correct?"
 
 **Quote source:** [`DAUBERT.md §9`](../DAUBERT.md#9-forensic-strict-mode-shipped-v2931); `FATAL_STRICT_CONTEXTS` in `cpm-engine.js`.
 
@@ -26,7 +26,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ---
 
-## Q2 — "Your skill-manifest analyst-signoff field is just text, correct? It's not cryptographically signed?"
+## Q2: "Your skill-manifest analyst-signoff field is just text, correct? It's not cryptographically signed?"
 
 **Quote source:** `cpp-skill-manifest/v1` schema; `_cpp_common/scripts/skill_manifest.py`.
 
@@ -36,7 +36,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ---
 
-## Q3 — "Your 13-case P6 comparison matrix was captured by you, and you changed the engine after the first capture, correct?"
+## Q3: "Your 13-case P6 comparison matrix was captured by you, and you changed the engine after the first capture, correct?"
 
 **Quote source:** [`validation/p6-comparison/comparison-matrix.md`](../validation/p6-comparison/comparison-matrix.md); [`validation/p6-comparison/README.md`](../validation/p6-comparison/README.md); [`release-evidence/v2.9.39/validation-summary.md`](../release-evidence/v2.9.39/validation-summary.md).
 
@@ -107,7 +107,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ---
 
-## Q4 — "Your published XER corpus contains no real project schedules, correct?"
+## Q4: "Your published XER corpus contains no real project schedules, correct?"
 
 **Quote source:** [`validation/xer-corpus/README.md`](../validation/xer-corpus/README.md).
 
@@ -117,7 +117,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ---
 
-## Q5 — "Your own documentation admits this corpus does not reproduce real-world XER pathologies, correct?"
+## Q5: "Your own documentation admits this corpus does not reproduce real-world XER pathologies, correct?"
 
 **Quote source:** [`validation/xer-corpus/README.md`](../validation/xer-corpus/README.md), "Limitations of synthetic corpora" section.
 
@@ -127,7 +127,7 @@ Format below: each section names the cross-exam question, the file:line citation
 
 ---
 
-## Q6 — "Your clean baseline XER emits twenty-three alerts. Why?"
+## Q6: "Your clean baseline XER emits twenty-three alerts. Why?"
 
 **Quote source:** `validation/xer-corpus/cases/01-small-clean-baseline/engine-output.json`.
 
@@ -143,7 +143,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q7 — "Your scale-stress test is a trivial linear chain, not a realistic construction network, correct?"
+## Q7: "Your scale-stress test is a trivial linear chain, not a realistic construction network, correct?"
 
 **Quote source:** [`validation/xer-corpus/README.md`](../validation/xer-corpus/README.md), case 02 description.
 
@@ -153,7 +153,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q8 — "Nothing in the engine prevents an analyst from skipping your SOP, correct?"
+## Q8: "Nothing in the engine prevents an analyst from skipping your SOP, correct?"
 
 **Quote source:** [`FORENSIC_USE_SOP.md`](../FORENSIC_USE_SOP.md).
 
@@ -163,7 +163,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q9 — "The analyst signoff in your SOP is just a human process, not cryptographically bound to the output, correct?"
+## Q9: "The analyst signoff in your SOP is just a human process, not cryptographically bound to the output, correct?"
 
 **Quote source:** [`FORENSIC_USE_SOP.md`](../FORENSIC_USE_SOP.md) Step 14.
 
@@ -173,7 +173,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q10 — "Your strict-mode validator only walks `result.alerts`, not `salvage_log`. An adversary could route around it via salvage mode, correct?"
+## Q10: "Your strict-mode validator only walks `result.alerts`, not `salvage_log`. An adversary could route around it via salvage mode, correct?"
 
 **Quote source:** `cpm-engine.js` `_applyForensicStrictValidation`.
 
@@ -183,7 +183,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q11 — "Two of your fifteen P6 comparison cases cannot actually be compared to P6, correct?"
+## Q11: "Two of your fifteen P6 comparison cases cannot actually be compared to P6, correct?"
 
 **Quote source:** [`validation/p6-comparison/comparison-matrix.md`](../validation/p6-comparison/comparison-matrix.md), "Known-by-construction divergences" section.
 
@@ -193,7 +193,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q12 — "You wrote your own SOP and your own Daubert disclosure, correct?"
+## Q12: "You wrote your own SOP and your own Daubert disclosure, correct?"
 
 **Quote source:** [`FORENSIC_USE_SOP.md`](../FORENSIC_USE_SOP.md), [`DAUBERT.md`](../DAUBERT.md).
 
@@ -203,7 +203,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q13 — "Your override mechanism accepts any non-empty string. An analyst could write 'because I said so' and strict mode would let the deliverable through, correct?"
+## Q13: "Your override mechanism accepts any non-empty string. An analyst could write 'because I said so' and strict mode would let the deliverable through, correct?"
 
 **Quote source:** `_applyForensicStrictValidation` rationale-handling in `cpm-engine.js`.
 
@@ -213,7 +213,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q14 — "You marked some of your features 'industry-first' and 'pre-publication.' Has any AACE / SCL / academic body endorsed these features?"
+## Q14: "You marked some of your features 'industry-first' and 'pre-publication.' Has any AACE / SCL / academic body endorsed these features?"
 
 **Quote source:** [`DAUBERT.md`](../DAUBERT.md) §2 row "Public-API surfaces", §11.
 
@@ -223,7 +223,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q15 — "Your engine's documentation has drifted between releases. The DAUBERT disclosure for v2.9.31 incorrectly identified the version as v2.9.29 in its header, didn't it?"
+## Q15: "Your engine's documentation has drifted between releases. The DAUBERT disclosure for v2.9.31 incorrectly identified the version as v2.9.29 in its header, didn't it?"
 
 **Quote source:** Historic — was true at v2.9.31; closed in v2.9.33 with the `npm run test:version-refs` regression gate.
 
@@ -233,7 +233,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q16 — "Your engine has not been peer-reviewed in a journal, correct?"
+## Q16: "Your engine has not been peer-reviewed in a journal, correct?"
 
 **Quote source:** [`DAUBERT.md §3`](../DAUBERT.md#3-peer-review).
 
@@ -243,7 +243,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q17 — "Your engine implements 66 jurisdiction holiday rules. Have any of those rules been legally validated by a jurisdiction's authorities?"
+## Q17: "Your engine implements 66 jurisdiction holiday rules. Have any of those rules been legally validated by a jurisdiction's authorities?"
 
 **Quote source:** [`docs/jurisdictions.md`](jurisdictions.md).
 
@@ -253,7 +253,7 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
-## Q18 — "Before v2.10.14 your engine named the wrong predecessor as the driver of work under way, correct?"
+## Q18: "Before v2.10.14 your engine named the wrong predecessor as the driver of work under way, correct?"
 
 **Quote source:** Historic — true through v2.10.13; closed in v2.10.14 ([`CHANGELOG.md`](../CHANGELOG.md) v2.10.14).
 

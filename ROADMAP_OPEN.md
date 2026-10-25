@@ -160,7 +160,7 @@ work, in both engines. No date, float or critical flag moved in any measurement;
 (change class A under the operator procedure).
 - **CLOSED:** TD-1, the driver of work under way (CHANGELOG.md v2.10.14).
 - The unit suite grew from 1,500 to 1,510 (T-TD1-1 to T-TD1-10).
-- The cross-validation surface stays at 233 fixtures and 22,189 of 22,189 comparisons. `driving_predecessor` is not a
+- The cross-validation surface stays at 233 fixtures and 22189 of 22189 comparisons. `driving_predecessor` is not a
   compared field, so JS = Python on it was measured apart: the P6 database (949 projects, 193,868
   activities) and 7,000 generated schedules (363,876 activities), every record equal.
 - Coverage re-measured on the new bytes: 93.88% statements / 82.25% branches / 96.98% functions.
@@ -178,7 +178,7 @@ work, in both engines. No date, float or critical flag moved in any measurement;
 
 Held-out set H27 scored the released v2.10.12 at 507 of 524; its five causes are **CLOSED** (rules MZ, UM, ZU, ZQ, and AW in place of the first reading, AR). Held-out sets H28 and H29, each drawn after the rules the set before it gave, found eight more causes, all **CLOSED** by the twelve rules of v2.10.13, each measured on synthetic P6 probe projects (179 probes, 937 rows) and so fitted (see CHANGELOG.md). v2.10.13 moves computed values (change class A under the operator procedure). It also reads the activity "Calculate multiple float paths" ends at (rule FK), which no earlier version read, and schedules P6's float-type codes `FT_SS` and `FT_Total` (rule FT), which earlier versions met with an ALERT. Held-out set H30, drawn after all twelve, scored the release bytes once: 675 of 675, all 12 cases clean.
 - The unit suite grew from 1,498 to 1,500 (two FT checks); the rules are pinned by the P6 probe replays.
-- The cross-validation surface grew from 207 to 233 fixtures and from 17,926 of 17,926 to 22,189 of 22,189 comparisons, 0 skipped, still 0 failures.
+- The cross-validation surface grew from 207 to 233 fixtures and from 17926 of 17926 to 22189 of 22189 comparisons, 0 skipped, still 0 failures.
 - Coverage was re-measured on the new bytes: 93.87% statements / 82.26% branches / 96.94% functions.
 - The 13-case P6 comparison matrix and the Larchmere capture cases (19-21) read as before.
 - No held-out difference is open: H1 to H30 match P6 on all 8,850 unfinished activities on these bytes.
