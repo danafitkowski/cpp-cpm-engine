@@ -291,7 +291,7 @@ below, which schedules those lags to the minute; the alert is then an INFO.
                                                  //     predecessor drives (activity has preds but they finished earlier
                                                  //     than data_date, so the schedule update date is the actual driver).
                                                  //   null  — true source activity (no preds, no constraint, no data-date floor).
-                                                 //   Work under way (v2.10.14): what holds its REMAINING work, the restart,
+                                                 //   Work under way (since v2.10.14): what holds its REMAINING work, the restart,
                                                  //     not what would have driven its actual start: the predecessor whose
                                                  //     restart drive lands on the restart (retained logic: every link;
                                                  //     progress override: FF / SF only; ties FS+0 first, then the lower code);
