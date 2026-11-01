@@ -200,9 +200,14 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  5d3da8c17101e8dbabdeac087adc70e5d5ad496f9f3b715eb48046d3660fdbb5
+cpm.py          SHA-256:  ab60df1d5147715a44f409eb68add88db43c5bc83e1bfd954ba948cf95e00496
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  49459f0aab4dfa2b680b671e5593fadf6d27d550a1bd4abc019a26bd32d62e06
+
+(v2.10.15, 2026-11-01 - cpm.py bumped from 5d3da8c1...: ENGINE_VERSION reads
+2.10.15; nothing else changed. The release changes the JS parseXER only:
+a blank lag_hr_cnt is a zero lag. compute_cpm already read an empty or
+missing lag_days ('' or None) as 0. cpm_hours.py and cpm_minutes.py unchanged.)
 
 (v2.10.14, 2026-10-25 - cpm.py bumped from 300f7548...: ENGINE_VERSION reads
 2.10.14. The driving_predecessor of work under way is what holds its
@@ -925,7 +930,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 328799
-  sha-256:  5d3da8c17101e8dbabdeac087adc70e5d5ad496f9f3b715eb48046d3660fdbb5
+  sha-256:  ab60df1d5147715a44f409eb68add88db43c5bc83e1bfd954ba948cf95e00496
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

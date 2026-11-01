@@ -12,6 +12,80 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.15 - 2026-11-01 - A blank lag is a zero lag
+
+**Computed values move (Class A): engine math changed in the XER parser, not in `computeCPM`.** `parseXER` now keeps a
+relationship whose `lag_hr_cnt` is blank or missing, at zero lag. From v2.9.12 through v2.10.14 it dropped that
+relationship with a `lag-non-finite` ALERT. Only a file with a blank or missing `lag_hr_cnt` moves; none of the exports
+in the measuring machine's working folders has one.
+
+What was wrong (issue #17, reported by an outside user):
+- **A P6 6.0 export (ERMHDR 6.0) leaves `lag_hr_cnt` empty** on relationships that P6 schedules at zero lag: the
+  reporter found P6's stored early dates meet every such relationship at zero lag. `parseXER` read the empty field as
+  not a number and dropped the relationship, so its successor lost that predecessor and could start as early as its
+  other logic allowed. In the reporter's 2,880-activity export, 2,614 of 3,235 relationships were dropped and the
+  project finished 19 days earlier than in P6 (the reporter's figure; working or calendar days not stated). With the
+  blank lags read as zero, the reporter found the engine matched P6's stored early and late dates, total and free
+  float and critical flag on all 2,880 activities. The author does not hold that export; those figures are the
+  reporter's.
+- **A regression from v2.9.12.** Through v2.9.11 `parseXER` read a blank lag as zero (`parseFloat(lag_hr_cnt) || 0`).
+  v2.9.12 (2026-05-16) began dropping a lag that is not a finite number, to keep `Infinity` out of the dates, and a
+  blank fell into that check. No P6 6.0 export was in the test corpus, so no test saw it; a user found it.
+- **The drop was reported:** from v2.9.12 each dropped relationship raised a `lag-non-finite` ALERT, returned in
+  `parseXER`'s `parse_alerts` and in `runCPM`'s `alerts`.
+- **`computeCPM` already read an empty or missing `lag_days` as 0** in both engines (`''`, `null` or a missing key;
+  `None` in the Python reference); only `parseXER` disagreed.
+
+The rule:
+- A blank or whitespace-only `lag_hr_cnt`, a blank last field (the parser trims each line, so a blank last field is
+  missing) and a TASKPRED table with no `lag_hr_cnt` column all read as a zero lag.
+- One `lag-blank-as-zero` INFO per file gives the number of TASKPRED rows read that way and the first of them, by its
+  P6 `task_id` values (not Activity IDs). A row later dropped for another reason, such as a task the file does not
+  hold, still counts.
+- A value that `parseFloat` does not read as a finite number (`NotANumber`, `Infinity`, text with no leading number)
+  is still dropped with the `lag-non-finite` ALERT, as before. A value with a leading number and trailing text
+  (`2abc`) is read as that number without an alert, as in every version; no lag in the exports below has one.
+
+**Verified.**
+- **The exports in the measuring machine's working folders** (its downloads, projects and skills; 1,477 distinct
+  files, P6 19.12 to 24.12, none from 6.0) were copied to a frozen folder. Read straight from each file's TASKPRED
+  table, independent of `parseXER`, none of their 644,698 relationships has a blank or missing `lag_hr_cnt`. The
+  1,465 that schedule (12 throw in both versions) were run through `parseXER` and `computeCPM` on v2.10.14 and on
+  these bytes: every field of all 261,600 unfinished activities, `driving_predecessor` and the alerts included, and
+  every critical set is identical.
+- **Held-out sets H1 to H30,** re-scored on these bytes through the public scorer in diagnosis mode (not a new score;
+  the scorer reads each case's XER through `parseXER`): 8,850 of 8,850 unfinished activities on all seven fields, as
+  on v2.10.14; none moves.
+- **JS unit suite:** 1,515 checks passing (1,510 in v2.10.14). BL-1 to BL-5 pin the rule. On the reporter's
+  two-activity case (A, 40 h, then B, 24 h, FS) a blank lag now starts B after A, as `0` does, and the project
+  finishes on day 8, not day 5.
+- **Cross-validation:** 233 fixtures, 22189 of 22189 executed, 0 skipped, 0 failures; alert parity on 231 of 233 (the
+  other 2 must throw). The harness does not run `parseXER`, so no fixture was added.
+- **P6 probe replays** (`npm run test:p6-comparison`, which read each probe's XER through `parseXER`) pass as before.
+  The Larchmere capture (3 P6 F9 exports; its inputs are not read through `parseXER`) matches P6 as before; its engine
+  outputs change only in the engine version.
+- **Coverage,** re-measured on these bytes: statements 93.89% (13,927 of 14,832), branches 82.25%
+  (3,652 of 4,440), functions 96.98% (225 of 232); cross-validation alone covers
+  60.63% of statements.
+
+**Who is affected.**
+- A run of `parseXER` on v2.9.12 to v2.10.14 on an export with a blank `lag_hr_cnt`. Such a run raised one
+  `lag-non-finite` ALERT per dropped relationship; its message holds `non-finite lag_hr_cnt=""`,
+  `non-finite lag_hr_cnt=undefined` or `non-finite lag_hr_cnt="` followed by spaces. `computeCPM` called with
+  relationships directly is unchanged.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational): on a file with a blank or missing `lag_hr_cnt` a
+date, float or critical flag can move. Re-run under §12.2 a deliverable computed through `parseXER` on v2.9.12 to
+v2.10.14 whose run carried a `lag-non-finite` ALERT on a blank `lag_hr_cnt` (see Who is affected); a run without one
+is unchanged.
+
+**Not claimed.**
+- Not measured in P6 on the measuring machine: none of the exports in its working folders has a blank lag. Importing a
+  hand-edited XER with one into its P6 would measure it; that has not been done. That P6 schedules a blank lag as zero
+  rests on the reporter's export.
+
+---
+
 ## v2.10.14 - 2026-10-25 - The driver of work under way is what holds its remaining work
 
 **Class A: engine math changed in the driver record; no date, float or critical flag moved in any measurement.**

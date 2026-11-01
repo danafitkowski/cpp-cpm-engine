@@ -7424,11 +7424,11 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     const F = 'task_id\tpred_task_id\tpred_type\tlag_hr_cnt\tcomments';
     const zero = blankLagRun(F, ['2\t1\tPR_FS\t0\tx']);
     const mid = blankLagRun(F, ['2\t1\tPR_FS\t\tx']);
-    check('issue #17: a blank lag_hr_cnt keeps the relationship as a zero lag (B starts after A)',
+    check('BL-1 (issue #17): a blank lag_hr_cnt keeps the relationship as a zero lag (B starts after A)',
         mid.relCount === 1 && mid.bES === 5 && mid.finish === 8 &&
         mid.finish === zero.finish && mid.bES === zero.bES,
         JSON.stringify({ mid: [mid.relCount, mid.bES, mid.finish], zero: [zero.relCount, zero.bES, zero.finish] }));
-    check('issue #17: a blank lag_hr_cnt raises no lag-non-finite ALERT and one lag-blank-as-zero INFO',
+    check('BL-2 (issue #17): a blank lag_hr_cnt raises no lag-non-finite ALERT and one lag-blank-as-zero INFO',
         mid.nonFinite.length === 0 && mid.blank.length === 1 && mid.blank[0].severity === 'INFO' &&
         zero.blank.length === 0,
         JSON.stringify(mid.nonFinite.concat(mid.blank)));
@@ -7438,20 +7438,20 @@ console.log('\n=== Section R-v2.9.12 — Round 9 engine math fix wave ===');
     const tail = blankLagRun('task_id\tpred_task_id\tpred_type\tlag_hr_cnt', ['2\t1\tPR_FS\t']);
     const space = blankLagRun(F, ['2\t1\tPR_FS\t \tx']);
     const noCol = blankLagRun('task_id\tpred_task_id\tpred_type', ['2\t1\tPR_FS']);
-    check('issue #17: a blank last field, a whitespace field and a missing lag_hr_cnt column all read as a zero lag',
+    check('BL-3 (issue #17): a blank last field, a whitespace field and a missing lag_hr_cnt column all read as a zero lag',
         [tail, space, noCol].every((x) => x.relCount === 1 && x.bES === 5 && x.finish === 8 &&
             x.nonFinite.length === 0 && x.blank.length === 1),
         JSON.stringify([tail, space, noCol].map((x) => [x.relCount, x.bES, x.finish, x.nonFinite.length, x.blank.length])));
     // Many blank rows: one INFO for the file, with the count and the first row.
     const many = blankLagRun(F, ['2\t1\tPR_FS\t\tx', '3\t2\tPR_FS\t\tx', '3\t1\tPR_SS\t8\tx']);
-    check('issue #17: several blank lags are reported once, with the count and the first row',
+    check('BL-4 (issue #17): several blank lags are reported once, with the count and the first row',
         many.relCount === 3 && many.finish === 9 && many.blank.length === 1 &&
-        many.blank[0].message.indexOf('2 relationships') >= 0 &&
+        many.blank[0].message.indexOf('2 rows') >= 0 &&
         many.blank[0].message.indexOf('from=1 to=2') >= 0,
         JSON.stringify(many.blank));
     // A malformed value is still not a zero lag: dropped, with the ALERT.
     const bad = blankLagRun(F, ['2\t1\tPR_FS\tNotANumber\tx']);
-    check('issue #17: a non-numeric lag_hr_cnt is still dropped with the lag-non-finite ALERT',
+    check('BL-5 (issue #17): a non-numeric lag_hr_cnt is still dropped with the lag-non-finite ALERT',
         bad.relCount === 0 && bad.nonFinite.length === 1 && bad.nonFinite[0].severity === 'ALERT' &&
         bad.blank.length === 0,
         JSON.stringify(bad));

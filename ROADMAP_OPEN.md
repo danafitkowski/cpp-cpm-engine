@@ -152,6 +152,28 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.15 (reviewed 2026-11-01)
+
+v2.10.15 closes issue #17, reported by an outside user. From v2.9.12, `parseXER` dropped, with a `lag-non-finite`
+ALERT, any relationship whose `lag_hr_cnt` was blank; a P6 6.0 export leaves zero lags blank. It now reads a blank or
+missing lag as zero, as it did through v2.9.11. Only a file with a blank or missing `lag_hr_cnt` moves (change class A
+under the operator procedure); none of the 1,477 exports in the measuring machine's working folders has one.
+- **CLOSED:** issue #17, a blank lag (CHANGELOG.md v2.10.15).
+- The unit suite grew from 1,510 to 1,515 (BL-1 to BL-5).
+- The cross-validation surface stays at 233 fixtures and 22189 of 22189 comparisons; the harness does not run
+  `parseXER`.
+- Coverage re-measured on the new bytes: 93.89% statements / 82.25% branches / 96.98% functions.
+- **OPEN:** that P6 schedules a blank lag as zero is not measured on the measuring machine's P6; it rests on the
+  reporter's export. A hand-edited XER with a blank lag, imported into that P6, would measure it.
+- **OPEN:** `parseXER` reads a lag with a leading number and trailing text (`2abc`) as that number without an alert,
+  where `computeCPM`'s strict parse would reject it. No lag in the measuring machine's exports has one.
+- **OPEN (carried from v2.10.14):** where the data date holds the remaining work of an activity under way, P6's
+  driving-path flag goes on into the as-built history; the engine records the data date (see the v2.10.14 status).
+- **OPEN (carried from v2.10.14):** `driving_predecessor` is not among the cross-validated fields.
+- **OPEN (carried from v2.10.13):** other pairs of a constraint and a mandatory date on work under way have no probe.
+- **OPEN (carried from v2.10.13):** the whole-day pass does not model times of day or the resources' own calendars,
+  so the hours-pass rules on resource dependent work are not in it.
+
 ## Status at v2.10.14 (reviewed 2026-10-25)
 
 v2.10.14 closes TD-1, found on a real delay claim: the recorded driver of work under way named what would have
@@ -436,4 +458,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.14. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.15. Update on every release that closes or opens an audit item.

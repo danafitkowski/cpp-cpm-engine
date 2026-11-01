@@ -263,6 +263,16 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
+## Q19: "Before v2.10.15 your engine dropped every relationship with a blank lag, so on some P6 exports it finished weeks early, correct?"
+
+**Quote source:** Historic — true of `parseXER` from v2.9.12 through v2.10.14; closed in v2.10.15 ([`CHANGELOG.md`](../CHANGELOG.md) v2.10.15).
+
+**Response.** From v2.9.12 through v2.10.14, for an export that leaves a lag field empty, yes, and each drop raised a `lag-non-finite` ALERT naming the relationship. v2.9.12 began rejecting lags that are not finite numbers and the blank fell into that check; v2.9.11 and earlier read it as zero, as v2.10.15 does again. An outside user reported one P6 6.0 export that leaves zero lags empty (issue #17): 2,614 of 3,235 relationships dropped and a finish 19 days early, by the reporter's figures. `computeCPM`, given relationships directly, already read an empty lag as zero. None of the 1,477 exports in the measuring machine's working folders (P6 19.12 to 24.12) has a blank lag, and the 1,465 of them that schedule do so identically on v2.10.14 and v2.10.15.
+
+**Concession to make.** "A run of the engine's XER parser on v2.9.12 to v2.10.14 on an export with blank lags dropped those relationships and raised an ALERT for each; its dates should not be relied on. Re-run it on v2.10.15. The test suite did not catch the regression: no P6 6.0 export was in its corpus, and a user found it. Five checks now pin it. That P6 schedules a blank lag as zero is the reporter's finding on their export, not a measurement made on our P6."
+
+---
+
 ## How to use this document at deposition / on the stand
 
 1. **Before testimony**, read the questions you expect to face based on your reliance on the engine. Mark the responses that match your case.
