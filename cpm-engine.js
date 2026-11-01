@@ -8199,6 +8199,10 @@ function parseXER(content) {
     }
     let _activityCount = 0;
     let _relationshipCount = 0;
+    // v2.10.15 (issue #17) — TASKPRED rows whose blank lag_hr_cnt is read as
+    // a zero lag, and the first of them, for the one INFO after the loop.
+    let _blankLagCount = 0;
+    let _blankLagFirst = null;
 
     const lines = contentStr.split('\n');
     for (const line of lines) {
@@ -8652,13 +8656,30 @@ function parseXER(content) {
                 if (predType === 'PR_SS') relType = 'SS';
                 else if (predType === 'PR_FF') relType = 'FF';
                 else if (predType === 'PR_SF') relType = 'SF';
+                // v2.10.15 (issue #17) — a blank lag_hr_cnt is a zero lag.
+                // Some P6 6.0 exports write a zero lag as an empty field (a
+                // blank last field arrives here as undefined: the line is
+                // trimmed). Until then it fell into the non-finite check below
+                // and the relationship was dropped. The reporter's evidence: in
+                // a 2,880-activity file P6's own early dates meet every such
+                // link at zero lag, and read that way the engine matches them
+                // on every activity. computeCPM and the Python reference
+                // already read a blank lag as 0. Counted here and reported
+                // once, after the loop, as a lag-blank-as-zero INFO.
+                const _lagText = row.lag_hr_cnt === undefined ? '' : String(row.lag_hr_cnt).trim();
+                if (_lagText === '') {
+                    if (_blankLagCount === 0) {
+                        _blankLagFirst = 'from=' + (row.pred_task_id || '?') + ' to=' + (row.task_id || '?');
+                    }
+                    _blankLagCount++;
+                }
                 // v2.9.12 T2.15 — reject non-finite lag values. Previously
                 // `parseFloat('Infinity')` etc. propagated to ES/EF arithmetic
                 // and project_finish silently came out as Infinity. A real
                 // XER never emits a non-finite lag; if we see one, the file
                 // is corrupt or hand-edited and the relationship must be
                 // dropped with a loud ALERT.
-                const _rawLag = parseFloat(row.lag_hr_cnt);
+                const _rawLag = _lagText === '' ? 0 : parseFloat(row.lag_hr_cnt);
                 let _lagDays;
                 if (!Number.isFinite(_rawLag)) {
                     _MC.parseAlerts.push({
@@ -8720,6 +8741,16 @@ function parseXER(content) {
                 }
             }
         }
+    }
+    if (_blankLagCount > 0) {
+        _MC.parseAlerts.push({
+            severity: 'INFO',
+            context: 'lag-blank-as-zero',
+            message: 'TASKPRED: ' + _blankLagCount +
+                (_blankLagCount === 1 ? ' relationship has' : ' relationships have') +
+                ' a blank lag_hr_cnt (first: ' + _blankLagFirst + '); each is read as a ' +
+                'zero lag. Some P6 exports (ERMHDR 6.0) write a zero lag as an empty field.',
+        });
     }
 
     for (const _aid of Object.keys(_assignCounts)) {
