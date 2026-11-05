@@ -2235,10 +2235,30 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
                                    'the whole-day pass only.' % (e,))})
         return {'applied': False, 'reason': 'error: %s' % e}
     fmt = _cm.format_instant
+    withheld = []
     for c in by_code:
         o, n = out[c], nodes[c]
         if n['is_complete']:
             continue
+        # DG (5-Nov-2026): the whole-day pass picks the driving predecessor on
+        # day numbers, so on part-day work it can name one that does not hold
+        # the start: a 4-hour and a 6-hour activity into one milestone tie on
+        # the day, and the 4-hour one, with 2 hours of float, was named. Where
+        # the minutes pass's binding set (cpm_hours._binding_preds) leaves the
+        # whole-day choice out, the driver is withheld, not reported; the
+        # whole-day choice and the minutes pass's set are kept on the record.
+        # JS paired site: _hoursPass.
+        # The check is on the predecessor, not on which of its links: a
+        # predecessor tied by two links holds the start through either.
+        dp = n.get('driving_predecessor')
+        binding = o.get('binding')
+        if (binding is not None and dp and dp.get('code') and _dg_rel_type(dp.get('type')) in _DG_REL_TYPES
+                and not any(b['code'] == dp['code'] for b in binding)):
+            n['driving_predecessor'] = {
+                'type': 'WITHHELD', 'reason': 'part-day work',
+                'whole_day': dp, 'minutes_binding': [b['code'] for b in binding],
+            }
+            withheld.append(c)
         started = o['status'] == 'started'
         n['early_start_dt'] = fmt(o['restart'] if started and o['restart'] is not None else o['es'])
         n['early_finish_dt'] = fmt(o['ef'])
@@ -2281,7 +2301,18 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
             'lag_calendar': lag_cal, 'float_type': float_type,
             # activities sized from their days (inserted or changed after the
             # conversion), named so a deliverable can say so
-            'sized_from_days': sized_from_days}
+            'sized_from_days': sized_from_days,
+            # DG: the activities whose driving predecessor was withheld above
+            'driver_withheld': withheld}
+
+
+# DG: the link types the driver check reads, normalised as _dg_rel_type does.
+# JS paired sites: _DG_REL_TYPES / _dgRelType.
+_DG_REL_TYPES = frozenset(('FS', 'SS', 'FF', 'SF'))
+
+
+def _dg_rel_type(t):
+    return str(t or '').upper().replace('PR_', '', 1)
 
 
 def _restart_beats(new, inc):
@@ -5716,6 +5747,21 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # pass's test.
         critical = {c for c, n in nodes.items() if not n['is_complete'] and (
             n['tf'] <= 0.0 if n.get('tf_hours') is None else n['tf_hours'] <= 0)}
+    if _hours.get('applied') and _hours.get('driver_withheld'):
+        # DG (5-Nov-2026): say which activities lost their driving
+        # predecessor to the check in _hours_pass, and why. JS paired site:
+        # after the _hoursPass call.
+        _w = _hours['driver_withheld']
+        alerts.append({
+            'severity': 'ALERT', 'context': 'driver-withheld-part-day',
+            'message': ('Driving predecessor withheld on ' + str(len(_w)) + ' activit'
+                        + ('y' if len(_w) == 1 else 'ies')
+                        + ' (' + ', '.join(str(x) for x in _w) + '): the whole-day pass picks the driver on day '
+                        'numbers, and on this part-day work the predecessor it picked does not hold the start to '
+                        'the minute. The dates and float are unaffected. Each node keeps the whole-day choice and '
+                        'the predecessors that hold its start in the hours pass on driving_predecessor (type '
+                        'WITHHELD).'),
+        })
 
     return {
         'nodes': nodes,

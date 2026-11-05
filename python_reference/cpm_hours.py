@@ -17,7 +17,7 @@ Inputs (all optional fields may be absent):
   float_type: 'FT_FF' (finish float, P6's default) | 'FT_Start' | 'FT_SS' | 'FT_Min' (cpm.compute_cpm reads
   FT_Total as FT_Start).
 Output: {code: {es, ef, ls, lf (instants), restart, tf_minutes, ff_minutes, tf_start_minutes, tf_finish_minutes,
-        ff_signed_minutes, status}} plus 'project_finish'.
+        ff_signed_minutes, status, binding}} plus 'project_finish'.
 """
 from collections import defaultdict, deque
 
@@ -379,6 +379,48 @@ def _rsrc_place(n, cal, start_req, finish_req, xf=None):
     return es, ef
 
 
+def _binding_preds(drv, n, cal, tt, xf_on):
+    """DG (5-Nov-2026): the predecessors whose drive sets an activity's start in the minutes pass.
+
+    Each drive in `drv` ([from_code, type, kind, t]: a start requirement off FS / SS, a finish requirement off
+    FF / SF) is turned into the start it implies: a start requirement at the next working minute; a finish
+    requirement, on work with remaining duration, that duration back from the finish it pins, as the forward pass
+    places it; on zero-duration work, the next working minute; on a finish milestone, the requirement itself, which
+    it sits at. The binding set is every predecessor whose implied start is the latest or tied with it (no working
+    time between the two on the activity's calendar), as
+    [code, type] pairs. Where the activity's placement turns on more than its own calendar and duration (resource
+    dependent work, an expected finish) and a finish requirement is among its drives, the implied start is not this
+    simple, and the answer is None: not checked. cpm.compute_cpm checks the whole-day pass's driving predecessor
+    against this set (_hours_pass). The data date, constraints and external dates are floors the set leaves out: it
+    compares predecessors with predecessors. JS paired site: _hrBindingPreds.
+    """
+    if not drv:
+        return []
+    plain = not n['asg'] and not xf_on
+    implied = []
+    for code, typ, kind, t in drv:
+        if tt == 'TT_FinMile':
+            s = t   # placed at the latest requirement of either kind
+        elif kind == 'start':
+            s = cal.next_work(t)
+        elif not plain:
+            return None
+        elif n['rem'] == 0:
+            s = cal.next_work(t)
+        else:
+            fr = t if (cal.is_start(t) or cal.is_finish(t)) else cal.next_work(t)
+            s = cal.sub(fr, n['rem'])
+        implied.append((code, typ, s))
+    latest = None
+    for x in implied:
+        if latest is None or x[2] > latest:
+            latest = x[2]
+    # a tie is no working time between the two on the activity's calendar, as
+    # P6 reads a driving relationship: the close of a Saturday shift and the
+    # Monday opening are one point (measured on a P6 export: P6 flags both)
+    return [[x[0], x[1]] for x in implied if cal.between(x[2], latest) == 0]
+
+
 def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, schedule_mode='retained_logic',
                       lag_calendar='predecessor', project_calendar=None, project_finish=None,
                       ss_lag_from='early_start', use_expected_finish=False, use_external_dates=True,
@@ -619,14 +661,17 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
         xf_on = n['xf'] is not None and tt not in ('TT_Mile', 'TT_FinMile')
         xf_floor = None
         xf_start_pred = False
+        # DG: each predecessor's drive, kept for the binding set below
+        drv = []
         for r in preds[c]:
             p = nodes[r['from_code']]
             if 'ef' not in p:
                 continue
             kind, t = drive(p, r, n)
+            if kind == 'start' and n['started'] and schedule_mode == 'progress_override':
+                continue
+            drv.append([r['from_code'], r['type'], kind, t])
             if kind == 'start':
-                if n['started'] and schedule_mode == 'progress_override':
-                    continue
                 xf_start_pred = True
                 start_req = max(start_req, t)
             elif xf_on:
@@ -771,6 +816,7 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                         # (ZZ-CPP-H2S-M M7, M8, M15)
                         n['es'] = cal.next_work(dd)
                         n['ef'] = cal.add(n['es'], n['rem']) if n['rem'] > 0 else n['es']
+        n['binding'] = _binding_preds(drv, n, cal, tt, xf_on)
     proj_ef = max((n['ef'] for n in nodes.values() if n.get('ef') is not None), default=dd)
 
     # ---------------------------------------------------------------- backward
@@ -1340,6 +1386,10 @@ def compute_cpm_hours(activities, relationships, *, data_date, cal_map=None, sch
                   # the two total floats P6 picks between, and free float
                   # before the floor at zero (printed float, v2.10.1)
                   'tf_start_minutes': tf_sta, 'tf_finish_minutes': tf_fin, 'ff_signed_minutes': ff_signed,
-                  'status': 'complete' if n['complete'] else ('started' if n['started'] else 'not started')}
+                  'status': 'complete' if n['complete'] else ('started' if n['started'] else 'not started'),
+                  # DG: the predecessors that set the start to the minute, or
+                  # None where the pass cannot say (see _binding_preds)
+                  'binding': (None if n.get('binding') is None
+                              else [{'code': code, 'type': typ} for code, typ in n['binding']])}
     out['__project_finish__'] = proj_ef
     return out

@@ -200,9 +200,17 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  ab60df1d5147715a44f409eb68add88db43c5bc83e1bfd954ba948cf95e00496
+cpm.py          SHA-256:  f3544cbbca065eced75267f257d4c5a2c30647cd9c19a885fe86d8989104a56f
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  49459f0aab4dfa2b680b671e5593fadf6d27d550a1bd4abc019a26bd32d62e06
+cpm_hours.py    SHA-256:  de01740fa6385e5404a1fdd0a2b10008f57952c829cee1e61f7907a0155427b5
+
+(next candidate, 2026-11-05 - cpm.py bumped from ab60df1d..., cpm_hours.py
+from 49459f0a...: DG, the driver on part-day work. compute_cpm_hours keeps,
+for each activity, the predecessors whose drive sets its start to the minute
+('binding', _binding_preds); _hours_pass withholds a whole-day driving
+predecessor that set leaves out (type WITHHELD, driver_withheld) and
+compute_cpm raises the driver-withheld-part-day ALERT. ENGINE_VERSION still
+reads 2.10.15 until the release. cpm_minutes.py unchanged.)
 
 (v2.10.15, 2026-11-01 - cpm.py bumped from 5d3da8c1...: ENGINE_VERSION reads
 2.10.15; nothing else changed. The release changes the JS parseXER only:

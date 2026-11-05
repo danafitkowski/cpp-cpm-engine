@@ -2971,12 +2971,15 @@ function computeCPMHours(activities, relationships, o) {
         const xfOn = n.xf !== null && tt !== 'TT_Mile' && tt !== 'TT_FinMile';
         let xfFloor = null;
         let xfStartPred = false;
+        // DG: each predecessor's drive, kept for the binding set below
+        const drv = [];
         for (const r of preds.get(c)) {
             const p = nodes.get(r.from_code);
             if (p.ef === undefined) continue;
             const [kind, t] = drive(p, r, n);
+            if (kind === 'start' && n.started && scheduleMode === 'progress_override') continue;
+            drv.push([r.from_code, r.type, kind, t]);
             if (kind === 'start') {
-                if (n.started && scheduleMode === 'progress_override') continue;
                 xfStartPred = true;
                 startReq = Math.max(startReq, t);
             } else if (xfOn) {
@@ -3116,6 +3119,7 @@ function computeCPMHours(activities, relationships, o) {
                 }
             }
         }
+        n.binding = _hrBindingPreds(drv, n, cal, tt, xfOn);
     }
     let projEf = null;
     for (const n of nodes.values()) {
@@ -3681,10 +3685,58 @@ function computeCPMHours(activities, relationships, o) {
             // floor at zero (printed float, v2.10.1)
             tf_start_minutes: tfSta, tf_finish_minutes: tfFin, ff_signed_minutes: ffSigned,
             status: n.complete ? 'complete' : (n.started ? 'started' : 'not started'),
+            // DG: the predecessors that set the start to the minute, or null
+            // where the pass cannot say (see _hrBindingPreds)
+            binding: n.binding === undefined ? null
+                : (n.binding === null ? null : n.binding.map(([code, type]) => ({ code, type }))),
         };
     }
     out.__project_finish__ = projEf;
     return out;
+}
+
+// DG (5-Nov-2026): the predecessors whose drive sets an activity's start in the
+// minutes pass. Each drive (a start requirement off FS / SS, a finish
+// requirement off FF / SF) is turned into the start it implies: a start
+// requirement at the next working minute; a finish requirement, on work with
+// remaining duration, that duration back from the finish it pins, as the
+// forward pass places it; on zero-duration work, the next working minute; on a
+// finish milestone, the requirement itself, which it sits at. The binding set is every predecessor whose implied start is
+// the latest or tied with it: no working time between the two on the
+// activity's calendar. Where the activity's placement turns on
+// more than its own calendar and duration (resource dependent work, an
+// expected finish) and a finish requirement is among its drives, the implied
+// start is not this simple, and the answer is null: not checked. computeCPM
+// checks the whole-day pass's driving predecessor against this set
+// (_hoursPass). The data date, constraints and external dates are floors the
+// set leaves out: it compares predecessors with predecessors. Python paired
+// site: cpm_hours._binding_preds.
+function _hrBindingPreds(drv, n, cal, tt, xfOn) {
+    if (!drv.length) return [];
+    const plain = !(n.asg && n.asg.length) && !xfOn;
+    const implied = [];
+    for (const [code, type, kind, t] of drv) {
+        let s;
+        if (tt === 'TT_FinMile') {
+            s = t;   // placed at the latest requirement of either kind
+        } else if (kind === 'start') {
+            s = cal.nextWork(t);
+        } else if (!plain) {
+            return null;
+        } else if (n.rem === 0) {
+            s = cal.nextWork(t);
+        } else {
+            const fr = (cal.isStart(t) || cal.isFinish(t)) ? t : cal.nextWork(t);
+            s = cal.sub(fr, n.rem);
+        }
+        implied.push([code, type, s]);
+    }
+    let latest = null;
+    for (const x of implied) if (latest === null || x[2] > latest) latest = x[2];
+    // a tie is no working time between the two on the activity's calendar, as
+    // P6 reads a driving relationship: the close of a Saturday shift and the
+    // Monday opening are one point (measured on a P6 export: P6 flags both)
+    return implied.filter((x) => cal.between(x[2], latest) === 0).map((x) => [x[0], x[1]]);
 }
 
 const _HOURS_LAG_CAL = {
@@ -3887,10 +3939,30 @@ function _hoursPass(activities, relationships, nodes, p) {
         });
         return { applied: false, reason: 'error: ' + (e && e.message) };
     }
+    const withheld = [];
     for (const c of byCode.keys()) {
         const r = out[c];
         const n = nodes[c];
         if (n.is_complete) continue;
+        // DG (5-Nov-2026): the whole-day pass picks the driving predecessor on
+        // day numbers, so on part-day work it can name one that does not hold
+        // the start: a 4-hour and a 6-hour activity into one milestone tie on
+        // the day, and the 4-hour one, with 2 hours of float, was named. Where
+        // the minutes pass's binding set (_hrBindingPreds) leaves the
+        // whole-day choice out, the driver is withheld, not reported; the
+        // whole-day choice and the minutes pass's set are kept on the record.
+        // Python paired site: _hours_pass.
+        // The check is on the predecessor, not on which of its links: a
+        // predecessor tied by two links holds the start through either.
+        const dp = n.driving_predecessor;
+        if (r.binding && dp && dp.code && _DG_REL_TYPES.has(_dgRelType(dp.type)) &&
+                !r.binding.some((b) => b.code === dp.code)) {
+            n.driving_predecessor = {
+                type: 'WITHHELD', reason: 'part-day work',
+                whole_day: dp, minutes_binding: r.binding.map((b) => b.code),
+            };
+            withheld.push(c);
+        }
         const started = r.status === 'started';
         n.early_start_dt = _hrFormatInstant(started && r.restart !== null ? r.restart : r.es);
         n.early_finish_dt = _hrFormatInstant(r.ef);
@@ -3947,7 +4019,13 @@ function _hoursPass(activities, relationships, nodes, p) {
     return {
         applied: true, unit: 'minutes', project_finish_dt: _hrFormatInstant(out.__project_finish__),
         lag_calendar: lagCal, float_type: p.floatType, sized_from_days: sizedFromDays,
+        driver_withheld: withheld,
     };
+}
+
+const _DG_REL_TYPES = new Set(['FS', 'SS', 'FF', 'SF']);
+function _dgRelType(t) {
+    return String(t || '').toUpperCase().replace('PR_', '');
 }
 
 // TD-1 — true when restart candidate `next` ([drive, type, lag, code, via
@@ -7783,6 +7861,20 @@ function computeCPM(activities, relationships, opts) {
             if ((n.tf_hours === null || n.tf_hours === undefined) ? n.tf <= 0 : n.tf_hours <= 0) criticalCodes.add(c);
         }
     }
+    if (_hours.applied && _hours.driver_withheld.length) {
+        // DG (5-Nov-2026): say which activities lost their driving
+        // predecessor to the check in _hoursPass, and why. Python paired site:
+        // after the _hours_pass call.
+        const w = _hours.driver_withheld;
+        alerts.push({
+            severity: 'ALERT', context: 'driver-withheld-part-day',
+            message: 'Driving predecessor withheld on ' + w.length + ' activit' + (w.length === 1 ? 'y' : 'ies') +
+                ' (' + w.join(', ') + '): the whole-day pass picks the driver on day numbers, and on this ' +
+                'part-day work the predecessor it picked does not hold the start to the minute. The dates and ' +
+                'float are unaffected. Each node keeps the whole-day choice and the predecessors that hold its ' +
+                'start in the hours pass on driving_predecessor (type WITHHELD).',
+        });
+    }
     // With the hours pass applied the printed dates and the float in hours are
     // exact, so a fractional lag or duration the day pass rounded no longer
     // reaches them: its SUB_DAY_LAG_ROUNDED ALERT becomes an INFO that says so
@@ -10652,12 +10744,19 @@ function computeCPMWithStrategies(activities, relationships, opts) {
     const cpMethodsByCode = Object.create(null);
     for (const c of Object.keys(result.nodes)) cpMethodsByCode[c] = [];
 
+    // DG (5-Nov-2026): where the hours pass ran, the float is the float it
+    // prints and the latest finish is the latest instant, as for the critical
+    // codes since v2.10.1. Python paired site: compute_cpm_with_strategies.
+    const _dgHours = !!(result.hours && result.hours.applied);
+    const _dgTf = (n) => ((_dgHours && n.tf_working_days !== undefined && n.tf_working_days !== null)
+        ? n.tf_working_days : n.tf);
+
     // ── TFM strategy ────────────────────────────────────────────────────────
     if (strategies.includes('TFM')) {
         const codes = [];
         for (const c of Object.keys(result.nodes)) {
             const n = result.nodes[c];
-            if (!n.is_complete && n.tf <= tfThreshold) {
+            if (!n.is_complete && _dgTf(n) <= tfThreshold) {
                 codes.push(c);
                 cpMethodsByCode[c].push('TFM');
             }
@@ -10686,6 +10785,25 @@ function computeCPMWithStrategies(activities, relationships, opts) {
         const codes = [];
         const seen = new Set();
         const terminal = _findLatestFinish(result.nodes);
+        // DG: the walk starts at the latest finish and follows the driving
+        // predecessors, both chosen on day numbers. Where the hours pass ran
+        // and puts another activity's finish later than the chosen terminal's,
+        // or the walk reaches a withheld driver, the path is withheld.
+        let lpmWithheld = null;
+        if (_dgHours && terminal && !result.nodes[terminal].is_complete) {
+            let latest = null;
+            for (const c of Object.keys(result.nodes)) {
+                const n = result.nodes[c];
+                if (!n.is_complete && n.early_finish_dt && (latest === null || n.early_finish_dt > latest)) {
+                    latest = n.early_finish_dt;
+                }
+            }
+            const tdt = result.nodes[terminal].early_finish_dt;
+            if (latest !== null && tdt && tdt < latest) {
+                lpmWithheld = 'the whole-day pass ends the path at ' + terminal + ' (' + tdt +
+                    '), and another activity finishes later, at ' + latest;
+            }
+        }
         if (terminal && !result.nodes[terminal].is_complete) {
             // Walk back via driving_predecessor.code. CONSTRAINT / DATA_DATE
             // sentinels lack a .code field — they terminate the walk early
@@ -10701,17 +10819,31 @@ function computeCPMWithStrategies(activities, relationships, opts) {
                 const n = result.nodes[cur];
                 if (!n || !n.driving_predecessor) break;
                 const dp = n.driving_predecessor;
-                if (!dp.code) break;  // CONSTRAINT / DATA_DATE sentinel.
+                if (dp.type === 'WITHHELD' && lpmWithheld === null) {
+                    lpmWithheld = 'the walk reaches ' + cur + ', whose driving predecessor is withheld';
+                }
+                if (!dp.code) break;  // CONSTRAINT / DATA_DATE / WITHHELD sentinel.
                 cur = dp.code;
                 depth += 1;
             }
         }
-        // Stamp method label on visited nodes.
-        for (const c of codes) cpMethodsByCode[c].push('LPM');
-        strategy_summary.LPM = {
-            critical_count: codes.length,
-            codes: codes.slice().sort(),
-        };
+        if (lpmWithheld !== null) {
+            // withheld is not empty: the count is null and the codes are none,
+            // and the divergence below leaves LPM out
+            strategy_summary.LPM = { critical_count: null, codes: [], withheld: true, reason: lpmWithheld };
+            result.alerts.push({
+                severity: 'ALERT', context: 'lpm-withheld-part-day',
+                message: 'Longest path withheld: ' + lpmWithheld + '. The path is traced on day numbers, and ' +
+                    'this part-day work does not hold to them; the dates and float are unaffected.',
+            });
+        } else {
+            // Stamp method label on visited nodes.
+            for (const c of codes) cpMethodsByCode[c].push('LPM');
+            strategy_summary.LPM = {
+                critical_count: codes.length,
+                codes: codes.slice().sort(),
+            };
+        }
     }
     // ── MFP strategy — input (crt_path_num) + computed (engine) ─────────────
     if (strategies.includes('MFP')) {
@@ -10836,15 +10968,17 @@ function computeCPMWithStrategies(activities, relationships, opts) {
     const allCodes = new Set();
     for (const s of allSets) for (const c of s) allCodes.add(c);
     const sets = { LPM: lpmSet, TFM: tfmSet, MFP: mfpSet };
+    // DG: a withheld strategy takes no part in the comparison
+    const compared = strategies.filter(k => !(strategy_summary[k] && strategy_summary[k].withheld));
     const all_agree = [];
     const any_flagged = Array.from(allCodes).sort();
     for (const c of allCodes) {
         let flagged = 0;
-        for (const k of strategies) if (sets[k] && sets[k].has(c)) flagged += 1;
-        if (flagged === strategies.length) all_agree.push(c);
+        for (const k of compared) if (sets[k] && sets[k].has(c)) flagged += 1;
+        if (flagged === compared.length) all_agree.push(c);
     }
     const only = (selfKey) => {
-        const others = strategies.filter(k => k !== selfKey);
+        const others = compared.filter(k => k !== selfKey);
         const out = [];
         for (const c of allCodes) {
             const hasSelf = sets[selfKey] && sets[selfKey].has(c);
@@ -10925,6 +11059,38 @@ function _impactWorkingDays(beforeDate, afterDate, calMap, projectCalendarId) {
     return n;
 }
 
+// DG (5-Nov-2026): why a whole-day TIA impact cannot stand, or null when it
+// can. `before` / `after` are the finish instants the hours pass printed
+// ('YYYY-MM-DD HH:MM'), null where it did not run; `wholeDays` is the impact
+// counted on the whole-day finishes. The count stands when it equals the
+// working days between the two finish dates P6 prints, counted on the project
+// calendar (the first calendar when none is named, as _impactWorkingDays
+// does): a 4-hour insertion that moved the finish from 12:00 to 17:00 of the
+// same day was counted as 1 working day, against 0 between the dates.
+function _dgTiaWithhold(before, after, wholeDays, opts) {
+    if (!before && !after) return null;
+    if (!before || !after) return 'only one of the two schedules has minute-level dates to compare';
+    const cm = opts.calMap || {};
+    const keys = Object.keys(cm);
+    const info = (opts.projectCalendar !== undefined && opts.projectCalendar !== null && cm[opts.projectCalendar])
+        || (keys.length ? cm[keys[0]] : null);
+    if (!info) return 'there is no calendar to count the finish dates on';
+    const cal = new _HrWorkCalendar(info);
+    const a = _hrParseInstant(before);
+    const b = _hrParseInstant(after);
+    if (a === null || b === null) return 'a finish instant did not read as a date';
+    const da = Math.floor(a / _HR_DAY);
+    const db = Math.floor(b / _HR_DAY);
+    let n = 0;
+    for (let d = Math.min(da, db) + 1; d <= Math.max(da, db); d++) if (cal.slots(d).length) n += 1;
+    const days = db >= da ? n : -n;
+    if (days !== wholeDays) {
+        return 'the whole-day count gives ' + wholeDays + ' working days, and the finish dates P6 prints (' +
+            before + ' and ' + after + ') are ' + days + ' working days apart';
+    }
+    return null;
+}
+
 function computeTIA(activities, relationships, fragnets, opts) {
     opts = opts || {};
     const mode = opts.mode || 'isolated';
@@ -10945,6 +11111,11 @@ function computeTIA(activities, relationships, fragnets, opts) {
     let prevRels = relationships;
     let prevFinishNum = baselineFinishNum;
     let prevFinish = baselineFinish;
+    // DG: the finish instants the hours pass prints, where it ran
+    const _dgDt = (r) => ((r && r.hours && r.hours.applied) ? r.hours.project_finish_dt : null);
+    const baselineFinishDt = _dgDt(baseline);
+    let prevFinishDt = baselineFinishDt;
+    const tiaWithheld = [];
 
     for (const f of (fragnets || [])) {
         // Audit T2 fix: intra-fragnet duplicate-code check BEFORE the base
@@ -11048,22 +11219,53 @@ function computeTIA(activities, relationships, fragnets, opts) {
             continue;
         }
         const impact_days = postFinishNum - cmpFinishNum;
-        per_fragnet.push({
-            fragnet_id: f.fragnet_id,
-            name: f.name,
-            liability: f.liability || 'Unattributed',
-            status: 'ok',
-            completion_before: cmpFinish,
-            completion_after: postFinish,
-            impact_days,
-            impact_working_days: _impactWorkingDays(cmpFinish, postFinish, opts.calMap, opts.projectCalendar),
-            post_cpm: post,
-        });
+        const impact_working_days = _impactWorkingDays(cmpFinish, postFinish, opts.calMap, opts.projectCalendar);
+        // DG (5-Nov-2026): the impact is counted in whole days between the
+        // whole-day pass's finishes. Where the hours pass ran, its finishes are
+        // the ones P6 prints, and the whole-day count measures the delay only
+        // when both sit at the same point of their working day and the count
+        // agrees with the days between them; a 4-hour insertion was reported
+        // as 1 working day. Otherwise the impact is withheld through the error
+        // path, so it is never read as a figure or as zero. In cumulative mode
+        // the fragnet still goes into the network. Python paired site:
+        // tia_builder (time-impact-analysis skill).
+        const cmpFinishDt = (mode === 'cumulative-additive') ? prevFinishDt : baselineFinishDt;
+        const postFinishDt = _dgDt(post);
+        const dgWhy = _dgTiaWithhold(cmpFinishDt, postFinishDt, impact_working_days, opts);
+        if (dgWhy !== null) {
+            tiaWithheld.push(f.fragnet_id);
+            per_fragnet.push({
+                fragnet_id: f.fragnet_id,
+                name: f.name,
+                liability: f.liability || 'Unattributed',
+                status: 'error',
+                withheld: true,
+                error: 'Impact withheld: ' + dgWhy + '.',
+                completion_before: cmpFinish,
+                completion_after: postFinish,
+                completion_before_dt: cmpFinishDt,
+                completion_after_dt: postFinishDt,
+                post_cpm: post,
+            });
+        } else {
+            per_fragnet.push({
+                fragnet_id: f.fragnet_id,
+                name: f.name,
+                liability: f.liability || 'Unattributed',
+                status: 'ok',
+                completion_before: cmpFinish,
+                completion_after: postFinish,
+                impact_days,
+                impact_working_days,
+                post_cpm: post,
+            });
+        }
         if (mode === 'cumulative-additive') {
             prevActivities = merged;
             prevRels = mergedRels;
             prevFinishNum = postFinishNum;
             prevFinish = postFinish;
+            prevFinishDt = postFinishDt;
         }
     }
 
@@ -11075,9 +11277,31 @@ function computeTIA(activities, relationships, fragnets, opts) {
         for (const e of per_fragnet)
             if (e.status === 'ok') cumulative_days += e.impact_days;
     }
-    const cumulative_working_days = (mode === 'cumulative-additive')
+    let cumulative_working_days = (mode === 'cumulative-additive')
         ? _impactWorkingDays(baselineFinish, prevFinish, opts.calMap, opts.projectCalendar)
         : per_fragnet.reduce((s, e) => s + (e.status === 'ok' ? e.impact_working_days : 0), 0);
+    if (tiaWithheld.length) {
+        alerts.push({
+            severity: 'ALERT', context: 'tia-impact-withheld-part-day',
+            message: 'TIA impact withheld for ' + tiaWithheld.length + ' fragnet' + (tiaWithheld.length === 1 ? '' : 's') +
+                ' (' + tiaWithheld.join(', ') + '): the whole-day count does not measure part-day delay. ' +
+                'Each carries status error, withheld true and both finish instants. ' +
+                (mode === 'cumulative-additive' ? 'The fragnets stay in the cumulative network.'
+                    : 'They are not in the cumulative totals.'),
+        });
+    }
+    // DG: the cumulative figure of the cumulative mode is a whole-day count too
+    if (mode === 'cumulative-additive' && per_fragnet.length) {
+        const dgCum = _dgTiaWithhold(baselineFinishDt, prevFinishDt, cumulative_working_days, opts);
+        if (dgCum !== null) {
+            cumulative_days = null;
+            cumulative_working_days = null;
+            alerts.push({
+                severity: 'ALERT', context: 'tia-impact-withheld-part-day',
+                message: 'Cumulative TIA impact withheld: ' + dgCum + '.',
+            });
+        }
+    }
 
     // by_liability tabulation
     const by_liability = Object.create(null);

@@ -299,6 +299,16 @@ below, which schedules those lags to the minute; the alert is then an INFO.
                                                  //     when a later external early start or resume date holds it;
                                                  //     {type:'DATA_DATE', date} when the data date holds it and it has
                                                  //     predecessors; null when only its own actual start holds it.
+                                                 //   {type:'WITHHELD', reason:'part-day work', whole_day, minutes_binding}
+                                                 //     (next release): where the hours pass ran, the whole-day choice above
+                                                 //     is checked against it, and withheld when another predecessor holds
+                                                 //     the start to the minute. `whole_day` keeps the whole-day choice;
+                                                 //     `minutes_binding` lists the predecessors whose drive sets the start
+                                                 //     in the hours pass. One ALERT 'driver-withheld-part-day' names them;
+                                                 //     result.hours.driver_withheld lists the codes. Not checked: work whose
+                                                 //     placement turns on an expected finish or resource assignments when a
+                                                 //     finish link is among its drives, and drivers against the data date or
+                                                 //     a constraint.
             is_complete, actual_start, actual_finish,
             clndr_id, duration_days,
         },
@@ -353,6 +363,8 @@ const r = E.computeCPMWithStrategies(acts, rels, {
 // r.strategy_summary, r.divergence (only_LPM, only_TFM, only_MFP, all_agree)
 ```
 
+Where the hours pass ran (next release): TFM reads the printed float (`tf_working_days`), as the critical codes do since v2.10.1. LPM is withheld, `{critical_count: null, codes: [], withheld: true, reason}` with an ALERT `lpm-withheld-part-day`, when another activity finishes later to the minute than the terminal the whole-day pass chose, or the walk reaches a withheld driver; a withheld strategy takes no part in `divergence`.
+
 ---
 
 ## Time Impact Analysis
@@ -369,6 +381,12 @@ const r = E.computeTIA(activities, relationships, fragnets, {
 });
 // r.baseline (full CPM result)
 // r.per_fragnet[i] = { fragnet_id, name, liability, status, impact_days, impact_working_days, post_cpm }
+//   (next release) where the hours pass ran, an impact the whole-day count cannot measure is withheld:
+//   { status: 'error', withheld: true, error, completion_before_dt, completion_after_dt, post_cpm } and an
+//   ALERT 'tia-impact-withheld-part-day'. The whole-day count stands when it equals the working days
+//   between the two finish dates the hours pass prints, on the project calendar. Withheld rows are not in
+//   the isolated totals; in cumulative mode they stay in the network, and a failed check on the cumulative
+//   finish sets cumulative_days and cumulative_working_days to null.
 // r.cumulative_days (total days extension)
 // r.by_liability = { Owner: 6, Contractor: 4 }
 // r.manifest.methodology = 'AACE 29R-03 MIP 3.6 (Modeled / Additive / Single Base — Prospective Single-Base TIA)'

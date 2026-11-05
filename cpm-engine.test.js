@@ -13866,6 +13866,80 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(dau.map((n) => ['A1X', 'A2X', 'A3X', 'A4X', 'A5X', 'B1X', 'B1Y', 'B2X', 'B3X', 'B4X'].map((c) => c === 'B1Y' ? n[c].es : n[c].restart))));
 }
 
+// DG (5-Nov-2026): the whole-day pass picks the driving predecessor, the
+// longest path's terminal and the TIA impact on day numbers. On part-day work
+// they are checked against the hours pass and withheld where it disagrees;
+// whole-day work is unchanged. Python paired tests:
+// tests/test_driver_guard_2026_11_05.py.
+{
+    const CAL = { C: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 8 } };
+    const a = (code, h, k) => Object.assign({ code, duration_days: h / 8, remaining_hours: h,
+        remaining_hours_days: h / 8, clndr_id: 'C' }, k || {});
+    const fm = (code) => a(code, 0, { task_type: 'TT_FinMile' });
+    const fs = (x, y) => ({ from_code: x, to_code: y, type: 'FS', lag_days: 0 });
+    const opts = { dataDate: '2026-01-05 08:00', calMap: CAL, projectCalendar: 'C' };
+    const pair = (ha, hb, k) => E.computeCPMWithStrategies([a('A', ha), a('B', hb), fm('F')],
+        [fs('A', 'F'), fs('B', 'F')], Object.assign({ strategies: ['LPM', 'TFM'] }, opts, k || {}));
+
+    const part = pair(4, 6);
+    const dp = part.nodes.F.driving_predecessor;
+    const al = part.alerts.filter((x) => x.context === 'driver-withheld-part-day');
+    check('DG-1: a 4-hour and a 6-hour activity into one milestone: the whole-day driver (A) is withheld, and the hours pass names B',
+        dp && dp.type === 'WITHHELD' && dp.whole_day.code === 'A' && JSON.stringify(dp.minutes_binding) === '["B"]' &&
+        JSON.stringify(part.hours.driver_withheld) === '["F"]' && al.length === 1 && al[0].severity === 'ALERT' &&
+        al[0].message.indexOf('(F)') >= 0,
+        JSON.stringify({ dp, w: part.hours.driver_withheld, al }));
+    check('DG-2: there the dates and float are unchanged: B and F finish 15:00, A has 2 hours of float, and the critical codes are B and F',
+        part.nodes.F.early_finish_dt === '2026-01-05 15:00' && part.nodes.A.tf_hours === 2 &&
+        JSON.stringify(part.criticalCodesArray.slice().sort()) === '["B","F"]',
+        JSON.stringify([part.nodes.F.early_finish_dt, part.nodes.A.tf_hours, part.criticalCodesArray]));
+    check('DG-3: TFM reads the printed float, so A (2 hours) is left out; LPM is withheld, not empty: count null, and no divergence entry',
+        JSON.stringify(part.strategy_summary.TFM.codes) === '["B","F"]' &&
+        part.strategy_summary.LPM.withheld === true && part.strategy_summary.LPM.critical_count === null &&
+        part.alerts.some((x) => x.context === 'lpm-withheld-part-day') &&
+        part.divergence.only_LPM.length === 0 && JSON.stringify(part.divergence.all_agree) === '["B","F"]',
+        JSON.stringify({ s: part.strategy_summary, d: part.divergence }));
+
+    const whole = pair(8, 16);
+    check('DG-4: whole days (8 and 16 hours): nothing withheld, B drives F, no DG alert, LPM traced and TFM as before',
+        whole.nodes.F.driving_predecessor.code === 'B' && whole.hours.driver_withheld.length === 0 &&
+        !whole.alerts.some((x) => /part-day/.test(x.context)) && !whole.strategy_summary.LPM.withheld &&
+        whole.strategy_summary.LPM.codes.indexOf('B') >= 0 && JSON.stringify(whole.strategy_summary.TFM.codes) === '["B","F"]',
+        JSON.stringify({ dp: whole.nodes.F.driving_predecessor, s: whole.strategy_summary }));
+
+    // the check is on the predecessor, not the link: one predecessor tied by FS
+    // and FF holds the start through either
+    const two = E.computeCPM([a('A', 4), a('B', 4)],
+        [fs('A', 'B'), { from_code: 'A', to_code: 'B', type: 'FF', lag_days: 0 }], opts);
+    check('DG-5: a predecessor tied by two links is not withheld whichever link the whole-day pass names',
+        two.nodes.B.driving_predecessor && two.nodes.B.driving_predecessor.code === 'A' &&
+        two.hours.driver_withheld.length === 0, JSON.stringify(two.nodes.B.driving_predecessor));
+
+    const tia = (hb, hd, mode) => E.computeTIA([a('A', hb)], [], [{ fragnet_id: 'D1', liability: 'Owner',
+        activities: [a('D', hd)], ties: [fs('A', 'D')] }], Object.assign({ mode: mode || 'isolated' }, opts));
+    const t1 = tia(4, 4);
+    const f1 = t1.per_fragnet[0];
+    check('DG-6: TIA: a 4-hour delay after a 4-hour activity (12:00 to 17:00 the same day: 0 working days between the dates, 1 on whole days) is withheld through the error path, with both instants and the ALERT, and is out of the totals',
+        f1.status === 'error' && f1.withheld === true && f1.impact_working_days === undefined && / 0 working days apart/.test(f1.error) &&
+        f1.completion_before_dt === '2026-01-05 12:00' && f1.completion_after_dt === '2026-01-05 17:00' &&
+        t1.cumulative_working_days === 0 && t1.alerts.some((x) => x.context === 'tia-impact-withheld-part-day'),
+        JSON.stringify({ f1: Object.assign({}, f1, { post_cpm: undefined }), cum: t1.cumulative_working_days }));
+    const ok = [tia(8, 8), tia(8, 16), tia(4, 8)].map((r) => r.per_fragnet[0]);
+    check('DG-7: TIA whole-day delays keep their figures: 1 and 2 working days, and a full day after a half-day finish is 1',
+        ok.every((f) => f.status === 'ok' && !f.withheld) &&
+        JSON.stringify(ok.map((f) => f.impact_working_days)) === '[1,2,1]',
+        JSON.stringify(ok.map((f) => [f.status, f.impact_working_days])));
+    const cum = E.computeTIA([a('A', 4)], [], [
+        { fragnet_id: 'D1', activities: [a('D', 8)], ties: [fs('A', 'D')] },
+        { fragnet_id: 'D2', activities: [a('G', 4)], ties: [fs('D', 'G')] }],
+    Object.assign({ mode: 'cumulative-additive' }, opts));
+    check('DG-8: TIA cumulative: the 4-hour fragnet that ends on the date it starts (12:00 to 17:00) is withheld but stays in the network, and the cumulative figures are withheld (null)',
+        cum.per_fragnet[0].status === 'ok' && cum.per_fragnet[0].impact_working_days === 1 &&
+        cum.per_fragnet[1].withheld === true && cum.cumulative_days === null && cum.cumulative_working_days === null,
+        JSON.stringify({ p: cum.per_fragnet.map((f) => [f.fragnet_id, f.status, f.impact_working_days]),
+            c: [cum.cumulative_days, cum.cumulative_working_days] }));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
