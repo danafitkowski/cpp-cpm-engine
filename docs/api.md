@@ -363,7 +363,7 @@ const r = E.computeCPMWithStrategies(acts, rels, {
 // r.strategy_summary, r.divergence (only_LPM, only_TFM, only_MFP, all_agree)
 ```
 
-Where the hours pass ran (next release): TFM reads the printed float (`tf_working_days`), as the critical codes do since v2.10.1. LPM is withheld, `{critical_count: null, codes: [], withheld: true, reason}` with an ALERT `lpm-withheld-part-day`, when another activity finishes later to the minute than the terminal the whole-day pass chose, or the walk reaches a withheld driver; a withheld strategy takes no part in `divergence`.
+Where the hours pass ran (next release): TFM reads the printed float (`tf_working_days`), as the critical codes do since v2.10.1. LPM is withheld, `{critical_count: null, codes: [], withheld: true, reason}` with an ALERT `lpm-withheld-part-day`, when another activity finishes working time later (on either activity's calendar) than the terminal the whole-day pass chose, or the walk reaches a withheld driver; a withheld strategy takes no part in `divergence`.
 
 ---
 

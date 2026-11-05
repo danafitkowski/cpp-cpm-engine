@@ -13929,6 +13929,19 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         ok.every((f) => f.status === 'ok' && !f.withheld) &&
         JSON.stringify(ok.map((f) => f.impact_working_days)) === '[1,2,1]',
         JSON.stringify(ok.map((f) => [f.status, f.impact_working_days])));
+    // whole days ending in a start milestone: it prints at the next morning's
+    // opening after its predecessor's close, which is not working time later
+    // (independent review, 5-Nov-2026: LPM was withheld here, by code order)
+    const ms = ['A1000', 'T'].map((t) => {
+        const m = t === 'T' ? 'A' : 'A1010';
+        return E.computeCPMWithStrategies([a(t, 16), a(m, 0, { task_type: 'TT_Mile' })], [fs(t, m)],
+            Object.assign({ strategies: ['LPM', 'TFM'] }, opts));
+    });
+    check('DG-9: whole days ending in a start milestone: LPM is traced, not withheld, whichever code sorts first',
+        ms.every((r) => !r.strategy_summary.LPM.withheld && r.strategy_summary.LPM.critical_count > 0 &&
+            !r.alerts.some((x) => x.context === 'lpm-withheld-part-day')),
+        JSON.stringify(ms.map((r) => r.strategy_summary.LPM)));
+
     const cum = E.computeTIA([a('A', 4)], [], [
         { fragnet_id: 'D1', activities: [a('D', 8)], ties: [fs('A', 'D')] },
         { fragnet_id: 'D2', activities: [a('G', 4)], ties: [fs('D', 'G')] }],

@@ -10789,19 +10789,30 @@ function computeCPMWithStrategies(activities, relationships, opts) {
         // predecessors, both chosen on day numbers. Where the hours pass ran
         // and puts another activity's finish later than the chosen terminal's,
         // or the walk reaches a withheld driver, the path is withheld.
+        // "Later" is working time later, on either activity's calendar: a
+        // start milestone printed at the next morning's opening after its
+        // predecessor's close is not later than it.
         let lpmWithheld = null;
         if (_dgHours && terminal && !result.nodes[terminal].is_complete) {
-            let latest = null;
-            for (const c of Object.keys(result.nodes)) {
-                const n = result.nodes[c];
-                if (!n.is_complete && n.early_finish_dt && (latest === null || n.early_finish_dt > latest)) {
-                    latest = n.early_finish_dt;
+            const tdt = result.nodes[terminal].early_finish_dt;
+            const t0 = _hrParseInstant(tdt);
+            const cm = opts.calMap || {};
+            const calOf = (cid) => new _HrWorkCalendar(cm[cid] || cm[opts.projectCalendar] || {});
+            const tCal = calOf(result.nodes[terminal].clndr_id);
+            let later = null;
+            if (t0 !== null) {
+                for (const c of Object.keys(result.nodes)) {
+                    const n = result.nodes[c];
+                    if (n.is_complete || !n.early_finish_dt || n.early_finish_dt <= tdt) continue;
+                    const t1 = _hrParseInstant(n.early_finish_dt);
+                    if (t1 === null) continue;
+                    if ((tCal.between(t0, t1) > 0 || calOf(n.clndr_id).between(t0, t1) > 0) &&
+                            (later === null || n.early_finish_dt > later)) later = n.early_finish_dt;
                 }
             }
-            const tdt = result.nodes[terminal].early_finish_dt;
-            if (latest !== null && tdt && tdt < latest) {
+            if (later !== null) {
                 lpmWithheld = 'the whole-day pass ends the path at ' + terminal + ' (' + tdt +
-                    '), and another activity finishes later, at ' + latest;
+                    '), and another activity finishes later, at ' + later;
             }
         }
         if (terminal && !result.nodes[terminal].is_complete) {
