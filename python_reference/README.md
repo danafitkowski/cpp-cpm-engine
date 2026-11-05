@@ -937,8 +937,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 328799
-  sha-256:  ab60df1d5147715a44f409eb68add88db43c5bc83e1bfd954ba948cf95e00496
+  bytes: 331438
+  sha-256:  f3544cbbca065eced75267f257d4c5a2c30647cd9c19a885fe86d8989104a56f
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
