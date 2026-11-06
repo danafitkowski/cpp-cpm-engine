@@ -10815,6 +10815,61 @@ function _findLatestFinish(nodes) {
 //   opts     — { maxPaths: number, targetCode: string }
 //
 // Returns: Array of { path_number: number, codes: string[] }
+// MF (v2.10.17): the predecessor the MFP walk steps to, decided on the whole
+// pool so that the order of the relationship rows cannot change it.
+// Unfinished predecessors rank on floatOf (the printed float where the hours
+// pass ran), then the latest whole-day finish, then laterOf (among those
+// still tied, one that another finishes working time later than drops out),
+// then the lowest code. Completed ones rank as before: the lowest whole-day
+// float, the latest whole-day finish, the lowest code. The best of each then
+// meet once, on the whole-day float, the whole-day finish and the code.
+// Without the hours pass (floatOf the whole-day float, no laterOf) this is
+// the old order on the whole pool. Python paired site: _mfp_choose.
+function _mfpChoose(pool, nodes, floatOf, laterOf) {
+    const live = [];
+    const done = [];
+    for (const p of pool) {
+        const n = nodes[p.from_code];
+        if (n) (n.is_complete ? done : live).push(p);
+    }
+    let bestDone = null;
+    for (const p of done) {
+        if (bestDone === null) { bestDone = p; continue; }
+        const a = nodes[p.from_code];
+        const b = nodes[bestDone.from_code];
+        if (a.tf < b.tf || (a.tf === b.tf && (a.ef > b.ef || (a.ef === b.ef && p.from_code < bestDone.from_code)))) {
+            bestDone = p;
+        }
+    }
+    let bestLive = null;
+    if (live.length) {
+        let fmin = Infinity;
+        for (const p of live) {
+            const f = floatOf(nodes[p.from_code]);
+            if (f < fmin) fmin = f;
+        }
+        let tied = live.filter((p) => floatOf(nodes[p.from_code]) === fmin);
+        if (!tied.length) tied = live;
+        let emax = -Infinity;
+        for (const p of tied) if (nodes[p.from_code].ef > emax) emax = nodes[p.from_code].ef;
+        const byEf = tied.filter((p) => nodes[p.from_code].ef === emax);
+        if (byEf.length) tied = byEf;
+        if (laterOf && tied.length > 1) {
+            const keep = tied.filter((p) => !tied.some((q) => q.from_code !== p.from_code &&
+                laterOf(nodes[q.from_code], nodes[p.from_code]) > 0));
+            if (keep.length) tied = keep;
+        }
+        for (const p of tied) if (bestLive === null || p.from_code < bestLive.from_code) bestLive = p;
+    }
+    if (bestLive === null || bestDone === null) return bestLive || bestDone;
+    const L = nodes[bestLive.from_code];
+    const D = nodes[bestDone.from_code];
+    const lf = L.tf;
+    if (D.tf !== lf) return D.tf < lf ? bestDone : bestLive;
+    if (D.ef !== L.ef) return D.ef > L.ef ? bestDone : bestLive;
+    return bestDone.from_code < bestLive.from_code ? bestDone : bestLive;
+}
+
 function _computeMFPPaths(nodes, predMap, opts) {
     opts = opts || {};
     // v2.9.20 A20-M2 — cap maxPaths. Each path enumerates a chain back
@@ -10863,25 +10918,10 @@ function _computeMFPPaths(nodes, predMap, opts) {
             // a prior path. P6's exact behaviour in this corner case is not
             // publicly documented; overlap is the least-surprising fallback.)
 
-            // Pick lowest-TF predecessor; tie-break by latest EF; then alpha
-            let best = null;
-            for (const p of pool) {
-                const pn = nodes[p.from_code];
-                if (!pn) continue;
-                if (best === null) { best = p; continue; }
-                const bn = nodes[best.from_code];
-                const live = !pn.is_complete && !bn.is_complete;
-                const fp = live ? floatOf(pn) : pn.tf;
-                const fb = live ? floatOf(bn) : bn.tf;
-                if (fp < fb) { best = p; continue; }
-                if (fp === fb) {
-                    if (pn.ef > bn.ef) { best = p; continue; }
-                    if (pn.ef === bn.ef) {
-                        const lt = (live && laterOf) ? laterOf(pn, bn) : 0;
-                        if (lt > 0 || (lt === 0 && p.from_code < best.from_code)) { best = p; }
-                    }
-                }
-            }
+            // Pick lowest-TF predecessor; tie-break by latest EF; then alpha.
+            // MF (v2.10.17): decided on the whole pool, so the order of the
+            // relationship rows cannot change it (_mfpChoose)
+            const best = _mfpChoose(pool, nodes, floatOf, laterOf);
             if (!best) break;
             current = best.from_code;
             safety += 1;

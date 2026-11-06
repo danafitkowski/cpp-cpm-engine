@@ -14183,6 +14183,32 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
     check('MF-4: a completed predecessor does not win on the printed float: the path is T and U, not T and the completed C',
         JSON.stringify(done.strategy_summary.MFP.computed.paths[0].codes) === '["T","U"]' && done.nodes.U.tf_working_days > 0,
         JSON.stringify([done.strategy_summary.MFP.computed.paths, done.nodes.U.tf_working_days]));
+
+    // the choice is made on the whole pool, so the order of the relationship
+    // rows cannot change it (the 6-Nov review: a pairwise scan cycled once a
+    // completed predecessor, or the printed-finish tie-break, was in play)
+    const perms = (xs) => xs.length <= 1 ? [xs] : xs.flatMap((x, i) =>
+        perms(xs.slice(0, i).concat(xs.slice(i + 1))).map((r) => [x].concat(r)));
+    const paths = (acts, front, last, preds, cal, dd) => perms(preds).map((o) => JSON.stringify(
+        E.computeCPMWithStrategies(acts, front.concat(o.map((f) => last(f))), { dataDate: dd, calMap: cal,
+            projectCalendar: 'C', strategies: ['MFP'] }).strategy_summary.MFP.computed.paths[0].codes));
+    const CAL2 = { C: CAL.C, D: { work_days: [1, 2, 3, 4, 5, 6, 7], holidays: [], hours_per_day: 8 } };
+    const b = (code, h, cal, k) => Object.assign({ code, duration_days: h / 8, remaining_hours: h, remaining_hours_days: h / 8,
+        clndr_id: cal }, k || {});
+    const pa = paths([b('E', 0, 'D', { actual_start: '2026-01-05 08:00', actual_finish: '2026-01-05 12:00', is_complete: true }),
+        b('C', 11, 'C'), b('B', 8, 'C'), b('G', 3, 'D'), b('F', 4, 'C', { constraint: { type: 'SNET', date: '2026-01-06 09:00' } })],
+    [fs('B', 'F')], (f) => fs(f, 'G'), ['C', 'B', 'E'], CAL2, '2026-01-05 12:00');
+    check('MF-5: a completed predecessor among unfinished ones: every order of G\'s three predecessor rows gives one path',
+        pa.every((x) => x === pa[0]) && pa[0] === '["G","E"]', JSON.stringify(pa));
+    const CAL3 = { C: CAL.C, E: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 10 },
+        G: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], hours_per_day: 24 } };
+    const c = (code, h, cal, tt) => Object.assign({ code, duration_days: h / CAL3[cal].hours_per_day, remaining_hours: h,
+        remaining_hours_days: h / CAL3[cal].hours_per_day, clndr_id: cal }, tt ? { task_type: tt } : {});
+    const pb = paths([c('J', 8, 'C'), c('C', 11, 'E'), c('D', 0, 'C', 'TT_Mile'), c('L', 0, 'G', 'TT_Mile'), c('B', 24, 'G')],
+        [fs('J', 'C'), fs('C', 'D'), { from_code: 'D', to_code: 'L', type: 'FF', lag_days: 0 }],
+        (f) => ({ from_code: f, to_code: 'B', type: f === 'L' ? 'SS' : 'FS', lag_days: 0 }), ['D', 'C', 'L'], CAL3, '2026-01-05 08:00');
+    check('MF-6: three predecessors tied on float and day, on calendars that close at different times: C drops out (L finishes working time later), D wins on code, in every row order',
+        pb.every((x) => x === pb[0]) && pb[0] === '["B","D","C","J"]', JSON.stringify(pb));
 }
 
 console.log('\n========================================');
