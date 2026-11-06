@@ -10828,6 +10828,12 @@ function _computeMFPPaths(nodes, predMap, opts) {
     const targetCode = opts.targetCode || _findLatestFinish(nodes);
     if (!targetCode || !nodes[targetCode]) return [];
 
+    // MF (v2.10.17): where the hours pass ran, the caller ranks on the
+    // printed float and breaks a same-day tie on the printed finish. Both
+    // decide only between two unfinished predecessors: a completed activity
+    // has no printed float, so a pair with one compares as before.
+    const floatOf = opts.floatOf || ((n) => n.tf);
+    const laterOf = opts.laterOf || null;
     const paths = [];
     const claimedNodes = new Set();
 
@@ -10864,10 +10870,16 @@ function _computeMFPPaths(nodes, predMap, opts) {
                 if (!pn) continue;
                 if (best === null) { best = p; continue; }
                 const bn = nodes[best.from_code];
-                if (pn.tf < bn.tf) { best = p; continue; }
-                if (pn.tf === bn.tf) {
+                const live = !pn.is_complete && !bn.is_complete;
+                const fp = live ? floatOf(pn) : pn.tf;
+                const fb = live ? floatOf(bn) : bn.tf;
+                if (fp < fb) { best = p; continue; }
+                if (fp === fb) {
                     if (pn.ef > bn.ef) { best = p; continue; }
-                    if (pn.ef === bn.ef && p.from_code < best.from_code) { best = p; }
+                    if (pn.ef === bn.ef) {
+                        const lt = (live && laterOf) ? laterOf(pn, bn) : 0;
+                        if (lt > 0 || (lt === 0 && p.from_code < best.from_code)) { best = p; }
+                    }
                 }
             }
             if (!best) break;
@@ -10904,6 +10916,44 @@ function computeCPMWithStrategies(activities, relationships, opts) {
     const _dgHours = !!(result.hours && result.hours.applied);
     const _dgTf = (n) => ((_dgHours && n.tf_working_days !== undefined && n.tf_working_days !== null)
         ? n.tf_working_days : n.tf);
+    // DG / MF: "later" is working time later, on either activity's calendar:
+    // a start milestone printed at the next opening after its predecessor's
+    // close is not later than it.
+    const _dgCm = opts.calMap || {};
+    const _dgCals = Object.create(null);
+    const _dgCalOf = (cid) => {
+        const k = String(cid);
+        if (!_dgCals[k]) _dgCals[k] = new _HrWorkCalendar(_dgCm[cid] || _dgCm[opts.projectCalendar] || {});
+        return _dgCals[k];
+    };
+    // 1, -1 or 0: whether a's printed finish is working time later than b's
+    const _dgFinishLater = (a, b) => {
+        if (!a.early_finish_dt || !b.early_finish_dt || a.early_finish_dt === b.early_finish_dt) return 0;
+        const ta = _hrParseInstant(a.early_finish_dt);
+        const tb = _hrParseInstant(b.early_finish_dt);
+        if (ta === null || tb === null || ta === tb) return 0;
+        const lo = Math.min(ta, tb);
+        const hi = Math.max(ta, tb);
+        const apart = _dgCalOf(a.clndr_id).between(lo, hi) > 0 || _dgCalOf(b.clndr_id).between(lo, hi) > 0;
+        return apart ? (ta > tb ? 1 : -1) : 0;
+    };
+    // the unfinished activity at the latest printed finish (lowest code on a
+    // tie) among those that finish working time later than `code`, or null:
+    // none does, or the hours pass did not run. LPM is withheld on it; MFP is
+    // traced from it.
+    const _dgLaterThan = (code) => {
+        const t = code ? result.nodes[code] : null;
+        if (!_dgHours || !t || t.is_complete || !t.early_finish_dt) return null;
+        if (_hrParseInstant(t.early_finish_dt) === null) return null;
+        let best = null;
+        for (const c of Object.keys(result.nodes).sort()) {
+            const n = result.nodes[c];
+            if (n.is_complete || !n.early_finish_dt || n.early_finish_dt <= t.early_finish_dt) continue;
+            if (_hrParseInstant(n.early_finish_dt) === null || _dgFinishLater(n, t) <= 0) continue;
+            if (best === null || n.early_finish_dt > best.dt) best = { code: c, dt: n.early_finish_dt };
+        }
+        return best;
+    };
 
     // ── TFM strategy ────────────────────────────────────────────────────────
     if (strategies.includes('TFM')) {
@@ -10919,6 +10969,7 @@ function computeCPMWithStrategies(activities, relationships, opts) {
             critical_count: codes.length,
             codes: codes.sort(),
             threshold: tfThreshold,
+            float_basis: _dgHours ? 'printed' : 'whole-day',
         };
     }
 
@@ -10947,27 +10998,10 @@ function computeCPMWithStrategies(activities, relationships, opts) {
         // start milestone printed at the next morning's opening after its
         // predecessor's close is not later than it.
         let lpmWithheld = null;
-        if (_dgHours && terminal && !result.nodes[terminal].is_complete) {
-            const tdt = result.nodes[terminal].early_finish_dt;
-            const t0 = _hrParseInstant(tdt);
-            const cm = opts.calMap || {};
-            const calOf = (cid) => new _HrWorkCalendar(cm[cid] || cm[opts.projectCalendar] || {});
-            const tCal = calOf(result.nodes[terminal].clndr_id);
-            let later = null;
-            if (t0 !== null) {
-                for (const c of Object.keys(result.nodes)) {
-                    const n = result.nodes[c];
-                    if (n.is_complete || !n.early_finish_dt || n.early_finish_dt <= tdt) continue;
-                    const t1 = _hrParseInstant(n.early_finish_dt);
-                    if (t1 === null) continue;
-                    if ((tCal.between(t0, t1) > 0 || calOf(n.clndr_id).between(t0, t1) > 0) &&
-                            (later === null || n.early_finish_dt > later)) later = n.early_finish_dt;
-                }
-            }
-            if (later !== null) {
-                lpmWithheld = 'the whole-day pass ends the path at ' + terminal + ' (' + tdt +
-                    '), and another activity finishes later, at ' + later;
-            }
+        const lpmLater = _dgLaterThan(terminal);
+        if (lpmLater !== null) {
+            lpmWithheld = 'the whole-day pass ends the path at ' + terminal + ' (' +
+                result.nodes[terminal].early_finish_dt + '), and another activity finishes later, at ' + lpmLater.dt;
         }
         if (terminal && !result.nodes[terminal].is_complete) {
             // Walk back via driving_predecessor.code. CONSTRAINT / DATA_DATE
@@ -11057,11 +11091,34 @@ function computeCPMWithStrategies(activities, relationships, opts) {
         }
 
         // ── Part 3: Compute MFP from scratch using P6's algorithm ────────────
-        const mfpTargetCode = opts.mfpTargetCode || _findLatestFinish(result.nodes);
+        // MF (v2.10.17): where the hours pass ran, the computed path is read
+        // off it. The walk ranks on the printed float, as TFM does, and breaks
+        // a same-day tie on the printed finish; the default target moves to
+        // the activity that finishes working time later than the whole-day
+        // pass's latest finish, as the LPM check finds it. The walk reads only
+        // floats and finishes, which the hours pass prints, so nothing is
+        // withheld. Python paired site: compute_cpm_with_strategies.
+        let mfpTargetCode = opts.mfpTargetCode || _findLatestFinish(result.nodes);
+        let mfpWholeDayTarget = null;
+        if (!opts.mfpTargetCode) {
+            const mt = _dgLaterThan(mfpTargetCode);
+            if (mt !== null) {
+                mfpWholeDayTarget = mfpTargetCode;
+                mfpTargetCode = mt.code;
+                result.alerts.push({
+                    severity: 'INFO', context: 'mfp-target-printed-finish',
+                    message: 'Float path traced from ' + mt.code + ' (' + mt.dt + '), the latest finish the hours ' +
+                        'pass prints; the whole-day pass ends at ' + mfpWholeDayTarget + ' (' +
+                        result.nodes[mfpWholeDayTarget].early_finish_dt + '), which finishes earlier in working time.',
+                });
+            }
+        }
         const mfpMaxPaths = opts.mfpMaxPaths || 1;
         const computedPaths = _computeMFPPaths(result.nodes, mfpPredMap, {
             maxPaths: mfpMaxPaths,
             targetCode: mfpTargetCode,
+            floatOf: _dgTf,
+            laterOf: _dgHours ? _dgFinishLater : null,
         });
 
         // Path 1 computed codes (used as the canonical "MFP" set for downstream)
@@ -11123,7 +11180,9 @@ function computeCPMWithStrategies(activities, relationships, opts) {
             codes: computedPath1Codes.sort(),
             available: inputAvailable || computedAvailable,
             target_code: mfpTargetCode,
+            float_basis: _dgHours ? 'printed' : 'whole-day',
         };
+        if (mfpWholeDayTarget !== null) strategy_summary.MFP.whole_day_target = mfpWholeDayTarget;
     }
     // ── Divergence: pairwise + intersection / union sets ────────────────────
     const setOf = (key) => new Set(strategy_summary[key] ? strategy_summary[key].codes : []);

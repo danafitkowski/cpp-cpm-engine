@@ -14143,6 +14143,48 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(rTwo.alerts));
 }
 
+// MF (v2.10.17): where the hours pass ran, the computed MFP is read off it:
+// the walk ranks on the printed float and the default target moves to an
+// activity that finishes working time later than the whole-day latest finish.
+// Whole days are unchanged. Python paired tests:
+// tests/test_mfp_printed_float_2026_11_06.py.
+{
+    const CAL = { C: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 8 } };
+    const a = (code, h, k) => Object.assign({ code, duration_days: h / 8, remaining_hours: h,
+        remaining_hours_days: h / 8, clndr_id: 'C' }, k || {});
+    const fm = (code) => a(code, 0, { task_type: 'TT_FinMile' });
+    const fs = (x, y) => ({ from_code: x, to_code: y, type: 'FS', lag_days: 0 });
+    const run = (acts, rels) => E.computeCPMWithStrategies(acts, rels, { dataDate: '2026-01-05 08:00', calMap: CAL,
+        projectCalendar: 'C', strategies: ['LPM', 'TFM', 'MFP'] });
+    const info = (r) => r.alerts.filter((x) => x.context === 'mfp-target-printed-finish');
+
+    const part = run([a('A', 4), a('B', 6), fm('F')], [fs('A', 'F'), fs('B', 'F')]);
+    const m = part.strategy_summary.MFP;
+    check('MF-1: a 4-hour and a 6-hour activity into one milestone: MFP traces B (no float), not A (2 hours), on the printed float, and names the whole-day end it moved from',
+        JSON.stringify(m.codes) === '["B"]' && m.target_code === 'B' && m.whole_day_target === 'A' &&
+        m.float_basis === 'printed' && part.strategy_summary.TFM.float_basis === 'printed' &&
+        info(part).length === 1 && info(part)[0].severity === 'INFO',
+        JSON.stringify({ m, info: info(part) }));
+    const whole = run([a('A', 8), a('B', 16), fm('F')], [fs('A', 'F'), fs('B', 'F')]);
+    check('MF-2: whole days (8 and 16 hours): MFP is B as before, its target is not moved and no MFP INFO is raised',
+        JSON.stringify(whole.strategy_summary.MFP.codes) === '["B"]' && whole.strategy_summary.MFP.target_code === 'B' &&
+        whole.strategy_summary.MFP.whole_day_target === undefined && info(whole).length === 0,
+        JSON.stringify(whole.strategy_summary.MFP));
+    const ms = run([a('A1000', 16), a('A1010', 0, { task_type: 'TT_Mile' })], [fs('A1000', 'A1010')]);
+    check('MF-3: whole days ending in a start milestone: the milestone printed at the next opening is not later, so the target stays',
+        ms.strategy_summary.MFP.target_code === 'A1000' && info(ms).length === 0 &&
+        !ms.strategy_summary.LPM.withheld,
+        JSON.stringify([ms.strategy_summary.MFP, ms.strategy_summary.LPM]));
+    // a completed predecessor has no printed float: U (4 hours, 1 hour of
+    // printed float under T's 14:00 start) and the completed C tie on whole
+    // days, and the later finish, U, is the path, as before
+    const done = run([a('C', 0, { actual_start: '2026-01-02 08:00', actual_finish: '2026-01-02 17:00', is_complete: true }),
+        a('U', 4), a('T', 8, { constraint: { type: 'SNET', date: '2026-01-05 14:00' } })], [fs('C', 'T'), fs('U', 'T')]);
+    check('MF-4: a completed predecessor does not win on the printed float: the path is T and U, not T and the completed C',
+        JSON.stringify(done.strategy_summary.MFP.computed.paths[0].codes) === '["T","U"]' && done.nodes.U.tf_working_days > 0,
+        JSON.stringify([done.strategy_summary.MFP.computed.paths, done.nodes.U.tf_working_days]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
