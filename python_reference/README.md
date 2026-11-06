@@ -200,17 +200,17 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  f3544cbbca065eced75267f257d4c5a2c30647cd9c19a885fe86d8989104a56f
+cpm.py          SHA-256:  e1265e97c4bd09932c68a4417b09783e02700c8f405bb69fe452d17a684399ec
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
-cpm_hours.py    SHA-256:  de01740fa6385e5404a1fdd0a2b10008f57952c829cee1e61f7907a0155427b5
+cpm_hours.py    SHA-256:  05f43718388bc51b7c906bde4c0119c9d57131639c1afa3022a3eadc3624e605
 
-(next candidate, 2026-11-05 - cpm.py bumped from ab60df1d..., cpm_hours.py
-from 49459f0a...: DG, the driver on part-day work. compute_cpm_hours keeps,
-for each activity, the predecessors whose drive sets its start to the minute
-('binding', _binding_preds); _hours_pass withholds a whole-day driving
-predecessor that set leaves out (type WITHHELD, driver_withheld) and
-compute_cpm raises the driver-withheld-part-day ALERT. ENGINE_VERSION still
-reads 2.10.15 until the release. cpm_minutes.py unchanged.)
+(v2.10.16, 2026-11-06 - cpm.py bumped from ab60df1d..., cpm_hours.py
+from 49459f0a...: the driver on part-day work. compute_cpm_hours keeps, for
+each activity, the predecessors whose links set its latest start in the hours
+pass ('binding', _binding_preds); _hours_pass withholds a whole-day driving
+predecessor that set leaves out (type WITHHELD, driver_withheld), and
+compute_cpm adds the driver-withheld-part-day ALERT. ENGINE_VERSION reads
+2.10.16. cpm_minutes.py unchanged.)
 
 (v2.10.15, 2026-11-01 - cpm.py bumped from 5d3da8c1...: ENGINE_VERSION reads
 2.10.15; nothing else changed. The release changes the JS parseXER only:
@@ -937,8 +937,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 331438
-  sha-256:  f3544cbbca065eced75267f257d4c5a2c30647cd9c19a885fe86d8989104a56f
+  bytes: 331779
+  sha-256:  e1265e97c4bd09932c68a4417b09783e02700c8f405bb69fe452d17a684399ec
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

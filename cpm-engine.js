@@ -148,7 +148,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.15';
+const ENGINE_VERSION = '2.10.16';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -3685,8 +3685,9 @@ function computeCPMHours(activities, relationships, o) {
             // floor at zero (printed float, v2.10.1)
             tf_start_minutes: tfSta, tf_finish_minutes: tfFin, ff_signed_minutes: ffSigned,
             status: n.complete ? 'complete' : (n.started ? 'started' : 'not started'),
-            // DG: the predecessors that set the start to the minute, or null
-            // where the pass cannot say (see _hrBindingPreds)
+            // DG: the predecessors whose links set the latest start in the
+            // hours pass (the data date, constraints and external dates left
+            // out), or null where the pass cannot say (see _hrBindingPreds)
             binding: n.binding === undefined ? null
                 : (n.binding === null ? null : n.binding.map(([code, type]) => ({ code, type }))),
         };
@@ -3695,7 +3696,7 @@ function computeCPMHours(activities, relationships, o) {
     return out;
 }
 
-// DG (5-Nov-2026): the predecessors whose drive sets an activity's start in the
+// DG (v2.10.16): the predecessors whose drive sets an activity's start in the
 // minutes pass. Each drive (a start requirement off FS / SS, a finish
 // requirement off FF / SF) is turned into the start it implies: a start
 // requirement at the next working minute; a finish requirement, on work with
@@ -3944,7 +3945,7 @@ function _hoursPass(activities, relationships, nodes, p) {
         const r = out[c];
         const n = nodes[c];
         if (n.is_complete) continue;
-        // DG (5-Nov-2026): the whole-day pass picks the driving predecessor on
+        // DG (v2.10.16): the whole-day pass picks the driving predecessor on
         // day numbers, so on part-day work it can name one that does not hold
         // the start: a 4-hour and a 6-hour activity into one milestone tie on
         // the day, and the 4-hour one, with 2 hours of float, was named. Where
@@ -3953,13 +3954,15 @@ function _hoursPass(activities, relationships, nodes, p) {
         // whole-day choice and the minutes pass's set are kept on the record.
         // Python paired site: _hours_pass.
         // The check is on the predecessor, not on which of its links: a
-        // predecessor tied by two links holds the start through either.
+        // predecessor tied by two links holds the start through at least one
+        // of them, and is listed once. An empty minutes_binding means no
+        // predecessor's link sets the start in the hours pass.
         const dp = n.driving_predecessor;
         if (r.binding && dp && dp.code && _DG_REL_TYPES.has(_dgRelType(dp.type)) &&
                 !r.binding.some((b) => b.code === dp.code)) {
             n.driving_predecessor = {
                 type: 'WITHHELD', reason: 'part-day work',
-                whole_day: dp, minutes_binding: r.binding.map((b) => b.code),
+                whole_day: dp, minutes_binding: [...new Set(r.binding.map((b) => b.code))],
             };
             withheld.push(c);
         }
@@ -7862,17 +7865,19 @@ function computeCPM(activities, relationships, opts) {
         }
     }
     if (_hours.applied && _hours.driver_withheld.length) {
-        // DG (5-Nov-2026): say which activities lost their driving
+        // DG (v2.10.16): say which activities lost their driving
         // predecessor to the check in _hoursPass, and why. Python paired site:
         // after the _hours_pass call.
         const w = _hours.driver_withheld;
         alerts.push({
             severity: 'ALERT', context: 'driver-withheld-part-day',
             message: 'Driving predecessor withheld on ' + w.length + ' activit' + (w.length === 1 ? 'y' : 'ies') +
-                ' (' + w.join(', ') + '): the whole-day pass picks the driver on day numbers, and on this ' +
-                'part-day work the predecessor it picked does not hold the start to the minute. The dates and ' +
-                'float are unaffected. Each node keeps the whole-day choice and the predecessors that hold its ' +
-                'start in the hours pass on driving_predecessor (type WITHHELD).',
+                ' (' + w.join(', ') + '): the whole-day pass picks the driver in whole days, and on this ' +
+                'part-day work the predecessor it picked is not among those whose links set the latest start in ' +
+                'the hours pass. The dates and float are unaffected. Each node keeps the whole-day choice and that ' +
+                'set (minutes_binding) on driving_predecessor (type WITHHELD). The set leaves out the data date, ' +
+                'constraints and external dates and is not a reported driver: read the driving relationship from ' +
+                'P6, or trace it by hand.',
         });
     }
     // With the hours pass applied the printed dates and the float in hours are
@@ -10744,7 +10749,7 @@ function computeCPMWithStrategies(activities, relationships, opts) {
     const cpMethodsByCode = Object.create(null);
     for (const c of Object.keys(result.nodes)) cpMethodsByCode[c] = [];
 
-    // DG (5-Nov-2026): where the hours pass ran, the float is the float it
+    // DG (v2.10.16): where the hours pass ran, the float is the float it
     // prints and the latest finish is the latest instant, as for the critical
     // codes since v2.10.1. Python paired site: compute_cpm_with_strategies.
     const _dgHours = !!(result.hours && result.hours.applied);
@@ -10844,8 +10849,9 @@ function computeCPMWithStrategies(activities, relationships, opts) {
             strategy_summary.LPM = { critical_count: null, codes: [], withheld: true, reason: lpmWithheld };
             result.alerts.push({
                 severity: 'ALERT', context: 'lpm-withheld-part-day',
-                message: 'Longest path withheld: ' + lpmWithheld + '. The path is traced on day numbers, and ' +
-                    'this part-day work does not hold to them; the dates and float are unaffected.',
+                message: 'Longest path withheld: ' + lpmWithheld + '. The path is traced in whole days, and ' +
+                    'on this part-day work the hours pass places the finishes differently; the dates and float ' +
+                    'are unaffected.',
             });
         } else {
             // Stamp method label on visited nodes.
@@ -10999,6 +11005,9 @@ function computeCPMWithStrategies(activities, relationships, opts) {
         return out.sort();
     };
     const divergence = {
+        // DG: the strategies the comparison took part in (a withheld one is
+        // left out); with one, all_agree and its only_ list are its own set
+        compared: compared.slice(),
         all_agree: all_agree.sort(),
         any_flagged,
         only_LPM: only('LPM'),
@@ -11070,14 +11079,16 @@ function _impactWorkingDays(beforeDate, afterDate, calMap, projectCalendarId) {
     return n;
 }
 
-// DG (5-Nov-2026): why a whole-day TIA impact cannot stand, or null when it
+// DG (v2.10.16): why a whole-day TIA impact cannot stand, or null when it
 // can. `before` / `after` are the finish instants the hours pass printed
 // ('YYYY-MM-DD HH:MM'), null where it did not run; `wholeDays` is the impact
 // counted on the whole-day finishes. The count stands when it equals the
-// working days between the two finish dates P6 prints, counted on the project
-// calendar (the first calendar when none is named, as _impactWorkingDays
-// does): a 4-hour insertion that moved the finish from 12:00 to 17:00 of the
-// same day was counted as 1 working day, against 0 between the dates.
+// working days between the two finish dates the hours pass prints, counted on
+// the project calendar (the first calendar when none is named, as
+// _impactWorkingDays does): a 4-hour insertion that moved the finish from 12:00
+// to 17:00 of the same day was counted as 1 working day, against 0 between the
+// dates. A kept impact is that date difference; part-day remainders are not
+// counted.
 function _dgTiaWithhold(before, after, wholeDays, opts) {
     if (!before && !after) return null;
     if (!before || !after) return 'only one of the two schedules has minute-level dates to compare';
@@ -11096,8 +11107,9 @@ function _dgTiaWithhold(before, after, wholeDays, opts) {
     for (let d = Math.min(da, db) + 1; d <= Math.max(da, db); d++) if (cal.slots(d).length) n += 1;
     const days = db >= da ? n : -n;
     if (days !== wholeDays) {
-        return 'the whole-day count gives ' + wholeDays + ' working days, and the finish dates P6 prints (' +
-            before + ' and ' + after + ') are ' + days + ' working days apart';
+        const wd = (k) => k + ' working day' + (Math.abs(k) === 1 ? '' : 's');
+        return 'the whole-day count gives ' + wd(wholeDays) + ', and the finish dates the hours pass prints (' +
+            before + ' and ' + after + ') are ' + wd(days) + ' apart';
     }
     return null;
 }
@@ -11231,15 +11243,16 @@ function computeTIA(activities, relationships, fragnets, opts) {
         }
         const impact_days = postFinishNum - cmpFinishNum;
         const impact_working_days = _impactWorkingDays(cmpFinish, postFinish, opts.calMap, opts.projectCalendar);
-        // DG (5-Nov-2026): the impact is counted in whole days between the
+        // DG (v2.10.16): the impact is counted in whole days between the
         // whole-day pass's finishes. Where the hours pass ran, its finishes are
-        // the ones P6 prints, and the whole-day count measures the delay only
-        // when both sit at the same point of their working day and the count
-        // agrees with the days between them; a 4-hour insertion was reported
-        // as 1 working day. Otherwise the impact is withheld through the error
-        // path, so it is never read as a figure or as zero. In cumulative mode
-        // the fragnet still goes into the network. Python paired site:
-        // tia_builder (time-impact-analysis skill).
+        // the printed ones, and the whole-day count stands only when it equals
+        // the working days between the two printed finish dates; a 4-hour
+        // insertion was reported as 1 working day. Otherwise the impact is
+        // withheld through the error path (status error, withheld true), and
+        // the totals it would enter are null, so it is never read as a figure
+        // or as zero. In cumulative mode the fragnet still goes into the
+        // network. Python paired site: tia_builder (time-impact-analysis
+        // skill).
         const cmpFinishDt = (mode === 'cumulative-additive') ? prevFinishDt : baselineFinishDt;
         const postFinishDt = _dgDt(post);
         const dgWhy = _dgTiaWithhold(cmpFinishDt, postFinishDt, impact_working_days, opts);
@@ -11291,14 +11304,21 @@ function computeTIA(activities, relationships, fragnets, opts) {
     let cumulative_working_days = (mode === 'cumulative-additive')
         ? _impactWorkingDays(baselineFinish, prevFinish, opts.calMap, opts.projectCalendar)
         : per_fragnet.reduce((s, e) => s + (e.status === 'ok' ? e.impact_working_days : 0), 0);
+    // DG: an isolated total that leaves out a withheld fragnet is not the
+    // total, so it is withheld too (cumulative mode checks its own figure)
+    if (tiaWithheld.length && mode !== 'cumulative-additive') {
+        cumulative_days = null;
+        cumulative_working_days = null;
+    }
     if (tiaWithheld.length) {
         alerts.push({
             severity: 'ALERT', context: 'tia-impact-withheld-part-day',
             message: 'TIA impact withheld for ' + tiaWithheld.length + ' fragnet' + (tiaWithheld.length === 1 ? '' : 's') +
                 ' (' + tiaWithheld.join(', ') + '): the whole-day count does not measure part-day delay. ' +
-                'Each carries status error, withheld true and both finish instants. ' +
+                'Each carries status error, withheld true and both finish instants, and the by_liability ' +
+                'entry of its liability is null. ' +
                 (mode === 'cumulative-additive' ? 'The fragnets stay in the cumulative network.'
-                    : 'They are not in the cumulative totals.'),
+                    : 'cumulative_days and cumulative_working_days are null.'),
         });
     }
     // DG: the cumulative figure of the cumulative mode is a whole-day count too
@@ -11321,6 +11341,8 @@ function computeTIA(activities, relationships, fragnets, opts) {
         const k = e.liability || 'Unattributed';
         by_liability[k] = (by_liability[k] || 0) + e.impact_days;
     }
+    // DG: a liability with a withheld fragnet has no total
+    for (const e of per_fragnet) if (e.withheld) by_liability[e.liability || 'Unattributed'] = null;
 
     // ── v2.9.35 — Working-day basis alerts (silent-fallback hardening) ───
     // _impactWorkingDays silently returns CALENDAR days when no usable

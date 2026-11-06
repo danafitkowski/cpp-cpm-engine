@@ -380,7 +380,7 @@ def _rsrc_place(n, cal, start_req, finish_req, xf=None):
 
 
 def _binding_preds(drv, n, cal, tt, xf_on):
-    """DG (5-Nov-2026): the predecessors whose drive sets an activity's start in the minutes pass.
+    """DG (v2.10.16): the predecessors whose drive sets an activity's start in the minutes pass.
 
     Each drive in `drv` ([from_code, type, kind, t]: a start requirement off FS / SS, a finish requirement off
     FF / SF) is turned into the start it implies: a start requirement at the next working minute; a finish

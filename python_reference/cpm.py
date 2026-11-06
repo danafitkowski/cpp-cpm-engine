@@ -157,7 +157,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.15'
+ENGINE_VERSION = '2.10.16'
 
 
 # =============================================================================
@@ -2240,7 +2240,7 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
         o, n = out[c], nodes[c]
         if n['is_complete']:
             continue
-        # DG (5-Nov-2026): the whole-day pass picks the driving predecessor on
+        # DG (v2.10.16): the whole-day pass picks the driving predecessor on
         # day numbers, so on part-day work it can name one that does not hold
         # the start: a 4-hour and a 6-hour activity into one milestone tie on
         # the day, and the 4-hour one, with 2 hours of float, was named. Where
@@ -2249,14 +2249,16 @@ def _hours_pass(activities, relationships, nodes, *, data_date, cal_map, project
         # whole-day choice and the minutes pass's set are kept on the record.
         # JS paired site: _hoursPass.
         # The check is on the predecessor, not on which of its links: a
-        # predecessor tied by two links holds the start through either.
+        # predecessor tied by two links holds the start through at least one
+        # of them, and is listed once. An empty minutes_binding means no
+        # predecessor's link sets the start in the hours pass.
         dp = n.get('driving_predecessor')
         binding = o.get('binding')
         if (binding is not None and dp and dp.get('code') and _dg_rel_type(dp.get('type')) in _DG_REL_TYPES
                 and not any(b['code'] == dp['code'] for b in binding)):
             n['driving_predecessor'] = {
                 'type': 'WITHHELD', 'reason': 'part-day work',
-                'whole_day': dp, 'minutes_binding': [b['code'] for b in binding],
+                'whole_day': dp, 'minutes_binding': list(dict.fromkeys(b['code'] for b in binding)),
             }
             withheld.append(c)
         started = o['status'] == 'started'
@@ -5748,7 +5750,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         critical = {c for c, n in nodes.items() if not n['is_complete'] and (
             n['tf'] <= 0.0 if n.get('tf_hours') is None else n['tf_hours'] <= 0)}
     if _hours.get('applied') and _hours.get('driver_withheld'):
-        # DG (5-Nov-2026): say which activities lost their driving
+        # DG (v2.10.16): say which activities lost their driving
         # predecessor to the check in _hours_pass, and why. JS paired site:
         # after the _hoursPass call.
         _w = _hours['driver_withheld']
@@ -5756,11 +5758,12 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             'severity': 'ALERT', 'context': 'driver-withheld-part-day',
             'message': ('Driving predecessor withheld on ' + str(len(_w)) + ' activit'
                         + ('y' if len(_w) == 1 else 'ies')
-                        + ' (' + ', '.join(str(x) for x in _w) + '): the whole-day pass picks the driver on day '
-                        'numbers, and on this part-day work the predecessor it picked does not hold the start to '
-                        'the minute. The dates and float are unaffected. Each node keeps the whole-day choice and '
-                        'the predecessors that hold its start in the hours pass on driving_predecessor (type '
-                        'WITHHELD).'),
+                        + ' (' + ', '.join(str(x) for x in _w) + '): the whole-day pass picks the driver in whole '
+                        'days, and on this part-day work the predecessor it picked is not among those whose links '
+                        'set the latest start in the hours pass. The dates and float are unaffected. Each node '
+                        'keeps the whole-day choice and that set (minutes_binding) on driving_predecessor (type '
+                        'WITHHELD). The set leaves out the data date, constraints and external dates and is not a '
+                        'reported driver: read the driving relationship from P6, or trace it by hand.'),
         })
 
     return {

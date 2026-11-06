@@ -13866,7 +13866,7 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(dau.map((n) => ['A1X', 'A2X', 'A3X', 'A4X', 'A5X', 'B1X', 'B1Y', 'B2X', 'B3X', 'B4X'].map((c) => c === 'B1Y' ? n[c].es : n[c].restart))));
 }
 
-// DG (5-Nov-2026): the whole-day pass picks the driving predecessor, the
+// DG (v2.10.16): the whole-day pass picks the driving predecessor, the
 // longest path's terminal and the TIA impact on day numbers. On part-day work
 // they are checked against the hours pass and withheld where it disagrees;
 // whole-day work is unchanged. Python paired tests:
@@ -13890,14 +13890,16 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         al[0].message.indexOf('(F)') >= 0,
         JSON.stringify({ dp, w: part.hours.driver_withheld, al }));
     check('DG-2: there the dates and float are unchanged: B and F finish 15:00, A has 2 hours of float, and the critical codes are B and F',
+        part.nodes.B.early_finish_dt === '2026-01-05 15:00' &&
         part.nodes.F.early_finish_dt === '2026-01-05 15:00' && part.nodes.A.tf_hours === 2 &&
         JSON.stringify(part.criticalCodesArray.slice().sort()) === '["B","F"]',
         JSON.stringify([part.nodes.F.early_finish_dt, part.nodes.A.tf_hours, part.criticalCodesArray]));
-    check('DG-3: TFM reads the printed float, so A (2 hours) is left out; LPM is withheld, not empty: count null, and no divergence entry',
+    check('DG-3: TFM reads the printed float, so A (2 hours) is left out; LPM is withheld, not empty: count null, and the divergence compares TFM alone',
         JSON.stringify(part.strategy_summary.TFM.codes) === '["B","F"]' &&
         part.strategy_summary.LPM.withheld === true && part.strategy_summary.LPM.critical_count === null &&
         part.alerts.some((x) => x.context === 'lpm-withheld-part-day') &&
-        part.divergence.only_LPM.length === 0 && JSON.stringify(part.divergence.all_agree) === '["B","F"]',
+        part.divergence.only_LPM.length === 0 && JSON.stringify(part.divergence.compared) === '["TFM"]' &&
+        JSON.stringify(part.divergence.all_agree) === '["B","F"]',
         JSON.stringify({ s: part.strategy_summary, d: part.divergence }));
 
     const whole = pair(8, 16);
@@ -13908,40 +13910,35 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify({ dp: whole.nodes.F.driving_predecessor, s: whole.strategy_summary }));
 
     // the check is on the predecessor, not the link: one predecessor tied by FS
-    // and FF holds the start through either
+    // and FF holds the start through at least one of them; where the whole-day
+    // choice is withheld, a predecessor tied by two links is listed once
     const two = E.computeCPM([a('A', 4), a('B', 4)],
         [fs('A', 'B'), { from_code: 'A', to_code: 'B', type: 'FF', lag_days: 0 }], opts);
-    check('DG-5: a predecessor tied by two links is not withheld whichever link the whole-day pass names',
+    const twice = E.computeCPM([a('A', 4), a('B', 6), fm('F')],
+        [fs('A', 'F'), fs('B', 'F'), { from_code: 'B', to_code: 'F', type: 'FF', lag_days: 0 }], opts);
+    check('DG-5: a predecessor tied by two links is not withheld whichever link the whole-day pass names, and is listed once in minutes_binding',
         two.nodes.B.driving_predecessor && two.nodes.B.driving_predecessor.code === 'A' &&
-        two.hours.driver_withheld.length === 0, JSON.stringify(two.nodes.B.driving_predecessor));
+        two.hours.driver_withheld.length === 0 && twice.nodes.F.driving_predecessor.type === 'WITHHELD' &&
+        JSON.stringify(twice.nodes.F.driving_predecessor.minutes_binding) === '["B"]',
+        JSON.stringify([two.nodes.B.driving_predecessor, twice.nodes.F.driving_predecessor]));
 
     const tia = (hb, hd, mode) => E.computeTIA([a('A', hb)], [], [{ fragnet_id: 'D1', liability: 'Owner',
         activities: [a('D', hd)], ties: [fs('A', 'D')] }], Object.assign({ mode: mode || 'isolated' }, opts));
     const t1 = tia(4, 4);
     const f1 = t1.per_fragnet[0];
-    check('DG-6: TIA: a 4-hour delay after a 4-hour activity (12:00 to 17:00 the same day: 0 working days between the dates, 1 on whole days) is withheld through the error path, with both instants and the ALERT, and is out of the totals',
-        f1.status === 'error' && f1.withheld === true && f1.impact_working_days === undefined && / 0 working days apart/.test(f1.error) &&
+    check('DG-6: TIA: a 4-hour delay after a 4-hour activity (12:00 to 17:00 the same day: 0 working days between the dates, 1 on whole days) is withheld through the error path, with both instants and the ALERT, and the totals and its liability\'s entry are null',
+        f1.status === 'error' && f1.withheld === true && f1.impact_working_days === undefined &&
+        /gives 1 working day, and the finish dates the hours pass prints .* are 0 working days apart/.test(f1.error) &&
         f1.completion_before_dt === '2026-01-05 12:00' && f1.completion_after_dt === '2026-01-05 17:00' &&
-        t1.cumulative_working_days === 0 && t1.alerts.some((x) => x.context === 'tia-impact-withheld-part-day'),
-        JSON.stringify({ f1: Object.assign({}, f1, { post_cpm: undefined }), cum: t1.cumulative_working_days }));
+        t1.cumulative_working_days === null && t1.cumulative_days === null && t1.by_liability.Owner === null &&
+        t1.alerts.some((x) => x.context === 'tia-impact-withheld-part-day'),
+        JSON.stringify({ f1: Object.assign({}, f1, { post_cpm: undefined }), cum: t1.cumulative_working_days,
+            liab: t1.by_liability }));
     const ok = [tia(8, 8), tia(8, 16), tia(4, 8)].map((r) => r.per_fragnet[0]);
     check('DG-7: TIA whole-day delays keep their figures: 1 and 2 working days, and a full day after a half-day finish is 1',
         ok.every((f) => f.status === 'ok' && !f.withheld) &&
         JSON.stringify(ok.map((f) => f.impact_working_days)) === '[1,2,1]',
         JSON.stringify(ok.map((f) => [f.status, f.impact_working_days])));
-    // whole days ending in a start milestone: it prints at the next morning's
-    // opening after its predecessor's close, which is not working time later
-    // (independent review, 5-Nov-2026: LPM was withheld here, by code order)
-    const ms = ['A1000', 'T'].map((t) => {
-        const m = t === 'T' ? 'A' : 'A1010';
-        return E.computeCPMWithStrategies([a(t, 16), a(m, 0, { task_type: 'TT_Mile' })], [fs(t, m)],
-            Object.assign({ strategies: ['LPM', 'TFM'] }, opts));
-    });
-    check('DG-9: whole days ending in a start milestone: LPM is traced, not withheld, whichever code sorts first',
-        ms.every((r) => !r.strategy_summary.LPM.withheld && r.strategy_summary.LPM.critical_count > 0 &&
-            !r.alerts.some((x) => x.context === 'lpm-withheld-part-day')),
-        JSON.stringify(ms.map((r) => r.strategy_summary.LPM)));
-
     const cum = E.computeTIA([a('A', 4)], [], [
         { fragnet_id: 'D1', activities: [a('D', 8)], ties: [fs('A', 'D')] },
         { fragnet_id: 'D2', activities: [a('G', 4)], ties: [fs('D', 'G')] }],
@@ -13951,6 +13948,19 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         cum.per_fragnet[1].withheld === true && cum.cumulative_days === null && cum.cumulative_working_days === null,
         JSON.stringify({ p: cum.per_fragnet.map((f) => [f.fragnet_id, f.status, f.impact_working_days]),
             c: [cum.cumulative_days, cum.cumulative_working_days] }));
+
+    // whole days ending in a start milestone: it prints at the next morning's
+    // opening after its predecessor's close, which is not working time later
+    // (automated code review, 5 November 2026: LPM was withheld here, by code order)
+    const ms = ['A1000', 'T'].map((t) => {
+        const m = t === 'T' ? 'A' : 'A1010';
+        return E.computeCPMWithStrategies([a(t, 16), a(m, 0, { task_type: 'TT_Mile' })], [fs(t, m)],
+            Object.assign({ strategies: ['LPM', 'TFM'] }, opts));
+    });
+    check('DG-9: whole days ending in a start milestone: LPM is traced, not withheld, whichever code sorts first',
+        ms.every((r) => !r.strategy_summary.LPM.withheld && r.strategy_summary.LPM.critical_count > 0 &&
+            !r.alerts.some((x) => x.context === 'lpm-withheld-part-day')),
+        JSON.stringify(ms.map((r) => r.strategy_summary.LPM)));
 }
 
 console.log('\n========================================');

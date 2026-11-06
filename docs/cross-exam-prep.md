@@ -273,6 +273,16 @@ One version note, so the number is not a surprise on cross. The committed captur
 
 ---
 
+## Q20: "Before v2.10.16 your engine could name the wrong driving predecessor on part-day work, correct?"
+
+**Quote source:** Historic: true in every release before v2.10.16; withheld since v2.10.16 ([`CHANGELOG.md`](../CHANGELOG.md) v2.10.16).
+
+**Response.** Yes, on part-day work. Before v2.10.0 the engine had no hours pass, so on part-day work the dates, the float and the driver were all worked in whole days. From v2.10.0 the dates and float were right to the minute and this defect did not touch them, but the driving predecessor, the longest path, the TFM set and a TIA impact were still read off the whole-day pass. Where two predecessors tie on the day and differ in hours, the engine could name the one that does not hold the start. An automated review (Codex, an AI coding agent run by the author) found it on 5 November 2026, on a 4-hour and a 6-hour activity into one milestone. v2.10.16 checks the driver, the longest path and the TIA impact against the hours pass and withholds each, with an ALERT, where the hours pass disagrees; TFM now reads the printed float. On the 1,502 exports that schedule on the measuring machine, per activity only the driver record moves, on 305 activities; LPM is withheld in 149 files, and the TFM set changes in 339. Against P6's longest-path flag, which P6 sets on activities, not on relationships: of the 23 withheld activities on P6's path, P6 flags a predecessor the hours pass names and not the whole-day choice on 19, both on 4, and the whole-day choice alone on 0.
+
+**Concession to make.** "On a schedule with part-day work, a driver, longest path, TFM set or TIA impact the engine reported before v2.10.16 should be re-run on v2.10.16 and checked against P6's own longest-path flag or its driving-relationship display. v2.10.16 withholds the ones the hours pass contradicts; it does not derive the driver to the minute, and 130 drivers on P6-flagged activities still disagree with P6 and are not caught."
+
+---
+
 ## How to use this document at deposition / on the stand
 
 1. **Before testimony**, read the questions you expect to face based on your reliance on the engine. Mark the responses that match your case.

@@ -152,6 +152,36 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.16 (reviewed 2026-11-06)
+
+v2.10.16 closes a defect found on 5 November 2026 by an automated review: on part-day work the driving predecessor,
+the longest path, the TFM set and the TIA impact were read off the whole-day pass and could disagree with the
+minute-level dates. The driver, the longest path and the TIA impact are now checked against the hours pass and
+withheld, with an ALERT, where the hours pass disagrees; TFM reads the printed float (Class A under PROCEDURE.md
+§12.1). On the 1,502 exports that schedule on the measuring machine, per activity only
+`driving_predecessor` moves, on 305 activities; LPM is withheld in 149 files, and
+the TFM set changes in 339, where it now equals the critical flags.
+- **CLOSED:** a whole-day driver, longest path or TIA impact reported where the hours pass contradicts it, and a TFM
+  set read off the whole-day float (CHANGELOG.md v2.10.16).
+- The unit suite grew from 1,515 to 1,524 (DG-1 to DG-9).
+- The cross-validation surface stays at 233 fixtures and 22189 of 22189 comparisons.
+- Coverage re-measured on the v2.10.16 source: 93.98% statements / 82.41% branches / 97.07%
+  functions.
+- **OPEN:** the engine withholds; it does not derive the driver at minute resolution. 130 drivers on
+  P6-flagged activities still disagree with P6 and are not caught, nor is a longest path traced through one of them.
+  Deriving the driver from a minute-level trace of the driving relationships is the fix; this release does not
+  contain it.
+- **OPEN:** not checked: a whole-day driver that is the data date, a constraint or an external date; resource
+  dependent work with driving assignments, and work under an expected finish, when a finish link is among its
+  drives.
+- **OPEN:** MFP is computed on the whole-day float and is not checked against the hours pass.
+- **OPEN (carried from v2.10.15):** that P6 schedules a blank lag as zero is not measured on the measuring machine's
+  P6, and `parseXER` reads a lag such as `2abc` as its leading number without an alert.
+- **OPEN (carried from v2.10.14):** `driving_predecessor` is not among the cross-validated fields. The Python
+  reference now carries the same check, so the field could be compared; adding a field to the harness is its own
+  change, with its own run over the 233 fixtures, and was not made in this release.
+- **OPEN (carried from v2.10.13):** the whole-day pass does not model times of day or the resources' own calendars.
+
 ## Status at v2.10.15 (reviewed 2026-11-01)
 
 v2.10.15 closes issue #17, reported by an outside user. From v2.9.12, `parseXER` dropped, with a `lag-non-finite`
@@ -458,4 +488,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.15. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.16. Update on every release that closes or opens an audit item.

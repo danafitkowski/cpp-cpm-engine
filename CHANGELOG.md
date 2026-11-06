@@ -12,6 +12,139 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.16 - 2026-11-06 - The driver, the longest path, TFM and the TIA impact on part-day work
+
+**Computed values move (Class A): engine math changed in four reported results, the driving predecessor, the longest
+path (LPM), the TFM set and the TIA impact. No date, float or critical flag from `computeCPM` moves.** Where the hours
+pass ran, the driver, the longest path and the TIA impact are checked against it and withheld, with an ALERT, where it
+disagrees; no driver, path or impact is worked out in their place. TFM now reads the float the hours pass prints, so
+its set equals the critical flags; it carries no ALERT.
+
+What was wrong (found on 5 November 2026 by an automated review of the engine, Codex, an AI coding agent run by the
+author, and confirmed by re-running its probes):
+- **The hours pass (v2.10.0) dates and floats the network to the minute, but four results were still read off the
+  whole-day pass, which counts whole working days:** `driving_predecessor`, the longest path traced through those
+  drivers (with its terminal), the TFM set (on the whole-day float) and the impact of a time impact analysis. On
+  part-day work they could be wrong.
+- **A 4-hour and a 6-hour activity both FS into one finish milestone:** dates and float were right to the minute (the
+  4-hour activity carries 2 hours of float, and the critical flag leaves it out), but the milestone's driving
+  predecessor was the 4-hour activity, the longest path was that activity alone, and TFM counted it critical.
+- **A 4-hour fragnet behind a 4-hour activity** moved the finish from 12:00 to 17:00 of the same day; `computeTIA`
+  reported 1 working day.
+- **Both engines agreed on the wrong answer:** `driving_predecessor` is not a cross-validated field, so the harness
+  could not see it.
+- **Before v2.10.0** the engine had no hours pass, so on part-day work the dates, the float and the driver were all
+  worked in whole days.
+
+The rules:
+- **The driver.** `computeCPMHours` keeps, for each activity, the predecessors whose links set its latest start
+  (`binding`): each link's requirement is turned into the start it implies, and the set is the latest of them and any
+  tied with it, a tie being no working time between the two on the activity's calendar (a Saturday close and the
+  Monday opening are one point). The data date, constraints and external dates are left out: the set compares
+  predecessors with predecessors. Where the hours pass ran and the set leaves out the whole-day pass's choice,
+  `driving_predecessor` becomes `{type: 'WITHHELD', reason: 'part-day work', whole_day, minutes_binding}`,
+  `result.hours.driver_withheld` lists the activities, and one ALERT `driver-withheld-part-day` names them.
+  `whole_day` is the whole-day choice. `minutes_binding` is the set the check used, each code once: it is not a
+  reported driver, and an empty one means no predecessor's link sets the start in the hours pass. The check is on the
+  predecessor, not on which of its links.
+- **Not checked:** a whole-day driver that is the data date, a constraint or an external date (only a relationship
+  of type FS, SS, FF or SF is checked); resource dependent work with driving assignments (`TT_Rsrc`), and work under
+  an expected finish, when a finish link (FF or SF) is among its drives; any run without P6's hours, where the
+  whole-day pass runs alone; and MFP, which is computed on the whole-day float.
+- **The strategies.** TFM reads `tf_working_days`, the float the hours pass prints; the critical flags read
+  `tf_hours`, the same float in hours, since v2.10.1, so at the default threshold of 0 the two sets are the same. LPM
+  is withheld (`critical_count: null`, `codes: []`, `withheld: true`, `reason`, ALERT `lpm-withheld-part-day`) when
+  another unfinished activity finishes working time later than the chosen terminal, on either activity's calendar,
+  or the walk reaches a withheld driver. A start milestone printed at the next opening after its predecessor's close
+  is not later. A withheld strategy takes no part in the divergence; `divergence.compared` lists the strategies that
+  did, and with one left, `all_agree` and its `only_` list are its own set.
+- **The TIA impact.** A kept impact is the count of working days between the two finish dates the hours pass prints,
+  on the project calendar; part-day remainders are not counted. The whole-day count is kept only when it equals that
+  count. Otherwise the fragnet takes the error path, `{status: 'error', withheld: true, error, completion_before_dt,
+  completion_after_dt}`, with an ALERT `tia-impact-withheld-part-day`; a reader that splits rows on `status` splits
+  the error rows on `withheld`. A withheld fragnet's liability has `by_liability` null. In isolated mode
+  `cumulative_days` and `cumulative_working_days` are null while any fragnet is withheld. In cumulative mode the
+  withheld fragnets stay in the network, and the cumulative figure is checked the same way; a failed check sets both
+  to null, with a second ALERT.
+
+**What a reader does with a withheld result.** Read the driving relationship, the longest path or the impact from
+P6's own schedule, or trace it by hand. `whole_day` and `minutes_binding` are where to start, not an answer.
+
+**Verified** (on the v2.10.16 source):
+- **Census of `computeCPM`, v2.10.15 against v2.10.16:** 1,514 distinct exports in the measuring machine's
+  working folders and OneDrive (the measuring machine is the author's workstation, which runs P6 Professional; the
+  exports come from P6 19.12 to 24.12), 1,502 of which schedule (12 fail to schedule in
+  both versions), run through `parseXER` and `computeCPM` with every field of all 279,265 unfinished
+  activities compared. Per activity, only `driving_predecessor` moved, on 305 activities in
+  204 files; every critical set is identical. Those files also gain the ALERT and
+  `result.hours.driver_withheld`. The exports are private and not in this repository, so a third party cannot re-run
+  the census.
+- **Census of `computeCPMWithStrategies` (LPM and TFM), the same 1,502 exports:** LPM is withheld in
+  149 files (in 93 another activity finishes later than the whole-day terminal;
+  in 56 the walk reaches a withheld driver) and is unchanged in the rest. The TFM set changed in
+  339 files: 885 activities left it and 298 joined it, and in each
+  of those files the new set equals the engine's critical flags, which it did not on v2.10.15. `computeTIA` was not
+  run on the census: the exports carry no fragnets.
+- **Against P6's longest-path flag** (`driving_path_flag`, which P6 sets on activities, in the 380 of those
+  exports that carry it; an XER does not flag relationships, so "P6 flags a predecessor" means the predecessor
+  activity carries the flag): 68 of the 305 withheld activities are in
+  those exports, 23 on P6's longest path and 45 off it, where the flag says nothing about
+  the driver. Of the 23, P6 flags a predecessor in `minutes_binding` and not the whole-day choice on
+  19, both on 4, and the whole-day choice alone on 0. Of the
+  4,671 flagged unfinished activities with two or more predecessors, the engine keeps a driver P6
+  flags on 4,409 and withholds the driver on 23. On 130 others the kept driver
+  disagrees with P6 and this check does not catch it; a longest path traced through one of them is not withheld
+  either. The remaining 109 are held by the data date or a constraint, or have no predecessor P6 flags.
+- **Held-out sets H1 to H30,** re-scored on the v2.10.16 source through the public scorer in diagnosis mode (not a
+  new score): 8,850 of 8,850 unfinished activities match P6 on all seven fields, as on v2.10.15; none
+  moves. `driving_predecessor` is not among the seven fields, so the re-score says nothing about the change itself.
+- **JS unit suite:** 1,524 checks pass (1,515 in v2.10.15); DG-1 to DG-9 test the rules, the whole-day controls and
+  the start-milestone case.
+- **Cross-validation:** 233 fixtures, 22189 of 22189 executed, 0 skipped, 0 failures; the hours record, which now
+  carries `driver_withheld`, is compared in both engines. `driving_predecessor` is still not a compared field. The
+  Python reference carries the driver check, its ALERT and its record; it has no strategies or TIA. Those have Python
+  twins outside this repository, in the CPP skills (the strategies in the skills' Python engine, the TIA impact in
+  the time-impact-analysis skill), changed in step and tested there; those tests cannot be run from here.
+- **An automated code review of the fix** (an AI code-review agent run by the author on 5 November 2026) ran 3,000
+  random networks per configuration (one and two calendars; Mon-Fri with a lunch break, Mon-Thu 10 hours, seven
+  days; retained logic and progress override; started and completed work; FS / SS / FF / SF with lags; all four lag
+  calendars). For each driver it kept only the named predecessor's link and re-ran the engine. That tests the engine
+  against its own hours pass, not against P6. It found no wrong withhold and no wrong keep on plain, started and
+  mixed-calendar work, and on 2,100 of those networks the JS engine and the skills' Python engine gave the same
+  driver records, strategy summaries, divergence and alert texts. It found two defects, both fixed: LPM was withheld
+  on whole-day work ending in a start milestone (DG-9), and the path-explorer skill's forward trace hid a withheld
+  successor behind a driven one (fixed and tested in that skill). The review was not re-run after the fixes.
+- **An automated review of the release** (claude.ai, 6 November 2026) found, besides wording, three code defects,
+  all fixed: an isolated TIA total left out a withheld impact and could read 0 (now null, in the engine and the TIA
+  skill); `minutes_binding` could list a predecessor twice; and the TIA reason said P6 printed the finish dates of a
+  network P6 never scheduled. It also found that the census had not run the strategies; that census is above.
+- **P6 probe replays** (`npm run test:p6-comparison`) pass as before; the outputs of the Larchmere capture (a test
+  project built and scheduled in P6 for the comparison) change only in the engine version.
+- **Coverage,** re-measured on the v2.10.16 source: statements 93.98% (14,181 of 15,089), branches
+  82.41% (3,759 of 4,561), functions 97.07% (232 of 239); cross-validation alone
+  covers 60.16% of statements.
+
+**Who is affected.**
+- A reader of `driving_predecessor`, of LPM or TFM from `computeCPMWithStrategies`, or of a `computeTIA` impact or
+  total, on a schedule run with P6's hours passed in (`parseXER` passes them) that carries part-day work: durations
+  or lags that are not whole working days, links between calendars whose days open and close at different times, or
+  activities on such calendars that finish on the same day. Schedules whose work is all whole working days, on
+  calendars that open and close at the same times, are not affected.
+
+**Change class under PROCEDURE.md §12.1:** Class A (computational). Re-run on v2.10.16 every deliverable that read a
+driver, a longest path, a TFM set or a TIA impact from a schedule with part-day work and P6's hours passed in. Where
+the re-run carries a new ALERT, or its TFM set differs, re-issue it under §12.2. A schedule run without P6's hours is
+not checked.
+
+**Not claimed.**
+- The release withholds; it does not derive the driver at minute resolution. 130 drivers on
+  P6-flagged activities still disagree with P6 and are not caught, nor is a longest path traced through one of them.
+  Deriving the driver from a minute-level trace of the driving relationships is open (ROADMAP_OPEN.md); this release
+  does not contain it.
+- MFP is computed on the whole-day float and is not checked against the hours pass.
+
+---
+
 ## v2.10.15 - 2026-11-01 - A blank lag is a zero lag
 
 **Computed values move (Class A): engine math changed in the XER parser, not in `computeCPM`.** `parseXER` now keeps a
