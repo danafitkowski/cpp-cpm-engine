@@ -12,6 +12,14 @@
 An open-source CPM engine with AACE-aligned methodology and a published [Daubert disclosure](DAUBERT.md).
 **1,524 JS unit tests. The JS engine and its Python reference agree on all 22189 enumerated cross-validation comparisons, none skipped. That is a consistency check between two implementations by the same author, not a check against P6; what a third party can reproduce is in [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification).**
 
+## Start here
+
+| You are | Start with |
+| --- | --- |
+| A scheduler with a P6 schedule | The **[CPP Lens viewer](https://criticalpathpartners.ca/viewer/)**. Drop in an XER or P6 XML file and see 30 diagnostic sections. XER and XML files are read in your browser and never uploaded. Nothing to install. |
+| Using Claude, Cursor, Cline or another MCP client | The **hosted MCP server** at `https://mcp.criticalpathpartners.ca/mcp`. Nothing to install and no API key. Client setup is in [`llms-install.md`](llms-install.md). |
+| A developer | The engine itself: see [Quick start](#quick-start). One JavaScript file with no runtime dependencies. |
+
 Court-facing usage: pair this engine with the analyst-application discipline in [`FORENSIC_USE_SOP.md`](FORENSIC_USE_SOP.md), the verification chain in [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md), the per-release receipts in [`release-evidence/`](release-evidence/), the field-level P6 comparison framework in [`validation/p6-comparison/`](validation/p6-comparison/), and the held-out P6 comparison in [`validation/held-out/`](validation/held-out/). Do NOT cite README in a court-facing report — cite the documents listed in [DAUBERT.md](DAUBERT.md) and [`FORENSIC_USE_SOP.md` §Required pairing](FORENSIC_USE_SOP.md).
 
 Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a forensic-scheduling consultancy.
@@ -231,10 +239,12 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Every commit must pass 1,524 unit test
 
 ## Companion repositories
 
-Two companion repositories are public:
+Four companion repositories are public:
 
-- **[cpp-xer-parser](https://github.com/danafitkowski/cpp-xer-parser)** — the canonical Primavera P6 XER parser. The engine consumes its parse output as the canonical XER → JS-object layer; `cpp-xer-parser` has no dependency on this engine.
-- **[cpp-critical-path-validator](https://github.com/danafitkowski/cpp-critical-path-validator)** — critical path validation and DCMA-14 assessment. Optionally consumes this engine for the LPM cross-check; degrades gracefully when absent.
+- **[cpp-xer-parser](https://github.com/danafitkowski/cpp-xer-parser)** (Python) — the canonical Primavera P6 XER parser. The engine consumes its parse output as the canonical XER → JS-object layer; `cpp-xer-parser` has no dependency on this engine.
+- **[cpp-lens-parser](https://github.com/danafitkowski/cpp-lens-parser)** (JavaScript) — a P6 XER reader and writer with byte-identical parity to the Python parser. The Lens viewer is built on it.
+- **[cpp-critical-path-validator](https://github.com/danafitkowski/cpp-critical-path-validator)** (Python) — critical path validation and DCMA-14 assessment. Optionally consumes this engine for the LPM cross-check; degrades gracefully when absent.
+- **[cpp-lens-viewer](https://github.com/danafitkowski/cpp-lens-viewer)** (JavaScript) — the browser schedule viewer live at [criticalpathpartners.ca/viewer](https://criticalpathpartners.ca/viewer/).
 
 Additional CPP skills (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, collapsed-as-built, counter-claim-analysis, schedule-risk-analysis) are private; contact Critical Path Partners for access.
 
