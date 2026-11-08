@@ -16,7 +16,7 @@ An open-source CPM engine with AACE-aligned methodology and a published [Daubert
 
 | You are | Start with |
 | --- | --- |
-| A scheduler with a P6 schedule | The **[CPP Lens viewer](https://criticalpathpartners.ca/viewer/)**. Drop in an XER or P6 XML file and see 30 diagnostic sections. XER and XML files are read in your browser and never uploaded. Nothing to install. |
+| A scheduler with a P6 schedule | The **[CPP Lens viewer](https://criticalpathpartners.ca/viewer/)**. Drop in an XER or P6 XML file and see 30 diagnostic sections. XER and XML files are read in your browser and are not uploaded unless you choose the optional Deep Forensic Analysis, which sends the schedule to the CPP server with activity names removed by default. Nothing to install. |
 | Using Claude, Cursor, Cline or another MCP client | The **hosted MCP server** at `https://mcp.criticalpathpartners.ca/mcp`. Nothing to install and no API key. Client setup is in [`llms-install.md`](llms-install.md). |
 | A developer | The engine itself: see [Quick start](#quick-start). One JavaScript file with no runtime dependencies. |
 
