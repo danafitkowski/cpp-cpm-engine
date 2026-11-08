@@ -197,7 +197,7 @@ See [DAUBERT.md §3.1, Independent Verification](DAUBERT.md#31-independent-verif
 
 Client setup for the hosted MCP server (Cline, Cursor, Claude Code, Claude Desktop) is in [`llms-install.md`](llms-install.md). The engine runs live at **[mcp.criticalpathpartners.ca](https://mcp.criticalpathpartners.ca/try)** — try it in your browser. The same `cpm-engine.js` file is served over the wire and embedded inline in every report CPP produces.
 
-The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis) all consume this engine — the JS port for browser/MCP, the Python sibling for batch pipelines.
+The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, impacted-as-planned, schedule-risk-analysis, collapsed-as-built, counter-claim-analysis) all consume this engine — the JS port for browser/MCP, the Python sibling for batch pipelines.
 
 ---
 
@@ -246,7 +246,7 @@ Four companion repositories are public:
 - **[cpp-critical-path-validator](https://github.com/danafitkowski/cpp-critical-path-validator)** (Python) — critical path validation and DCMA-14 assessment. Optionally consumes this engine for the LPM cross-check; degrades gracefully when absent.
 - **[cpp-lens-viewer](https://github.com/danafitkowski/cpp-lens-viewer)** (JavaScript) — the browser schedule viewer live at [criticalpathpartners.ca/viewer](https://criticalpathpartners.ca/viewer/).
 
-Additional CPP skills (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, collapsed-as-built, counter-claim-analysis, schedule-risk-analysis) are private; contact Critical Path Partners for access.
+Additional CPP skills (forensic-delay-analysis, claims-preparation, claim-workbench, time-impact-analysis, impacted-as-planned, collapsed-as-built, counter-claim-analysis, schedule-risk-analysis) are private; contact Critical Path Partners for access.
 
 ---
 
