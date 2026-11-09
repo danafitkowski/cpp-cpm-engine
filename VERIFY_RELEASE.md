@@ -1,11 +1,11 @@
-# VERIFY_RELEASE.md — `cpm-engine` v2.10.16 Forensic Verification Packet
+# VERIFY_RELEASE.md — `cpm-engine` v2.10.17 Forensic Verification Packet
 
-This document is the **courtroom-exhibit-form** of the engine release verification chain. Cite **this file**, the **Sigstore-signed witness** attached to the [v2.10.16 release](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.10.16), and the [DAUBERT.md](DAUBERT.md) disclosure together — that triad is the engine's reliability record under FRE 702 / Daubert Prong 1 (testability).
+This document is the **courtroom-exhibit-form** of the engine release verification chain. Cite **this file**, the **Sigstore-signed witness** attached to the [v2.10.17 release](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.10.17), and the [DAUBERT.md](DAUBERT.md) disclosure together — that triad is the engine's reliability record under FRE 702 / Daubert Prong 1 (testability).
 
-> **Status:** v2.10.16. **Change class under PROCEDURE.md §12.1: Class A (computational)**: on part-day work a reported driving predecessor, longest path or TIA impact can now be withheld, and the TFM set reads the printed float. Re-run on v2.10.16 every deliverable that read one of them from a schedule with part-day work and P6's hours passed in; where the re-run carries a new ALERT, or its TFM set differs, re-issue it under §12.2. What changes:
+> **Status:** v2.10.17. **Change class under PROCEDURE.md §12.1: Class C (inert)**: no computed value moves, and nothing a deliverable says about the engine becomes wrong, so a deliverable issued on the previous release needs no action, except a DCMA-14 deliverable whose #12 says the test stopped at its 20 s or 60 s time limit, which should be re-run. What changes:
 >
-> - **The driver on part-day work:** where the hours pass ran, the whole-day pass's `driving_predecessor` is withheld (type `WITHHELD`, ALERT `driver-withheld-part-day`) when it is not among the predecessors whose links set the latest start in the hours pass. LPM is withheld when another unfinished activity finishes working time later than its terminal, on either calendar, or its walk reaches a withheld driver. TFM reads the printed float. A TIA impact that differs from the working days between the two printed finish dates is withheld, and so are the totals it would enter.
-> - **What did not move:** any date, float or critical flag from `computeCPM`. Of the 1,502 exports that schedule on the measuring machine, per activity only `driving_predecessor` moved, on 305 activities in 204 files; LPM is withheld in 149 files, and the TFM set changed in 339, where it now equals the critical flags. H1 to H30, re-scored on the v2.10.16 source in diagnosis mode (not a new held-out score), match P6 on 8,850 of 8,850 unfinished activities, as on the previous release; `driving_predecessor` is not among the seven fields compared.
+> - **The public engine:** `cpm-engine.js` and `python_reference/cpm.py` differ from the previous release only in their version string. The release records the Python engine that CPP's analysis skills and hosted tools run counting working days by whole weeks instead of day by day; a DCMA-14 Critical Path Test there that stopped at its time limit can now finish, so its #12 can read PASS or FAIL.
+> - **What did not move:** anything computed. The count by weeks gives the day-by-day count on 8,206 randomised cases on the released bytes and 15,000 on the first candidate's, and every date and float on 560 schedules from real P6 exports, measured outside this repository. H1 to H30, re-scored on the v2.10.17 source in diagnosis mode (not a new held-out score), match P6 on 8,850 of 8,850 unfinished activities, as on the previous release.
 >
 > See [CHANGELOG.md](CHANGELOG.md) for the measurements.
 
@@ -23,21 +23,21 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 
 ---
 
-## Release manifest — v2.10.16
+## Release manifest — v2.10.17
 
 | Item | Value |
 |---|---|
-| Tag | `v2.10.16` |
-| Commit SHA | `3bddac64d0ecc59df991c54e618058a31214c6ca` (the content commit the `v2.10.16` tag names) |
-| Release date | 2026-11-06 |
+| Tag | `v2.10.17` |
+| Commit SHA | `3b35cdd57006028877f7d75f7ea9ddb557605d8a` (the content commit the `v2.10.17` tag names) |
+| Release date | 2026-11-09 |
 | Engine source | `cpm-engine.js` |
 | Engine SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/cpm-engine.js.sha256` (the top-level `cpm-engine.js.sha256` is **gitignored** per `scripts/attestation.js` — it is a per-machine regenerated artifact, not a committed pin). |
 | Python reference | `python_reference/cpm.py`, with the hours pass's `python_reference/cpm_minutes.py` and `python_reference/cpm_hours.py` (SHA-256 pinned in `python_reference/README.md` and recorded in the witness) |
 | Python reference SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/python_reference-cpm.py.sha256` (the top-level `python_reference/cpm.py.sha256` is **gitignored** for the same reason — generated artifact, not committed pin). |
-| Witness JSON (release asset) | `attestations/latest.json` on [the v2.10.16 release page](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.10.16) |
+| Witness JSON (release asset) | `attestations/latest.json` on [the v2.10.17 release page](https://github.com/danafitkowski/cpp-cpm-engine/releases/tag/v2.10.17) |
 | Unit tests | 1,524 / 1,524 passing |
 | Cross-validation | 22189 of 22189 enumerated comparisons bit-identical across 233 fixtures, 0 deviations, 0 skipped: the harness's `Checks: 22189 / 22189` is the whole enumerated surface (the 100 mutual skips on completed activities through v2.10.0 closed in v2.10.1 when both engines began emitting the signed free-float pair there; see [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification)) |
-| Branch coverage | 82.41% (3,759 / 4,561 branches), measured on the v2.10.16 bytes 2026-11-06; see [DAUBERT.md §2.1](DAUBERT.md#21-test-coverage-v21016-baseline) |
+| Branch coverage | 82.41% (3,759 / 4,561 branches), measured on the v2.10.17 bytes 2026-11-09; see [DAUBERT.md §2.1](DAUBERT.md#21-test-coverage-v21017-baseline) |
 | Statement coverage | 93.98% (14,181 / 15,089 statements), same §2.1 baseline measurement |
 | Citation regression | PASS |
 | `npm run verify` verdict | PASS |
@@ -54,7 +54,7 @@ This is the cheapest verification step. It does not require the verifier to trus
 # Clone the repository at the tagged commit
 git clone https://github.com/danafitkowski/cpp-cpm-engine
 cd cpp-cpm-engine
-git checkout v2.10.16
+git checkout v2.10.17
 
 # Compute the SHA-256 of the engine source
 shasum -a 256 cpm-engine.js
@@ -81,7 +81,7 @@ This is the cryptographic integrity layer. The verifier confirms that the witnes
 # From the GitHub release page, download attestations/latest.json
 # (it is attached as a release asset, not committed to the repo tree;
 # the asset is named `latest.json`)
-gh release download v2.10.16 \
+gh release download v2.10.17 \
     --repo danafitkowski/cpp-cpm-engine \
     --pattern "latest.json"
 ```
@@ -133,7 +133,7 @@ This is the strongest verification step. The verifier ignores all of the propone
 ```bash
 git clone https://github.com/danafitkowski/cpp-cpm-engine
 cd cpp-cpm-engine
-git checkout v2.10.16
+git checkout v2.10.17
 
 # Optional — install c8 devDep for coverage reporting
 npm install --no-save
@@ -146,7 +146,7 @@ npm run verify
 
 ```
 === cpm-engine verification ===
-package version:  2.10.16
+package version:  2.10.17
 engine.sha256:    <engine_sha from manifest>
 python_ref.sha256: <python_sha from manifest>
 
@@ -177,7 +177,7 @@ Layers 1-3 verify the engine against itself. The next layer — outside the prop
 
 This packet does **not** yet include a third-party reproduction memo from an outside scheduler / programmer / academic. The single biggest credibility step beyond Layers 1-3 is a signed Layer 4 attestation; pursuit of that attestation is on the [DAUBERT.md §10 roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-What an opposing expert can do **today** without waiting for that memo: clone v2.10.16, run `npm run verify`, run the engine against three or four of their own P6 schedule exports, compare outputs to P6 native values field-by-field, and either confirm or document the discrepancy. The engine's source is open and the verification surface is one command.
+What an opposing expert can do **today** without waiting for that memo: clone v2.10.17, run `npm run verify`, run the engine against three or four of their own P6 schedule exports, compare outputs to P6 native values field-by-field, and either confirm or document the discrepancy. The engine's source is open and the verification surface is one command.
 
 ---
 
@@ -194,8 +194,8 @@ What an opposing expert can do **today** without waiting for that memo: clone v2
 ## How to cite this verification packet in an expert report
 
 ```
-Verification chain for cpm-engine v2.10.16:
-  Tag:               v2.10.16
+Verification chain for cpm-engine v2.10.17:
+  Tag:               v2.10.17
   Commit SHA:        <commit_sha>
   Engine SHA-256:    <engine_sha>
   Python ref SHA-256: <python_sha>
@@ -205,15 +205,15 @@ Verification chain for cpm-engine v2.10.16:
                      22189 / 22189 crossval checks executed across 233 fixtures
                      (the whole 22189-comparison enumerated surface; 0 skipped)
   Coverage:          93.98% stmts / 82.41% branches / 97.07% funcs,
-                     measured on the v2.10.16 bytes 2026-11-06
+                     measured on the v2.10.17 bytes 2026-11-09
                      (see cpp-cpm-engine/DAUBERT.md §2.1)
   Disclosure:        cpp-cpm-engine/DAUBERT.md
   Reproduction:      `git clone github.com/danafitkowski/cpp-cpm-engine && \
-                      git checkout v2.10.16 && npm run verify`
+                      git checkout v2.10.17 && npm run verify`
 ```
 
 This packet is intended to be attached as an exhibit to an FRCP 26(a)(2)(B) report alongside DAUBERT.md. It is also referenced from the engine's own [Daubert disclosure surface](DAUBERT.md) §3.1 Layer 2.
 
 ---
 
-*Document version: aligned to `cpm-engine` v2.10.16. SHA values populate at tag time from `cpm-engine.js.sha256` and `python_reference/cpm.py.sha256` in the release tree, and from the Sigstore-signed `attestations/latest.json` release asset.*
+*Document version: aligned to `cpm-engine` v2.10.17. SHA values populate at tag time from `cpm-engine.js.sha256` and `python_reference/cpm.py.sha256` in the release tree, and from the Sigstore-signed `attestations/latest.json` release asset.*
