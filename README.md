@@ -33,7 +33,7 @@ Maintained by [Critical Path Partners](https://criticalpathpartners.ca) — a fo
 ```bash
 git clone https://github.com/danafitkowski/cpp-cpm-engine.git
 cd cpp-cpm-engine
-git checkout v2.10.16
+git checkout v2.10.17
 ```
 
 The engine has zero runtime dependencies, so a clone is all it needs. This is the same install path [`VERIFY_RELEASE.md`](VERIFY_RELEASE.md) gives an opposing expert.
@@ -59,7 +59,7 @@ const result = E.computeCPM(
 
 console.log('Project finish:', result.projectFinish);     // 2026-01-21
 console.log('Critical path:', result.criticalCodesArray); // ['A', 'B', 'C']
-console.log('Engine version:', result.manifest.engine_version); // 2.10.16
+console.log('Engine version:', result.manifest.engine_version); // 2.10.17
 ```
 
 That's it. Forward pass, backward pass, total float, free float, calendar arithmetic, P6-conventional date math, multi-jurisdiction holidays — all done.
@@ -120,7 +120,7 @@ Every computation emits a manifest:
 
 ```js
 result.manifest = {
-    engine_version: '2.10.16',
+    engine_version: '2.10.17',
     method_id: 'computeCPM',
     activity_count: 3,
     relationship_count: 2,
@@ -151,7 +151,7 @@ The engine has a Python sibling (`_cpp_common/scripts/cpm.py`) used by every CPP
 
 ```bash
 npm run crossval
-# 233 fixtures, 22189 checks executed, 0 deviations, measured 2026-11-06.
+# 233 fixtures, 22189 checks executed, 0 deviations, measured 2026-11-09.
 # That is the whole enumerated surface: since v2.10.1 the harness field guards skip nothing.
 ```
 
@@ -186,7 +186,7 @@ Compare the engine and Python-reference SHA-256s and the pass counts inside your
 Verify the CI-signed witness of a release. A witness you generate locally with `npm run verify` is unsigned, so verifying it finds no attestation; the signed one ships in the tree:
 
 ```bash
-gh attestation verify release-evidence/v2.10.16/witness-v2.10.16.json --owner danafitkowski
+gh attestation verify release-evidence/v2.10.17/witness-v2.10.17.json --owner danafitkowski
 ```
 
 See [DAUBERT.md §3.1, Independent Verification](DAUBERT.md#31-independent-verification), for the full Daubert framing: there the term means checks a party other than the author can run.
@@ -205,7 +205,7 @@ The CPP forensic suite (forensic-delay-analysis, claims-preparation, claim-workb
 
 If you use this engine in academic work or expert-witness reports, please cite:
 
-> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.10.16. <https://github.com/danafitkowski/cpp-cpm-engine>
+> Fitkowski, D. (2026). *cpm-engine: An open-source critical-path-method engine with AACE-canonical method labels and a published Daubert disclosure.* Critical Path Partners. Version 2.10.17. <https://github.com/danafitkowski/cpp-cpm-engine>
 
 Algorithm citations are in [`docs/citations.md`](docs/citations.md). All citations have been verified against primary sources.
 
@@ -227,7 +227,7 @@ You can use this engine in commercial forensic consulting, in academic research,
 
 **v2.9.10 (2026-05-16) — Round 7-8 hardening.** Independent-verification infrastructure (public CI on 9 OS × Node combos, Sigstore-signed witness JSONs, one-command local reproduction via `npm run verify`) ships as a tagged release. Engine math byte-identical to v2.9.9; that is a docs + infra release. See [DAUBERT.md §3.1](DAUBERT.md#31-independent-verification) and the new [§10 Roadmap](DAUBERT.md#10-roadmap--forward-looking-daubert-hardening).
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.10.16.
+See [CHANGELOG.md](CHANGELOG.md) for the full release history through v2.10.17.
 
 ---
 

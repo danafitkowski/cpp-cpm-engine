@@ -152,6 +152,19 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.17 (reviewed 2026-11-09)
+
+v2.10.17 changes no code in this repository's engine (Class C, inert, under PROCEDURE.md §12.1): `cpm-engine.js` and
+`python_reference/cpm.py` differ from v2.10.16 only in their version string. The release records the Python
+engine that CPP's analysis skills and hosted tools run counting working days by whole weeks instead of day by
+day, with every computed value identical; a DCMA-14 Critical Path Test in those skills that stopped at its time
+limit can now finish (CHANGELOG.md v2.10.17).
+- The unit suite stays at 1,524, and the cross-validation surface at 233 fixtures and 22189 of 22189
+  comparisons.
+- Coverage is unchanged on the v2.10.17 bytes: 93.98% statements / 82.41% branches / 97.07% functions.
+- Held-out sets H1 to H30, re-scored in diagnosis mode: 8,850 of 8,850 rows, as on v2.10.16.
+- Nothing is opened or closed: the items open at v2.10.16, below, stand.
+
 ## Status at v2.10.16 (reviewed 2026-11-06)
 
 v2.10.16 closes a defect found on 5 November 2026 by an automated review: on part-day work the driving predecessor,
@@ -488,4 +501,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.16. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.17. Update on every release that closes or opens an audit item.

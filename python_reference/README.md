@@ -200,9 +200,15 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  e1265e97c4bd09932c68a4417b09783e02700c8f405bb69fe452d17a684399ec
+cpm.py          SHA-256:  12a8f55a2f94f3ae367e7b045a89533178188ece3c844679f254b4b2846b1b62
 cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
 cpm_hours.py    SHA-256:  05f43718388bc51b7c906bde4c0119c9d57131639c1afa3022a3eadc3624e605
+
+(v2.10.17, 2026-11-09 - cpm.py bumped from e1265e97...: ENGINE_VERSION reads
+2.10.17; nothing else changed. The release changes no public engine code:
+the skills' own Python engine (not this reference) counts working days by
+whole weeks instead of day by day, with every computed value identical (Class C).
+cpm_hours.py and cpm_minutes.py unchanged.)
 
 (v2.10.16, 2026-11-06 - cpm.py bumped from ab60df1d..., cpm_hours.py
 from 49459f0a...: the driver on part-day work. compute_cpm_hours keeps, for
@@ -938,7 +944,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 331779
-  sha-256:  e1265e97c4bd09932c68a4417b09783e02700c8f405bb69fe452d17a684399ec
+  sha-256:  12a8f55a2f94f3ae367e7b045a89533178188ece3c844679f254b4b2846b1b62
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

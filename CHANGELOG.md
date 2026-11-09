@@ -12,6 +12,56 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.17 - 2026-11-09 - The skills' Python engine counts working days by whole weeks
+
+**Nothing computed moves (Class C, inert): engine math is unchanged. No code in this repository's engine changes:
+`cpm-engine.js` and `python_reference/cpm.py` differ from v2.10.16 only in their version string.** The release records
+a change to the Python engine that CPP's analysis skills and hosted tools run, their own copy kept with those skills
+(`python_reference/cpm.py` here is the frozen mirror of the JS engine and is not that copy). That engine counted the
+working days between two dates, behind the whole-day pass's working-day float, by walking day by day. It now counts
+the whole weeks of the calendar's weekly pattern, then the days left over, then the calendar's holidays and special
+workdays in the range, found by bisection: a holiday on a worked weekday takes one off, and a special workday on an
+unworked weekday adds one unless it is also a holiday, which wins, as before. Outside the years 1900 to 9999 the
+day-by-day count still runs.
+
+**One thing a report can show differently.** The DCMA-14 Critical Path Test (#12) in those skills stops at fixed time
+limits (20 s for the recalculation as filed, 60 s for the whole test) and then reports the test as not run and says
+why. The faster count lets a test that stopped at its limit on v2.10.16 finish, so on the same
+schedule #12 can now read PASS or FAIL, and with it the number of checks scored and the grade can change. A search of
+every deliverable in the measuring machine's working folders made since the test began on 8 November 2026 (HTML, Markdown, JSON, text,
+CSV, Word, Excel and PDF) found none with a #12 the test stopped for time.
+
+**Verified** (outside this repository unless stated: the skills' engine is not in it, so these figures cannot be
+reproduced from it):
+- **The same count to the day:** 8,206 randomised cases against the day-by-day count on the released bytes, and
+  15,000 before them on the first candidate's bytes, whose arithmetic the later cache fixes do not touch; no
+  difference. They cover every one of the 128 weekly patterns; holidays and special workdays on worked and unworked
+  days, repeated, outside the range and malformed; ranges of none, one day, reversed, across years and leap days and
+  at the 1900 and 9999 edges; fractional day numbers; and no calendar.
+- **The same values:** every date and float identical on 560 schedules from real P6 exports, on the first
+  candidate's bytes.
+- **The cache:** a calendar's holiday and special-workday sets are frozen when they are built, so the index built
+  from them cannot go stale; a set that is not frozen is counted day by day.
+- **Cross-validation of the skills' engine:** this repository's 233 fixtures, run against the released skills'
+  engine in place of `python_reference`, execute 22189 of 22189 comparisons, all bit-identical.
+- **Speed** (one Windows PC, AMD Ryzen 7 5800H, the test's time limits lifted for the measurement): the whole
+  DCMA-14 assessment with its Critical Path Test on a 1,000-activity test network, 20.7 s to 2.9 s; the same on the
+  largest real schedule measured (2,898 activities), 13.3 s to 6.6 s; the recalculation as filed of the 560
+  schedules, 688 s to 296 s in total.
+- **This repository, on the v2.10.17 bytes:** 1,524 unit tests pass; cross-validation over 233 fixtures executes 22189
+  of 22189 comparisons, all bit-identical; coverage, re-measured, is 93.98% statements (14,181 / 15,089), 82.41%
+  branches (3,759 / 4,561) and 97.07% functions (232 / 239), the same as on v2.10.16; held-out sets H1 to H30,
+  re-scored through the public scorer in diagnosis mode, match P6 on 8,850 of 8,850 rows, as on v2.10.16.
+- **Reviews:** two automated reviews (AI agents run by the author), each repeated until it found nothing more; each
+  finding was fixed and checked again, the cache above among them.
+
+**Change class under PROCEDURE.md §12.1:** Class C (inert). No computed value moves and nothing a deliverable says
+about the engine becomes wrong, so a deliverable issued on v2.10.16 needs no action, with one exception: re-run on
+v2.10.17 any DCMA-14 deliverable whose #12 says the test stopped at its 20 s or 60 s time limit. The version moves so
+that a deliverable names the engine that computed it.
+
+---
+
 ## v2.10.16 - 2026-11-06 - The driver, the longest path, TFM and the TIA impact on part-day work
 
 **Computed values move (Class A): engine math changed in four reported results, the driving predecessor, the longest
