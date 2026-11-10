@@ -254,4 +254,4 @@ Additional CPP skills (forensic-delay-analysis, claims-preparation, claim-workbe
 
 CPP is a forensic-scheduling consultancy. The engine is open-source as a deliberate posture choice: the CPM math is a decades-old peer-reviewed commodity (Kelley & Walker 1959, Kahn 1962, Tarjan 1972); the workflow, methodology discipline, and Daubert-disclosure posture are where forensic value lives. Open-sourcing the math layer means any academic, solo forensic, contractor's internal scheduler, or independent reviewer has a transparent, citable foundation to inspect, modify, or build on.
 
-If you ship something built on this engine, we'd love to hear about it: [danafitkowski@gmail.com](mailto:danafitkowski@gmail.com).
+If you ship something built on this engine, we'd love to hear about it: [dana@criticalpathpartners.ca](mailto:dana@criticalpathpartners.ca).
