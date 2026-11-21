@@ -11152,9 +11152,11 @@ function computeCPMWithStrategies(activities, relationships, opts) {
                 mfpTargetCode = mt.code;
                 result.alerts.push({
                     severity: 'INFO', context: 'mfp-target-printed-finish',
-                    message: 'Float path traced from ' + mt.code + ' (' + mt.dt + '), the latest finish the hours ' +
-                        'pass prints; the whole-day pass ends at ' + mfpWholeDayTarget + ' (' +
-                        result.nodes[mfpWholeDayTarget].early_finish_dt + '), which finishes earlier in working time.',
+                    // Codex 21-Nov-2026: the latest printed finish among those later than the whole-day end,
+                    // not the latest finish of all (a start milestone can print later without working time between)
+                    message: 'Float path traced from ' + mt.code + ' (' + mt.dt + '), the latest printed finish ' +
+                        'among the unfinished activities that finish working time later than ' + mfpWholeDayTarget +
+                        ' (' + result.nodes[mfpWholeDayTarget].early_finish_dt + '), where the whole-day pass ends.',
                 });
             }
         }

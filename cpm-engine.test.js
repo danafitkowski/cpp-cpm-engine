@@ -14221,6 +14221,32 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(empty.strategy_summary.MFP.codes) === '["A"]' && empty.strategy_summary.MFP.target_code === 'A' &&
         info(empty).length === 0,
         JSON.stringify([empty.strategy_summary.MFP, info(empty)]));
+    // Codex 21-Nov-2026: whole days on two calendars. A (1 day, Mon-Fri) and B
+    // (2 days, every day) into T (SNET Monday 12 Jan). The printed float, on
+    // each activity's own calendar as P6 prints it, is A 4 days, B 5; the
+    // whole-day float counted A's weekend (6). MFP ranks on the printed float:
+    // T, A (it was T, B). One calendar of whole days is unchanged (MF-2).
+    const cal2 = { C: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 8 },
+        D: { work_days: [0, 1, 2, 3, 4, 5, 6], holidays: [], hours_per_day: 8 } };
+    const day = (code, d, cl, k) => Object.assign({ code, duration_days: d, remaining_hours: 8 * d,
+        remaining_hours_days: d, clndr_id: cl }, k || {});
+    const two = E.computeCPMWithStrategies([day('A', 1, 'C'), day('B', 2, 'D'),
+        day('T', 1, 'C', { constraint: { type: 'SNET', date: '2026-01-12 08:00' } })], [fs('A', 'T'), fs('B', 'T')],
+    { dataDate: '2026-01-05 08:00', calMap: cal2, projectCalendar: 'C', strategies: ['LPM', 'TFM', 'MFP'] });
+    check('MF-8: whole days on two calendars rank on the printed float, each on its own calendar: T then A (4 days), not B (5)',
+        JSON.stringify(two.strategy_summary.MFP.computed.paths[0].codes) === '["T","A"]' &&
+        two.nodes.A.tf_working_days === 4 && two.nodes.B.tf_working_days === 5 && two.nodes.A.tf > two.nodes.B.tf,
+        JSON.stringify([two.strategy_summary.MFP.computed.paths, two.nodes.A.tf, two.nodes.B.tf]));
+    // Codex 21-Nov-2026: the walk itself, with the target named: A (4 hours,
+    // 2 of float) and B (6 hours, none) into F. On whole days they tie and A
+    // wins on its code; on the printed float B is the path.
+    const named = E.computeCPMWithStrategies([a('A', 4), a('B', 6), fm('F')], [fs('A', 'F'), fs('B', 'F')],
+        { dataDate: '2026-01-05 08:00', calMap: CAL, projectCalendar: 'C', strategies: ['LPM', 'TFM', 'MFP'],
+            mfpTargetCode: 'F' });
+    check('MF-9: with the target named, the walk ranks the predecessors on the printed float: F then B, not F then A by code',
+        JSON.stringify(named.strategy_summary.MFP.computed.paths[0].codes) === '["F","B"]' &&
+        named.strategy_summary.MFP.target_code === 'F',
+        JSON.stringify(named.strategy_summary.MFP));
 }
 
 console.log('\n========================================');
