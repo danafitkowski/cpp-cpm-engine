@@ -10961,9 +10961,14 @@ function computeCPMWithStrategies(activities, relationships, opts) {
     // close is not later than it.
     const _dgCm = opts.calMap || {};
     const _dgCals = Object.create(null);
+    // an empty calendar entry falls back as a missing one does, as in the hours
+    // pass and the Python twin (Codex, 21-Nov-2026)
+    const _dgPresent = (x) => ((x && (typeof x !== 'object' || Object.keys(x).length > 0)) ? x : null);
     const _dgCalOf = (cid) => {
         const k = String(cid);
-        if (!_dgCals[k]) _dgCals[k] = new _HrWorkCalendar(_dgCm[cid] || _dgCm[opts.projectCalendar] || {});
+        if (!_dgCals[k]) {
+            _dgCals[k] = new _HrWorkCalendar(_dgPresent(_dgCm[cid]) || _dgPresent(_dgCm[opts.projectCalendar]) || {});
+        }
         return _dgCals[k];
     };
     // 1, -1 or 0: whether a's printed finish is working time later than b's

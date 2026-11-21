@@ -14209,6 +14209,18 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         (f) => ({ from_code: f, to_code: 'B', type: f === 'L' ? 'SS' : 'FS', lag_days: 0 }), ['D', 'C', 'L'], CAL3, '2026-01-05 08:00');
     check('MF-6: three predecessors tied on float and day, on calendars that close at different times: C drops out (L finishes working time later), D wins on code, in every row order',
         pb.every((x) => x === pb[0]) && pb[0] === '["B","D","C","J"]', JSON.stringify(pb));
+    // an empty calendar entry falls back to the project calendar, as a missing
+    // one does (Codex, 21-Nov-2026): A ends Monday 12:00 and the start milestone
+    // B is printed Tuesday 08:00, with no working time between, so B is not later
+    const cal4 = { C: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 4 }, X: {} };
+    const empty = E.computeCPMWithStrategies([
+        { code: 'A', duration_days: 1, remaining_hours: 4, remaining_hours_days: 1, clndr_id: 'X' },
+        { code: 'B', duration_days: 0, remaining_hours: 0, remaining_hours_days: 0, clndr_id: 'X', task_type: 'TT_Mile' }],
+    [fs('A', 'B')], { dataDate: '2026-01-05 08:00', calMap: cal4, projectCalendar: 'C', strategies: ['LPM', 'TFM', 'MFP'] });
+    check('MF-7: an empty calendar entry falls back to the project calendar: the start milestone at the next opening is not later, so MFP stays on A with no INFO',
+        JSON.stringify(empty.strategy_summary.MFP.codes) === '["A"]' && empty.strategy_summary.MFP.target_code === 'A' &&
+        info(empty).length === 0,
+        JSON.stringify([empty.strategy_summary.MFP, info(empty)]));
 }
 
 console.log('\n========================================');
