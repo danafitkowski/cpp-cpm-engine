@@ -10964,7 +10964,9 @@ function computeCPMWithStrategies(activities, relationships, opts) {
     // an empty calendar entry falls back as a missing one does, as in the hours
     // pass and the Python twin (Codex, 21-Nov-2026)
     const _dgPresent = (x) => ((x && (typeof x !== 'object' || Object.keys(x).length > 0)) ? x : null);
-    const _dgCalOf = (cid) => {
+    const _dgCalOf = (cid0) => {
+        // a missing or blank calendar id is the project calendar's, as in the hours pass (Codex round 3)
+        const cid = (cid0 === null || cid0 === undefined || cid0 === '') ? opts.projectCalendar : cid0;
         const k = String(cid);
         if (!_dgCals[k]) {
             _dgCals[k] = new _HrWorkCalendar(_dgPresent(_dgCm[cid]) || _dgPresent(_dgCm[opts.projectCalendar]) || {});

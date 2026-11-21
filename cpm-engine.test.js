@@ -14247,6 +14247,29 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(named.strategy_summary.MFP.computed.paths[0].codes) === '["F","B"]' &&
         named.strategy_summary.MFP.target_code === 'F',
         JSON.stringify(named.strategy_summary.MFP));
+    // Codex round 3: a blank calendar id is the project calendar's (4-hour
+    // days here), not an entry keyed ''. A ends Monday 12:00, the start
+    // milestone B prints Tuesday 08:00, no working time between: MFP stays A
+    const blank = E.computeCPMWithStrategies([
+        { code: 'A', duration_days: 1, remaining_hours: 4, remaining_hours_days: 1 },
+        { code: 'B', duration_days: 0, remaining_hours: 0, remaining_hours_days: 0, task_type: 'TT_Mile' }],
+    [fs('A', 'B')], { dataDate: '2026-01-05 08:00', projectCalendar: 'C', strategies: ['LPM', 'TFM', 'MFP'],
+        calMap: { C: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 4 },
+            '': { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 8 } } });
+    check('MF-10: a missing calendar id reads the project calendar: the start milestone at the next opening is not later, so MFP stays on A',
+        JSON.stringify(blank.strategy_summary.MFP.codes) === '["A"]' && info(blank).length === 0,
+        JSON.stringify([blank.strategy_summary.MFP, info(blank)]));
+    // Codex round 3: one calendar of whole days, B under a Finish On or Before
+    // Fri 16 Jan. P6 prints the same float for A and B (9 days, both may
+    // finish Fri 16 Jan 17:00); the whole-day float said 13 and 10. On the
+    // printed float they tie, and the finish and the code take A
+    const one = E.computeCPMWithStrategies([a('A', 8), a('B', 8, { constraint: { type: 'FNLT', date: '2026-01-16 17:00' } }),
+        a('T', 8, { constraint: { type: 'SNET', date: '2026-01-19 08:00' } })], [fs('A', 'T'), fs('B', 'T')],
+    { dataDate: '2026-01-05 08:00', calMap: CAL, projectCalendar: 'C', strategies: ['LPM', 'TFM', 'MFP'] });
+    check('MF-11: one calendar of whole days where the printed float ties (9 and 9) and the whole-day float did not: T then A',
+        JSON.stringify(one.strategy_summary.MFP.computed.paths[0].codes) === '["T","A"]' &&
+        one.nodes.A.tf_working_days === 9 && one.nodes.B.tf_working_days === 9,
+        JSON.stringify([one.strategy_summary.MFP.computed.paths, one.nodes.A.tf, one.nodes.B.tf]));
 }
 
 console.log('\n========================================');
