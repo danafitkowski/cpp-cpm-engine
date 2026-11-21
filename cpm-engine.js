@@ -289,6 +289,19 @@ function _constraintTimeMinutes(rawDate) {
     return hh * 60 + mm;
 }
 
+// Minute-precision sort key of an actual date ('YYYY-MM-DD' or
+// 'YYYY-MM-DD HH:MM'): day number * 1440 + minute of day (a date with no time
+// counts from the opening of the day). 0 when the date does not parse. Used
+// by the FS-overlap disclosure to order a predecessor's actual finish against
+// a successor's actual start on the same day. Python paired site:
+// _actual_minute_key in python_reference/cpm.py.
+function _actualMinuteKey(s) {
+    const n = dateToNum(s);
+    if (n <= 0) return 0;
+    const t = _constraintTimeMinutes(s);
+    return n * 1440 + (t === null ? 0 : t);
+}
+
 // Attach the constraint's time of day, when it has one.
 function _withConstraintInstant(cstr, rawDate, kept) {
     // A constraint handed back already normalized (the date part in `date`,
@@ -7817,6 +7830,11 @@ function computeCPM(activities, relationships, opts) {
         // retroactive actual-start editing (actuals after the schedule's
         // update window shouldn't normally exist).
         const _postDataDateStartPreds = [];
+        // FS overlap in the as-built: an FS predecessor that started on or
+        // before the successor but had not finished when the successor
+        // started (still in progress, or an actual finish later than the
+        // successor's actual start). See the alert below.
+        const _fsOverlapPreds = [];
         // v2.9.24 — use memoized offset (audit LOW R21).
         const _aStartNum = a.actual_start
             ? (_actStartNumByCode.has(a.code) ? _actStartNumByCode.get(a.code) : dateToNum(a.actual_start))
@@ -7830,6 +7848,7 @@ function computeCPM(activities, relationships, opts) {
                 _unstartedPreds.push(p.from_code);
                 continue;
             }
+            let _premature = false;
             // v2.9.12 T3.21 — also catch true OoS-progress: pred has
             // actual_start but the successor started EARLIER than the
             // predecessor did.
@@ -7839,6 +7858,7 @@ function computeCPM(activities, relationships, opts) {
                     ? _actStartNumByCode.get(p.from_code)
                     : dateToNum(predAct.actual_start);
                 if (_pStartNum > 0 && _pStartNum > _aStartNum) {
+                    _premature = true;
                     _prematureStartPreds.push({
                         code: p.from_code,
                         pred_start: predAct.actual_start,
@@ -7851,6 +7871,22 @@ function computeCPM(activities, relationships, opts) {
                         pred_start: predAct.actual_start,
                     });
                 }
+            }
+            // FS overlap. Only an FS link with no lead (lag >= 0): an SS / FF /
+            // SF link, or an FS with a lead, permits overlap by design. A
+            // predecessor already reported above (not started, or started
+            // after the successor) is not reported twice. A positive lag is
+            // not added: the test is the predecessor's finish alone, so a
+            // successor started inside the lag window is not flagged here.
+            if (!_premature && _aStartNum > 0 && p.type === 'FS' && !(p.lag_days < 0)) {
+                if (predAct.actual_finish) {
+                    if (_actualMinuteKey(predAct.actual_finish) > _actualMinuteKey(a.actual_start)) {
+                        _fsOverlapPreds.push(p.from_code + ' (finished ' + predAct.actual_finish + ')');
+                    }
+                } else if (!predAct.is_complete) {
+                    _fsOverlapPreds.push(p.from_code + ' (in progress, no actual finish)');
+                }
+                // complete with no actual_finish recorded: nothing to compare
             }
         }
         if (_unstartedPreds.length > 0) {
@@ -7875,6 +7911,29 @@ function computeCPM(activities, relationships, opts) {
                     ' started ' + a.actual_start +
                     ' but ' + _prematureStartPreds.length + ' predecessor(s) ' +
                     'started AFTER it (retained-logic anomaly): ' + _premList,
+            });
+        }
+        // FS overlap: the successor started before an FS predecessor
+        // finished. P6 accepts this progress and schedules it (under retained
+        // logic the successor's remaining work waits for the predecessor; its
+        // actual start stands), so it is legitimate as-built overlap, not
+        // corrupt input. Severity WARN, as for 'actual-after-data-date', the
+        // other progress condition P6 schedules and logs; the ALERTs above
+        // are the out-of-sequence shapes strict mode stops on. NOT a member of
+        // FATAL_STRICT_CONTEXTS: a strict run must not stop on progress P6
+        // accepts, and the distinct context keeps it out of the schedule-
+        // health out-of-sequence count. It is disclosed so the analyst sees
+        // that the as-built does not follow the FS logic as drawn. No date or
+        // float changes. Python paired site: python_reference/cpm.py.
+        if (_fsOverlapPreds.length > 0) {
+            alerts.push({
+                severity: 'WARN',
+                context: 'out-of-sequence-fs-overlap',
+                code: 'out-of-sequence-fs-overlap',
+                message: 'Activity ' + a.code + ' started ' + a.actual_start +
+                    ' before ' + _fsOverlapPreds.length + ' FS predecessor(s) ' +
+                    'finished (as-built overlap of FS logic, which P6 permits; ' +
+                    'disclosed, not fatal): ' + _fsOverlapPreds.join(', '),
             });
         }
         // v2.9.24 — audit HIGH R8. WARN when a pred's actual_start is after

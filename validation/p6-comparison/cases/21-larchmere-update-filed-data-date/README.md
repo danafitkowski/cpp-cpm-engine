@@ -33,6 +33,7 @@ Alerts:
 - ALERT `out-of-sequence`: 1
 - ALERT `project-deadline-applied`: 1
 - WARN `actual-after-data-date`: 1
+- WARN `out-of-sequence-fs-overlap`: 1
 - WARN `post-data-date-actual`: 48
 
 ## Checking it

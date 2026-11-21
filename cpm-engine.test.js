@@ -14057,6 +14057,92 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(ms.map((r) => r.strategy_summary.LPM)));
 }
 
+// ── FS overlap in the as-built: a successor started before its FS predecessor
+// finished. The out-of-sequence scan flagged a predecessor that had not
+// started, or that started after the successor; one that started first but
+// was still in progress (or finished later) at the successor's actual start
+// passed silently. Shape of a synthetic stress-test update (data date
+// 2026-09-28 08:00, retained logic): FAB in progress since 2026-09-14, its FS
+// successor INS started 2026-09-25 08:00. Python paired site:
+// python_reference/cpm.py (the out-of-sequence block).
+{
+    const CAL = { C5: { work_days: [1, 2, 3, 4, 5], hours_per_day: 8, holidays: [] } };
+    const O = { dataDate: '2026-09-28 08:00', calMap: CAL, scheduleMode: 'retained_logic' };
+    const A = (code, d, x) => Object.assign({ code, duration_days: d, clndr_id: 'C5' }, x || {});
+    const L = (a, b, t, lag) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: lag || 0 });
+    const overlap = (r) => r.alerts.filter((x) => x.code === 'out-of-sequence-fs-overlap');
+    const shape = () => [
+        A('FAB', 5, { actual_start: '2026-09-14 08:00', remaining_duration: 1 }),
+        A('INS', 3, { actual_start: '2026-09-25 08:00', remaining_duration: 3 }),
+        A('TST', 2)];
+    const shapeRels = [L('FAB', 'INS'), L('INS', 'TST')];
+
+    const r = E.computeCPM(shape(), shapeRels, O);
+    const ov = overlap(r);
+    check('OOS-FS-1: an FS successor started while its predecessor is still in progress raises out-of-sequence-fs-overlap (WARN), naming both',
+        ov.length === 1 && ov[0].severity === 'WARN' && ov[0].context === 'out-of-sequence-fs-overlap' &&
+        /INS/.test(ov[0].message) && /FAB/.test(ov[0].message) && /in progress/.test(ov[0].message),
+        JSON.stringify(r.alerts));
+    check('OOS-FS-2: the overlap is not reported as the fatal out-of-sequence context',
+        !r.alerts.some((x) => x.context === 'out-of-sequence'),
+        JSON.stringify(r.alerts.map((x) => x.context)));
+
+    let strictErr = null; let rs = null;
+    try { rs = E.computeCPMForensicStrict(shape(), shapeRels, O); } catch (e) { strictErr = e; }
+    check('OOS-FS-3: forensic strict mode still runs on the overlap shape and carries the disclosure',
+        strictErr === null && rs && overlap(rs).length === 1 &&
+        !E.FATAL_STRICT_CONTEXTS.has('out-of-sequence-fs-overlap'),
+        strictErr ? strictErr.message : JSON.stringify(rs && rs.alerts));
+
+    const rLate = E.computeCPM([
+        A('FAB', 5, { actual_start: '2026-09-14 08:00', actual_finish: '2026-09-25 17:00', is_complete: true }),
+        A('INS', 3, { actual_start: '2026-09-25 08:00', remaining_duration: 1 }), A('TST', 2)], shapeRels, O);
+    const ovLate = overlap(rLate);
+    check('OOS-FS-4: a predecessor that finished after the successor\'s actual start raises the overlap alert with both dates',
+        ovLate.length === 1 && /finished 2026-09-25 17:00/.test(ovLate[0].message) &&
+        /started 2026-09-25 08:00/.test(ovLate[0].message),
+        JSON.stringify(rLate.alerts));
+
+    const rClean = E.computeCPM([
+        A('FAB', 5, { actual_start: '2026-09-14 08:00', actual_finish: '2026-09-24 17:00', is_complete: true }),
+        A('INS', 3, { actual_start: '2026-09-25 08:00', remaining_duration: 1 }), A('TST', 2)], shapeRels, O);
+    check('OOS-FS-5: a clean FS (predecessor finished 24 Sep 17:00, successor started 25 Sep 08:00) raises no overlap and no out-of-sequence alert',
+        overlap(rClean).length === 0 && !rClean.alerts.some((x) => /^out-of-sequence/.test(x.context || '')),
+        JSON.stringify(rClean.alerts));
+
+    // Relationship types that permit overlap by design are not flagged: SS,
+    // and an FS with a lead (negative lag).
+    const rSS = E.computeCPM(shape(), [L('FAB', 'INS', 'SS'), L('INS', 'TST')], O);
+    const rLead = E.computeCPM(shape(), [L('FAB', 'INS', 'FS', -5), L('INS', 'TST')], O);
+    check('OOS-FS-6: an SS link, or an FS with a lead, is not flagged as an FS overlap',
+        overlap(rSS).length === 0 && overlap(rLead).length === 0,
+        JSON.stringify([rSS.alerts, rLead.alerts]));
+
+    // The unstarted-predecessor case keeps its out-of-sequence ALERT (fatal in
+    // strict mode) and is not reported a second time as an overlap.
+    const rUn = E.computeCPM([
+        A('FAB', 5),
+        A('INS', 3, { actual_start: '2026-09-25 08:00', remaining_duration: 3 }), A('TST', 2)], shapeRels, O);
+    let unErr = null;
+    try { E.computeCPMForensicStrict([A('FAB', 5), A('INS', 3, { actual_start: '2026-09-25 08:00', remaining_duration: 3 }), A('TST', 2)], shapeRels, O); } catch (e) { unErr = e; }
+    check('OOS-FS-7: an unstarted FS predecessor still raises out-of-sequence (ALERT, fatal in strict mode) and no overlap alert',
+        rUn.alerts.some((x) => x.context === 'out-of-sequence' && x.severity === 'ALERT' && /no actual_start/.test(x.message)) &&
+        overlap(rUn).length === 0 && unErr && unErr.context === 'out-of-sequence',
+        JSON.stringify(rUn.alerts) + ' / ' + (unErr && unErr.message));
+
+    // One alert per successor, every overlapping predecessor listed.
+    const rTwo = E.computeCPM([
+        A('FAB', 5, { actual_start: '2026-09-14 08:00', remaining_duration: 1 }),
+        A('PIP', 5, { actual_start: '2026-09-15 08:00', remaining_duration: 2 }),
+        A('INS', 3, { actual_start: '2026-09-25 08:00', remaining_duration: 3 }), A('TST', 2)],
+    [L('FAB', 'INS'), L('PIP', 'INS'), L('INS', 'TST')], O);
+    const ovTwo = overlap(rTwo);
+    check('OOS-FS-8: two overlapping FS predecessors give one alert that names both',
+        ovTwo.length === 1 && /2 FS predecessor/.test(ovTwo[0].message) &&
+        /FAB/.test(ovTwo[0].message) && /PIP/.test(ovTwo[0].message),
+        JSON.stringify(rTwo.alerts));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');

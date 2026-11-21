@@ -279,6 +279,18 @@ def _constraint_time_minutes(raw_date):
     return hh * 60 + mm
 
 
+def _actual_minute_key(s):
+    """Minute-precision sort key of an actual date: day number * 1440 +
+    minute of day (no time counts from the opening of the day); 0 when the
+    date does not parse. Used by the FS-overlap disclosure. JS paired site:
+    _actualMinuteKey in cpm-engine.js."""
+    n = date_to_num(s)
+    if n <= 0:
+        return 0
+    t = _constraint_time_minutes(s)
+    return n * 1440 + (0 if t is None else t)
+
+
 def _with_constraint_instant(cstr, raw_date, kept=None):
     """Attach the constraint's time of day, when it has one. A constraint
     handed back already normalized (the date part in `date`, the time in
@@ -5746,6 +5758,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         _unstarted = []
         _premature = []
         _post_dd = []
+        _fs_overlap = []
         _a_start_num = _act_start_num_by_code.get(a['code'], 0) if a.get('actual_start') else 0
         for p in preds:
             pred_node = nodes.get(p['from_code'])
@@ -5757,13 +5770,28 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
             if not pred_act.get('actual_start') and not pred_act.get('is_complete'):
                 _unstarted.append(p['from_code'])
                 continue
+            _is_premature = False
             if _a_start_num > 0 and pred_act.get('actual_start'):
                 _p_start_num = _act_start_num_by_code.get(
                     p['from_code'], date_to_num(pred_act['actual_start']))
                 if _p_start_num > 0 and _p_start_num > _a_start_num:
+                    _is_premature = True
                     _premature.append((p['from_code'], pred_act['actual_start']))
                 if dd_num > 0 and _p_start_num > 0 and _p_start_num > dd_num:
                     _post_dd.append((p['from_code'], pred_act['actual_start']))
+            # FS overlap (JS paired site: the out-of-sequence scan in
+            # cpm-engine.js). FS with no lead only; a predecessor already
+            # reported as unstarted or premature is not reported twice; a
+            # positive lag is not added to the predecessor's finish.
+            if (not _is_premature and _a_start_num > 0 and p.get('type') == 'FS'
+                    and not ((p.get('lag_days') or 0) < 0)):
+                if pred_act.get('actual_finish'):
+                    if (_actual_minute_key(pred_act['actual_finish'])
+                            > _actual_minute_key(a['actual_start'])):
+                        _fs_overlap.append('%s (finished %s)'
+                                           % (p['from_code'], pred_act['actual_finish']))
+                elif not pred_act.get('is_complete'):
+                    _fs_overlap.append('%s (in progress, no actual finish)' % (p['from_code'],))
         if _unstarted:
             _label = 'is complete' if a.get('is_complete') else 'is in progress'
             alerts.append({
@@ -5781,6 +5809,20 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 'message': 'Activity %s started %s but %d predecessor(s) '
                            'started AFTER it (retained-logic anomaly): %s'
                            % (a['code'], a.get('actual_start'), len(_premature), _prem_list),
+            })
+        # FS overlap: WARN, distinct context and code, not in the strict-mode
+        # fatal set (P6 accepts and schedules this progress). Same message
+        # as the JS engine. No date or float changes.
+        if _fs_overlap:
+            alerts.append({
+                'severity': 'WARN',
+                'context': 'out-of-sequence-fs-overlap',
+                'code': 'out-of-sequence-fs-overlap',
+                'message': 'Activity %s started %s before %d FS predecessor(s) '
+                           'finished (as-built overlap of FS logic, which P6 '
+                           'permits; disclosed, not fatal): %s'
+                           % (a['code'], a.get('actual_start'), len(_fs_overlap),
+                              ', '.join(_fs_overlap)),
             })
         if _post_dd:
             _dd_list = ', '.join('%s (started %s)' % x for x in _post_dd)

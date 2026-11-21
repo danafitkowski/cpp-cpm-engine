@@ -200,9 +200,18 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  d6a83bfe36e2680314cb72870a8631f55ac5e43c91edd0a89af4f323bbedc9b5
+cpm.py          SHA-256:  82c62432666f81c1af1eff3461aac1c6696de35b8ea90b0f54918e977b22731b
 cpm_minutes.py  SHA-256:  7e0619baa016225adaccd88c25b7e3b7df1ed12e862cf7b3d176249e303af03d
 cpm_hours.py    SHA-256:  05f43718388bc51b7c906bde4c0119c9d57131639c1afa3022a3eadc3624e605
+
+(Unreleased, 2026-11-21 - cpm.py bumped from d6a83bfe...: the out-of-sequence
+scan also discloses an FS link whose successor started before the
+predecessor finished (predecessor still in progress, or an actual finish
+later than the successor's actual start; FS with no lead only). It raises a
+WARN with context and code 'out-of-sequence-fs-overlap', not in the
+strict-mode fatal set, paired with the JS engine (_actual_minute_key /
+_actualMinuteKey). Nothing computed moves. ENGINE_VERSION unchanged.
+cpm_hours.py and cpm_minutes.py unchanged.)
 
 (v2.10.18, 2026-11-21 - cpm.py bumped from 12a8f55a..., cpm_minutes.py
 from d71c28c4...: the input checks paired with the JS engine's strict
@@ -953,8 +962,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 335366
-  sha-256:  d6a83bfe36e2680314cb72870a8631f55ac5e43c91edd0a89af4f323bbedc9b5
+  bytes: 337601
+  sha-256:  82c62432666f81c1af1eff3461aac1c6696de35b8ea90b0f54918e977b22731b
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

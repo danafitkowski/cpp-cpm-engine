@@ -32,6 +32,7 @@ Alerts:
 - ALERT `constraint-violated`: 1
 - ALERT `out-of-sequence`: 1
 - ALERT `project-deadline-applied`: 1
+- WARN `out-of-sequence-fs-overlap`: 1
 
 ## Checking it
 
