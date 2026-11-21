@@ -152,6 +152,17 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.19 (reviewed 2026-11-21)
+
+v2.10.19 discloses an as-built FS overlap: a successor whose actual start is earlier than its FS predecessor's
+actual finish, or than a predecessor still in progress, raises a WARN with the stable code
+`out-of-sequence-fs-overlap` (Cedarline Stress Test ISSUE-5, 21 November 2026). It is not fatal in strict mode,
+because P6 schedules the overlap under retained logic. Nothing computed moves (Class B under PROCEDURE.md §12.1).
+- The unit suite grew from 1,546 to 1,554 (OOS-FS-1 to 8); crossval stays at 233 fixtures and 22189 of 22189.
+- Coverage on the v2.10.19 bytes: 94.08% statements / 82.63% branches / 97.10% functions.
+- Held-out sets H1 to H30, re-scored in diagnosis mode: 8,850 of 8,850 rows, as on v2.10.18.
+- Nothing else is opened or closed.
+
 ## Status at v2.10.18 (reviewed 2026-11-21)
 
 v2.10.18 closes the forensic strict-mode findings of a third-party audit of v2.10.17 (20 November 2026): a missing or
@@ -515,4 +526,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.18. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.19. Update on every release that closes or opens an audit item.

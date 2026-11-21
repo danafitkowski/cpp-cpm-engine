@@ -12,6 +12,23 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.19 - 2026-11-21 - An as-built FS overlap is disclosed
+
+**Nothing computed moves (Class B, disclosure): engine math is unchanged; on every file measured, every date and float is identical to v2.10.18.** A successor whose actual start is earlier than its FS predecessor's actual finish, or that started while the predecessor was still in progress, now raises a WARN with context and code `out-of-sequence-fs-overlap`, naming each overlapping predecessor. Before, the out-of-sequence scan flagged only a predecessor that had not started, or that started after the successor. The new case passed silently, and forensic strict mode ran clean on it.
+
+The alert is not in `FATAL_STRICT_CONTEXTS`. P6 accepts the overlap under retained logic: the successor's remaining work waits for the predecessor, and its actual start stands. So a strict run discloses the overlap and does not stop on it. SS, FF and SF links and FS links with a lead are not flagged, since they allow overlap. A successor that started inside a positive lag is not flagged either (the lag is not added to the predecessor's finish). `python_reference/cpm.py` raises the same alert with the same message.
+
+Found by the Cedarline Stress Test (a fictional benchmark, 21 November 2026, ISSUE-5): on its update 2, an activity started on 25 September before its FS predecessor finished on 28 September, and only the hosted Python windows tool flagged it.
+
+**Measured on these bytes (2026-11-21).**
+- JS unit 1,554 (1,546 before; OOS-FS-1 to 8).
+- Crossval 233 fixtures, 22189 of 22189.
+- Coverage 94.08% statements / 82.63% branches / 97.10% functions (94.05 / 82.60 / 97.09 before).
+- H1 to H30 re-scored in diagnosis mode (not a new score): 8,850 of 8,850.
+- The three Larchmere capture cases (19 to 21) each carry the new WARN once, with dates and floats unchanged.
+
+---
+
 ## v2.10.18 - 2026-11-21 - Forensic strict mode stops on invalid scheduling inputs
 
 **Class A on invalid input only; on valid input nothing computed moves.** Engine math changed only where the input is invalid: on every valid schedule measured (the 233 crossval fixtures, H1 to H30, the P6 probe suites) every date and float is identical to v2.10.17. A third-party audit of v2.10.17 (20 November
