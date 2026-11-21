@@ -14275,6 +14275,19 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(one.strategy_summary.MFP.computed.paths[0].codes) === '["T","A"]' &&
         one.nodes.A.tf_working_days === 9 && one.nodes.B.tf_working_days === 9,
         JSON.stringify([one.strategy_summary.MFP.computed.paths, one.nodes.A.tf, one.nodes.B.tf]));
+    // Codex round 5: the project calendar is read as computeCPM reads it,
+    // projectCalendar or else project_calendar, and none at all
+    const pcRun = (o) => E.computeCPMWithStrategies([
+        { code: 'A', duration_days: 1, remaining_hours: 4, remaining_hours_days: 1 },
+        { code: 'B', duration_days: 0, remaining_hours: 0, remaining_hours_days: 0, task_type: 'TT_Mile' }],
+    [fs('A', 'B')], Object.assign({ dataDate: '2026-01-05 08:00', strategies: ['LPM', 'TFM', 'MFP'] }, o));
+    const c4 = { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 4 };
+    const none = pcRun({ calMap: { '': c4 } });
+    const snake = pcRun({ calMap: { C: c4 }, project_calendar: 'C' });
+    check('MF-12: no project calendar named, or named as project_calendar: the start milestone at the next opening is not later; MFP and LPM stay on A',
+        [none, snake].every((r) => JSON.stringify(r.strategy_summary.MFP.codes) === '["A"]' && info(r).length === 0 &&
+            !r.strategy_summary.LPM.withheld && JSON.stringify(r.strategy_summary.LPM.codes) === '["A"]'),
+        JSON.stringify([none.strategy_summary.MFP, none.strategy_summary.LPM, snake.strategy_summary.MFP]));
 }
 
 console.log('\n========================================');
