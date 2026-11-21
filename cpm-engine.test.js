@@ -14219,7 +14219,10 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
     [fs('A', 'B')], { dataDate: '2026-01-05 08:00', calMap: cal4, projectCalendar: 'C', strategies: ['LPM', 'TFM', 'MFP'] });
     check('MF-7: an empty calendar entry falls back to the project calendar: the start milestone at the next opening is not later, so MFP stays on A with no INFO',
         JSON.stringify(empty.strategy_summary.MFP.codes) === '["A"]' && empty.strategy_summary.MFP.target_code === 'A' &&
-        info(empty).length === 0,
+        info(empty).length === 0 &&
+        // LPM reads the same calendar (Codex round 4): no longer withheld here, as on the plain calendar
+        !empty.strategy_summary.LPM.withheld && JSON.stringify(empty.strategy_summary.LPM.codes) === '["A"]' &&
+        !empty.alerts.some((x) => x.context === 'lpm-withheld-part-day') && empty.nodes.A.cp_methods.includes('LPM'),
         JSON.stringify([empty.strategy_summary.MFP, info(empty)]));
     // Codex 21-Nov-2026: whole days on two calendars. A (1 day, Mon-Fri) and B
     // (2 days, every day) into T (SNET Monday 12 Jan). The printed float, on
@@ -14257,7 +14260,9 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         calMap: { C: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 4 },
             '': { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 8 } } });
     check('MF-10: a missing calendar id reads the project calendar: the start milestone at the next opening is not later, so MFP stays on A',
-        JSON.stringify(blank.strategy_summary.MFP.codes) === '["A"]' && info(blank).length === 0,
+        JSON.stringify(blank.strategy_summary.MFP.codes) === '["A"]' && info(blank).length === 0 &&
+        !blank.strategy_summary.LPM.withheld && JSON.stringify(blank.strategy_summary.LPM.codes) === '["A"]' &&
+        !blank.alerts.some((x) => x.context === 'lpm-withheld-part-day'),
         JSON.stringify([blank.strategy_summary.MFP, info(blank)]));
     // Codex round 3: one calendar of whole days, B under a Finish On or Before
     // Fri 16 Jan. P6 prints the same float for A and B (9 days, both may
