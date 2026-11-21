@@ -6,8 +6,8 @@ This document is the **courtroom-exhibit-form** of the engine release verificati
 >
 > - **Forensic strict mode stops on invalid scheduling inputs** (third-party audit, 20 November 2026). Three classes of input changed dates or float without stopping a strict-mode run, two of them with no alert: a missing or unknown calendar (7-day ordinal arithmetic; its alerts carried call-site labels strict mode did not match, so the run returned with zero overrides), a missing or unreadable data date when only started work remained, and a minute-precision data date with an impossible clock time (08:99 was read as 09:39). A malformed Must Finish By was dropped with a warning. Each now raises a fatal alert with a stable `code`: `calendar-fallback-ordinal`, `missing-data-date`, `invalid-data-date`, `project-deadline-invalid`. Outside strict mode the run continues and the alert is recorded; a clock time that does not exist is no longer read as another one.
 > - **The Daubert disclosure no longer claims compatibility with proposed FRE 707**, which is not an operative rule (DAUBERT.md §1).
-> - **What did not move:** nothing computed on valid input. Cross-validation 22189 of 22189 across 233 fixtures; H1 to H30, re-scored on the v2.10.18 source in diagnosis mode (not a new held-out score), 8,850 of 8,850 unfinished activities, as on v2.10.17.
-> - **This guide is part of the release commit.** The v2.10.17 tag carried the previous release's VERIFY_RELEASE.md, because the guide was written after the tag. From v2.10.18 the guide names its own release in the tagged tree, CI refuses a tag whose guide or package.json names another version, and the post-tag evidence (verify run, witness, Rekor entry) lives in [`release-evidence/v2.10.18/`](release-evidence/v2.10.18/).
+> - **What did not move:** nothing computed on valid input. Cross-validation 22189 of 22189 across 233 fixtures; H1 to H30, re-scored on the v2.10.18 source in diagnosis mode (not a new held-out score), 8,850 of 8,850 unfinished activities, as on the previous release.
+> - **This guide is part of the release commit.** The previous release's tag carried the VERIFY_RELEASE.md of the release before it, because the guide was written after the tag. From v2.10.18 the guide names its own release in the tagged tree, CI refuses a tag whose guide or package.json names another version, and the post-tag evidence (verify run, witness, Rekor entry) lives in [`release-evidence/v2.10.18/`](release-evidence/v2.10.18/).
 >
 > See [CHANGELOG.md](CHANGELOG.md) for the measurements.
 
@@ -30,7 +30,7 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 | Item | Value |
 |---|---|
 | Tag | `v2.10.18` |
-| Commit SHA | the content commit the `v2.10.18` tag names, recorded with the verify run and the Rekor entry in [`release-evidence/v2.10.18/`](release-evidence/v2.10.18/) once the tag is cut |
+| Commit SHA | `ca4db425d673817a5935c455f12ee4b5c9aa1994` (the content commit the `v2.10.18` tag names; verify run 44891463007, Rekor logIndex 4032465902, in [`release-evidence/v2.10.18/`](release-evidence/v2.10.18/)) |
 | Release date | 2026-11-21 |
 | Engine source | `cpm-engine.js` |
 | Engine SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/cpm-engine.js.sha256` (the top-level `cpm-engine.js.sha256` is **gitignored** per `scripts/attestation.js` — it is a per-machine regenerated artifact, not a committed pin). |
