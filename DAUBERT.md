@@ -458,17 +458,17 @@ const result = E.computeCPM(activities, relationships, {
 });
 ```
 
-In strict mode, if any alert whose stable `code` (from v2.10.18; matched first) or whose `context` is in `FATAL_STRICT_CONTEXTS` (or whose message begins with a pattern in `FATAL_STRICT_MESSAGE_PATTERNS`) is emitted, the engine throws `StrictForensicViolation` — a labeled exception with `name: 'StrictForensicViolation'`, `code: 'STRICT_FORENSIC_VIOLATION'`, and `.context` / `.alert` properties for programmatic handling.
+In strict mode, if any alert whose stable `code` (matched first) or whose `context` is in `FATAL_STRICT_CONTEXTS` (or whose message begins with a pattern in `FATAL_STRICT_MESSAGE_PATTERNS`) is emitted, the engine throws `StrictForensicViolation` — a labeled exception with `name: 'StrictForensicViolation'`, `code: 'STRICT_FORENSIC_VIOLATION'`, and `.context` / `.alert` properties for programmatic handling.
 
 ### The fatal-context taxonomy
 
-42 alert contexts are fatal in strict mode (v2.10.18; the figure here read 37 while the set held 38). The full list is exported as `E.FATAL_STRICT_CONTEXTS` and grouped by hazard class in the engine source. Highlights:
+42 alert contexts are fatal in strict mode. The full list is exported as `E.FATAL_STRICT_CONTEXTS` and grouped by hazard class in the engine source. Highlights:
 
 | Hazard class | Example contexts |
 |---|---|
-| Calendar / progress-mode | `invalid-calendar-falling-back`, `calendar-fallback-ordinal` (v2.10.18: no calendar map, or an activity's calendar missing from it), `lag-hours-per-day-fallback`, `unknown-schedule-mode` |
-| Not fatal, disclosed (v2.10.19) | `out-of-sequence-fs-overlap` (WARN): an FS successor started before its predecessor finished. P6 schedules this under retained logic, so it is disclosed, not fatal |
-| Data date / Must Finish By (v2.10.18) | `missing-data-date` (now also when only started work remains), `invalid-data-date` (a day or clock time that does not exist), `project-deadline-invalid` (a Must Finish By supplied but unreadable) |
+| Calendar / progress-mode | `invalid-calendar-falling-back`, `calendar-fallback-ordinal` (no calendar map, or an activity's calendar missing from it), `lag-hours-per-day-fallback`, `unknown-schedule-mode` |
+| Not fatal, disclosed | `out-of-sequence-fs-overlap` (WARN): an FS successor started before its predecessor finished. P6 schedules this under retained logic, so it is disclosed, not fatal |
+| Data date / Must Finish By | `missing-data-date` (now also when only started work remains), `invalid-data-date` (a day or clock time that does not exist), `project-deadline-invalid` (a Must Finish By supplied but unreadable) |
 | Logic integrity | `dangling-rel`, `relationship-dropped`, `self-loop`, `invalid-rel-type`, `cycle-excluded` |
 | Schema / input | `duplicate-activity-code`, `unrecognized-task-type`, `task-dropped`, `lag-non-finite`, `invalid-date-coerced` |
 | Constraints | `constraint-unrecognized`, `constraint-incomplete`, `constraint-invalid-date`, `constraint-skipped` |

@@ -1,0 +1,4 @@
+Sigstore transparency-log entry for witness-v2.10.19.json
+logIndex: 4033814314
+log: rekor.sigstore.dev
+verified with: gh attestation verify witness-v2.10.19.json --owner danafitkowski

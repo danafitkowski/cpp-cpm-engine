@@ -28,7 +28,7 @@ What it does **not** prove: that the engine produces correct CPM dates for every
 | Item | Value |
 |---|---|
 | Tag | `v2.10.19` |
-| Commit SHA | the content commit the `v2.10.19` tag names, recorded with the verify run and the Rekor entry in [`release-evidence/v2.10.19/`](release-evidence/v2.10.19/) once the tag is cut |
+| Commit SHA | `2954470348b22b6d86ff77d45b82aadf6305e9b6` (the content commit the `v2.10.19` tag names; verify run 44935915974, Rekor logIndex 4033814314, in [`release-evidence/v2.10.19/`](release-evidence/v2.10.19/)) |
 | Release date | 2026-11-21 |
 | Engine source | `cpm-engine.js` |
 | Engine SHA-256 | computed at attestation time; mirrored in the per-release `release-evidence/v<TAG>/cpm-engine.js.sha256` (the top-level `cpm-engine.js.sha256` is **gitignored** per `scripts/attestation.js` — it is a per-machine regenerated artifact, not a committed pin). |
