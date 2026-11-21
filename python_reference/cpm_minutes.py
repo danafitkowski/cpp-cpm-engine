@@ -32,6 +32,14 @@ DAY = 1440
 _SEARCH_DAYS = 3660   # ten years: a calendar with no working time in that span is broken
 
 
+def clock_ok(hh, mm):
+    """v2.10.18: hours 00-23 with minutes 00-59, or 24:00 (the close of the
+    day). JS paired site: _hrClockOk."""
+    if hh == 24:
+        return mm == 0
+    return 0 <= hh <= 23 and 0 <= mm <= 59
+
+
 def parse_instant(s):
     """'YYYY-MM-DD[ HH:MM[:SS]]' -> minutes since the epoch; None for blank or unreadable."""
     if s is None:
@@ -46,9 +54,16 @@ def parse_instant(s):
     m = 0
     if len(s) >= 16 and s[10] in (' ', 'T'):
         try:
-            m = int(s[11:13]) * 60 + int(s[14:16])
+            hh, mm = int(s[11:13]), int(s[14:16])
         except ValueError:
-            m = 0
+            hh = mm = None
+        if hh is not None:
+            # v2.10.18 PAIRED FIX (JS _hrParseInstant): a clock time that is
+            # not one (08:99, 25:00) is unreadable, not rolled forward;
+            # 08:99 used to read as 09:39. 24:00 is the close of the day.
+            if not clock_ok(hh, mm):
+                return None
+            m = hh * 60 + mm
     return (d.toordinal() - EPOCH_ORD) * DAY + m
 
 

@@ -41,6 +41,9 @@ A release may not proceed (no version bump, no release notes, no tag) if any of 
 4. Any CLOSED row has empty Evidence or Verification command cells.
 5. Any row's Status column conflicts with its Verification result column (e.g., status = CLOSED but result describes a failure).
 
+6. The release has no recorded human publication review. Before a tag, a person reads every file added or changed since the previous tag under `release-evidence/`, `validation/`, `examples/`, `schemas/` and `tests/` fixtures and confirms it is safe to publish (no client, employer or engagement name or data); the review is recorded, with the reviewer and date, in the release's `release-evidence/v<TAG>/README.md`. `tests/no-client-names.test.js` runs in CI on every push and before release, but it is a heuristic (a hashed denylist and shape rules, with exclusions) and cannot stand in for the review. Added v2.10.18 after a third-party audit (20 November 2026) found the public validation page claimed more than these controls do.
+7. `VERIFY_RELEASE.md` or `package.json` names a version other than the tag. The guide is written in the release commit, not after the tag; post-tag evidence goes in `release-evidence/v<TAG>/`. CI (`verify.yml`) enforces this on tag pushes.
+
 Hard stop #4 applies only to CLOSED rows. DEFERRED / ACCEPTED-LIMITATION / BLOCKED rows are expected to have empty Evidence / Verification cells until the underlying work happens.
 
 ---

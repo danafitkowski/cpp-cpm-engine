@@ -114,14 +114,14 @@ The current federal expert-witness admissibility standard. The 2023 amendment cl
 - **U.S. Courts:** <https://www.uscourts.gov/sites/default/files/federal_rules_of_evidence_-_dec_1_2023_0.pdf>
 - **Verified:** Yes.
 
-### FRE 707 (proposed federal rule, final effective date pending)
+### Proposed FRE 707 (not an operative rule)
 
-> Proposed Federal Rule of Evidence 707 — *Machine-Generated Evidence.* Pending Judicial Conference adoption as of 2026.
+> Proposed Federal Rule of Evidence 707 — *Machine-Generated Evidence.*
 
-Not yet a final rule; published for comment. The engine's `buildDaubertDisclosure()` is structured to be 707-compliant when the rule lands.
+Proposed Federal Rule of Evidence 707 (machine-generated evidence) is not an operative rule. The version published for public comment in August 2025 was withdrawn by the Advisory Committee on Evidence Rules at its 7 May 2026 meeting, which sent a modified proposal for further study. The engine's `buildDaubertDisclosure()` makes no claim of compatibility with any version of it (removed in v2.10.18).
 
-- **U.S. Courts (proposed):** <https://www.uscourts.gov/rules-policies/proposed-amendments-published-public-comment>
-- **Verified:** Yes (as proposed rule).
+- **U.S. Courts:** <https://www.uscourts.gov/sites/default/files/document/2026-10_evidence_rules_agenda_book_9-23_final.pdf> (agenda book for the 15 October 2026 meeting, p. 5)
+- **Verified:** 2026-11-21.
 
 ---
 

@@ -200,9 +200,19 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  12a8f55a2f94f3ae367e7b045a89533178188ece3c844679f254b4b2846b1b62
-cpm_minutes.py  SHA-256:  d71c28c4dbffba6e330f9b006ff08abf4a200facbfea928008dcfe79462b259c
+cpm.py          SHA-256:  d6a83bfe36e2680314cb72870a8631f55ac5e43c91edd0a89af4f323bbedc9b5
+cpm_minutes.py  SHA-256:  7e0619baa016225adaccd88c25b7e3b7df1ed12e862cf7b3d176249e303af03d
 cpm_hours.py    SHA-256:  05f43718388bc51b7c906bde4c0119c9d57131639c1afa3022a3eadc3624e605
+
+(v2.10.18, 2026-11-21 - cpm.py bumped from 12a8f55a..., cpm_minutes.py
+from d71c28c4...: the input checks paired with the JS engine's strict
+mode. The calendar-fallback ALERTs carry the stable code
+'calendar-fallback-ordinal'; a data date or Must Finish By naming a day or
+clock time that does not exist raises 'invalid-data-date' /
+'project-deadline-invalid' (_data_date_problem); 'missing-data-date' also
+fires when only started work remains; parse_instant refuses an impossible
+clock time (08:99 used to read as 09:39). Nothing computed moves on valid
+input. cpm_hours.py unchanged.)
 
 (v2.10.17, 2026-11-09 - cpm.py bumped from e1265e97...: ENGINE_VERSION reads
 2.10.17; nothing else changed. The release changes no public engine code:
@@ -943,8 +953,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 331779
-  sha-256:  12a8f55a2f94f3ae367e7b045a89533178188ece3c844679f254b4b2846b1b62
+  bytes: 335366
+  sha-256:  d6a83bfe36e2680314cb72870a8631f55ac5e43c91edd0a89af4f323bbedc9b5
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

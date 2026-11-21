@@ -157,7 +157,7 @@ def _round_half_up_to(x, decimals=0):
 # full: since v2.10.1 the completed-activity branch also emits ff_signed and
 # ff_signed_working_days (0), as the JS engine does, so the harness skips no
 # free-float comparison.
-ENGINE_VERSION = '2.10.17'
+ENGINE_VERSION = '2.10.18'
 
 
 # =============================================================================
@@ -231,6 +231,38 @@ CANONICAL_CONSTRAINT_TYPES = frozenset([
 # repo). Start constraints were measured over the same population and found
 # already correct — `es` / `ls` ARE the start instant — and are untouched.
 _TIME_RE = re.compile(r'^\d{4}-\d{2}-\d{2}[ T](\d{2}):(\d{2})')
+
+
+_DATA_DATE_RE = re.compile(
+    r'^(\d{4}-\d{1,2}-\d{1,2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?'
+    r'(?:Z|[+-]\d{2}:?\d{2})?)?$')
+
+
+def _clock_ok(hh, mm):
+    """v2.10.18: hours 00-23 with minutes 00-59, or 24:00 (the close of the
+    day). JS paired site: _hrClockOk."""
+    if hh == 24:
+        return mm == 0
+    return 0 <= hh <= 23 and 0 <= mm <= 59
+
+
+def _data_date_problem(value):
+    """v2.10.18: why a data date (or Must Finish By) cannot be used, or None
+    when it can: the day must exist and the clock time must be one. JS paired
+    site: _dataDateProblem."""
+    s = str(value).strip()
+    m = _DATA_DATE_RE.match(s)
+    if not m:
+        return 'is not in the form YYYY-MM-DD or YYYY-MM-DD HH:MM'
+    if date_to_num(m.group(1)) <= 0:
+        return 'names a day that does not exist'
+    if m.group(2) is not None:
+        hh, mm = int(m.group(2)), int(m.group(3))
+        if not _clock_ok(hh, mm):
+            return 'carries a clock time that does not exist (%s:%s)' % (m.group(2), m.group(3))
+        if m.group(4) is not None and (int(m.group(4)) > 59 or (hh == 24 and int(m.group(4)) != 0)):
+            return 'carries seconds that do not exist (%s)' % (m.group(4),)
+    return None
 
 
 def _constraint_time_minutes(raw_date):
@@ -884,8 +916,11 @@ def _advance_workdays(start_num, n_days, calendar_info, *, alerts, ctx):
     if start_num <= 0:
         return start_num + _round_half_up(n_days)
     if not calendar_info:
+        # v2.10.18 PAIRED FIX — `code` is the stable identity (JS strict mode
+        # matches it); `context` stays the call-site label.
         alerts.append({
             'severity': 'ALERT',
+            'code': 'calendar-fallback-ordinal',
             'context': ctx,
             'message': (
                 'Calendar-aware arithmetic unavailable (no cal_map/clndr_id) '
@@ -907,6 +942,7 @@ def _retreat_workdays(end_num, n_days, calendar_info, *, alerts, ctx):
     if not calendar_info:
         alerts.append({
             'severity': 'ALERT',
+            'code': 'calendar-fallback-ordinal',
             'context': ctx,
             'message': (
                 'Calendar-aware backward arithmetic unavailable '
@@ -2834,26 +2870,61 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # computeCPMForensicStrict([A 5 d, B 3 d], [A->B]) with no dataDate returned
     # A.es_date = '' , A.ef_date = 2020-01-06, projectFinish = 2020-01-09 and
     # alerts.length = 0. Fires only when the epoch seed is actually reachable.
+    #
+    # v2.10.18 PAIRED FIX (third-party audit, 20 Nov 2026). (1) Started work
+    # with work remaining is floored at the data date; with no usable data
+    # date that floor is silently lost, so every unfinished activity counts,
+    # started or not. Only an all-actuals as-built stays unflagged. (2) A
+    # data date supplied but malformed (a day or clock time that does not
+    # exist) is its own alert, 'invalid-data-date'.
+    if data_date:
+        _dd_problem = _data_date_problem(data_date)
+        if _dd_problem:
+            alerts.append({
+                'severity': 'ALERT',
+                'context': 'invalid-data-date',
+                'code': 'invalid-data-date',
+                'message': (
+                    'INVALID_DATA_DATE: data_date %r %s. Supply the data date '
+                    'as YYYY-MM-DD or YYYY-MM-DD HH:MM with a real day and '
+                    'clock time.' % (str(data_date), _dd_problem)
+                ),
+            })
     if dd_num <= 0:
         _epoch_seeded = sum(
             1 for _n in nodes.values()
             if not _n['is_complete'] and not _n['actual_start']
         )
-        if _epoch_seeded > 0:
+        _started_open = sum(
+            1 for _n in nodes.values()
+            if not _n['is_complete'] and _n['actual_start']
+        )
+        if _epoch_seeded + _started_open > 0:
+            _parts = []
+            if _epoch_seeded > 0:
+                _parts.append(
+                    'the forward pass seeds early start at offset 0 (the '
+                    '2020-01-01 epoch) for the %d %s that are neither complete '
+                    'nor actually started, and add_work_days falls back to '
+                    'ORDINAL 7-day arithmetic below offset 0, so those dates '
+                    'are epoch-anchored and non-calendar'
+                    % (_epoch_seeded, 'activity' if _epoch_seeded == 1 else 'activities'))
+            if _started_open > 0:
+                _parts.append(
+                    'the remaining work of the %d started, unfinished %s is not '
+                    'floored at a data date, so %s on from the actual start as '
+                    'if no time had passed since'
+                    % (_started_open, 'activity' if _started_open == 1 else 'activities',
+                       'its finish runs' if _started_open == 1 else 'their finishes run'))
             alerts.append({
                 'severity': 'ALERT',
                 'context': 'missing-data-date',
+                'code': 'missing-data-date',
                 'message': (
-                    'MISSING_DATA_DATE: data_date is %s; the forward pass seeds '
-                    'early start at offset 0 (the 2020-01-01 epoch) for the %d '
-                    '%s that are neither complete nor actually started, and '
-                    'add_work_days falls back to ORDINAL 7-day arithmetic below '
-                    'offset 0. Every date in this result is epoch-anchored and '
-                    'non-calendar. Supply data_date.'
+                    'MISSING_DATA_DATE: data_date is %s; %s. Supply data_date.'
                     % (('%r which did not parse as YYYY-MM-DD' % (data_date,))
                        if data_date else 'absent',
-                       _epoch_seeded,
-                       'activity' if _epoch_seeded == 1 else 'activities')
+                       '; and '.join(_parts))
                 ),
             })
 
@@ -4532,14 +4603,19 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # activities on six fields. N with several projects open is not measured.
     # JS paired site: _projectDeadlineNum / _seedLFFor.
     _pf_raw = str(project_finish or '').strip()
-    _pf_day = date_to_num(_pf_raw) if _pf_raw else 0
+    # v2.10.18 PAIRED FIX — the data date's check: a Must Finish By with a day
+    # or clock time that does not exist is refused, not read as another one.
+    _pf_problem = _data_date_problem(_pf_raw) if _pf_raw else None
+    _pf_day = (0 if _pf_problem else date_to_num(_pf_raw)) if _pf_raw else 0
     if _pf_raw and _pf_day <= 0:
         alerts.append({
             'severity': 'WARN',
             'context': 'project-deadline-invalid',
+            'code': 'project-deadline-invalid',
             'message': (
-                'project_finish=%r did not parse as YYYY-MM-DD; the late dates '
-                'were seeded from the early finish.' % (_pf_raw,)
+                'project_finish=%r (the Must Finish By) was supplied but %s; it '
+                'was not applied and the late dates were seeded from the early '
+                'finish.' % (_pf_raw, _pf_problem or 'did not parse as YYYY-MM-DD')
             ),
         })
     if _pf_day > 0:

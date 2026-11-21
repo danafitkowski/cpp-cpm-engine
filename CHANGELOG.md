@@ -12,6 +12,63 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.18 - 2026-11-21 - Forensic strict mode stops on invalid scheduling inputs
+
+**Class A on invalid input only; on valid input nothing computed moves.** Engine math changed only where the input is invalid: on every valid schedule measured (the 233 crossval fixtures, H1 to H30, the P6 probe suites) every date and float is identical to v2.10.17. A third-party audit of v2.10.17 (20 November
+2026) found three classes of invalid input that changed dates or float without stopping a forensic strict-mode run,
+two of them with no alert at all, and a malformed Must Finish By that strict mode let through. Each now raises a
+fatal alert with a stable `code`, and strict mode matches the code before the context. Measured on the audit's own
+cases (unit tests V21018-1 to V21018-4):
+
+- **Missing or unknown calendar** (`calendar-fallback-ordinal`). Three days from Friday 20 November 2026 last
+  worked Sunday 22 November under the seven-day fallback, against Tuesday 24 November on the assigned Monday to
+  Friday calendar. Four alerts were raised, but their `context` was the call-site label (`forward A.EF`,
+  `backward A.LS`), which changes with the phase and the activity, so strict mode returned the result with zero
+  overrides recorded. The alerts now carry `code: 'calendar-fallback-ordinal'`, which is fatal unless overridden with
+  a written rationale. Tested with no calendar map and with an activity calendar missing from the map.
+- **Missing or unreadable data date when only started work remains** (`missing-data-date`, `invalid-data-date`). A
+  task started Monday 16 November with two days left last worked Tuesday 17 November with no data date or an
+  unreadable one, against Monday 23 November from a 20 November data date, with no alert. The gate counted only
+  unstarted work; it now counts every unfinished activity. An all-actuals as-built, where no date depends on the
+  data date, is still not flagged. A data date supplied but malformed is now its own alert, `invalid-data-date`,
+  whatever the network holds.
+- **Impossible clock time in a minute-precision data date** (`invalid-data-date`). Eight hours from Friday 08:00 on a
+  08:00-12:00 / 13:00-17:00 weekday calendar finish Friday 17:00; a data date of Friday 08:99 was read as 09:39 and
+  moved the finish to Monday 09:39, with no alert. The hours parser (`_hrParseInstant`) now refuses a clock time that
+  does not exist (hours 00-23 with minutes 00-59, or 24:00, the close of the day), and the data date is checked before
+  any computing (`_dataDateProblem`). The supported end-of-day conventions are tested separately: 17:00 and 24:00
+  are accepted, 24:00 equals the next day's 00:00, and the ISO form with seconds is accepted.
+- **Malformed Must Finish By** (`project-deadline-invalid`). An impossible 31 November returned zero float and a
+  warning and did not stop strict mode; a valid 23 November gives the test activity -2 working days of float, which
+  is what a dropped constraint can hide. Supplied-but-malformed (a day or clock time that does not exist) is now fatal
+  in strict mode; not supplied is unchanged.
+
+Outside strict mode every run continues as before and the alert is recorded; the one computed difference is that a
+clock time that does not exist is no longer read as another one: the minutes pass refuses it and the whole-day dates
+stand, with the alert. `python_reference/cpm.py` and `cpm_minutes.py` carry the same checks (Python has no strict
+switch; the alerts and codes are the same).
+
+**Disclosure.** `buildDaubertDisclosure()` no longer claims to be forward-compatible with proposed FRE 707, and
+DAUBERT.md, `docs/citations.md` and `docs/api.md` no longer say so. Proposed Rule 707 is not an operative rule: the
+version published for comment in August 2025 was withdrawn by the Advisory Committee on Evidence Rules at its 7 May
+2026 meeting, which sent a modified proposal for further study (agenda book for the committee's 15 October 2026
+meeting, p. 5). DAUBERT.md §9 now gives 42 fatal contexts; it read 37 while the set held 38.
+
+**Release process.** The v2.10.17 tag carried a VERIFY_RELEASE.md that still named v2.10.16, because the guide was
+written after the tag. From this release the guide is written in the release commit, and `verify.yml` refuses a tag
+whose `package.json` or VERIFY_RELEASE.md names another version; the post-tag evidence goes in
+`release-evidence/v<TAG>/`. The existing v2.10.17 tag is not moved. `tests/no-client-names.test.js` now runs in CI
+(`test.yml` and `verify.yml`), and CLAUDE.md §3 adds a recorded human publication review before every tag, since the
+scanner is a heuristic. npm `latest` still serves v2.9.19: the verified Git release is the supported channel, as the
+README says.
+
+**Measured on these bytes (2026-11-21).** JS unit 1,546 (1,524 before; 22 new checks); crossval 233 fixtures, 22189 of
+22189; coverage 94.05% statements / 82.60% branches / 97.09% functions (93.98 / 82.41 / 97.07 before); H1 to H30,
+re-scored in diagnosis mode (not a new score), 8,850 of 8,850 unfinished activities on all seven fields, as on
+v2.10.17; the P6 probe suites pass.
+
+---
+
 ## v2.10.17 - 2026-11-09 - The skills' Python engine counts working days by whole weeks
 
 **Nothing computed moves (Class C, inert): engine math is unchanged. No code in this repository's engine changes:

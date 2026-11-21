@@ -25,6 +25,13 @@ jobs:
       - name: Run unit tests
         run: node cpm-engine.test.js
 
+      # v2.10.18 — the client-name scanner runs on every push, not only in the
+      # local aggregate suite (third-party audit, 20 Nov 2026). It is a
+      # heuristic gate (hashed denylist plus shape rules), so a release also
+      # needs the human publication review in CLAUDE.md section 3.
+      - name: Client-name scanner
+        run: node tests/no-client-names.test.js
+
       - name: Engine version sanity check
         shell: bash
         run: |

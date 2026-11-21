@@ -108,13 +108,14 @@
 //    // Useful as a bid-collusion / retroactive-manipulation signal, not as a
 //    // schedule-equivalence proof.
 //
-// 8. Daubert / FRE 702 disclosure wrapper (forward-compatible with proposed FRE 707):
+// 8. Daubert / FRE 702 disclosure wrapper:
 //
 //    const d = E.buildDaubertDisclosure(result, opts);
 //    // d.prong_1_tested / prong_2_peer_review / prong_3_error_rate /
 //    // prong_4_general_acceptance — each with evidence text.
 //    // d.provenance.input_topology_hash auto-populated when activities/rels
-//    // supplied via opts. Compliant before FRE 707 final rule lands.
+//    // supplied via opts. Proposed FRE 707 is not an operative rule (see
+//    // Section L); the wrapper makes no claim about it.
 //
 // 9. Float-burndown timeline (per-activity TF erosion across snapshots):
 //
@@ -148,7 +149,7 @@
 // Node.js crypto module for topology hash (E2). Null in browser; browser fallback uses FNV-1a.
 const _crypto = (typeof require !== 'undefined') ? (() => { try { return require('crypto'); } catch(e) { return null; } })() : null;
 
-const ENGINE_VERSION = '2.10.17';
+const ENGINE_VERSION = '2.10.18';
 
 // v2.9.20 A20-M5 — module-level DOS guards. The XER parser already enforces
 // these for raw-file ingest (see SECTION G). They're hoisted here so callers
@@ -1029,8 +1030,13 @@ function _advanceWithAlerts(startNum, nDays, calendarInfo, alerts, ctx) {
     const _nSafe = Number.isFinite(_nRaw) ? _nRaw : 0;
     if (startNum <= 0) return startNum + _roundHalfUp(_nSafe);
     if (!calendarInfo) {
+        // v2.10.18 — `code` is the stable identity forensic strict mode
+        // matches; `context` stays the call-site label ('forward A.EF'),
+        // which changes with the phase and the activity and so cannot be
+        // listed in FATAL_STRICT_CONTEXTS.
         alerts.push({
             severity: 'ALERT',
+            code: 'calendar-fallback-ordinal',
             context: ctx,
             message: 'Calendar-aware arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.',
         });
@@ -1048,6 +1054,7 @@ function _retreatWithAlerts(endNum, nDays, calendarInfo, alerts, ctx) {
     if (!calendarInfo) {
         alerts.push({
             severity: 'ALERT',
+            code: 'calendar-fallback-ordinal',
             context: ctx,
             message: 'Calendar-aware backward arithmetic unavailable (no cal_map/clndr_id) - falling back to 7-day ordinal arithmetic.',
         });
@@ -2166,6 +2173,37 @@ function _hrRound(x) {
     return (f % 2 === 0) ? f : f + 1;
 }
 
+// v2.10.18 — hours 00-23 with minutes 00-59, or 24:00 (the close of the day).
+function _hrClockOk(hh, mm) {
+    if (!Number.isInteger(hh) || !Number.isInteger(mm)) return false;
+    if (hh === 24) return mm === 0;
+    return hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59;
+}
+
+// v2.10.18 — why a data date cannot be used, or null when it can. A data date
+// is 'YYYY-MM-DD', optionally followed (space or 'T') by HH:MM or HH:MM:SS.
+// The day must exist (no 2026-11-31) and the clock time must be one
+// (_hrClockOk). Anything else is refused by name rather than read as a
+// different date or time.
+function _dataDateProblem(dataDate) {
+    const s = String(dataDate).trim();
+    // A trailing fraction of a second or a zone suffix is tolerated here:
+    // dateToNum already discloses that it ignores a zone, and neither changes
+    // which day or minute is named.
+    const m = /^(\d{4}-\d{1,2}-\d{1,2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.exec(s);
+    if (!m) return 'is not in the form YYYY-MM-DD or YYYY-MM-DD HH:MM';
+    if (dateToNum(m[1]) <= 0) return 'names a day that does not exist';
+    if (m[2] !== undefined) {
+        const hh = Number(m[2]);
+        const mm = Number(m[3]);
+        if (!_hrClockOk(hh, mm)) return 'carries a clock time that does not exist (' + m[2] + ':' + m[3] + ')';
+        if (m[4] !== undefined && (Number(m[4]) > 59 || (hh === 24 && Number(m[4]) !== 0))) {
+            return 'carries seconds that do not exist (' + m[4] + ')';
+        }
+    }
+    return null;
+}
+
 // 'YYYY-MM-DD[ HH:MM[:SS]]' -> minutes since the epoch; null for blank or unreadable.
 function _hrParseInstant(s) {
     if (s === null || s === undefined) return null;
@@ -2183,7 +2221,14 @@ function _hrParseInstant(s) {
     if (s.length >= 16 && (s[10] === ' ' || s[10] === 'T')) {
         const hh = Number(s.slice(11, 13));
         const mm = Number(s.slice(14, 16));
-        if (Number.isInteger(hh) && Number.isInteger(mm)) m = hh * 60 + mm;
+        if (Number.isInteger(hh) && Number.isInteger(mm)) {
+            // v2.10.18 — a clock time that is not one (08:99, 25:00) is
+            // unreadable, not rolled forward: 08:99 used to read as 09:39.
+            // 24:00 is the close of the day, the same instant as the next
+            // day's 00:00.
+            if (!_hrClockOk(hh, mm)) return null;
+            m = hh * 60 + mm;
+        }
     }
     return Math.round((ms - _HR_EPOCH_MS) / 86400000) * _HR_DAY + m;
 }
@@ -4542,26 +4587,65 @@ function computeCPM(activities, relationships, opts) {
     // (at least one activity that is neither complete nor actually started), so
     // an all-actuals as-built is not flagged for a date it does not use.
     // 'missing-data-date' is a member of FATAL_STRICT_CONTEXTS.
-    if (ddNum <= 0) {
-        let _epochSeeded = 0;
-        for (const _c in nodes) {
-            const _n = nodes[_c];
-            if (!_n.is_complete && !_n.actual_start) _epochSeeded += 1;
-        }
-        if (_epochSeeded > 0) {
+    //
+    // v2.10.18 — two gaps closed (third-party audit, 20 Nov 2026). (1) A
+    // started activity with work remaining has its finish floored at the
+    // data date; with the data date absent or unreadable that floor is
+    // silently lost (a task started Monday 16 November with two days left
+    // last worked Tuesday 17 November instead of Monday 23 November from a
+    // 20 November data date, with no alert). So the gate now counts EVERY unfinished
+    // activity, started or not; only an all-actuals as-built, where no date
+    // depends on the data date, stays unflagged. (2) A data date that is
+    // supplied but malformed (2026-13-45, 2026-11-31, 2026-11-20 08:99) is
+    // its own fatal alert, 'invalid-data-date', whatever the network holds:
+    // it is an input error, and 08:99 used to be read as 09:39.
+    if (dataDate) {
+        const _ddProblem = _dataDateProblem(dataDate);
+        if (_ddProblem) {
             alerts.push({
                 severity: 'ALERT',
-                context: 'missing-data-date',
-                message: 'MISSING_DATA_DATE: opts.dataDate is ' +
-                    (dataDate ? JSON.stringify(dataDate) + ' which did not parse as YYYY-MM-DD'
-                              : 'absent') +
-                    '; the forward pass seeds early start at offset 0 (the ' +
+                context: 'invalid-data-date',
+                code: 'invalid-data-date',
+                message: 'INVALID_DATA_DATE: opts.dataDate ' + JSON.stringify(String(dataDate)) +
+                    ' ' + _ddProblem + '. Supply the data date as YYYY-MM-DD or ' +
+                    'YYYY-MM-DD HH:MM with a real day and clock time.',
+            });
+        }
+    }
+    if (ddNum <= 0) {
+        let _epochSeeded = 0;
+        let _startedOpen = 0;
+        for (const _c in nodes) {
+            const _n = nodes[_c];
+            if (_n.is_complete) continue;
+            if (_n.actual_start) _startedOpen += 1;
+            else _epochSeeded += 1;
+        }
+        if (_epochSeeded + _startedOpen > 0) {
+            const _parts = [];
+            if (_epochSeeded > 0) {
+                _parts.push('the forward pass seeds early start at offset 0 (the ' +
                     '2020-01-01 epoch) for the ' + _epochSeeded + ' activit' +
                     (_epochSeeded === 1 ? 'y' : 'ies') + ' that are neither ' +
                     'complete nor actually started, and addWorkDays falls back ' +
-                    'to ORDINAL 7-day arithmetic below offset 0. Every date in ' +
-                    'this result is epoch-anchored and non-calendar. Supply ' +
-                    'opts.dataDate.',
+                    'to ORDINAL 7-day arithmetic below offset 0, so those dates ' +
+                    'are epoch-anchored and non-calendar');
+            }
+            if (_startedOpen > 0) {
+                _parts.push('the remaining work of the ' + _startedOpen +
+                    ' started, unfinished activit' + (_startedOpen === 1 ? 'y' : 'ies') +
+                    ' is not floored at a data date, so ' +
+                    (_startedOpen === 1 ? 'its finish runs' : 'their finishes run') +
+                    ' on from the actual start as if no time had passed since');
+            }
+            alerts.push({
+                severity: 'ALERT',
+                context: 'missing-data-date',
+                code: 'missing-data-date',
+                message: 'MISSING_DATA_DATE: opts.dataDate is ' +
+                    (dataDate ? JSON.stringify(dataDate) + ' which did not parse as YYYY-MM-DD'
+                              : 'absent') +
+                    '; ' + _parts.join('; and ') + '. Supply opts.dataDate.',
             });
         }
     }
@@ -6473,7 +6557,10 @@ function computeCPM(activities, relationships, opts) {
         opts.mustFinishBy || '').trim();
     let _projectDeadlineNum = 0;
     if (_projectFinishOpt) {
-        _projectDeadlineNum = dateToNum(_projectFinishOpt);
+        // v2.10.18 — the same check as the data date: a Must Finish By with a
+        // day or clock time that does not exist is refused, not read as
+        // another one ('project-deadline-invalid' is fatal in strict mode).
+        _projectDeadlineNum = _dataDateProblem(_projectFinishOpt) ? 0 : dateToNum(_projectFinishOpt);
         if (_projectDeadlineNum > 0) {
             // Both sides as INSTANTS: Friday 17:00 is the opening of Saturday,
             // which is also the instant of a Friday early finish (ef_instant),
@@ -6503,8 +6590,11 @@ function computeCPM(activities, relationships, opts) {
             alerts.push({
                 severity: 'WARN',
                 context: 'project-deadline-invalid',
+                code: 'project-deadline-invalid',
                 message: 'project_finish=' + JSON.stringify(_projectFinishOpt) +
-                    ' did not parse as YYYY-MM-DD; the late dates were seeded ' +
+                    ' (the Must Finish By) was supplied but ' +
+                    (_dataDateProblem(_projectFinishOpt) || 'did not parse as YYYY-MM-DD') +
+                    '; it was not applied and the late dates were seeded ' +
                     'from the early finish.',
             });
         }
@@ -12233,7 +12323,7 @@ function verifyReport(report, activities, relationships, opts) {
 }
 
 // ============================================================================
-// SECTION L — buildDaubertDisclosure (FRE 702 disclosure wrapper; forward-compatible with proposed FRE 707)
+// SECTION L — buildDaubertDisclosure (FRE 702 disclosure wrapper)
 // ============================================================================
 
 /**
@@ -12242,14 +12332,20 @@ function verifyReport(report, activities, relationships, opts) {
  * Builds a runtime disclosure package suitable for expert-witness exhibits /
  * FRCP 26(a)(2)(B) reports.
  *
- * Proposed Federal Rule of Evidence 707 (final rule expected late 2026 /
- * early 2027) requires AI-generated evidence to pass Daubert's four-prong test:
+ * The package answers the four Daubert factors under FRE 702 (Dec 1, 2023
+ * amendment):
  *   1. Has the methodology been TESTED?
  *   2. Has it been subject to PEER REVIEW or publication?
  *   3. What is the KNOWN OR POTENTIAL ERROR RATE?
  *   4. Is there GENERAL ACCEPTANCE in the relevant scientific community?
  *
- * When Rule 707 lands, every CPP forensic deliverable already compliant.
+ * v2.10.18 — the package no longer claims compatibility with proposed FRE 707.
+ * Proposed Rule 707 (machine-generated evidence) is not an operative rule: the
+ * version published for comment in August 2025 was withdrawn by the Advisory
+ * Committee on Evidence Rules at its 7 May 2026 meeting, which sent a modified
+ * proposal for further study (agenda book for the committee's 15 October 2026
+ * meeting, p. 5). A claim of compatibility with a rule whose text is not
+ * settled cannot be tested, so it is not made.
  *
  * @param {object} result - Any CPM result object (may be null for standalone use).
  * @param {object} [opts]
@@ -12345,7 +12441,7 @@ function buildDaubertDisclosure(result, opts) {
     const auditDate = opts.audit_date || manifest.audit_date || null;
 
     return {
-        rule: 'FRE 702 (Dec 1, 2023 amendment) / Daubert v. Merrell Dow Pharmaceuticals (1993) / FRCP 26(a)(2)(B); also forward-compatible with proposed FRE 707.',
+        rule: 'FRE 702 (Dec 1, 2023 amendment) / Daubert v. Merrell Dow Pharmaceuticals (1993) / FRCP 26(a)(2)(B).',
         methodology: {
             description: methodology,
             method_id: manifest.method_id || 'unknown',
@@ -14806,7 +14902,10 @@ const FATAL_STRICT_CONTEXTS = new Set([
     'hammock-negative-span',
     'hammocks-skipped-in-section-c',
     // Empty / degenerate
-    'missing-data-date',                // no parseable opts.dataDate while unstarted work exists → ES seeded at the 2020-01-01 epoch and addWorkDays falls back to ordinal 7-day arithmetic
+    'missing-data-date',                // no parseable opts.dataDate while unfinished work exists → ES seeded at the 2020-01-01 epoch (ordinal 7-day arithmetic) and/or started work not floored at the data date (v2.10.18: started work counts too)
+    'invalid-data-date',                // v2.10.18 — opts.dataDate supplied but malformed: a day that does not exist (2026-11-31) or a clock time that does not exist (08:99, 25:00)
+    'calendar-fallback-ordinal',        // v2.10.18 — matched on alert.code: no calendar map, or an activity's clndr_id not in it → 7-day ordinal arithmetic (Sunday counted as a working day)
+    'project-deadline-invalid',         // v2.10.18 — a Must Finish By (opts.projectFinish / mustFinishBy) was supplied but did not parse → dropped, late dates seeded from the early finish
     'impossible-negative-float',        // negative total float with no imposed finish and no constraint anywhere — arithmetically impossible, therefore an engine artifact
     'empty-schedule',                   // no valid activities after filtering
     'section-d-ordinal-only',           // Section D used where calendar-aware Section C required
@@ -14851,6 +14950,14 @@ class StrictForensicViolation extends Error {
  */
 function _matchFatalStrictAlert(alert) {
     if (!alert || typeof alert !== 'object') return null;
+    // v2.10.18 — a stable `code` is matched first. Some alerts carry a
+    // call-site label in `context` ('forward A.EF', 'backward A.LS') that
+    // changes with the phase and the activity; strict mode used to miss
+    // them, so a schedule with no calendar ran under 7-day arithmetic and
+    // returned a strict-mode result with zero overrides recorded.
+    if (alert.code && FATAL_STRICT_CONTEXTS.has(alert.code)) {
+        return alert.code;
+    }
     if (alert.context && FATAL_STRICT_CONTEXTS.has(alert.context)) {
         return alert.context;
     }

@@ -152,6 +152,20 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.18 (reviewed 2026-11-21)
+
+v2.10.18 closes the forensic strict-mode findings of a third-party audit of v2.10.17 (20 November 2026): a missing or
+unknown calendar, a missing or unreadable data date with only started work remaining, an impossible clock time in a
+data date, and a malformed Must Finish By each now stop a strict-mode run (Class A on invalid input only; CHANGELOG.md
+v2.10.18). The disclosure no longer claims compatibility with proposed FRE 707, and the release process now writes
+VERIFY_RELEASE.md in the release commit and runs the client-name scanner in CI.
+- The unit suite grew from 1,524 to 1,546 (V21018-1 to V21018-4 and the strict-mode fixtures' calendars); the
+  cross-validation surface stays at 233 fixtures and 22189 of 22189 comparisons.
+- Coverage on the v2.10.18 bytes: 94.05% statements / 82.60% branches / 97.09% functions.
+- Held-out sets H1 to H30, re-scored in diagnosis mode: 8,850 of 8,850 rows, as on v2.10.17.
+- Open, not engine code: npm `latest` serves v2.9.19; the verified Git release is the supported channel.
+- Nothing else is opened or closed: the items open at v2.10.17, below, stand.
+
 ## Status at v2.10.17 (reviewed 2026-11-09)
 
 v2.10.17 changes no code in this repository's engine (Class C, inert, under PROCEDURE.md §12.1): `cpm-engine.js` and
@@ -501,4 +515,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.17. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.18. Update on every release that closes or opens an audit item.

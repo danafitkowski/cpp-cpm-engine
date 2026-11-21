@@ -8989,6 +8989,10 @@ console.log('\n=== v2.9.15 Bug F4-rest — LPM via driving_predecessor backwalk 
 // ============================================================================
 // SECTION R-v2.9.31 — Forensic Strict Mode (court-grade run gate) tests
 // ============================================================================
+// v2.10.18 — strict-mode fixtures carry a real calendar. Before v2.10.18 the
+// 'clean input' cases here had no calendar at all and passed strict mode
+// under 7-day ordinal arithmetic, the defect the 20 Nov 2026 audit found.
+const _STRICT_MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [] } };
 
 console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 
@@ -9017,15 +9021,15 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Clean input passes through strict mode unchanged
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'B', duration_days: 3 },
-        { code: 'C', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'B', duration_days: 3, clndr_id: 'MF' },
+        { code: 'C', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [
         { from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 },
         { from_code: 'B', to_code: 'C', type: 'FS', lag_days: 0 },
     ];
-    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: true });
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05', calMap: _STRICT_MF, forensic_strict: true });
     check('strict mode clean: result returned',
         r && r.projectFinish !== undefined);
     check('strict mode clean: manifest.forensic_strict === true',
@@ -9038,11 +9042,11 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Convenience wrapper computeCPMForensicStrict
 {
     const acts = [
-        { code: 'A', duration_days: 3, early_start: '2026-01-05' },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 3, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const r = E.computeCPMForensicStrict(acts, rels, { dataDate: '2026-01-05' });
+    const r = E.computeCPMForensicStrict(acts, rels, { dataDate: '2026-01-05', calMap: _STRICT_MF });
     check('strict mode wrapper: produces result',
         r && r.projectFinish !== undefined);
     check('strict mode wrapper: forces forensic_strict true',
@@ -9052,19 +9056,19 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Duplicate activity codes throw in strict mode
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },  // duplicate
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },  // duplicate
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     // Normal mode: alert recorded, returns
-    const rNormal = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    const rNormal = E.computeCPM(acts, rels, { dataDate: '2026-01-05', calMap: _STRICT_MF });
     check('strict mode duplicate-code: normal mode records alert + returns',
         rNormal && rNormal.alerts && rNormal.alerts.some(a => a.context === 'duplicate-activity-code'));
     // Strict mode: throws
     let caught = null;
     try {
-        E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: true });
+        E.computeCPM(acts, rels, { dataDate: '2026-01-05', calMap: _STRICT_MF, forensic_strict: true });
     } catch (e) {
         caught = e;
     }
@@ -9079,14 +9083,14 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Override with valid rationale: alert recorded, result returns
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     const rationale = 'Verified: source XER has data-entry typo on A; both rows refer to the same activity (confirmed against original Schedule H). Override applied with analyst signoff.';
     const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
+        dataDate: '2026-01-05', calMap: _STRICT_MF,
         forensic_strict: true,
         forensic_strict_overrides: {
             'duplicate-activity-code': rationale,
@@ -9108,15 +9112,15 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Override with empty rationale: throws
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     let caught = null;
     try {
         E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
             forensic_strict_overrides: { 'duplicate-activity-code': '' },
         });
@@ -9130,15 +9134,15 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Override with whitespace-only rationale: throws
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     let caught = null;
     try {
         E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
             forensic_strict_overrides: { 'duplicate-activity-code': '   \t  ' },
         });
@@ -9150,15 +9154,15 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Override with non-string rationale (number / null): throws
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     let caught = null;
     try {
         E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
             forensic_strict_overrides: { 'duplicate-activity-code': 42 },
         });
@@ -9170,15 +9174,15 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // Override key that is NOT a fatal context: ignored, alert still throws on its own
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     let caught = null;
     try {
         E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
             forensic_strict_overrides: {
                 'not-a-real-context': 'Some rationale',
@@ -9208,12 +9212,12 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // forensic_strict: false is the default → does NOT enable strict mode
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },  // duplicate
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },  // duplicate
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
-    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05' });
+    const r = E.computeCPM(acts, rels, { dataDate: '2026-01-05', calMap: _STRICT_MF });
     check('strict mode default off: alert recorded, no throw',
         r && r.alerts.some(a => a.context === 'duplicate-activity-code'));
     check('strict mode default off: manifest.forensic_strict not set',
@@ -9224,14 +9228,14 @@ console.log('\n=== v2.9.31 — Forensic Strict Mode ===');
 // (strict-equality guard means only literal true enables it)
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     let threw = false;
     try {
-        E.computeCPM(acts, rels, { dataDate: '2026-01-05', forensic_strict: 'true' });
+        E.computeCPM(acts, rels, { dataDate: '2026-01-05', calMap: _STRICT_MF, forensic_strict: 'true' });
     } catch (e) { threw = true; }
     check('strict mode truthy-not-true: does NOT enable strict (string "true" rejected)',
         !threw);
@@ -9252,14 +9256,14 @@ console.log('\n=== v2.9.32 — Forensic Strict Mode hardening ===');
 // computeCPMSalvaging refuses strict mode at entry (same posture as runCPM).
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
         { code: 'B', duration_days: 'NaN' },  // would trigger salvage WARN
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     let caught = null;
     try {
         E.computeCPMSalvaging(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
         });
     } catch (e) { caught = e; }
@@ -9312,13 +9316,13 @@ console.log('\n=== v2.9.32 — Forensic Strict Mode hardening ===');
 // - Override value that is exactly the string "false" — still non-empty, accepted.
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
+        dataDate: '2026-01-05', calMap: _STRICT_MF,
         forensic_strict: true,
         forensic_strict_overrides: { 'duplicate-activity-code': 'false' },
     });
@@ -9331,14 +9335,14 @@ console.log('\n=== v2.9.32 — Forensic Strict Mode hardening ===');
 // Override value that is an array — non-string, must throw.
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
     ];
     const rels = [];
     let caught = null;
     try {
         E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
             forensic_strict_overrides: { 'duplicate-activity-code': ['rationale'] },
         });
@@ -9367,13 +9371,13 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
 // Structured override accepted with required `rationale` field.
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },  // duplicate-activity-code (fatal in strict)
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },  // duplicate-activity-code (fatal in strict)
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
+        dataDate: '2026-01-05', calMap: _STRICT_MF,
         forensic_strict: true,
         forensic_strict_overrides: {
             'duplicate-activity-code': {
@@ -9406,13 +9410,13 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
 // Legacy string-form override still accepted (backward compat).
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
-        { code: 'B', duration_days: 2 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
+        { code: 'B', duration_days: 2, clndr_id: 'MF' },
     ];
     const rels = [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 0 }];
     const r = E.computeCPM(acts, rels, {
-        dataDate: '2026-01-05',
+        dataDate: '2026-01-05', calMap: _STRICT_MF,
         forensic_strict: true,
         forensic_strict_overrides: {
             'duplicate-activity-code': 'Legacy string rationale.',
@@ -9430,14 +9434,14 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
 // Structured override MISSING rationale field → throws.
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
     ];
     const rels = [];
     let caught = null;
     try {
         E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
             forensic_strict_overrides: {
                 'duplicate-activity-code': { authority_source: 'oops, no rationale' },
@@ -9453,14 +9457,14 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
 // Structured override with empty rationale → throws.
 {
     const acts = [
-        { code: 'A', duration_days: 5, early_start: '2026-01-05' },
-        { code: 'A', duration_days: 3 },
+        { code: 'A', duration_days: 5, clndr_id: 'MF', early_start: '2026-01-05' },
+        { code: 'A', duration_days: 3, clndr_id: 'MF' },
     ];
     const rels = [];
     let caught = null;
     try {
         E.computeCPM(acts, rels, {
-            dataDate: '2026-01-05',
+            dataDate: '2026-01-05', calMap: _STRICT_MF,
             forensic_strict: true,
             forensic_strict_overrides: {
                 'duplicate-activity-code': { rationale: '   ' },
@@ -9558,7 +9562,13 @@ console.log('\n=== v2.9.33 — structured-override schema + table-driven fatal-c
         'hammocks-skipped-in-section-c':
             'Section C — hammocks present but Section C does not resolve them',
         'missing-data-date':
-            'Section C — no parseable opts.dataDate while unstarted work exists; ES seeds at offset 0 (2020-01-01 epoch) and addWorkDays short-circuits to ordinal 7-day arithmetic',
+            'Section C — no parseable opts.dataDate while unfinished work exists; ES seeds at offset 0 (2020-01-01 epoch) and addWorkDays short-circuits to ordinal 7-day arithmetic, and/or started work is not floored at the data date',
+        'invalid-data-date':
+            'Section C — opts.dataDate supplied but names a day or clock time that does not exist (_dataDateProblem)',
+        'calendar-fallback-ordinal':
+            'Section C — _advanceWithAlerts / _retreatWithAlerts with no calendarInfo (no cal_map, or clndr_id not in it); matched on alert.code because alert.context is the call-site label',
+        'project-deadline-invalid':
+            'Section C — opts.projectFinish / mustFinishBy supplied but unreadable; dropped and the late dates seeded from the early finish',
         'impossible-negative-float':
             'Section C — negative total float in a network with no imposed project finish and no date-bearing constraint on any activity; arithmetically impossible with a maxEF-seeded backward pass, so an engine artifact rather than a schedule fact',
         'empty-schedule':
@@ -9743,6 +9753,90 @@ const _SEVEN = { workDays: [0, 1, 2, 3, 4, 5, 6], holidays: [] };
         { dataDate: '2026-01-05', calMap: _CAL, projectCalendar: _MF });
     check('V2942-4: missing-data-date does not fire when dataDate is supplied',
         !ok.alerts.some(a => a.context === 'missing-data-date'));
+}
+
+// ---------------------------------------------------------------------------
+// V21018 — third-party audit, 20 November 2026: three classes of invalid input
+// changed dates or float without stopping forensic strict mode, and a
+// malformed Must Finish By was dropped with a warning. Each case below is the
+// audit's own, with the date it measured, and each also checks that the
+// valid neighbour still runs.
+{
+    const MF = { MF: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 8 } };
+    const strictCtx = (acts, opts) => {
+        try { E.computeCPMForensicStrict(acts, [], opts); return null; }
+        catch (e) { return (e && e.name === 'StrictForensicViolation') ? e.context : 'other: ' + e.message; }
+    };
+    // 1. Missing or unknown calendar. Three days from Friday 20 Nov 2026 end
+    // Tuesday 24 Nov on Mon-Fri; the 7-day fallback ended them Sunday 22 Nov.
+    const t1 = [{ code: 'A', duration_days: 3, early_start: '2026-11-20', clndr_id: 'MF' }];
+    const ok1 = E.computeCPMForensicStrict(t1, [], { dataDate: '2026-11-20', calMap: MF });
+    check('V21018-1: valid Mon-Fri calendar runs strict, last worked day Tue 24 Nov',
+        ok1.nodes.A.ef_date === '2026-11-25', ok1.nodes.A.ef_date);
+    check('V21018-1: no calendar map at all is fatal in strict mode',
+        strictCtx(t1, { dataDate: '2026-11-20' }) === 'calendar-fallback-ordinal');
+    check('V21018-1: a clndr_id missing from the map is fatal in strict mode',
+        strictCtx([Object.assign({}, t1[0], { clndr_id: 'ZZ' })], { dataDate: '2026-11-20', calMap: MF }) === 'calendar-fallback-ordinal');
+    const nonStrict1 = E.computeCPM(t1, [], { dataDate: '2026-11-20' });
+    check('V21018-1: outside strict mode the fallback still runs and carries the stable code',
+        nonStrict1.alerts.length > 0 && nonStrict1.alerts.every(a => a.code === 'calendar-fallback-ordinal'));
+    const ov1 = E.computeCPMForensicStrict(t1, [], { dataDate: '2026-11-20',
+        forensic_strict_overrides: { 'calendar-fallback-ordinal': 'analyst: seven-day working is the contract basis' } });
+    check('V21018-1: an explicit override lets the fallback run and is recorded',
+        ov1.manifest.forensic_strict_overrides_applied.length > 0 &&
+        ov1.manifest.forensic_strict_overrides_applied.every(o => o.context === 'calendar-fallback-ordinal'));
+    // 2. Missing or invalid data date with only STARTED work remaining. Two
+    // days left from a 20 Nov data date end Mon 23 Nov; with no data date
+    // the engine last worked them Tue 17 Nov, silently.
+    const t2 = [{ code: 'B', duration_days: 4, remaining_duration: 2, actual_start: '2026-11-16', clndr_id: 'MF' }];
+    const ok2 = E.computeCPMForensicStrict(t2, [], { dataDate: '2026-11-20', calMap: MF });
+    check('V21018-2: valid data date floors the remaining work (last worked Mon 23 Nov)',
+        ok2.nodes.B.ef_date === '2026-11-24', ok2.nodes.B.ef_date);
+    check('V21018-2: absent data date with started work remaining is fatal',
+        strictCtx(t2, { calMap: MF }) === 'missing-data-date');
+    check('V21018-2: unreadable data date (2026-13-45) is fatal',
+        strictCtx(t2, { dataDate: '2026-13-45', calMap: MF }) === 'invalid-data-date');
+    check('V21018-2: a day that does not exist (2026-11-31) is fatal',
+        strictCtx(t2, { dataDate: '2026-11-31', calMap: MF }) === 'invalid-data-date');
+    const asBuilt = [{ code: 'C', duration_days: 4, actual_start: '2026-11-16', actual_finish: '2026-11-19', clndr_id: 'MF' }];
+    const ok2b = E.computeCPMForensicStrict(asBuilt, [], { calMap: MF });
+    check('V21018-2: an all-actuals as-built with no data date still runs (intentional case)',
+        ok2b && !ok2b.alerts.some(a => a.context === 'missing-data-date'));
+    // 3. Minute-precision data date. Eight hours from Friday 08:00 on the
+    // 08:00-12:00 / 13:00-17:00 weekday calendar end Friday 17:00; 08:99 was
+    // read as 09:39 and moved the finish to Monday 09:39.
+    const t3 = [{ code: 'D', duration_days: 1, remaining_hours: 8, clndr_id: 'MF' }];
+    const ok3 = E.computeCPMForensicStrict(t3, [], { dataDate: '2026-11-20 08:00', calMap: MF });
+    check('V21018-3: 08:00 data date, eight hours finish Friday 17:00',
+        ok3.nodes.D.early_finish_dt === '2026-11-20 17:00', ok3.nodes.D.early_finish_dt);
+    check('V21018-3: 08:99 is fatal in strict mode', strictCtx(t3, { dataDate: '2026-11-20 08:99', calMap: MF }) === 'invalid-data-date');
+    check('V21018-3: 25:00 is fatal in strict mode', strictCtx(t3, { dataDate: '2026-11-20 25:00', calMap: MF }) === 'invalid-data-date');
+    check('V21018-3: 24:30 is fatal in strict mode', strictCtx(t3, { dataDate: '2026-11-20 24:30', calMap: MF }) === 'invalid-data-date');
+    const ns3 = E.computeCPM(t3, [], { dataDate: '2026-11-20 08:99', calMap: MF });
+    check('V21018-3: outside strict mode 08:99 is not read as 09:39, and is alerted',
+        ns3.nodes.D.early_finish_dt !== '2026-11-23 09:39' && ns3.alerts.some(a => a.context === 'invalid-data-date'),
+        String(ns3.nodes.D.early_finish_dt));
+    // supported end-of-day conventions, tested separately
+    const eod = E.computeCPMForensicStrict(t3, [], { dataDate: '2026-11-20 17:00', calMap: MF });
+    check('V21018-3: 17:00 (close of day) is accepted; the work runs Monday',
+        eod.nodes.D.early_finish_dt === '2026-11-23 17:00', eod.nodes.D.early_finish_dt);
+    const eod24 = E.computeCPMForensicStrict(t3, [], { dataDate: '2026-11-20 24:00', calMap: MF });
+    const next00 = E.computeCPMForensicStrict(t3, [], { dataDate: '2026-11-21 00:00', calMap: MF });
+    check('V21018-3: 24:00 (close of day) is accepted and equals the next day 00:00',
+        eod24.nodes.D.early_finish_dt === next00.nodes.D.early_finish_dt, eod24.nodes.D.early_finish_dt);
+    const sec = E.computeCPMForensicStrict(t3, [], { dataDate: '2026-11-20T08:00:00', calMap: MF });
+    check('V21018-3: ISO form with seconds is accepted', sec.nodes.D.early_finish_dt === '2026-11-20 17:00',
+        sec.nodes.D.early_finish_dt);
+    // 4. Must Finish By: not supplied, supplied and valid, supplied and malformed.
+    const t4 = [{ code: 'F', duration_days: 3, clndr_id: 'MF' }];
+    const none4 = E.computeCPMForensicStrict(t4, [], { dataDate: '2026-11-20', calMap: MF });
+    check('V21018-4: no Must Finish By supplied runs, float 0', none4.nodes.F.tf === 0);
+    const v4 = E.computeCPMForensicStrict(t4, [], { dataDate: '2026-11-20', calMap: MF, projectFinish: '2026-11-23' });
+    check('V21018-4: a valid 23 Nov Must Finish By gives -2 working days of float', v4.nodes.F.tf === -2, String(v4.nodes.F.tf));
+    check('V21018-4: a malformed Must Finish By (2026-11-31) is fatal',
+        strictCtx(t4, { dataDate: '2026-11-20', calMap: MF, projectFinish: '2026-11-31' }) === 'project-deadline-invalid');
+    check('V21018-4: a Must Finish By with an impossible time is fatal',
+        strictCtx(t4, { dataDate: '2026-11-20', calMap: MF, projectFinish: '2026-11-23 17:99' }) === 'project-deadline-invalid');
 }
 
 // ---------------------------------------------------------------------------

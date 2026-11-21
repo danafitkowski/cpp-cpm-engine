@@ -57,6 +57,31 @@ jobs:
             exit 1
           fi
 
+      # v2.10.18 — a release tag must carry release documents that name it.
+      # The v2.10.17 tag shipped a VERIFY_RELEASE.md that still named
+      # v2.10.16, because the guide was updated after the tag (third-party
+      # audit, 20 Nov 2026). On a tag push: the tag, package.json and the
+      # first line of VERIFY_RELEASE.md must name the same version.
+      - name: Release documents name this tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          TAG_VER="${GITHUB_REF_NAME#v}"
+          PKG_VER=$(node -p "require('./package.json').version")
+          HEAD_LINE=$(head -n 1 VERIFY_RELEASE.md)
+          echo "tag: $TAG_VER  package.json: $PKG_VER"
+          echo "VERIFY_RELEASE.md: $HEAD_LINE"
+          if [ "$TAG_VER" != "$PKG_VER" ]; then
+            echo "::error::tag v$TAG_VER does not match package.json $PKG_VER"; exit 1
+          fi
+          case "$HEAD_LINE" in
+            *"v$TAG_VER "*) ;;
+            *) echo "::error::VERIFY_RELEASE.md does not name v$TAG_VER on its first line"; exit 1 ;;
+          esac
+
+      - name: Client-name scanner
+        run: node tests/no-client-names.test.js
+
       - name: Run full verification + generate witness
         shell: bash
         run: |
