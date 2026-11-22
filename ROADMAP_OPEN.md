@@ -152,6 +152,21 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.20 (reviewed 2026-11-21)
+
+v2.10.20 reads the computed MFP float path off the hours pass, closing the item v2.10.16 left open ("MFP is computed
+on the whole-day float and is not checked against the hours pass"). Class A under PROCEDURE.md §12.1: one reported
+result moves, the computed MFP path of `computeCPMWithStrategies` (and LPM where a blank calendar id or an empty
+calendar entry had withheld it falsely). `computeCPM` does not move.
+- Census of 864 exports against v2.10.19: `computeCPM` identical on 286,461 unfinished activities; LPM and TFM
+  identical; MFP changed in 75 files. Against P6's stored float paths (56 exports): 7 agree better, 0 worse.
+- The unit suite grew from 1,554 to 1,566 (MF-1 to MF-12); crossval stays at 233 fixtures and 22189 of 22189.
+- Coverage on the v2.10.20 bytes: 94.12% statements / 83.21% branches / 96.76% functions.
+- Held-out sets H1 to H30, re-scored in diagnosis mode: 8,850 of 8,850 rows, as on v2.10.19.
+- **OPEN:** the computed MFP is the engine's total-float approximation of P6's multiple float path, not P6's
+  algorithm; ranking completed predecessors after unfinished ones agreed better with P6 on the 6 November census but
+  changes more schedules, and is not in this release.
+
 ## Status at v2.10.19 (reviewed 2026-11-21)
 
 v2.10.19 discloses an as-built FS overlap: a successor whose actual start is earlier than its FS predecessor's
@@ -212,7 +227,7 @@ the TFM set changes in 339, where it now equals the critical flags.
 - **OPEN:** not checked: a whole-day driver that is the data date, a constraint or an external date; resource
   dependent work with driving assignments, and work under an expected finish, when a finish link is among its
   drives.
-- **OPEN:** MFP is computed on the whole-day float and is not checked against the hours pass.
+- **CLOSED in v2.10.20:** MFP is computed on the whole-day float and is not checked against the hours pass.
 - **OPEN (carried from v2.10.15):** that P6 schedules a blank lag as zero is not measured on the measuring machine's
   P6, and `parseXER` reads a lag such as `2abc` as its leading number without an alert.
 - **OPEN (carried from v2.10.14):** `driving_predecessor` is not among the cross-validated fields. The Python
@@ -526,4 +541,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.19. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.20. Update on every release that closes or opens an audit item.

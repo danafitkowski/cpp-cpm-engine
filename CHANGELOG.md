@@ -12,6 +12,81 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.20 - 2026-11-21 - MFP is read off the hours pass
+
+**Computed values move (Class A): engine math changed in one reported result, the computed MFP float path from
+`computeCPMWithStrategies` (and LPM where a blank calendar id or an empty calendar entry withheld it falsely). No date,
+float or critical flag from `computeCPM` moves.**
+Where the hours pass ran, the computed MFP path now reads the float and finish dates the hours pass prints. It closes
+the item v2.10.16 left open: "MFP is computed on the whole-day float and is not checked against the hours pass."
+
+What was wrong:
+- **The computed MFP walk ranked predecessors on the whole-day float and finish.** On part-day work it could follow
+  an activity with float. A 4-hour and a 6-hour activity both FS into one finish milestone: the whole-day pass gives
+  both zero float and ends on the 4-hour one by code order, so MFP was that activity alone, which carries 2 hours of
+  float.
+- **Its default target was the whole-day pass's latest finish,** the same terminal v2.10.16 withholds LPM on.
+
+The rules (where the hours pass ran):
+- **The walk** decides each step on the whole set of predecessors, so the order of the relationship rows cannot
+  change it. The unfinished predecessors rank on the printed float (`tf_working_days`), as TFM does since v2.10.16,
+  then the latest whole-day finish; among those still tied, one that another finishes working time later than (on
+  either activity's calendar) drops out, and the lowest code wins. The completed predecessors rank as before: the
+  lowest whole-day float, the latest whole-day finish, the lowest code. The best of each then meet on the whole-day
+  float, finish and code, as before: a completed activity has no printed float.
+- **The default target** moves to the unfinished activity that finishes working time later than the whole-day pass's
+  latest finish, at the latest printed finish among those (the lowest code on a tie), as the LPM check finds it. An
+  INFO `mfp-target-printed-finish` names both; `strategy_summary.MFP.whole_day_target` keeps the whole-day choice. A
+  target the caller names (`mfpTargetCode`) is used as given. A start milestone printed at the next opening after its
+  predecessor's close is not later.
+- **The calendar of the "working time later" test** is read as the hours pass reads it: a missing or blank calendar
+  id, or an empty calendar entry, reads the project calendar (`projectCalendar`, else `project_calendar`). The check LPM
+  is withheld on reads the same calendar, so LPM is no longer withheld falsely there: on v2.10.19 a start milestone
+  printed at the next opening after its predecessor's close read as working time later on such a calendar.
+- **Where it can change.** MFP can move wherever the printed float ranks predecessors differently from the whole-day
+  float: part-day work, activities on different calendars (the printed float counts each on its own calendar, as P6
+  prints it; the whole-day float can count another calendar's weekend), and whole days where the two floats differ
+  (MF-8, MF-11). Where they rank alike, MFP is as before.
+- **Nothing is withheld:** the walk reads only floats and finishes, which the hours pass prints. LPM stays withheld
+  where v2.10.16 withholds it: its walk follows drivers, which the hours pass does not derive.
+- `strategy_summary.TFM.float_basis` and `strategy_summary.MFP.float_basis` say `'printed'` or `'whole-day'`.
+
+Built 6 November 2026 on v2.10.16 and held for release; rebased onto v2.10.19 and measured again on 21 November.
+Code review (Codex, six rounds on 21 November, the sixth clean) found these in the candidate, each fixed before
+release and pinned by a test that fails without the fix:
+- the canonical Python twin imported the hours module on a whole-day run (a path-loaded `cpm.py` raised
+  `ModuleNotFoundError`);
+- an empty calendar entry, a blank calendar id, and a project calendar given as `project_calendar` or not at all were
+  each read as another calendar in the "working time later" test, which could move the path and raise a false INFO
+  (MF-7, MF-10, MF-12), and withheld LPM (pinned in the same tests);
+- the INFO said the target was the latest finish the hours pass prints; it is the latest among those that finish
+  working time later than the whole-day end;
+- no test ran the walk itself with the printed float deciding (MF-9 does); and the brief's promise that whole days are
+  unchanged was wrong (MF-8 and MF-11 pin two cases, each the reading P6's printed float gives).
+
+**Measured on these bytes (2026-11-21), against v2.10.19:**
+- **Census of every distinct XER on the measuring machine:** 871 listed, 864 that schedule. `computeCPM`: every field
+  of all 286,461 unfinished activities identical. LPM and TFM identical in every file (LPM withheld in 36, as before).
+  The computed MFP path changed in 75 files; its target moved in 13.
+- **Against P6's stored float paths** (`crt_path_num`, in the 56 exports that carry them; the Jaccard agreement of the
+  computed path 1 with P6's path 1): 7 files agree better, 0 worse, 49 the same (mean 0.504 to 0.510). Run from P6's
+  own float path end (21 exports that name one): 7 better, 0 worse, 14 the same.
+- **4,000 random networks** (part-day and whole-day, FS / SS / FF links, completed work, milestones; a quarter mix a
+  7-day calendar in): JS and the canonical Python twin identical on MFP, TFM, LPM and the alerts; none depends on the
+  order of the relationship rows; TFM and LPM unchanged in all; MFP changed in 1,511 part-day networks and in 8 of the
+  146 whole-day networks on two calendars, none of the 486 on one.
+- **JS unit 1,566** (1,554 before; MF-1 to MF-12). Crossval 233 fixtures, 22189 of 22189. H1 to H30 re-scored in
+  diagnosis mode (not a new score): 8,850 of 8,850.
+- Coverage 94.12% statements / 83.21% branches / 96.76% functions (94.08 / 82.63 / 97.10 before). DAUBERT.md §2.1's
+  coverage table had not been refreshed since an earlier release (it read 94.31% / 81.45% / 96.02%); it now carries
+  these figures.
+
+**Not claimed.** The computed MFP is the engine's total-float approximation of P6's multiple float path, not P6's
+algorithm. A rule that ranks completed predecessors after unfinished ones agreed better with P6 on the 6 November
+census (16 better, 1 worse) but changes whole-day schedules too, and is not in this release.
+
+---
+
 ## v2.10.19 - 2026-11-21 - An as-built FS overlap is disclosed
 
 **Nothing computed moves (Class B, disclosure): engine math is unchanged; on every file measured, every date and float is identical to v2.10.18.** A successor whose actual start is earlier than its FS predecessor's actual finish, or that started while the predecessor was still in progress, now raises a WARN with context and code `out-of-sequence-fs-overlap`, naming each overlapping predecessor. Before, the out-of-sequence scan flagged only a predecessor that had not started, or that started after the successor. The new case passed silently, and forensic strict mode ran clean on it.

@@ -200,9 +200,14 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  58c80ff78b4013691fd44dee81098287264cf7079756bb619daaca21f9c2d299
+cpm.py          SHA-256:  9cde0fb37a4314f4231dc4b51a1cb7f863dbf0dfa64ca818e8f9077ba184d330
 cpm_minutes.py  SHA-256:  7e0619baa016225adaccd88c25b7e3b7df1ed12e862cf7b3d176249e303af03d
 cpm_hours.py    SHA-256:  05f43718388bc51b7c906bde4c0119c9d57131639c1afa3022a3eadc3624e605
+
+(v2.10.20, 2026-11-21 - cpm.py bumped from 58c80ff7...: ENGINE_VERSION reads
+2.10.20 and nothing else changes. The MFP change of this release is in the
+JS engine and the canonical Python twin in _cpp_common; this reference does
+not compute the strategies. cpm_hours.py and cpm_minutes.py unchanged.)
 
 (v2.10.19, 2026-11-21 - cpm.py bumped from d6a83bfe...: the out-of-sequence
 scan also discloses an FS link whose successor started before the
@@ -963,7 +968,7 @@ Expected output (Node 18+, Python 3.8+):
 ```
 Python reference: <repo>/python_reference/cpm.py
   bytes: 337601
-  sha-256:  58c80ff78b4013691fd44dee81098287264cf7079756bb619daaca21f9c2d299
+  sha-256:  9cde0fb37a4314f4231dc4b51a1cb7f863dbf0dfa64ca818e8f9077ba184d330
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
