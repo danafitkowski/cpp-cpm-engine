@@ -12,7 +12,7 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
-## v2.10.20 - 2026-11-21 - MFP is read off the hours pass
+## v2.10.20 - 2026-11-22 - MFP is read off the hours pass
 
 **Computed values move (Class A): engine math changed in one reported result, the computed MFP float path from
 `computeCPMWithStrategies` (and LPM where a blank calendar id or an empty calendar entry withheld it falsely). No date,
