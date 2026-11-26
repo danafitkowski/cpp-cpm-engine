@@ -14314,7 +14314,8 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
     check('LE-1: SS from A, FF to B: the LOE runs from A\'s start to B\'s finish, no float, critical',
         r1.level_of_effort.applied === true && pick(le(r1), ['status', 'early_start_dt', 'early_finish_dt',
             'late_finish_dt', 'tf_hours', 'tf_working_days', 'critical', 'remaining_hours', 'late_start_dt']) ===
-        JSON.stringify(['not_started', '2026-01-05 08:00', '2026-01-09 17:00', '2026-01-09 17:00', 0, 0, true, 40, null]),
+        JSON.stringify(['not_started', '2026-01-05 08:00', '2026-01-09 17:00', '2026-01-09 17:00', 0, 0, true, 40,
+            '2026-01-05 08:00']),
         JSON.stringify(le(r1)));
     const r2 = run([loe('L')], [rel('A', 'L', 'SS'), rel('B', 'L', 'SS'), rel('L', 'F', 'FF')]);
     check('LE-2: SS from A and from B: the LOE starts with A (the earliest), not B',
@@ -14376,6 +14377,41 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify(w13) === JSON.stringify(['Level of effort L carries a code that another activity also carries, so ' +
             'its relationships cannot be told apart: not dated (result.level_of_effort).']),
         JSON.stringify([le(r13), w13]));
+
+    // LE round 2 (26-Nov-2026): the late start, the float type, completed
+    // predecessors, started successors. X (8 h) beside A (16 h), both into F:
+    // X runs Monday with a day of float (late Tuesday).
+    const NET2 = [act('A', 16), act('X', 8), act('F', 0, { task_type: 'TT_FinMile' })];
+    const NET2_RELS = [rel('A', 'F'), rel('X', 'F')];
+    const run2 = (xa, xr, o) => E.computeCPM(NET2.concat(xa), NET2_RELS.concat(xr), Object.assign({}, KW, o || {}));
+    const r14 = run2([loe('L')], [rel('A', 'L', 'SS'), rel('L', 'X', 'FF')]);
+    check("LE-14: SS from A (critical), FF to X (a day of float): late start A's late start, late finish X's",
+        pick(le(r14), ['early_start_dt', 'early_finish_dt', 'late_start_dt', 'late_finish_dt']) ===
+        JSON.stringify(['2026-01-05 08:00', '2026-01-05 17:00', '2026-01-05 08:00', '2026-01-06 17:00']),
+        JSON.stringify(le(r14)));
+    const tf15 = {};
+    for (const ft of ['FT_FF', 'FT_Start', 'FT_SS', 'FT_Min']) {
+        tf15[ft] = le(run2([loe('L')], [rel('A', 'L', 'SS'), rel('L', 'X', 'FF')], { floatType: ft })).tf_hours;
+    }
+    check('LE-15: start float 0, finish float 8 h: FT_FF and FT_Start report 8, FT_SS and FT_Min 0',
+        JSON.stringify(tf15) === JSON.stringify({ FT_FF: 8, FT_Start: 8, FT_SS: 0, FT_Min: 0 }), JSON.stringify(tf15));
+    const p16 = act('P', 8, { actual_start: '2026-01-02 08:00', actual_finish: '2026-01-02 17:00', is_complete: true });
+    const r16 = run2([p16, loe('L')], [rel('P', 'X'), rel('P', 'L', 'SS'), rel('L', 'X', 'FF')]);
+    check("LE-16: an SS from completed P: the late start is P's late date (X's late start, Tue 08:00), not P's actual start",
+        le(r16).late_start_dt === '2026-01-06 08:00', JSON.stringify(le(r16)));
+    const s17 = act('S', 8, { actual_start: '2026-01-02 08:00' });
+    const r17 = run2([s17, loe('L')], [rel('A', 'L', 'SS'), rel('L', 'S', 'FS')]);
+    check('LE-17: an FS successor under way bounds the late finish at the close before its actual start (Thu 1 Jan 17:00)',
+        le(r17).late_finish_dt === '2026-01-01 17:00', JSON.stringify(le(r17)));
+    const r18 = E.computeCPMSalvaging(NET2.concat([loe('L')]), NET2_RELS.concat([rel('A', 'L', 'SS'), rel('L', 'A', 'FF')]), KW);
+    check('LE-18: salvaging leaves the LOE links alone: no DROPPED_EDGE, the late start read through A',
+        (r18.salvage_log || []).filter((x) => x.category === 'DROPPED_EDGE').length === 0 &&
+        le(r18).late_start_dt === '2026-01-05 08:00', JSON.stringify([r18.salvage_log, le(r18)]));
+    const r19 = run2([p16, loe('L')], [rel('P', 'X'), rel('P', 'L', 'SS'), rel('L', 'X', 'FF')],
+        { scheduleMode: 'progress_override' });
+    check('LE-19: under progress override a completed predecessor bounds nothing: late start = late finish (Tue 17:00)',
+        le(r19).late_start_dt === '2026-01-06 17:00' && le(r19).late_finish_dt === '2026-01-06 17:00',
+        JSON.stringify(le(r19)));
 }
 
 console.log('\n========================================');
