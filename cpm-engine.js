@@ -3888,15 +3888,22 @@ function _hrWorkingDays(minutes, hpd) {
 //           start) bounds, lag walked back, and of its FF predecessors'
 //           finishes, lag walked on; at the close of its own calendar and never
 //           before its start (no bound at all: the finish is the start);
-//   late finish  the same bounds on the late dates; with none, the latest late
-//           finish of the network;
-//   total float  working time from finish to late finish on its own calendar
-//           (P6's finish float), critical at or below zero.
+//   late finish  the same bounds on the late dates (an FS successor under way
+//           read at its actual start); with none, the latest late finish of the
+//           network;
+//   late start  (round 2) the earliest of its predecessors' late bounds (SS:
+//           their late start; FS: their late finish), lag walked on, at the next
+//           opening of its own calendar and never after its late finish; with
+//           none, its late finish. A completed predecessor lends the late date
+//           P6 gives completed work (doneLate), or on an FS its actual finish
+//           unless it is a start milestone; under progress override, nothing;
+//   total float  by the float type: finish float under FT_FF and FT_Start,
+//           start float under FT_SS, the smaller under FT_Min; critical at or
+//           below zero.
 // Measured on every project P6 last scheduled in the local P6 database that
-// carries a level of effort (390 projects, 892 unfinished LOE): start on 890,
-// finish on 888, late finish on 881, to the minute. P6's late start of a level
-// of effort follows no rule the same population supports, so it is not
-// reported (late_start_dt null). A lag in days is first converted to hours on
+// carries a level of effort (390 projects, 892 unfinished LOE), through the
+// update correction: 886 of 892 on start, finish, late finish and total float
+// together, to the minute. A lag in days is first converted to hours on
 // the predecessor's calendar, as the hours pass converts it. A link that is not
 // followed is named in links_not_followed with the reason: the other end is a
 // level of effort or a WBS summary, the type has no measured rule (an SF, or an
@@ -3958,7 +3965,9 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
         const aF = _hrParseInstant(a.actual_finish || null);
         if (n.is_complete) return [aS, aF, aS, aF];
         const s = aS !== null ? aS : _hrParseInstant(n.early_start_dt);
-        return [s, _hrParseInstant(n.early_finish_dt), _hrParseInstant(n.late_start_dt), _hrParseInstant(n.late_finish_dt)];
+        // a started one's late start is its actual start, as its start is (LE round 2)
+        return [s, _hrParseInstant(n.early_finish_dt), aS !== null ? aS : _hrParseInstant(n.late_start_dt),
+            _hrParseInstant(n.late_finish_dt)];
     };
     const lagTok = String(p.relationshipLagCalendar || 'successor').trim();
     const lagMode = Object.prototype.hasOwnProperty.call(_HOURS_LAG_CAL, lagTok) ? _HOURS_LAG_CAL[lagTok] : 'successor';
@@ -3982,6 +3991,45 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
         const v = _hrParseInstant(n.late_finish_dt);
         if (v !== null && (netLf === null || v > netLf)) netLf = v;
     }
+    // min / max by loop, not by spread: an LOE may carry more links than a
+    // call accepts arguments
+    const lo = (xs) => { let v = xs[0]; for (const x of xs) if (x < v) v = x; return v; };
+    const hi = (xs) => { let v = xs[0]; for (const x of xs) if (x > v) v = x; return v; };
+    // LE round 2: the late date P6 gives a COMPLETED network activity: the
+    // earliest late date of its network successors (FS / SS: late start; FF /
+    // SF: late finish; a completed one's own), no lag; none: the network's
+    // latest late finish. Python paired site: done_late.
+    const succOf = new Map();
+    for (const r of relationships || []) {
+        if (!r) continue;
+        const fc = String(r.from_code === null || r.from_code === undefined ? '' : r.from_code).trim();
+        const tc = String(r.to_code === null || r.to_code === undefined ? '' : r.to_code).trim();
+        if (fc !== tc && Object.prototype.hasOwnProperty.call(nodes, fc) && Object.prototype.hasOwnProperty.call(nodes, tc)) {
+            if (!succOf.has(fc)) succOf.set(fc, []);
+            succOf.get(fc).push([tc, String(r.type || 'FS').toUpperCase().replace('PR_', '')]);
+        }
+    }
+    const doneMemo = new Map();
+    // under progress override P6 leaves a completed activity's late dates blank
+    // (86 of 86 projects; retained logic dates them, 277 of 277): no bound
+    const doneLate = (code, seen) => {
+        if (p.scheduleMode === 'progress_override') return null;
+        if (doneMemo.has(code)) return doneMemo.get(code);
+        seen = seen || new Set();
+        if (seen.has(code)) return null;
+        seen.add(code);
+        const b = [];
+        for (const [sc, rt] of succOf.get(code) || []) {
+            const sn = nodes[sc];
+            const v = sn.is_complete ? doneLate(sc, seen)
+                : _hrParseInstant(rt === 'FS' || rt === 'SS' ? sn.late_start_dt : sn.late_finish_dt);
+            if (v !== null) b.push(v);
+        }
+        const v = b.length ? lo(b) : netLf;
+        doneMemo.set(code, v);
+        return v;
+    };
+    const floatType = p.floatType || 'FT_FF';
     const dd = _hrParseInstant(p.dataDate);
     const fmt = (t) => (t === null ? null : _hrFormatInstant(t));
     const out = {};
@@ -4005,6 +4053,7 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
         const starts = [];
         const fins = [];
         const lfins = [];
+        const lstarts = [];
         for (const r of relationships || []) {
             if (!r) continue;
             const fc = String(r.from_code === null || r.from_code === undefined ? '' : r.from_code).trim();
@@ -4027,7 +4076,20 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
                 if (rt === 'SS' || rt === 'FS') {
                     const at = rt === 'SS' ? s : f;
                     if (at === null) why = 'the other end carries no date';
-                    else starts.push(walkOn(at, m, c));
+                    else {
+                        starts.push(walkOn(at, m, c));
+                        // its late start's bound (LE round 2): an SS predecessor's late
+                        // start, an FS one's late finish; a completed one's late date, but
+                        // its actual finish on an FS from completed work that is not a
+                        // start milestone
+                        const on = nodes[other];
+                        let lat;
+                        if (on.is_complete) {
+                            const ttype = String((byCode.get(other) || {}).task_type || '').trim();
+                            lat = (rt === 'SS' || ttype === 'TT_Mile') ? doneLate(other) : f;
+                        } else lat = _hrParseInstant(rt === 'SS' ? on.late_start_dt : on.late_finish_dt);
+                        if (lat !== null) lstarts.push(walkOn(lat, m, c));
+                    }
                 } else if (rt === 'FF') {
                     if (f === null) why = 'the other end carries no date';
                     else {
@@ -4051,22 +4113,28 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
             }
             if (why !== null) rec.links_not_followed.push({ from_code: fc, to_code: tc, type: rt, reason: why });
         }
-        // min / max by loop, not by spread: an LOE may carry more links than a
-        // call accepts arguments
-        const lo = (xs) => { let v = xs[0]; for (const x of xs) if (x < v) v = x; return v; };
-        const hi = (xs) => { let v = xs[0]; for (const x of xs) if (x > v) v = x; return v; };
         const floor = cal.nextWork(dd);
         let es;
         if (aS !== null) es = floor;
         else es = starts.length ? Math.max(cal.nextWork(lo(starts)), floor) : floor;
         const ef = fins.length ? Math.max(es, cal.prevWorkEnd(hi(fins))) : es;
         const lf = lfins.length ? cal.prevWorkEnd(hi(lfins)) : netLf;
-        let tfMin = null;
+        // late start (LE round 2): the earliest predecessor late bound at the next
+        // opening of its own calendar, never after its late finish; none: its late finish
+        let ls = null;
+        if (lf !== null) ls = lstarts.length ? Math.min(cal.nextWork(lo(lstarts)), lf) : lf;
         // `|| 0` keeps a zero float from printing as -0 where Python prints 0
-        if (lf !== null) tfMin = (lf >= ef ? cal.between(ef, lf) : -cal.between(lf, ef)) || 0;
+        const tfFin = lf === null ? null : ((lf >= ef ? cal.between(ef, lf) : -cal.between(lf, ef)) || 0);
+        const tfStart = ls === null ? null : ((ls >= es ? cal.between(es, ls) : -cal.between(ls, es)) || 0);
+        // the float by the project's float type: FT_SS start float, FT_Min the
+        // smaller, else (FT_FF, FT_Start) finish float
+        let tfMin;
+        if (floatType === 'FT_SS') tfMin = tfStart;
+        else if (floatType === 'FT_Min') tfMin = (tfFin === null || tfStart === null) ? null : Math.min(tfFin, tfStart);
+        else tfMin = tfFin;
         Object.assign(rec, {
             status: aS !== null ? 'started' : 'not_started',
-            early_start_dt: fmt(es), early_finish_dt: fmt(ef), late_finish_dt: fmt(lf),
+            early_start_dt: fmt(es), early_finish_dt: fmt(ef), late_start_dt: fmt(ls), late_finish_dt: fmt(lf),
             remaining_hours: Math.round(cal.between(es, ef) / 60 * 1e4) / 1e4,
             tf_hours: tfMin === null ? null : Math.round(tfMin / 60 * 1e4) / 1e4,
             tf_working_days: tfMin === null ? null : _hrWorkingDays(tfMin, hpdOf(cid)),
@@ -4074,11 +4142,7 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
         });
         out[code] = rec;
     }
-    return {
-        applied: true, activities: out,
-        late_start_note: "P6's late start of a level of effort is not reported (late_start_dt is None): " +
-            'no rule measured against P6 reproduces it.',
-    };
+    return { applied: true, activities: out, float_type: floatType };
 }
 
 function _hoursPass(activities, relationships, nodes, p) {
@@ -8224,6 +8288,7 @@ function computeCPM(activities, relationships, opts) {
         dataDate, calMap: rawCalMap, projectCalendar: _projectCalId, alerts,
         relationshipLagCalendar: opts.relationshipLagCalendar || opts.relationship_lag_calendar ||
             opts.sched_calendar_on_relationship_lag || 'successor',
+        floatType: _floatType, scheduleMode: _scheduleMode,
     });
     if (_hours.applied && _hours.driver_withheld.length) {
         // DG (v2.10.16): say which activities lost their driving

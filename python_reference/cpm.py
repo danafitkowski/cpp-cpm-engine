@@ -2431,25 +2431,37 @@ def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_d
 #           start) bounds, lag walked back, and of its FF predecessors'
 #           finishes, lag walked on; at the close of its own calendar and never
 #           before its start (no bound at all: the finish is the start);
-#   late finish  the same bounds on the late dates; with none, the latest late
-#           finish of the network;
-#   total float  working time from finish to late finish on its own calendar
-#           (P6's finish float), critical at or below zero.
+#   late finish  the same bounds on the late dates (an FS successor under way
+#           read at its actual start); with none, the latest late finish of the
+#           network;
+#   late start  (round 2) the earliest of its predecessors' late bounds, an SS
+#           predecessor's late start and an FS one's late finish, lag walked on,
+#           at the next opening of its own calendar and never after its late
+#           finish; with none, its late finish. A completed predecessor lends
+#           the late date P6 gives completed work (done_late: the earliest late
+#           date of its network successors, no lag), or on an FS its actual
+#           finish unless it is a start milestone; under progress override P6
+#           leaves completed work's late dates blank, and it lends nothing;
+#   total float  by the project's float type: finish float (late finish less
+#           finish) under FT_FF and FT_Start, start float (late start less
+#           start) under FT_SS, the smaller under FT_Min; critical at or below
+#           zero.
 # A started or completed activity at the other end is read at its actual dates.
 # Measured against P6's stored dates on every project P6 last scheduled in the
 # local P6 database that carries a level of effort (390 projects, 892
-# unfinished LOE, private oracle repo loe_2026_11_26): start on 890, finish on
-# 888, late finish on 881, to the minute. P6's late start of a level of effort
-# follows no rule the same population supports (the best candidate, the
-# predecessors' late dates read through completed work, matched 549 of 796
-# unlagged rows), so it is not reported: late_start_dt is None. A link that is
+# unfinished LOE, private oracle repo loe_2026_11_26), through the update
+# correction at each file's data date: 886 of 892 on start, finish, late finish
+# and total float together, to the minute; the six others sit next to network
+# activities the engine does not yet place as P6 does (five, in generated stress
+# projects) or are one FT_Min row no measured rule gives. A link that is
 # not followed is named in links_not_followed with the reason: the other end is
 # a level of effort or a WBS summary, the type has no measured rule (an SF, or an
 # SS from the level of effort), or the other end carries no date. A level of
 # effort whose code another activity also carries is not dated, and a WARN names
 # it. JS paired site: _levelOfEffortPass.
 def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date, cal_map, project_calendar,
-                          relationship_lag_calendar, alerts=None):
+                          relationship_lag_calendar, alerts=None, float_type='FT_FF',
+                          schedule_mode='retained_logic'):
     loe = {}
     seen = {}
     for a in activities or []:
@@ -2499,14 +2511,52 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
             by_code[str(a.get('code')).strip()] = a
 
     def ends(code):
-        """(start, finish, late start, late finish) instants of a network activity as a level of effort reads it."""
+        """(start, finish, late start, late finish) instants of a network activity as a level of effort reads it:
+        a started one's late start is its actual start, as its start is (LE round 2: P6's late finish of a level
+        of effort whose FS successor is under way is that successor's actual start, 4 of 4)."""
         n, a = nodes[code], by_code.get(code) or {}
         a_s, a_f = cm.parse_instant(a.get('actual_start') or None), cm.parse_instant(a.get('actual_finish') or None)
         if n.get('is_complete'):
             return a_s, a_f, a_s, a_f
         s = a_s if a_s is not None else cm.parse_instant(n.get('early_start_dt'))
-        return (s, cm.parse_instant(n.get('early_finish_dt')), cm.parse_instant(n.get('late_start_dt')),
+        return (s, cm.parse_instant(n.get('early_finish_dt')),
+                a_s if a_s is not None else cm.parse_instant(n.get('late_start_dt')),
                 cm.parse_instant(n.get('late_finish_dt')))
+
+    # LE round 2: the late date P6 gives a COMPLETED network activity (it stores one, late start = late
+    # finish): the earliest late date of its network successors, an FS / SS successor's late start and an
+    # FF / SF successor's late finish, a completed successor's own late date, NO lag; with no network
+    # successor the latest late finish of the network. P6 database, every completed activity of the 390
+    # projects: 33,284 of 33,605 with successors, 1,004 of 1,015 without. Under progress override P6 leaves a
+    # completed activity's late dates blank (every one, in 86 of 86 such projects; under retained logic it
+    # dates them in 277 of 277), so there a completed predecessor bounds nothing (None).
+    succ_of = {}
+    for r in relationships or []:
+        fc, tc = str(r.get('from_code') or '').strip(), str(r.get('to_code') or '').strip()
+        if fc in nodes and tc in nodes and fc != tc:
+            succ_of.setdefault(fc, []).append((tc, str(r.get('type') or 'FS').upper().replace('PR_', '')))
+    done_memo = {}
+
+    def done_late(code, seen=None):
+        if schedule_mode == 'progress_override':
+            return None
+        if code in done_memo:
+            return done_memo[code]
+        seen = set() if seen is None else seen
+        if code in seen:
+            return None
+        seen.add(code)
+        b = []
+        for sc, rt in succ_of.get(code, ()):
+            sn = nodes[sc]
+            if sn.get('is_complete'):
+                v = done_late(sc, seen)
+            else:
+                v = cm.parse_instant(sn.get('late_start_dt') if rt in ('FS', 'SS') else sn.get('late_finish_dt'))
+            if v is not None:
+                b.append(v)
+        done_memo[code] = min(b) if b else net_lf
+        return done_memo[code]
 
     lag_mode = _HOURS_LAG_CAL.get(str(relationship_lag_calendar or 'successor').strip(), 'successor')
     day24 = cm.WorkCalendar({'raw': '', 'work_days': [0, 1, 2, 3, 4, 5, 6], 'hours_per_day': 24})
@@ -2546,7 +2596,7 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
                         'tf_hours': None, 'tf_working_days': None, 'critical': False})
             out[code] = rec
             continue
-        starts, fins, lfins = [], [], []
+        starts, fins, lfins, lstarts = [], [], [], []
         for r in relationships or []:
             fc, tc = str(r.get('from_code') or '').strip(), str(r.get('to_code') or '').strip()
             if code not in (fc, tc) or fc == tc:
@@ -2569,6 +2619,17 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
                         why = 'the other end carries no date'
                     else:
                         starts.append(walk_on(at, m, c))
+                        # its late start's bound (LE round 2): an SS predecessor's late start, an FS one's late
+                        # finish; a completed one's late date (done_late), but its ACTUAL finish on an FS from
+                        # completed work that is not a start milestone
+                        on = nodes[other]
+                        if on.get('is_complete'):
+                            ttype = str((by_code.get(other) or {}).get('task_type') or '').strip()
+                            lat = done_late(other) if (rt == 'SS' or ttype == 'TT_Mile') else f
+                        else:
+                            lat = cm.parse_instant(on.get('late_start_dt') if rt == 'SS' else on.get('late_finish_dt'))
+                        if lat is not None:
+                            lstarts.append(walk_on(lat, m, c))
                 elif rt == 'FF':
                     if f is None:
                         why = 'the other end carries no date'
@@ -2600,20 +2661,33 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
             es = max(cal.next_work(min(starts)), floor) if starts else floor
         ef = max([es] + ([cal.prev_work_end(max(fins))] if fins else []))
         lf = cal.prev_work_end(max(lfins)) if lfins else net_lf
-        tf_min = None
+        # late start (LE round 2): the earliest late bound of its predecessors at the next opening of its own
+        # calendar, never after its late finish; with none, its late finish. P6 database: 884 of 892
+        # unfinished LOE on P6's stored dates (430 of 430 not started).
+        ls = None
         if lf is not None:
-            tf_min = cal.between(ef, lf) if lf >= ef else -cal.between(lf, ef)
+            ls = min(cal.next_work(min(lstarts)), lf) if lstarts else lf
+        tf_fin = None if lf is None else (cal.between(ef, lf) if lf >= ef else -cal.between(lf, ef))
+        tf_start = None if ls is None else (cal.between(es, ls) if ls >= es else -cal.between(ls, es))
+        # P6's total float of a level of effort by the project's float type (LE round 2, P6 database, every
+        # unfinished LOE on its own stored dates): finish float under FT_FF (753 of 753) and FT_Start (49 of
+        # 49), start float under FT_SS (4 of 4), the smaller of the two under FT_Min (85 of 86).
+        if float_type == 'FT_SS':
+            tf_min = tf_start
+        elif float_type == 'FT_Min':
+            tf_min = None if tf_fin is None or tf_start is None else min(tf_fin, tf_start)
+        else:
+            tf_min = tf_fin
         rec.update({'status': 'started' if a_s is not None else 'not_started',
                     'early_start_dt': cm.format_instant(es), 'early_finish_dt': cm.format_instant(ef),
+                    'late_start_dt': cm.format_instant(ls) if ls is not None else None,
                     'late_finish_dt': cm.format_instant(lf) if lf is not None else None,
                     'remaining_hours': round(cal.between(es, ef) / 60.0, 4),
                     'tf_hours': None if tf_min is None else round(tf_min / 60.0, 4),
                     'tf_working_days': None if tf_min is None else _hours_working_days(tf_min, hpd_of(cid)),
                     'critical': tf_min is not None and tf_min <= 0})
         out[code] = rec
-    return {'applied': True, 'activities': out,
-            'late_start_note': ('P6\'s late start of a level of effort is not reported (late_start_dt is None): '
-                                'no rule measured against P6 reproduces it.')}
+    return {'applied': True, 'activities': out, 'float_type': float_type}
 
 
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
@@ -6071,7 +6145,8 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # instants (see _level_of_effort_pass). JS paired site after _hoursPass.
     _loe = _level_of_effort_pass(
         activities, relationships, nodes, _hours, data_date=data_date, cal_map=cal_map,
-        project_calendar=project_calendar, relationship_lag_calendar=relationship_lag_calendar, alerts=alerts)
+        project_calendar=project_calendar, relationship_lag_calendar=relationship_lag_calendar, alerts=alerts,
+        float_type=_float_type, schedule_mode=schedule_mode)
     if _hours.get('applied') and _hours.get('driver_withheld'):
         # DG (v2.10.16): say which activities lost their driving
         # predecessor to the check in _hours_pass, and why. JS paired site:
