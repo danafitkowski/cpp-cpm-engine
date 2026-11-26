@@ -14290,6 +14290,94 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         JSON.stringify([none.strategy_summary.MFP, none.strategy_summary.LPM, snake.strategy_summary.MFP]));
 }
 
+// LE (candidate): the dates of a level of effort, as P6 derives them from the
+// activities it is linked to (_levelOfEffortPass). The network still leaves
+// every TT_LOE out, so nothing else moves. Calendar C is Mon-Fri, 08:00-12:00
+// and 13:00-17:00; 5 Jan 2026 is a Monday. Python paired tests:
+// _cpp_common/tests/test_level_of_effort_2026_11_26.py.
+{
+    const CAL = { C: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 8 } };
+    const KW = { dataDate: '2026-01-05 08:00', calMap: CAL, projectCalendar: 'C' };
+    const act = (code, h, x) => Object.assign({ code, duration_days: h / 8, remaining_hours: h,
+        remaining_hours_days: h / 8, clndr_id: 'C' }, x || {});
+    const loe = (code, x) => Object.assign({ code, duration_days: 0, remaining_hours: 0, remaining_hours_days: 0,
+        clndr_id: 'C', task_type: 'TT_LOE' }, x || {});
+    const rel = (a, b, t, lagH) => ({ from_code: a, to_code: b, type: t || 'FS', lag_days: (lagH || 0) / 8,
+        lag_hours: lagH || 0 });
+    const NET = [act('A', 16), act('B', 24), act('F', 0, { task_type: 'TT_FinMile' })];
+    const NET_RELS = [rel('A', 'B'), rel('B', 'F')];
+    const run = (xa, xr, o) => E.computeCPM(NET.concat(xa), NET_RELS.concat(xr), Object.assign({}, KW, o || {}));
+    const le = (r, c) => r.level_of_effort.activities[c || 'L'];
+    const pick = (x, ks) => JSON.stringify(ks.map((k) => x[k]));
+
+    const r1 = run([loe('L')], [rel('A', 'L', 'SS'), rel('L', 'B', 'FF')]);
+    check('LE-1: SS from A, FF to B: the LOE runs from A\'s start to B\'s finish, no float, critical',
+        r1.level_of_effort.applied === true && pick(le(r1), ['status', 'early_start_dt', 'early_finish_dt',
+            'late_finish_dt', 'tf_hours', 'tf_working_days', 'critical', 'remaining_hours', 'late_start_dt']) ===
+        JSON.stringify(['not_started', '2026-01-05 08:00', '2026-01-09 17:00', '2026-01-09 17:00', 0, 0, true, 40, null]),
+        JSON.stringify(le(r1)));
+    const r2 = run([loe('L')], [rel('A', 'L', 'SS'), rel('B', 'L', 'SS'), rel('L', 'F', 'FF')]);
+    check('LE-2: SS from A and from B: the LOE starts with A (the earliest), not B',
+        le(r2).early_start_dt === '2026-01-05 08:00', JSON.stringify(le(r2)));
+    const r3 = run([loe('L')], [rel('B', 'L', 'SS')]);
+    check('LE-3: no successor: finish = start (Wed 08:00), late finish = the network\'s (Fri 17:00), 3 days float',
+        pick(le(r3), ['early_start_dt', 'early_finish_dt', 'late_finish_dt', 'tf_hours', 'tf_working_days', 'critical'])
+        === JSON.stringify(['2026-01-07 08:00', '2026-01-07 08:00', '2026-01-09 17:00', 24, 3, false]), JSON.stringify(le(r3)));
+    const r4 = run([loe('L')], [rel('A', 'L', 'SS'), rel('B', 'L', 'FF')]);
+    check('LE-4: SS from A, FF from B, no successor: finish and late finish are B\'s',
+        pick(le(r4), ['early_start_dt', 'early_finish_dt', 'late_finish_dt', 'tf_hours']) ===
+        JSON.stringify(['2026-01-05 08:00', '2026-01-09 17:00', '2026-01-09 17:00', 0]), JSON.stringify(le(r4)));
+    const r5 = run([loe('L')], [rel('A', 'L', 'SS', 8), rel('L', 'B', 'FF')], { relationshipLagCalendar: 'rcal_Predecessor' });
+    check('LE-5: SS +8 h from A: the LOE starts Tue 08:00', le(r5).early_start_dt === '2026-01-06 08:00', JSON.stringify(le(r5)));
+    const r6 = run([loe('L', { actual_start: '2026-01-02 08:00' })], [rel('A', 'L', 'SS'), rel('L', 'B', 'FF')]);
+    check('LE-6: started before the data date: it restarts at the data date\'s opening',
+        pick(le(r6), ['status', 'early_start_dt', 'early_finish_dt']) ===
+        JSON.stringify(['started', '2026-01-05 08:00', '2026-01-09 17:00']), JSON.stringify(le(r6)));
+    const r7 = run([loe('L', { actual_start: '2025-12-29 08:00', actual_finish: '2026-01-02 17:00' })], [rel('A', 'L', 'SS')]);
+    check('LE-7: completed: the actual dates, no float',
+        pick(le(r7), ['status', 'early_start_dt', 'early_finish_dt', 'tf_hours', 'critical']) ===
+        JSON.stringify(['complete', '2025-12-29 08:00', '2026-01-02 17:00', null, false]), JSON.stringify(le(r7)));
+    const base = E.computeCPM(NET, NET_RELS, KW);
+    const keys = ['early_start_dt', 'early_finish_dt', 'late_start_dt', 'late_finish_dt', 'tf_hours', 'ff_hours', 'es', 'ef'];
+    const snap = (r) => JSON.stringify(Object.keys(r.nodes).sort().map((c) => [c, keys.map((k) => r.nodes[c][k])]));
+    check('LE-8: handing the engine its LOE changes no date, float or critical activity of the network',
+        snap(base) === snap(r1) && base.projectFinish === r1.projectFinish &&
+        JSON.stringify(Array.from(base.criticalCodes).sort()) === JSON.stringify(Array.from(r1.criticalCodes).sort()) &&
+        !Object.prototype.hasOwnProperty.call(r1.nodes, 'L'));
+    const r9 = run([loe('L'), loe('L2')], [rel('A', 'L', 'SS'), rel('L', 'L2', 'FF'), rel('L2', 'B', 'FF')]);
+    check('LE-9: L -> L2 (both level of effort) is named, not followed',
+        JSON.stringify(le(r9).links_not_followed) === JSON.stringify([{ from_code: 'L', to_code: 'L2', type: 'FF',
+            reason: 'the other end is a level of effort or a WBS summary' }]) &&
+        le(r9).early_finish_dt === '2026-01-05 08:00' && le(r9).early_start_dt === '2026-01-05 08:00', JSON.stringify(le(r9)));
+    const r10 = E.computeCPM([{ code: 'A', duration_days: 2, clndr_id: 'C' },
+        { code: 'L', duration_days: 0, clndr_id: 'C', task_type: 'TT_LOE' }], [rel('A', 'L', 'SS')], KW);
+    check('LE-10: no remaining_hours handed on: not applied, and the reason says why',
+        JSON.stringify(r10.level_of_effort) === JSON.stringify({ applied: false,
+            reason: 'the level of effort dates come from the hours pass, which did not run (no remaining_hours handed on)',
+            activities: {} }), JSON.stringify(r10.level_of_effort));
+    check('LE-11: a network without a level of effort says so',
+        JSON.stringify(base.level_of_effort) === JSON.stringify({ applied: false, reason: 'no level of effort', activities: {} }),
+        JSON.stringify(base.level_of_effort));
+    const calT = Object.assign({}, CAL, { T: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 10 } });
+    const r12 = E.computeCPM([{ code: 'A', duration_days: 2, remaining_hours: 20, remaining_hours_days: 2, clndr_id: 'T' },
+        act('B', 8), loe('L')], [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 1 },
+        { from_code: 'A', to_code: 'L', type: 'FS', lag_days: 1 }, { from_code: 'L', to_code: 'B', type: 'FF', lag_days: 0 }],
+    { dataDate: '2026-01-05 08:00', calMap: calT, projectCalendar: 'C', relationshipLagCalendar: 'rcal_Successor' });
+    check('LE-12: a lag in days converts on the predecessor\'s calendar: the LOE starts where the hours pass starts B (Thu 10:00)',
+        le(r12).early_start_dt === r12.nodes.B.early_start_dt && le(r12).early_start_dt === '2026-01-08 10:00',
+        JSON.stringify([le(r12), r12.nodes.B.early_start_dt]));
+    const r13 = run([loe('L')], [rel('A', 'L', 'SS'), rel('B', 'L', 'SF')]);
+    const r13b = run([loe('L'), act('L', 8)], [rel('A', 'L', 'SS')]);
+    const w13 = r13b.alerts.filter((x) => x.context === 'loe-code-not-unique').map((x) => x.message);
+    check('LE-13: an SF into the LOE is named with its reason; an LOE sharing its code with a task is not dated, with a WARN',
+        JSON.stringify(le(r13).links_not_followed) === JSON.stringify([{ from_code: 'B', to_code: 'L', type: 'SF',
+            reason: 'no measured P6 rule dates a level of effort through this type' }]) &&
+        !Object.prototype.hasOwnProperty.call(r13b.level_of_effort.activities, 'L') &&
+        JSON.stringify(w13) === JSON.stringify(['Level of effort L carries a code that another activity also carries, so ' +
+            'its relationships cannot be told apart: not dated (result.level_of_effort).']),
+        JSON.stringify([le(r13), w13]));
+}
+
 console.log('\n========================================');
 console.log('  ' + pass + ' passed, ' + fail + ' failed');
 console.log('========================================\n');
