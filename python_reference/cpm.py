@@ -2416,6 +2416,175 @@ def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_d
     return None
 
 
+# LE (level of effort, candidate, unreleased, 26-Nov-2026) — the dates P6 gives a level of
+# effort. The network leaves every TT_LOE out (v2.9.42 PAIRED FIX), so a level
+# of effort never drives the critical path or the project finish; until now it
+# also got no dates. P6 derives them from the activities it is linked to, and
+# this pass does the same, after the hours pass, on that pass's instants:
+#   start   the earliest of its predecessors' SS (their start) and FS (their
+#           finish) bounds, each lag walked on the lag calendar, at the next
+#           opening of its own calendar and never before the data date; work
+#           under way restarts at the data date;
+#   finish  the latest of its successors' FF (their finish) and FS (their
+#           start) bounds, lag walked back, and of its FF predecessors'
+#           finishes, lag walked on; at the close of its own calendar and never
+#           before its start (no bound at all: the finish is the start);
+#   late finish  the same bounds on the late dates; with none, the latest late
+#           finish of the network;
+#   total float  working time from finish to late finish on its own calendar
+#           (P6's finish float), critical at or below zero.
+# A started or completed activity at the other end is read at its actual dates.
+# Measured against P6's stored dates on every project P6 last scheduled in the
+# local P6 database that carries a level of effort (390 projects, 892
+# unfinished LOE, private oracle repo loe_2026_11_26): start on 890, finish on
+# 888, late finish on 881, to the minute. P6's late start of a level of effort
+# follows no rule the same population supports (the best candidate, the
+# predecessors' late dates read through completed work, matched 549 of 796
+# unlagged rows), so it is not reported: late_start_dt is None. A link to
+# another level of effort or a WBS summary is not followed and is named in
+# links_not_followed. JS paired site: _levelOfEffortPass.
+def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date, cal_map, project_calendar,
+                          relationship_lag_calendar):
+    loe = {}
+    for a in activities or []:
+        if not a:
+            continue
+        code = str(a.get('code') or '').strip()
+        tt = a.get('task_type')
+        if tt is None:
+            tt = a.get('taskType')
+        if code and str(tt or '').strip() == 'TT_LOE':
+            loe[code] = a
+    if not loe:
+        return {'applied': False, 'reason': 'no level of effort', 'activities': {}}
+    if not (hours or {}).get('applied'):
+        return {'applied': False,
+                'reason': 'the level of effort dates come from the hours pass, which did not run (%s)'
+                          % ((hours or {}).get('reason') or 'unknown'),
+                'activities': {}}
+    cm = _hours_sibling('cpm_minutes')
+    cals = {}
+
+    def cal_of(cid):
+        key = cid if cid else project_calendar
+        if key not in cals:
+            cals[key] = cm.WorkCalendar((cal_map or {}).get(key) or (cal_map or {}).get(project_calendar) or {})
+        return cals[key]
+
+    def hpd_of(cid):
+        h = _hours_float(((cal_map or {}).get(cid or project_calendar) or {}).get('hours_per_day'))
+        return h if h and h > 0 else 8.0
+
+    by_code = {}
+    for a in activities or []:
+        if a and str(a.get('code') or '').strip() in nodes:
+            by_code[str(a.get('code')).strip()] = a
+
+    def ends(code):
+        """(start, finish, late start, late finish) instants of a network activity as a level of effort reads it."""
+        n, a = nodes[code], by_code.get(code) or {}
+        a_s, a_f = cm.parse_instant(a.get('actual_start') or None), cm.parse_instant(a.get('actual_finish') or None)
+        if n.get('is_complete'):
+            return a_s, a_f, a_s, a_f
+        s = a_s if a_s is not None else cm.parse_instant(n.get('early_start_dt'))
+        return (s, cm.parse_instant(n.get('early_finish_dt')), cm.parse_instant(n.get('late_start_dt')),
+                cm.parse_instant(n.get('late_finish_dt')))
+
+    lag_mode = _HOURS_LAG_CAL.get(str(relationship_lag_calendar or 'successor').strip(), 'successor')
+    day24 = cm.WorkCalendar({'raw': '', 'work_days': [0, 1, 2, 3, 4, 5, 6], 'hours_per_day': 24})
+
+    def lag_cal(pred_cid, succ_cid):
+        if lag_mode == '24h':
+            return day24
+        if lag_mode == 'project':
+            return cal_of(project_calendar)
+        return cal_of(pred_cid if lag_mode == 'predecessor' else succ_cid)
+
+    def lag_minutes(r, cid):
+        h = _hours_float(r.get('lag_hours'))
+        if h is None:
+            h = (_hours_float(r.get('lag_days')) or 0.0) * hpd_of(cid)
+        return int(round(h * 60))
+
+    def walk_on(t, m, c):
+        return t if not m else c.add(c.next_work(t), m)
+
+    def walk_back(t, m, c):
+        return t if not m else c.sub(c.prev_work_end(t), m)
+
+    net_lf = [cm.parse_instant(n.get('late_finish_dt')) for n in nodes.values() if not n.get('is_complete')]
+    net_lf = max([x for x in net_lf if x is not None], default=None)
+    dd = cm.parse_instant(data_date)
+    out = {}
+    for code, a in loe.items():
+        cid = a.get('clndr_id') or project_calendar
+        cal = cal_of(cid)
+        a_s, a_f = cm.parse_instant(a.get('actual_start') or None), cm.parse_instant(a.get('actual_finish') or None)
+        rec = {'code': code, 'clndr_id': cid, 'actual_start': a.get('actual_start') or None,
+               'actual_finish': a.get('actual_finish') or None, 'late_start_dt': None, 'links_not_followed': []}
+        if a_f is not None:
+            rec.update({'status': 'complete', 'early_start_dt': cm.format_instant(a_s) if a_s is not None else None,
+                        'early_finish_dt': cm.format_instant(a_f), 'late_finish_dt': cm.format_instant(a_f),
+                        'tf_hours': None, 'tf_working_days': None, 'critical': False})
+            out[code] = rec
+            continue
+        starts, fins, lfins = [], [], []
+        for r in relationships or []:
+            fc, tc = str(r.get('from_code') or '').strip(), str(r.get('to_code') or '').strip()
+            if code not in (fc, tc) or fc == tc:
+                continue
+            other = fc if tc == code else tc
+            rt = str(r.get('type') or 'FS').upper().replace('PR_', '')
+            if other not in nodes:
+                rec['links_not_followed'].append({'from_code': fc, 'to_code': tc, 'type': rt})
+                continue
+            o_cid = (by_code.get(other) or {}).get('clndr_id') or project_calendar
+            s, f, ls, lf = ends(other)
+            if tc == code:      # other -> LOE
+                c = lag_cal(o_cid, cid)
+                m = lag_minutes(r, o_cid if lag_mode == 'predecessor' else cid)
+                if rt == 'SS' and s is not None:
+                    starts.append(walk_on(s, m, c))
+                elif rt == 'FS' and f is not None:
+                    starts.append(walk_on(f, m, c))
+                elif rt == 'FF' and f is not None:
+                    fins.append(walk_on(f, m, c))
+                    if lf is not None:
+                        lfins.append(walk_on(lf, m, c))
+            else:               # LOE -> other
+                c = lag_cal(cid, o_cid)
+                m = lag_minutes(r, cid if lag_mode == 'predecessor' else o_cid)
+                if rt == 'FF' and f is not None:
+                    fins.append(walk_back(f, m, c))
+                    if lf is not None:
+                        lfins.append(walk_back(lf, m, c))
+                elif rt == 'FS' and s is not None:
+                    fins.append(walk_back(s, m, c))
+                    if ls is not None:
+                        lfins.append(walk_back(ls, m, c))
+        floor = cal.next_work(dd)
+        if a_s is not None:
+            es = floor
+        else:
+            es = max(cal.next_work(min(starts)), floor) if starts else floor
+        ef = max([es] + ([cal.prev_work_end(max(fins))] if fins else []))
+        lf = cal.prev_work_end(max(lfins)) if lfins else net_lf
+        tf_min = None
+        if lf is not None:
+            tf_min = cal.between(ef, lf) if lf >= ef else -cal.between(lf, ef)
+        rec.update({'status': 'started' if a_s is not None else 'not_started',
+                    'early_start_dt': cm.format_instant(es), 'early_finish_dt': cm.format_instant(ef),
+                    'late_finish_dt': cm.format_instant(lf) if lf is not None else None,
+                    'remaining_hours': round(cal.between(es, ef) / 60.0, 4),
+                    'tf_hours': None if tf_min is None else round(tf_min / 60.0, 4),
+                    'tf_working_days': None if tf_min is None else _hours_working_days(tf_min, hpd_of(cid)),
+                    'critical': tf_min is not None and tf_min <= 0})
+        out[code] = rec
+    return {'applied': True, 'activities': out,
+            'late_start_note': ('P6\'s late start of a level of effort is not reported (late_start_dt is None): '
+                                'no rule measured against P6 reproduces it.')}
+
+
 def compute_cpm(activities, relationships, data_date='', cal_map=None,
                 project_calendar='', schedule_mode='retained_logic',
                 relationship_lag_calendar='successor',
@@ -5867,6 +6036,11 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # pass's test.
         critical = {c for c, n in nodes.items() if not n['is_complete'] and (
             n['tf'] <= 0.0 if n.get('tf_hours') is None else n['tf_hours'] <= 0)}
+    # LE (candidate): the dates of every level of effort, from the hours pass's
+    # instants (see _level_of_effort_pass). JS paired site after _hoursPass.
+    _loe = _level_of_effort_pass(
+        activities, relationships, nodes, _hours, data_date=data_date, cal_map=cal_map,
+        project_calendar=project_calendar, relationship_lag_calendar=relationship_lag_calendar)
     if _hours.get('applied') and _hours.get('driver_withheld'):
         # DG (v2.10.16): say which activities lost their driving
         # predecessor to the check in _hours_pass, and why. JS paired site:
@@ -5897,6 +6071,22 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
         # v2.9.42 PAIRED FIX — every activity dropped by the TT_LOE / TT_WBS
         # rule, in input order. Mirrors JS result.excluded_by_task_type.
         'excluded_by_task_type': excluded_by_task_type,
+        # LE (candidate) — the dates of each level of effort left out above, as
+        # P6 derives them (see _level_of_effort_pass). Mirrors JS
+        # result.level_of_effort.
+        'level_of_effort': _loe,
+        # The conventions this engine ran under, declared so a deliverable can
+        # state which ones produced its dates (skill_manifest reads them off
+        # the result; test_calendar_conventions pins the surface). The finish
+        # boundary is fixed behaviour; the lag calendar and float definition
+        # report the values the run actually resolved (the v2.9.43 skills
+        # catch-up made both configurable — see relationship_lag_calendar /
+        # float_type above — so the manifest now reports the resolved mode
+        # rather than a hardcoded label):
+        #   finish boundary  — ef_date = num_to_date(ef), and ef is the
+        #     boundary AFTER the last worked day, so it is EXCLUSIVE.
+        #   lag calendar     — every lag walk above passes _lag_cal_for(...).
+        #   float definition — tf per _float_type (FT_FF default: lf - ef).
     }
 
 

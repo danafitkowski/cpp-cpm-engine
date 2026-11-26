@@ -3876,6 +3876,178 @@ function _hrWorkingDays(minutes, hpd) {
     return Math.abs(v - r) < 1e-9 ? r : _roundHalfUpTo(v, 4);
 }
 
+// LE (level of effort, candidate, unreleased, 26-Nov-2026) — the dates P6 gives a level of
+// effort, after the hours pass and on its instants. The network leaves every
+// TT_LOE out (v2.9.42), so a level of effort never drives the critical path or
+// the project finish; P6 derives its dates from the activities it is linked to:
+//   start   the earliest of its predecessors' SS (their start) and FS (their
+//           finish) bounds, each lag walked on the lag calendar, at the next
+//           opening of its own calendar and never before the data date; work
+//           under way restarts at the data date;
+//   finish  the latest of its successors' FF (their finish) and FS (their
+//           start) bounds, lag walked back, and of its FF predecessors'
+//           finishes, lag walked on; at the close of its own calendar and never
+//           before its start (no bound at all: the finish is the start);
+//   late finish  the same bounds on the late dates; with none, the latest late
+//           finish of the network;
+//   total float  working time from finish to late finish on its own calendar
+//           (P6's finish float), critical at or below zero.
+// Measured on every project P6 last scheduled in the local P6 database that
+// carries a level of effort (390 projects, 892 unfinished LOE): start on 890,
+// finish on 888, late finish on 881, to the minute. P6's late start of a level
+// of effort follows no rule the same population supports, so it is not
+// reported (late_start_dt null). A link to another level of effort or a WBS
+// summary is not followed and is named in links_not_followed. Python paired
+// site: cpm._level_of_effort_pass.
+function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
+    const loe = new Map();
+    for (const a of activities || []) {
+        if (!a) continue;
+        const code = String(a.code === null || a.code === undefined ? '' : a.code).trim();
+        let tt = a.task_type;
+        if (tt === null || tt === undefined) tt = a.taskType;
+        if (code && String(tt || '').trim() === 'TT_LOE') loe.set(code, a);
+    }
+    if (!loe.size) return { applied: false, reason: 'no level of effort', activities: {} };
+    if (!(hours && hours.applied)) {
+        return {
+            applied: false,
+            reason: 'the level of effort dates come from the hours pass, which did not run (' +
+                ((hours && hours.reason) || 'unknown') + ')',
+            activities: {},
+        };
+    }
+    const calMap = p.calMap || {};
+    const projectCalendar = p.projectCalendar;
+    const cals = new Map();
+    const calOf = (cid) => {
+        const key = cid || projectCalendar;
+        if (!cals.has(key)) cals.set(key, new _HrWorkCalendar(calMap[key] || calMap[projectCalendar] || {}));
+        return cals.get(key);
+    };
+    const hpdOf = (cid) => {
+        const h = _hoursFloat((calMap[cid || projectCalendar] || {}).hours_per_day);
+        return h && h > 0 ? h : 8;
+    };
+    const byCode = new Map();
+    for (const a of activities || []) {
+        if (a && Object.prototype.hasOwnProperty.call(nodes, String(a.code === null || a.code === undefined ? '' : a.code).trim())) {
+            byCode.set(String(a.code).trim(), a);
+        }
+    }
+    const ends = (code) => {
+        const n = nodes[code];
+        const a = byCode.get(code) || {};
+        const aS = _hrParseInstant(a.actual_start || null);
+        const aF = _hrParseInstant(a.actual_finish || null);
+        if (n.is_complete) return [aS, aF, aS, aF];
+        const s = aS !== null ? aS : _hrParseInstant(n.early_start_dt);
+        return [s, _hrParseInstant(n.early_finish_dt), _hrParseInstant(n.late_start_dt), _hrParseInstant(n.late_finish_dt)];
+    };
+    const lagTok = String(p.relationshipLagCalendar || 'successor').trim();
+    const lagMode = Object.prototype.hasOwnProperty.call(_HOURS_LAG_CAL, lagTok) ? _HOURS_LAG_CAL[lagTok] : 'successor';
+    const day24 = new _HrWorkCalendar({ raw: '', work_days: [0, 1, 2, 3, 4, 5, 6], hours_per_day: 24 });
+    const lagCal = (predCid, succCid) => {
+        if (lagMode === '24h') return day24;
+        if (lagMode === 'project') return calOf(projectCalendar);
+        return calOf(lagMode === 'predecessor' ? predCid : succCid);
+    };
+    const lagMinutes = (r, cid) => {
+        let h = _hoursFloat(r.lag_hours);
+        if (h === null) h = (_hoursFloat(r.lag_days) || 0) * hpdOf(cid);
+        return _hrRound(h * 60);
+    };
+    const walkOn = (t, m, c) => (!m ? t : c.add(c.nextWork(t), m));
+    const walkBack = (t, m, c) => (!m ? t : c.sub(c.prevWorkEnd(t), m));
+    let netLf = null;
+    for (const c in nodes) {
+        const n = nodes[c];
+        if (n.is_complete) continue;
+        const v = _hrParseInstant(n.late_finish_dt);
+        if (v !== null && (netLf === null || v > netLf)) netLf = v;
+    }
+    const dd = _hrParseInstant(p.dataDate);
+    const fmt = (t) => (t === null ? null : _hrFormatInstant(t));
+    const out = {};
+    for (const [code, a] of loe) {
+        const cid = a.clndr_id || projectCalendar;
+        const cal = calOf(cid);
+        const aS = _hrParseInstant(a.actual_start || null);
+        const aF = _hrParseInstant(a.actual_finish || null);
+        const rec = {
+            code, clndr_id: cid, actual_start: a.actual_start || null, actual_finish: a.actual_finish || null,
+            late_start_dt: null, links_not_followed: [],
+        };
+        if (aF !== null) {
+            Object.assign(rec, {
+                status: 'complete', early_start_dt: fmt(aS), early_finish_dt: fmt(aF), late_finish_dt: fmt(aF),
+                tf_hours: null, tf_working_days: null, critical: false,
+            });
+            out[code] = rec;
+            continue;
+        }
+        const starts = [];
+        const fins = [];
+        const lfins = [];
+        for (const r of relationships || []) {
+            if (!r) continue;
+            const fc = String(r.from_code === null || r.from_code === undefined ? '' : r.from_code).trim();
+            const tc = String(r.to_code === null || r.to_code === undefined ? '' : r.to_code).trim();
+            if ((fc !== code && tc !== code) || fc === tc) continue;
+            const other = tc === code ? fc : tc;
+            const rt = String(r.type || 'FS').toUpperCase().replace('PR_', '');
+            if (!Object.prototype.hasOwnProperty.call(nodes, other)) {
+                rec.links_not_followed.push({ from_code: fc, to_code: tc, type: rt });
+                continue;
+            }
+            const oCid = (byCode.get(other) || {}).clndr_id || projectCalendar;
+            const [s, f, ls, lf] = ends(other);
+            if (tc === code) {
+                const c = lagCal(oCid, cid);
+                const m = lagMinutes(r, lagMode === 'predecessor' ? oCid : cid);
+                if (rt === 'SS' && s !== null) starts.push(walkOn(s, m, c));
+                else if (rt === 'FS' && f !== null) starts.push(walkOn(f, m, c));
+                else if (rt === 'FF' && f !== null) {
+                    fins.push(walkOn(f, m, c));
+                    if (lf !== null) lfins.push(walkOn(lf, m, c));
+                }
+            } else {
+                const c = lagCal(cid, oCid);
+                const m = lagMinutes(r, lagMode === 'predecessor' ? cid : oCid);
+                if (rt === 'FF' && f !== null) {
+                    fins.push(walkBack(f, m, c));
+                    if (lf !== null) lfins.push(walkBack(lf, m, c));
+                } else if (rt === 'FS' && s !== null) {
+                    fins.push(walkBack(s, m, c));
+                    if (ls !== null) lfins.push(walkBack(ls, m, c));
+                }
+            }
+        }
+        const floor = cal.nextWork(dd);
+        let es;
+        if (aS !== null) es = floor;
+        else es = starts.length ? Math.max(cal.nextWork(Math.min(...starts)), floor) : floor;
+        const ef = fins.length ? Math.max(es, cal.prevWorkEnd(Math.max(...fins))) : es;
+        const lf = lfins.length ? cal.prevWorkEnd(Math.max(...lfins)) : netLf;
+        let tfMin = null;
+        if (lf !== null) tfMin = lf >= ef ? cal.between(ef, lf) : -cal.between(lf, ef);
+        Object.assign(rec, {
+            status: aS !== null ? 'started' : 'not_started',
+            early_start_dt: fmt(es), early_finish_dt: fmt(ef), late_finish_dt: fmt(lf),
+            remaining_hours: Math.round(cal.between(es, ef) / 60 * 1e4) / 1e4,
+            tf_hours: tfMin === null ? null : Math.round(tfMin / 60 * 1e4) / 1e4,
+            tf_working_days: tfMin === null ? null : _hrWorkingDays(tfMin, hpdOf(cid)),
+            critical: tfMin !== null && tfMin <= 0,
+        });
+        out[code] = rec;
+    }
+    return {
+        applied: true, activities: out,
+        late_start_note: "P6's late start of a level of effort is not reported (late_start_dt is None): " +
+            'no rule measured against P6 reproduces it.',
+    };
+}
+
 function _hoursPass(activities, relationships, nodes, p) {
     const byCode = new Map();
     for (const a of activities || []) {
@@ -8013,6 +8185,13 @@ function computeCPM(activities, relationships, opts) {
             if ((n.tf_hours === null || n.tf_hours === undefined) ? n.tf <= 0 : n.tf_hours <= 0) criticalCodes.add(c);
         }
     }
+    // LE (candidate): the dates of every level of effort, from the hours pass's
+    // instants (see _levelOfEffortPass). Python paired site after _hours_pass.
+    const _loe = _levelOfEffortPass(activities, relationships, nodes, _hours, {
+        dataDate, calMap: rawCalMap, projectCalendar: _projectCalId,
+        relationshipLagCalendar: opts.relationshipLagCalendar || opts.relationship_lag_calendar ||
+            opts.sched_calendar_on_relationship_lag || 'successor',
+    });
     if (_hours.applied && _hours.driver_withheld.length) {
         // DG (v2.10.16): say which activities lost their driving
         // predecessor to the check in _hoursPass, and why. Python paired site:
@@ -8060,6 +8239,10 @@ function computeCPM(activities, relationships, opts) {
         // activity count against the network the engine actually solved.
         excluded_by_task_type: excludedByTaskType,
         excludedByTaskType,
+        // LE (candidate) — the dates of each level of effort left out above, as
+        // P6 derives them (see _levelOfEffortPass). Mirrors Python
+        // result['level_of_effort'].
+        level_of_effort: _loe,
         manifest,
     };
 
