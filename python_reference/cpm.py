@@ -2422,8 +2422,10 @@ def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_d
 # also got no dates. P6 derives them from the activities it is linked to, and
 # this pass does the same, after the hours pass, on that pass's instants:
 #   start   the earliest of its predecessors' SS (their start) and FS (their
-#           finish) bounds, each lag walked on the lag calendar, at the next
-#           opening of its own calendar and never before the data date; work
+#           finish) bounds, each lag walked on the lag calendar (a lag in days
+#           first converted to hours on the predecessor's calendar, as the hours
+#           pass converts it), at the next opening of its own calendar and never
+#           before the data date; work
 #           under way restarts at the data date;
 #   finish  the latest of its successors' FF (their finish) and FS (their
 #           start) bounds, lag walked back, and of its FF predecessors'
@@ -2440,21 +2442,37 @@ def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_d
 # 888, late finish on 881, to the minute. P6's late start of a level of effort
 # follows no rule the same population supports (the best candidate, the
 # predecessors' late dates read through completed work, matched 549 of 796
-# unlagged rows), so it is not reported: late_start_dt is None. A link to
-# another level of effort or a WBS summary is not followed and is named in
-# links_not_followed. JS paired site: _levelOfEffortPass.
+# unlagged rows), so it is not reported: late_start_dt is None. A link that is
+# not followed is named in links_not_followed with the reason: the other end is
+# a level of effort or a WBS summary, the type has no measured rule (an SF, or an
+# SS from the level of effort), or the other end carries no date. A level of
+# effort whose code another activity also carries is not dated, and a WARN names
+# it. JS paired site: _levelOfEffortPass.
 def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date, cal_map, project_calendar,
-                          relationship_lag_calendar):
+                          relationship_lag_calendar, alerts=None):
     loe = {}
+    seen = {}
     for a in activities or []:
         if not a:
             continue
         code = str(a.get('code') or '').strip()
+        if code:
+            seen[code] = seen.get(code, 0) + 1
         tt = a.get('task_type')
         if tt is None:
             tt = a.get('taskType')
         if code and str(tt or '').strip() == 'TT_LOE':
             loe[code] = a
+    shared = sorted(c for c in loe if seen.get(c, 0) > 1)
+    for c in shared:
+        del loe[c]
+    if shared and alerts is not None:
+        alerts.append({
+            'severity': 'WARN', 'context': 'loe-code-not-unique',
+            'message': ('Level of effort ' + ', '.join(shared) + (' carries a code' if len(shared) == 1 else
+                        ' carry codes') + ' that another activity also carries, so its relationships cannot be '
+                        'told apart: not dated (result.level_of_effort).'),
+        })
     if not loe:
         return {'applied': False, 'reason': 'no level of effort', 'activities': {}}
     if not (hours or {}).get('applied'):
@@ -2536,32 +2554,45 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
             other = fc if tc == code else tc
             rt = str(r.get('type') or 'FS').upper().replace('PR_', '')
             if other not in nodes:
-                rec['links_not_followed'].append({'from_code': fc, 'to_code': tc, 'type': rt})
+                rec['links_not_followed'].append({'from_code': fc, 'to_code': tc, 'type': rt,
+                                                  'reason': 'the other end is a level of effort or a WBS summary'})
                 continue
             o_cid = (by_code.get(other) or {}).get('clndr_id') or project_calendar
             s, f, ls, lf = ends(other)
-            if tc == code:      # other -> LOE
+            why = None
+            if tc == code:      # other -> LOE; a lag in days converts on the predecessor's calendar
                 c = lag_cal(o_cid, cid)
-                m = lag_minutes(r, o_cid if lag_mode == 'predecessor' else cid)
-                if rt == 'SS' and s is not None:
-                    starts.append(walk_on(s, m, c))
-                elif rt == 'FS' and f is not None:
-                    starts.append(walk_on(f, m, c))
-                elif rt == 'FF' and f is not None:
-                    fins.append(walk_on(f, m, c))
-                    if lf is not None:
-                        lfins.append(walk_on(lf, m, c))
+                m = lag_minutes(r, o_cid)
+                if rt == 'SS' or rt == 'FS':
+                    at = s if rt == 'SS' else f
+                    if at is None:
+                        why = 'the other end carries no date'
+                    else:
+                        starts.append(walk_on(at, m, c))
+                elif rt == 'FF':
+                    if f is None:
+                        why = 'the other end carries no date'
+                    else:
+                        fins.append(walk_on(f, m, c))
+                        if lf is not None:
+                            lfins.append(walk_on(lf, m, c))
+                else:
+                    why = 'no measured P6 rule dates a level of effort through this type'
             else:               # LOE -> other
                 c = lag_cal(cid, o_cid)
-                m = lag_minutes(r, cid if lag_mode == 'predecessor' else o_cid)
-                if rt == 'FF' and f is not None:
-                    fins.append(walk_back(f, m, c))
-                    if lf is not None:
-                        lfins.append(walk_back(lf, m, c))
-                elif rt == 'FS' and s is not None:
-                    fins.append(walk_back(s, m, c))
-                    if ls is not None:
-                        lfins.append(walk_back(ls, m, c))
+                m = lag_minutes(r, cid)
+                if rt == 'FF' or rt == 'FS':
+                    at, late = (f, lf) if rt == 'FF' else (s, ls)
+                    if at is None:
+                        why = 'the other end carries no date'
+                    else:
+                        fins.append(walk_back(at, m, c))
+                        if late is not None:
+                            lfins.append(walk_back(late, m, c))
+                else:
+                    why = 'no measured P6 rule dates a level of effort through this type'
+            if why is not None:
+                rec['links_not_followed'].append({'from_code': fc, 'to_code': tc, 'type': rt, 'reason': why})
         floor = cal.next_work(dd)
         if a_s is not None:
             es = floor
@@ -6040,7 +6071,7 @@ def compute_cpm(activities, relationships, data_date='', cal_map=None,
     # instants (see _level_of_effort_pass). JS paired site after _hoursPass.
     _loe = _level_of_effort_pass(
         activities, relationships, nodes, _hours, data_date=data_date, cal_map=cal_map,
-        project_calendar=project_calendar, relationship_lag_calendar=relationship_lag_calendar)
+        project_calendar=project_calendar, relationship_lag_calendar=relationship_lag_calendar, alerts=alerts)
     if _hours.get('applied') and _hours.get('driver_withheld'):
         # DG (v2.10.16): say which activities lost their driving
         # predecessor to the check in _hours_pass, and why. JS paired site:

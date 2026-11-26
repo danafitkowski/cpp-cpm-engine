@@ -14346,7 +14346,8 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
         !Object.prototype.hasOwnProperty.call(r1.nodes, 'L'));
     const r9 = run([loe('L'), loe('L2')], [rel('A', 'L', 'SS'), rel('L', 'L2', 'FF'), rel('L2', 'B', 'FF')]);
     check('LE-9: L -> L2 (both level of effort) is named, not followed',
-        JSON.stringify(le(r9).links_not_followed) === JSON.stringify([{ from_code: 'L', to_code: 'L2', type: 'FF' }]) &&
+        JSON.stringify(le(r9).links_not_followed) === JSON.stringify([{ from_code: 'L', to_code: 'L2', type: 'FF',
+            reason: 'the other end is a level of effort or a WBS summary' }]) &&
         le(r9).early_finish_dt === '2026-01-05 08:00' && le(r9).early_start_dt === '2026-01-05 08:00', JSON.stringify(le(r9)));
     const r10 = E.computeCPM([{ code: 'A', duration_days: 2, clndr_id: 'C' },
         { code: 'L', duration_days: 0, clndr_id: 'C', task_type: 'TT_LOE' }], [rel('A', 'L', 'SS')], KW);
@@ -14357,6 +14358,24 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
     check('LE-11: a network without a level of effort says so',
         JSON.stringify(base.level_of_effort) === JSON.stringify({ applied: false, reason: 'no level of effort', activities: {} }),
         JSON.stringify(base.level_of_effort));
+    const calT = Object.assign({}, CAL, { T: { work_days: [1, 2, 3, 4, 5], holidays: [], hours_per_day: 10 } });
+    const r12 = E.computeCPM([{ code: 'A', duration_days: 2, remaining_hours: 20, remaining_hours_days: 2, clndr_id: 'T' },
+        act('B', 8), loe('L')], [{ from_code: 'A', to_code: 'B', type: 'FS', lag_days: 1 },
+        { from_code: 'A', to_code: 'L', type: 'FS', lag_days: 1 }, { from_code: 'L', to_code: 'B', type: 'FF', lag_days: 0 }],
+    { dataDate: '2026-01-05 08:00', calMap: calT, projectCalendar: 'C', relationshipLagCalendar: 'rcal_Successor' });
+    check('LE-12: a lag in days converts on the predecessor\'s calendar: the LOE starts where the hours pass starts B (Thu 10:00)',
+        le(r12).early_start_dt === r12.nodes.B.early_start_dt && le(r12).early_start_dt === '2026-01-08 10:00',
+        JSON.stringify([le(r12), r12.nodes.B.early_start_dt]));
+    const r13 = run([loe('L')], [rel('A', 'L', 'SS'), rel('B', 'L', 'SF')]);
+    const r13b = run([loe('L'), act('L', 8)], [rel('A', 'L', 'SS')]);
+    const w13 = r13b.alerts.filter((x) => x.context === 'loe-code-not-unique').map((x) => x.message);
+    check('LE-13: an SF into the LOE is named with its reason; an LOE sharing its code with a task is not dated, with a WARN',
+        JSON.stringify(le(r13).links_not_followed) === JSON.stringify([{ from_code: 'B', to_code: 'L', type: 'SF',
+            reason: 'no measured P6 rule dates a level of effort through this type' }]) &&
+        !Object.prototype.hasOwnProperty.call(r13b.level_of_effort.activities, 'L') &&
+        JSON.stringify(w13) === JSON.stringify(['Level of effort L carries a code that another activity also carries, so ' +
+            'its relationships cannot be told apart: not dated (result.level_of_effort).']),
+        JSON.stringify([le(r13), w13]));
 }
 
 console.log('\n========================================');

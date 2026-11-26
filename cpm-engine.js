@@ -3896,17 +3896,33 @@ function _hrWorkingDays(minutes, hpd) {
 // carries a level of effort (390 projects, 892 unfinished LOE): start on 890,
 // finish on 888, late finish on 881, to the minute. P6's late start of a level
 // of effort follows no rule the same population supports, so it is not
-// reported (late_start_dt null). A link to another level of effort or a WBS
-// summary is not followed and is named in links_not_followed. Python paired
-// site: cpm._level_of_effort_pass.
+// reported (late_start_dt null). A lag in days is first converted to hours on
+// the predecessor's calendar, as the hours pass converts it. A link that is not
+// followed is named in links_not_followed with the reason: the other end is a
+// level of effort or a WBS summary, the type has no measured rule (an SF, or an
+// SS from the level of effort), or the other end carries no date. A level of
+// effort whose code another activity also carries is not dated, and a WARN
+// names it. Python paired site: cpm._level_of_effort_pass.
 function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
     const loe = new Map();
+    const seen = new Map();
     for (const a of activities || []) {
         if (!a) continue;
         const code = String(a.code === null || a.code === undefined ? '' : a.code).trim();
+        if (code) seen.set(code, (seen.get(code) || 0) + 1);
         let tt = a.task_type;
         if (tt === null || tt === undefined) tt = a.taskType;
         if (code && String(tt || '').trim() === 'TT_LOE') loe.set(code, a);
+    }
+    const shared = Array.from(loe.keys()).filter((c) => (seen.get(c) || 0) > 1).sort();
+    for (const c of shared) loe.delete(c);
+    if (shared.length && p.alerts) {
+        p.alerts.push({
+            severity: 'WARN', context: 'loe-code-not-unique',
+            message: 'Level of effort ' + shared.join(', ') + (shared.length === 1 ? ' carries a code' : ' carry codes') +
+                ' that another activity also carries, so its relationships cannot be told apart: not dated ' +
+                '(result.level_of_effort).',
+        });
     }
     if (!loe.size) return { applied: false, reason: 'no level of effort', activities: {} };
     if (!(hours && hours.applied)) {
@@ -3997,40 +4013,57 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
             const other = tc === code ? fc : tc;
             const rt = String(r.type || 'FS').toUpperCase().replace('PR_', '');
             if (!Object.prototype.hasOwnProperty.call(nodes, other)) {
-                rec.links_not_followed.push({ from_code: fc, to_code: tc, type: rt });
+                rec.links_not_followed.push({ from_code: fc, to_code: tc, type: rt,
+                    reason: 'the other end is a level of effort or a WBS summary' });
                 continue;
             }
             const oCid = (byCode.get(other) || {}).clndr_id || projectCalendar;
             const [s, f, ls, lf] = ends(other);
+            let why = null;
             if (tc === code) {
+                // other -> LOE; a lag in days converts on the predecessor's calendar
                 const c = lagCal(oCid, cid);
-                const m = lagMinutes(r, lagMode === 'predecessor' ? oCid : cid);
-                if (rt === 'SS' && s !== null) starts.push(walkOn(s, m, c));
-                else if (rt === 'FS' && f !== null) starts.push(walkOn(f, m, c));
-                else if (rt === 'FF' && f !== null) {
-                    fins.push(walkOn(f, m, c));
-                    if (lf !== null) lfins.push(walkOn(lf, m, c));
-                }
+                const m = lagMinutes(r, oCid);
+                if (rt === 'SS' || rt === 'FS') {
+                    const at = rt === 'SS' ? s : f;
+                    if (at === null) why = 'the other end carries no date';
+                    else starts.push(walkOn(at, m, c));
+                } else if (rt === 'FF') {
+                    if (f === null) why = 'the other end carries no date';
+                    else {
+                        fins.push(walkOn(f, m, c));
+                        if (lf !== null) lfins.push(walkOn(lf, m, c));
+                    }
+                } else why = 'no measured P6 rule dates a level of effort through this type';
             } else {
+                // LOE -> other
                 const c = lagCal(cid, oCid);
-                const m = lagMinutes(r, lagMode === 'predecessor' ? cid : oCid);
-                if (rt === 'FF' && f !== null) {
-                    fins.push(walkBack(f, m, c));
-                    if (lf !== null) lfins.push(walkBack(lf, m, c));
-                } else if (rt === 'FS' && s !== null) {
-                    fins.push(walkBack(s, m, c));
-                    if (ls !== null) lfins.push(walkBack(ls, m, c));
-                }
+                const m = lagMinutes(r, cid);
+                if (rt === 'FF' || rt === 'FS') {
+                    const at = rt === 'FF' ? f : s;
+                    const late = rt === 'FF' ? lf : ls;
+                    if (at === null) why = 'the other end carries no date';
+                    else {
+                        fins.push(walkBack(at, m, c));
+                        if (late !== null) lfins.push(walkBack(late, m, c));
+                    }
+                } else why = 'no measured P6 rule dates a level of effort through this type';
             }
+            if (why !== null) rec.links_not_followed.push({ from_code: fc, to_code: tc, type: rt, reason: why });
         }
+        // min / max by loop, not by spread: an LOE may carry more links than a
+        // call accepts arguments
+        const lo = (xs) => { let v = xs[0]; for (const x of xs) if (x < v) v = x; return v; };
+        const hi = (xs) => { let v = xs[0]; for (const x of xs) if (x > v) v = x; return v; };
         const floor = cal.nextWork(dd);
         let es;
         if (aS !== null) es = floor;
-        else es = starts.length ? Math.max(cal.nextWork(Math.min(...starts)), floor) : floor;
-        const ef = fins.length ? Math.max(es, cal.prevWorkEnd(Math.max(...fins))) : es;
-        const lf = lfins.length ? cal.prevWorkEnd(Math.max(...lfins)) : netLf;
+        else es = starts.length ? Math.max(cal.nextWork(lo(starts)), floor) : floor;
+        const ef = fins.length ? Math.max(es, cal.prevWorkEnd(hi(fins))) : es;
+        const lf = lfins.length ? cal.prevWorkEnd(hi(lfins)) : netLf;
         let tfMin = null;
-        if (lf !== null) tfMin = lf >= ef ? cal.between(ef, lf) : -cal.between(lf, ef);
+        // `|| 0` keeps a zero float from printing as -0 where Python prints 0
+        if (lf !== null) tfMin = (lf >= ef ? cal.between(ef, lf) : -cal.between(lf, ef)) || 0;
         Object.assign(rec, {
             status: aS !== null ? 'started' : 'not_started',
             early_start_dt: fmt(es), early_finish_dt: fmt(ef), late_finish_dt: fmt(lf),
@@ -8188,7 +8221,7 @@ function computeCPM(activities, relationships, opts) {
     // LE (candidate): the dates of every level of effort, from the hours pass's
     // instants (see _levelOfEffortPass). Python paired site after _hours_pass.
     const _loe = _levelOfEffortPass(activities, relationships, nodes, _hours, {
-        dataDate, calMap: rawCalMap, projectCalendar: _projectCalId,
+        dataDate, calMap: rawCalMap, projectCalendar: _projectCalId, alerts,
         relationshipLagCalendar: opts.relationshipLagCalendar || opts.relationship_lag_calendar ||
             opts.sched_calendar_on_relationship_lag || 'successor',
     });
