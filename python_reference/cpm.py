@@ -2439,21 +2439,28 @@ def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_d
 #           at the next opening of its own calendar and never after its late
 #           finish; with none, its late finish. A completed predecessor lends
 #           the late date P6 gives completed work (done_late: the earliest late
-#           date of its network successors, no lag), or on an FS its actual
-#           finish unless it is a start milestone; under progress override P6
-#           leaves completed work's late dates blank, and it lends nothing;
+#           date of its network successors, less the lag remaining at the data
+#           date), or on an FS its actual finish unless it is a start
+#           milestone; under progress override P6 leaves completed work's late
+#           dates blank, and it lends nothing, and (round 3) a predecessor under
+#           way lends no SS bound to a level of effort under way;
 #   total float  by the project's float type: finish float (late finish less
 #           finish) under FT_FF and FT_Start, start float (late start less
-#           start) under FT_SS, the smaller under FT_Min; critical at or below
+#           start) under FT_SS, the smaller under FT_Min (round 3: finish float
+#           for one under way under progress override); critical at or below
 #           zero.
 # A started or completed activity at the other end is read at its actual dates.
 # Measured against P6's stored dates on every project P6 last scheduled in the
 # local P6 database that carries a level of effort (390 projects, 892
-# unfinished LOE, private oracle repo loe_2026_11_26), through the update
-# correction at each file's data date: 886 of 892 on start, finish, late finish
-# and total float together, to the minute; the six others sit next to network
-# activities the engine does not yet place as P6 does (five, in generated stress
-# projects) or are one FT_Min row no measured rule gives. A link that is
+# unfinished LOE, private oracle repo loe_2026_11_26): on P6's own stored dates
+# the late start rule fits 892 of 892 and done_late 33,605 of 33,605 completed
+# activities. Through the update correction at each file's data date: 887 of
+# 892 on start, finish, late start, late finish and total float together, to
+# the minute; the five others are in generated stress projects whose resource
+# dependent work P6's F9 resized, so the database does not hold the input P6
+# scheduled from. On that input (the public held-out sets H8 to H30, P6's import
+# laid over, each LOE's actual dates as P6 gave them at the F9) the engine
+# matches P6 on all 271 unfinished LOE on all five fields. A link that is
 # not followed is named in links_not_followed with the reason: the other end is
 # a level of effort or a WBS summary, the type has no measured rule (an SF, or an
 # SS from the level of effort), or the other end carries no date. A level of
@@ -2525,16 +2532,19 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
 
     # LE round 2: the late date P6 gives a COMPLETED network activity (it stores one, late start = late
     # finish): the earliest late date of its network successors, an FS / SS successor's late start and an
-    # FF / SF successor's late finish, a completed successor's own late date, NO lag; with no network
-    # successor the latest late finish of the network. P6 database, every completed activity of the 390
-    # projects: 33,284 of 33,605 with successors, 1,004 of 1,015 without. Under progress override P6 leaves a
-    # completed activity's late dates blank (every one, in 86 of 86 such projects; under retained logic it
-    # dates them in 277 of 277), so there a completed predecessor bounds nothing (None).
+    # FF / SF successor's late finish, a completed successor's own late date; with no network successor the
+    # latest late finish of the network. LE round 3: less the lag REMAINING at the data date, the link's lag
+    # less the working time on the lag calendar from the activity's actual finish (FS, FF) or actual start
+    # (SS, SF) to the data date, walked back on the lag calendar; a lag the data date has used up takes
+    # nothing off (round 2's "no lag" fitted 33,284 of 33,605 with successors because almost every lag out
+    # of completed work has elapsed; every one of the 321 others carries a lag). Under progress override P6
+    # leaves a completed activity's late dates blank (every one, in 86 of 86 such projects; under retained
+    # logic it dates them in 277 of 277), so there a completed predecessor bounds nothing (None).
     succ_of = {}
     for r in relationships or []:
         fc, tc = str(r.get('from_code') or '').strip(), str(r.get('to_code') or '').strip()
         if fc in nodes and tc in nodes and fc != tc:
-            succ_of.setdefault(fc, []).append((tc, str(r.get('type') or 'FS').upper().replace('PR_', '')))
+            succ_of.setdefault(fc, []).append((tc, str(r.get('type') or 'FS').upper().replace('PR_', ''), r))
     done_memo = {}
 
     def done_late(code, seen=None):
@@ -2547,14 +2557,24 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
             return None
         seen.add(code)
         b = []
-        for sc, rt in succ_of.get(code, ()):
+        a = by_code.get(code) or {}
+        cid = a.get('clndr_id') or project_calendar
+        for sc, rt, r in succ_of.get(code, ()):
             sn = nodes[sc]
             if sn.get('is_complete'):
                 v = done_late(sc, seen)
             else:
                 v = cm.parse_instant(sn.get('late_start_dt') if rt in ('FS', 'SS') else sn.get('late_finish_dt'))
-            if v is not None:
-                b.append(v)
+            if v is None:
+                continue
+            m = lag_minutes(r, cid)
+            if m:
+                c = lag_cal(cid, (by_code.get(sc) or {}).get('clndr_id') or project_calendar)
+                at = cm.parse_instant((a.get('actual_finish') if rt in ('FS', 'FF') else a.get('actual_start')) or None)
+                el = c.between(at, dd) if at is not None and dd is not None and dd > at else 0
+                if m > el:
+                    v = walk_back(v, m - el, c)
+            b.append(v)
         done_memo[code] = min(b) if b else net_lf
         return done_memo[code]
 
@@ -2626,6 +2646,11 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
                         if on.get('is_complete'):
                             ttype = str((by_code.get(other) or {}).get('task_type') or '').strip()
                             lat = done_late(other) if (rt == 'SS' or ttype == 'TT_Mile') else f
+                        elif (schedule_mode == 'progress_override' and a_s is not None and rt == 'SS'
+                              and (by_code.get(other) or {}).get('actual_start')):
+                            # LE round 3: under progress override, work under way lends no SS bound to a level
+                            # of effort under way (P6 database: 18 of 18 such LOE carry their late finish)
+                            lat = None
                         else:
                             lat = cm.parse_instant(on.get('late_start_dt') if rt == 'SS' else on.get('late_finish_dt'))
                         if lat is not None:
@@ -2671,10 +2696,13 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
         tf_start = None if ls is None else (cal.between(es, ls) if ls >= es else -cal.between(ls, es))
         # P6's total float of a level of effort by the project's float type (LE round 2, P6 database, every
         # unfinished LOE on its own stored dates): finish float under FT_FF (753 of 753) and FT_Start (49 of
-        # 49), start float under FT_SS (4 of 4), the smaller of the two under FT_Min (85 of 86).
+        # 49), start float under FT_SS (4 of 4), the smaller of the two under FT_Min (85 of 86). LE round 3:
+        # under FT_Min, a level of effort under way carries the smaller under retained logic (11 of 11 where
+        # start float is the smaller) and its finish float under progress override (15 of 15; H22-10 A1180,
+        # the one of them whose start float is the smaller, decides it).
         if float_type == 'FT_SS':
             tf_min = tf_start
-        elif float_type == 'FT_Min':
+        elif float_type == 'FT_Min' and not (schedule_mode == 'progress_override' and a_s is not None):
             tf_min = None if tf_fin is None or tf_start is None else min(tf_fin, tf_start)
         else:
             tf_min = tf_fin

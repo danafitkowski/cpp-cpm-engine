@@ -3895,15 +3895,21 @@ function _hrWorkingDays(minutes, hpd) {
 //           their late start; FS: their late finish), lag walked on, at the next
 //           opening of its own calendar and never after its late finish; with
 //           none, its late finish. A completed predecessor lends the late date
-//           P6 gives completed work (doneLate), or on an FS its actual finish
-//           unless it is a start milestone; under progress override, nothing;
+//           P6 gives completed work (doneLate, less the lag remaining at the
+//           data date), or on an FS its actual finish unless it is a start
+//           milestone; under progress override, nothing, and (round 3) a
+//           predecessor under way lends no SS bound to an LOE under way;
 //   total float  by the float type: finish float under FT_FF and FT_Start,
-//           start float under FT_SS, the smaller under FT_Min; critical at or
+//           start float under FT_SS, the smaller under FT_Min (round 3: finish
+//           float for one under way under progress override); critical at or
 //           below zero.
 // Measured on every project P6 last scheduled in the local P6 database that
 // carries a level of effort (390 projects, 892 unfinished LOE), through the
-// update correction: 886 of 892 on start, finish, late finish and total float
-// together, to the minute. A lag in days is first converted to hours on
+// update correction: 887 of 892 on start, finish, late start, late finish and
+// total float together, to the minute; the five others are generated stress
+// projects whose resource dependent work P6's F9 resized. On the input P6
+// scheduled from (held-out sets H8 to H30) all 271 unfinished LOE match on
+// all five. A lag in days is first converted to hours on
 // the predecessor's calendar, as the hours pass converts it. A link that is not
 // followed is named in links_not_followed with the reason: the other end is a
 // level of effort or a WBS summary, the type has no measured rule (an SF, or an
@@ -3997,8 +4003,10 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
     const hi = (xs) => { let v = xs[0]; for (const x of xs) if (x > v) v = x; return v; };
     // LE round 2: the late date P6 gives a COMPLETED network activity: the
     // earliest late date of its network successors (FS / SS: late start; FF /
-    // SF: late finish; a completed one's own), no lag; none: the network's
-    // latest late finish. Python paired site: done_late.
+    // SF: late finish; a completed one's own); none: the network's latest late
+    // finish. LE round 3: less the lag REMAINING at the data date (the lag less
+    // the working time on the lag calendar from its actual finish, FS / FF, or
+    // actual start, SS / SF, to the data date). Python paired site: done_late.
     const succOf = new Map();
     for (const r of relationships || []) {
         if (!r) continue;
@@ -4006,7 +4014,7 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
         const tc = String(r.to_code === null || r.to_code === undefined ? '' : r.to_code).trim();
         if (fc !== tc && Object.prototype.hasOwnProperty.call(nodes, fc) && Object.prototype.hasOwnProperty.call(nodes, tc)) {
             if (!succOf.has(fc)) succOf.set(fc, []);
-            succOf.get(fc).push([tc, String(r.type || 'FS').toUpperCase().replace('PR_', '')]);
+            succOf.get(fc).push([tc, String(r.type || 'FS').toUpperCase().replace('PR_', ''), r]);
         }
     }
     const doneMemo = new Map();
@@ -4019,11 +4027,21 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
         if (seen.has(code)) return null;
         seen.add(code);
         const b = [];
-        for (const [sc, rt] of succOf.get(code) || []) {
+        const a = byCode.get(code) || {};
+        const cid = a.clndr_id || projectCalendar;
+        for (const [sc, rt, r] of succOf.get(code) || []) {
             const sn = nodes[sc];
-            const v = sn.is_complete ? doneLate(sc, seen)
+            let v = sn.is_complete ? doneLate(sc, seen)
                 : _hrParseInstant(rt === 'FS' || rt === 'SS' ? sn.late_start_dt : sn.late_finish_dt);
-            if (v !== null) b.push(v);
+            if (v === null) continue;
+            const m = lagMinutes(r, cid);
+            if (m) {
+                const c = lagCal(cid, (byCode.get(sc) || {}).clndr_id || projectCalendar);
+                const at = _hrParseInstant((rt === 'FS' || rt === 'FF' ? a.actual_finish : a.actual_start) || null);
+                const el = (at !== null && dd !== null && dd > at) ? c.between(at, dd) : 0;
+                if (m > el) v = walkBack(v, m - el, c);
+            }
+            b.push(v);
         }
         const v = b.length ? lo(b) : netLf;
         doneMemo.set(code, v);
@@ -4087,6 +4105,11 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
                         if (on.is_complete) {
                             const ttype = String((byCode.get(other) || {}).task_type || '').trim();
                             lat = (rt === 'SS' || ttype === 'TT_Mile') ? doneLate(other) : f;
+                        } else if (p.scheduleMode === 'progress_override' && aS !== null && rt === 'SS' &&
+                            (byCode.get(other) || {}).actual_start) {
+                            // LE round 3: under progress override, work under way lends no SS
+                            // bound to a level of effort under way (P6 database: 18 of 18)
+                            lat = null;
                         } else lat = _hrParseInstant(rt === 'SS' ? on.late_start_dt : on.late_finish_dt);
                         if (lat !== null) lstarts.push(walkOn(lat, m, c));
                     }
@@ -4127,11 +4150,13 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
         const tfFin = lf === null ? null : ((lf >= ef ? cal.between(ef, lf) : -cal.between(lf, ef)) || 0);
         const tfStart = ls === null ? null : ((ls >= es ? cal.between(es, ls) : -cal.between(ls, es)) || 0);
         // the float by the project's float type: FT_SS start float, FT_Min the
-        // smaller, else (FT_FF, FT_Start) finish float
+        // smaller, else (FT_FF, FT_Start) finish float; LE round 3: under FT_Min a
+        // level of effort under way carries its finish float under progress override
         let tfMin;
         if (floatType === 'FT_SS') tfMin = tfStart;
-        else if (floatType === 'FT_Min') tfMin = (tfFin === null || tfStart === null) ? null : Math.min(tfFin, tfStart);
-        else tfMin = tfFin;
+        else if (floatType === 'FT_Min' && !(p.scheduleMode === 'progress_override' && aS !== null)) {
+            tfMin = (tfFin === null || tfStart === null) ? null : Math.min(tfFin, tfStart);
+        } else tfMin = tfFin;
         Object.assign(rec, {
             status: aS !== null ? 'started' : 'not_started',
             early_start_dt: fmt(es), early_finish_dt: fmt(ef), late_start_dt: fmt(ls), late_finish_dt: fmt(lf),
