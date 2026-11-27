@@ -152,6 +152,25 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.21 (reviewed 2026-11-27)
+
+v2.10.21 dates the level of effort. Class A under PROCEDURE.md §12.1 for the level of effort only: each `TT_LOE`
+activity handed to `computeCPM` is dated after the hours pass and returned in `result.level_of_effort`; the network,
+which leaves it out, does not move.
+- Census of 1,789 exports against v2.10.20: every field of all 344,150 unfinished activities identical (`parseXER`
+  leaves a level of effort out, so none reaches `computeCPM` on that path).
+- Measured on P6's stored dates in a private P6 database (390 projects, 892 unfinished level of effort): each rule
+  fits all 892; the skills' corrected update dates 887 of 892 on all five fields, the five others being generated
+  projects P6's F9 resized. The held-out replay (`tests/p6-heldout-loe.test.js`): 271 of 271, fitted.
+- The unit suite grew from 1,566 to 1,588 (LE-1 to LE-22); crossval stays at 233 fixtures and 22189 of 22189 and does
+  not compare `level_of_effort`.
+- Coverage on the v2.10.21 bytes: 94.23% statements / 82.81% branches / 96.91% functions.
+- Held-out sets H1 to H30, re-scored in diagnosis mode: 8,850 of 8,850 rows, as on v2.10.20.
+- **OPEN:** P6 starts a level of effort itself at the F9 from its predecessors' progress; the engine dates it from
+  the actual dates it is handed and does not model that start.
+- **OPEN:** `parseXER` and `getTasks()` leave a level of effort out, so it is dated only when a caller hands the rows in.
+- **OPEN:** a level of effort linked SF, or SS from itself, is not dated through that link (no measured P6 rule).
+
 ## Status at v2.10.20 (reviewed 2026-11-21)
 
 v2.10.20 reads the computed MFP float path off the hours pass, closing the item v2.10.16 left open ("MFP is computed
@@ -541,4 +560,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.20. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.21. Update on every release that closes or opens an audit item.

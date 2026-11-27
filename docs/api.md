@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.20'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.21'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `1900` — the epoch anchor for internal day-offset arithmetic (since v2.10.7; 2020 before). |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -249,6 +249,43 @@ below, which schedules those lags to the minute; the alert is then an INFO.
 > `data_date`, `cal_map`, `schedule_mode`, `lag_calendar`, `project_calendar`,
 > `project_finish`, `ss_lag_from`, `use_expected_finish`, `use_external_dates`,
 > `float_type`) and returns instants in minutes since 2020-01-01 00:00.
+>
+> **Level of effort** (since v2.10.21). The network leaves a level of effort (`TT_LOE`) out,
+> as before: it drives nothing, its float is not the network's, and it is in no critical
+> set. When the hours pass ran, each `TT_LOE` activity handed to `computeCPM` (code,
+> calendar, and its actual dates when started or complete) is dated after the network
+> from the activities it is linked to, and returned in `result.level_of_effort`, as P6
+> stores a level of effort's dates:
+> - **start**: the earliest of its SS predecessors' starts and FS predecessors' finishes,
+>   lag walked on the lag calendar, at the next opening of its own calendar and never
+>   before the data date; one under way restarts at the data date;
+> - **finish**: the latest of its FF and FS successors' bounds and its FF predecessors'
+>   finishes; **late finish** the same on the late dates (an FS successor under way read
+>   at its actual start), with none the latest late finish of the network;
+> - **late start**: the earliest late bound its predecessors give (an SS predecessor's
+>   late start, an FS one's late finish, lag walked on), never after its late finish;
+>   with none, its late finish. A completed predecessor lends the late date P6 gives
+>   completed work: the earliest late bound of its successors less the lag remaining at
+>   the data date (on an FS from completed work, its actual finish, unless it is a start
+>   milestone). Under progress override completed work lends nothing (P6 leaves its late
+>   dates blank), and a predecessor under way lends no SS bound to a level of effort
+>   under way;
+> - **total float** by the float type: finish float under FT_FF and FT_Start, start float
+>   under FT_SS, the smaller under FT_Min (finish float for one under way under progress
+>   override); critical at or below zero.
+>
+> `result.level_of_effort` is `{applied, activities, float_type}`, `activities` keyed by
+> code: `{code, clndr_id, actual_start, actual_finish, status ('not_started' | 'started' |
+> 'complete'), early_start_dt, early_finish_dt, late_start_dt, late_finish_dt,
+> remaining_hours, tf_hours, tf_working_days, critical, links_not_followed}`. A link it
+> does not follow is named in `links_not_followed` with the reason (the other end is a
+> level of effort or a WBS summary; an SF link, or an SS from the level of effort, which
+> no measured P6 rule dates; the other end carries no date). A level of effort whose code
+> another activity also carries is not dated and raises a `loe-code-not-unique` WARN.
+> `{applied: false, reason}` when there is none or the hours pass did not run.
+> `parseXER` and `getTasks()` still leave a level of effort out (`dropped_activities`), so
+> a caller that wants its dates hands the `TT_LOE` rows and their relationships to
+> `computeCPM` itself (`tests/p6-heldout-loe.test.js` shows how).
 
 **opts:**
 
@@ -331,6 +368,8 @@ below, which schedules those lags to the minute; the alert is then an INFO.
     dropped_activities,                          // Array of { task_code, task_type, reason } surfaced from parseXER.
                                                  //   reason ∈ {'level-of-effort','wbs-summary','completed'}; a task
                                                  //   with no remaining work is kept (see parseXER below).
+    level_of_effort,                             // Since v2.10.21: {applied, activities, float_type}, the dates of
+                                                 //   each TT_LOE activity handed in (see the level of effort note).
     hammocks_resolved,                           // Count of hammock activities whose ES/LF were derived from preds/succs.
     hammocks_unresolved,                         // Count of hammocks that could not be resolved (no anchors / cycle).
     hammock_non_fs_alerts,                       // Back-compat: v2.9.8-era list of non-FS hammock rels. v2.9.9+ always [].

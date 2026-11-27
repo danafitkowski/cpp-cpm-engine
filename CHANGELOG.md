@@ -12,6 +12,76 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.21 - 2026-11-27 - The level of effort is dated as P6 dates it
+
+**Computed values move (Class A) for the level of effort only: engine math changed in one place, the dates of a
+level of effort (`TT_LOE`) handed to `computeCPM`. No date, float or critical flag of any other activity moves.**
+Until this release the engine left a level of effort out of its network with a `task-dropped` ALERT and gave it no
+dates. The network still leaves it out: it drives nothing, its float is not the network's, and it is in no critical
+set. What is new is that, after the hours pass, each level of effort handed in is dated from the activities it is
+linked to and returned in `result.level_of_effort`, as P6 stores a level of effort's dates.
+
+The rules (both engines, `_levelOfEffortPass` and the Python reference's `_level_of_effort_pass`):
+- **Start:** the earliest of its SS predecessors' starts and FS predecessors' finishes, lag walked on the lag
+  calendar, at the next opening of its own calendar and never before the data date. One under way restarts at the
+  data date.
+- **Finish:** the latest of its FF and FS successors' bounds and its FF predecessors' finishes. **Late finish:** the
+  same on the late dates, an FS successor under way read at its actual start; with none, the latest late finish of
+  the network.
+- **Late start:** the earliest late bound its predecessors give (an SS predecessor's late start, an FS one's late
+  finish, lag walked on), at the next opening of its calendar and never after its late finish; with none, its late
+  finish. A completed predecessor lends the late date P6 gives completed work: the earliest late bound of its
+  successors less the lag remaining at the data date, the lag less the working time on the lag calendar from its
+  actual finish (FS, FF) or actual start (SS, SF) to the data date; on an FS from completed work that is not a start
+  milestone, its actual finish. Under progress override P6 leaves completed work's late dates blank, so completed
+  work lends nothing there, and a predecessor under way lends no SS bound to a level of effort under way.
+- **Total float** by the float type: finish float under FT_FF and FT_Start, start float under FT_SS, the smaller
+  under FT_Min, but finish float for a level of effort under way under progress override. Critical at or below zero.
+- A link it does not follow is named in `links_not_followed` with the reason: the other end is a level of effort or
+  a WBS summary; an SF link or an SS from the level of effort, which no measured P6 rule dates; the other end carries
+  no date. A level of effort whose code another activity also carries is not dated (WARN `loe-code-not-unique`).
+- `parseXER` and `getTasks()` still leave a level of effort out (`dropped_activities`): a caller hands the `TT_LOE`
+  rows and their relationships to `computeCPM` itself (`tests/p6-heldout-loe.test.js` shows how). See docs/api.md.
+
+**How it was measured.** On P6's own stored dates in a private P6 Professional 23.12.1 database: every project P6
+last scheduled after any edit that carries a level of effort, 390 projects with 892 unfinished level of effort (the
+database also holds client projects, so its rows are not published; the figures are).
+- Each rule on P6's stored dates of the activities around it: the late start 892 of 892 (430 of 430 not started);
+  the total float by float type, FT_FF 753 of 753, FT_Start 49 of 49, FT_SS 4 of 4, FT_Min 86 of 86; the late date P6
+  gives completed work, 33,605 of 33,605 completed activities with successors (the same rule without the remaining
+  lag, 33,284: each of the 321 others carries a lag the data date has not used up). P6 keeps a level of effort's
+  remaining late start equal to its late start on all 892.
+- The engine's dates through the skills' corrected update (their Python engine, every option the file sets, at its
+  data date): 887 of 892 on start, finish, late start, late finish and total float together, to the minute. The five
+  others are in generated held-out projects (H23-05, H24-03, H25-12 twice, H28-12) whose resource dependent work P6's
+  F9 resized: the database does not hold the input P6 scheduled from (each held-out RESULT.md's `p6-f9-resized`).
+- On that input (`tests/p6-heldout-loe.test.js`, now in `npm run test:p6-comparison`: the held-out cases with P6's
+  import laid over, as the held-out scorer runs them, and each level of effort's actual dates as P6 gave them at the
+  F9, `validation/held-out/loe-actuals.json`): 271 of 271 unfinished level of effort in 23 sets on the four dates and
+  total float. This is a replay, not a held-out score: the rules were measured on the database, which holds these
+  projects, and three of them were settled after these sets were read. A generated case writes some level of effort
+  as not started; P6 starts a level of effort at the F9 from its predecessors' progress, which this release does not
+  model, so the test lays P6's actual dates over, as an XER P6 exports after the F9 carries them.
+
+**What did not move.** Census of every distinct XER on the measuring machine (1,807 files, frozen for the run; 1,789 schedule, the 18 others are unreadable on both versions alike): every field of all 344,150 unfinished activities identical to v2.10.20, `driving_predecessor` and the alerts included. `parseXER` leaves a level of effort out, so none reaches `computeCPM` on that path: the census shows the rest of the engine unchanged. H1 to H30 re-scored on these bytes in diagnosis mode (not a new held-out score):
+8,850 of 8,850, as v2.10.20, none moved. Cross-validation: 233 fixtures, 22189 of 22189; it does not compare
+`level_of_effort`. JS unit 1,588 (1,566 before; LE-1 to LE-22). Coverage 94.23% statements / 82.81% branches / 96.91%
+functions (94.12 / 83.21 / 96.76 before: the new pass adds 306 statements and 228 branches, of which the unit suite
+does not reach every guard).
+
+Built 26 to 27 November 2026 in three rounds. The first found the start, finish and late finish rules and left the
+late start unreported; the second added the late start, the float by type and the completed predecessors; the third
+settled the level of effort under way under progress override and the remaining lag. In the skills' Python engine
+(not this repository), `compute_cpm_salvaging` read an SS link into a level of effort and an FF link out of it as a
+loop and dropped one with a `DROPPED_EDGE` record; it now keeps the level of effort out of the loop search. The JS
+engine never did.
+
+**Not claimed.** P6's own start of a level of effort at the F9 (its actual start, set from its predecessors'
+progress) is not modelled: the engine dates a level of effort from the actual dates it is handed. A level of effort
+linked SF, or SS from itself, is not dated through that link.
+
+---
+
 ## v2.10.20 - 2026-11-22 - MFP is read off the hours pass
 
 **Computed values move (Class A): engine math changed in one reported result, the computed MFP float path from

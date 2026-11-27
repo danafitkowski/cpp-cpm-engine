@@ -1,0 +1,1395 @@
+{
+ "_about": "The actual dates P6 Professional 23.12.1 gave each level of effort (TT_LOE) of the held-out sets at its F9, read from P6 after the read-back, keyed \"<case> <task code>\". A generated case file writes some level of effort as not started; at the F9 P6 starts a level of effort itself from its predecessors' progress, and an XER P6 exports after the F9 carries those dates. tests/p6-heldout-loe.test.js lays them over the case files. Synthetic projects only.",
+ "loe": {
+  "H10-01 A1280": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-01 A1290": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-01 A1300": {
+   "act_end": "",
+   "act_start": "2026-07-09 06:00",
+   "status": "TK_Active"
+  },
+  "H10-02 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-02 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-03 A1250": {
+   "act_end": "",
+   "act_start": "2026-07-07 16:00",
+   "status": "TK_Active"
+  },
+  "H10-03 A1260": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-03 A1270": {
+   "act_end": "",
+   "act_start": "2026-07-06 07:00",
+   "status": "TK_Active"
+  },
+  "H10-06 A1250": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-09 A1150": {
+   "act_end": "",
+   "act_start": "2026-06-14 00:00",
+   "status": "TK_Active"
+  },
+  "H10-11 A1210": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-11 A1220": {
+   "act_end": "",
+   "act_start": "2026-10-22 12:00",
+   "status": "TK_Active"
+  },
+  "H10-11 A1230": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-12 A1310": {
+   "act_end": "",
+   "act_start": "2027-01-16 06:00",
+   "status": "TK_Active"
+  },
+  "H10-12 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H10-12 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H11-03 A1210": {
+   "act_end": "",
+   "act_start": "2027-01-25 07:00",
+   "status": "TK_Active"
+  },
+  "H11-03 A1220": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H11-05 A1250": {
+   "act_end": "",
+   "act_start": "2026-08-14 00:00",
+   "status": "TK_Active"
+  },
+  "H11-05 A1260": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H11-06 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H11-09 A1210": {
+   "act_end": "",
+   "act_start": "2027-01-18 07:00",
+   "status": "TK_Active"
+  },
+  "H11-12 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H11-12 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H11-12 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-01 A1390": {
+   "act_end": "",
+   "act_start": "2026-11-09 16:00",
+   "status": "TK_Active"
+  },
+  "H12-02 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-02 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-02 A1180": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-04 A1200": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-04 A1210": {
+   "act_end": "",
+   "act_start": "2026-10-07 08:00",
+   "status": "TK_Active"
+  },
+  "H12-04 A1220": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-08 A1270": {
+   "act_end": "",
+   "act_start": "2026-12-11 14:00",
+   "status": "TK_Active"
+  },
+  "H12-08 A1280": {
+   "act_end": "",
+   "act_start": "2026-12-19 06:00",
+   "status": "TK_Active"
+  },
+  "H12-08 A1290": {
+   "act_end": "",
+   "act_start": "2026-12-22 10:00",
+   "status": "TK_Active"
+  },
+  "H12-09 A1400": {
+   "act_end": "",
+   "act_start": "2026-10-06 07:00",
+   "status": "TK_Active"
+  },
+  "H12-09 A1410": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-12 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-12 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H12-12 A1330": {
+   "act_end": "",
+   "act_start": "2026-10-06 08:00",
+   "status": "TK_Active"
+  },
+  "H13-01 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H13-01 A1400": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H13-01 A1410": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H13-04 A1230": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H13-07 A1230": {
+   "act_end": "",
+   "act_start": "2026-12-07 08:00",
+   "status": "TK_Active"
+  },
+  "H13-07 A1240": {
+   "act_end": "",
+   "act_start": "2026-12-02 14:00",
+   "status": "TK_Active"
+  },
+  "H13-08 A1210": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H13-09 A1370": {
+   "act_end": "",
+   "act_start": "2026-04-16 07:00",
+   "status": "TK_Active"
+  },
+  "H13-09 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H13-11 A1340": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H13-11 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-01 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-02 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-02 A1400": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-02 A1410": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-04 A1140": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-04 A1150": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-06 A1150": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-06 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-07 A1160": {
+   "act_end": "",
+   "act_start": "2026-06-24 08:00",
+   "status": "TK_Active"
+  },
+  "H14-07 A1170": {
+   "act_end": "",
+   "act_start": "2026-06-25 16:00",
+   "status": "TK_Active"
+  },
+  "H14-09 A1300": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H14-09 A1310": {
+   "act_end": "",
+   "act_start": "2026-11-24 07:00",
+   "status": "TK_Active"
+  },
+  "H14-09 A1320": {
+   "act_end": "",
+   "act_start": "2026-11-26 07:00",
+   "status": "TK_Active"
+  },
+  "H15-02 A1360": {
+   "act_end": "",
+   "act_start": "2026-08-25 07:00",
+   "status": "TK_Active"
+  },
+  "H15-02 A1370": {
+   "act_end": "",
+   "act_start": "2026-08-19 15:00",
+   "status": "TK_Active"
+  },
+  "H15-02 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-03 A1190": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-04 A1270": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-04 A1280": {
+   "act_end": "",
+   "act_start": "2027-01-19 16:00",
+   "status": "TK_Active"
+  },
+  "H15-05 A1370": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-05 A1380": {
+   "act_end": "",
+   "act_start": "2027-01-18 16:00",
+   "status": "TK_Active"
+  },
+  "H15-07 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-07 A1360": {
+   "act_end": "",
+   "act_start": "2026-08-17 15:00",
+   "status": "TK_Active"
+  },
+  "H15-09 A1210": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-10 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-11 A1150": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H15-11 A1160": {
+   "act_end": "",
+   "act_start": "2027-01-03 10:00",
+   "status": "TK_Active"
+  },
+  "H15-11 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-02 A1280": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-02 A1290": {
+   "act_end": "",
+   "act_start": "2026-08-31 07:00",
+   "status": "TK_Active"
+  },
+  "H16-05 A1360": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-05 A1370": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-07 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-07 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-09 A1220": {
+   "act_end": "",
+   "act_start": "2026-09-14 11:00",
+   "status": "TK_Active"
+  },
+  "H16-09 A1230": {
+   "act_end": "",
+   "act_start": "2026-09-23 07:00",
+   "status": "TK_Active"
+  },
+  "H16-10 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-10 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H16-10 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H17-03 A1310": {
+   "act_end": "",
+   "act_start": "2026-11-01 00:00",
+   "status": "TK_Active"
+  },
+  "H17-06 A1170": {
+   "act_end": "",
+   "act_start": "2026-07-07 00:00",
+   "status": "TK_Active"
+  },
+  "H17-06 A1180": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H17-06 A1190": {
+   "act_end": "",
+   "act_start": "2026-07-10 04:00",
+   "status": "TK_Active"
+  },
+  "H18-02 A1170": {
+   "act_end": "",
+   "act_start": "2026-05-25 08:00",
+   "status": "TK_Active"
+  },
+  "H18-02 A1180": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H18-02 A1190": {
+   "act_end": "",
+   "act_start": "2026-05-22 12:00",
+   "status": "TK_Active"
+  },
+  "H18-07 A1140": {
+   "act_end": "",
+   "act_start": "2026-03-18 00:00",
+   "status": "TK_Active"
+  },
+  "H18-07 A1150": {
+   "act_end": "2026-03-21 00:00",
+   "act_start": "2026-03-18 16:00",
+   "status": "TK_Complete"
+  },
+  "H18-09 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H18-09 A1340": {
+   "act_end": "",
+   "act_start": "2026-06-18 16:00",
+   "status": "TK_Active"
+  },
+  "H18-09 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H18-11 A1210": {
+   "act_end": "2026-10-28 07:00",
+   "act_start": "2026-10-21 07:00",
+   "status": "TK_Complete"
+  },
+  "H18-11 A1220": {
+   "act_end": "",
+   "act_start": "2026-10-28 07:00",
+   "status": "TK_Active"
+  },
+  "H18-11 A1230": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H19-02 A1250": {
+   "act_end": "",
+   "act_start": "2019-12-14 16:00",
+   "status": "TK_Active"
+  },
+  "H19-02 A1260": {
+   "act_end": "",
+   "act_start": "2019-12-16 08:00",
+   "status": "TK_Active"
+  },
+  "H19-06 A1270": {
+   "act_end": "2020-01-08 07:00",
+   "act_start": "2019-12-16 07:00",
+   "status": "TK_Complete"
+  },
+  "H19-08 A1220": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H19-08 A1230": {
+   "act_end": "",
+   "act_start": "2019-12-30 08:00",
+   "status": "TK_Active"
+  },
+  "H19-10 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H19-11 A1210": {
+   "act_end": "",
+   "act_start": "2015-09-25 00:00",
+   "status": "TK_Active"
+  },
+  "H19-11 A1220": {
+   "act_end": "",
+   "act_start": "2015-09-27 00:00",
+   "status": "TK_Active"
+  },
+  "H19-12 A1270": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H20-02 A1330": {
+   "act_end": "",
+   "act_start": "2026-05-01 08:00",
+   "status": "TK_Active"
+  },
+  "H20-04 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H20-05 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H20-06 A1360": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H20-08 A1240": {
+   "act_end": "",
+   "act_start": "2026-09-29 09:30",
+   "status": "TK_Active"
+  },
+  "H20-08 A1250": {
+   "act_end": "",
+   "act_start": "2026-09-28 16:00",
+   "status": "TK_Active"
+  },
+  "H20-10 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H20-10 A1340": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H20-10 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H21-04 A1360": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H21-04 A1370": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H21-04 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H21-06 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H21-06 A1170": {
+   "act_end": "",
+   "act_start": "2026-08-13 06:00",
+   "status": "TK_Active"
+  },
+  "H21-08 A1150": {
+   "act_end": "",
+   "act_start": "2026-03-18 17:30",
+   "status": "TK_Active"
+  },
+  "H21-10 A1370": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H21-11 A1160": {
+   "act_end": "",
+   "act_start": "2026-09-28 17:00",
+   "status": "TK_Active"
+  },
+  "H21-11 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H21-11 A1180": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-01 A1250": {
+   "act_end": "",
+   "act_start": "2026-10-07 11:00",
+   "status": "TK_Active"
+  },
+  "H22-01 A1260": {
+   "act_end": "",
+   "act_start": "2026-09-29 09:30",
+   "status": "TK_Active"
+  },
+  "H22-01 A1270": {
+   "act_end": "2026-10-08 13:00",
+   "act_start": "2026-10-02 11:00",
+   "status": "TK_Complete"
+  },
+  "H22-02 A1290": {
+   "act_end": "",
+   "act_start": "2026-11-18 17:00",
+   "status": "TK_Active"
+  },
+  "H22-03 A1220": {
+   "act_end": "",
+   "act_start": "2026-06-12 12:00",
+   "status": "TK_Active"
+  },
+  "H22-03 A1230": {
+   "act_end": "",
+   "act_start": "2026-06-12 08:00",
+   "status": "TK_Active"
+  },
+  "H22-04 A1280": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-04 A1290": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-04 A1300": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-05 A1370": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-05 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-05 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-10 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-10 A1180": {
+   "act_end": "",
+   "act_start": "2026-04-09 17:00",
+   "status": "TK_Active"
+  },
+  "H22-11 A1250": {
+   "act_end": "",
+   "act_start": "2026-04-09 06:00",
+   "status": "TK_Active"
+  },
+  "H22-11 A1260": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H22-12 A1370": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-01 A1180": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-02 A1340": {
+   "act_end": "",
+   "act_start": "2027-02-04 16:00",
+   "status": "TK_Active"
+  },
+  "H23-02 A1350": {
+   "act_end": "",
+   "act_start": "2027-02-09 08:00",
+   "status": "TK_Active"
+  },
+  "H23-02 A1360": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-04 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-05 A1260": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-05 A1270": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-06 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-06 A1170": {
+   "act_end": "",
+   "act_start": "2027-01-07 17:30",
+   "status": "TK_Active"
+  },
+  "H23-07 A1150": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-07 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-07 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-08 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-08 A1390": {
+   "act_end": "",
+   "act_start": "2026-06-19 08:00",
+   "status": "TK_Active"
+  },
+  "H23-08 A1400": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-10 A1200": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-10 A1210": {
+   "act_end": "",
+   "act_start": "2026-10-09 12:00",
+   "status": "TK_Active"
+  },
+  "H23-10 A1220": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-11 A1270": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H23-12 A1250": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H24-03 A1290": {
+   "act_end": "",
+   "act_start": "2026-07-20 07:00",
+   "status": "TK_Active"
+  },
+  "H24-03 A1300": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H24-04 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H24-04 A1340": {
+   "act_end": "",
+   "act_start": "2026-03-06 16:00",
+   "status": "TK_Active"
+  },
+  "H24-05 A1390": {
+   "act_end": "",
+   "act_start": "2026-11-11 07:00",
+   "status": "TK_Active"
+  },
+  "H24-05 A1400": {
+   "act_end": "",
+   "act_start": "2026-11-26 08:00",
+   "status": "TK_Active"
+  },
+  "H24-05 A1410": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H24-06 A1150": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H24-06 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H24-11 A1150": {
+   "act_end": "2027-01-18 12:00",
+   "act_start": "2027-01-18 12:00",
+   "status": "TK_Complete"
+  },
+  "H24-11 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H24-11 A1170": {
+   "act_end": "",
+   "act_start": "2027-01-18 07:00",
+   "status": "TK_Active"
+  },
+  "H24-12 A1220": {
+   "act_end": "",
+   "act_start": "2026-06-26 08:00",
+   "status": "TK_Active"
+  },
+  "H24-12 A1230": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-01 A1380": {
+   "act_end": "",
+   "act_start": "2026-10-29 18:00",
+   "status": "TK_Active"
+  },
+  "H25-01 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-02 A1370": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-02 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-02 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-04 A1170": {
+   "act_end": "",
+   "act_start": "2026-12-07 08:00",
+   "status": "TK_Active"
+  },
+  "H25-06 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-07 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-07 A1180": {
+   "act_end": "",
+   "act_start": "2026-04-13 12:00",
+   "status": "TK_Active"
+  },
+  "H25-07 A1190": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H25-11 A1200": {
+   "act_end": "",
+   "act_start": "2027-01-01 08:00",
+   "status": "TK_Active"
+  },
+  "H25-11 A1210": {
+   "act_end": "",
+   "act_start": "2026-12-12 12:00",
+   "status": "TK_Active"
+  },
+  "H25-12 A1210": {
+   "act_end": "",
+   "act_start": "2026-10-21 08:00",
+   "status": "TK_Active"
+  },
+  "H25-12 A1220": {
+   "act_end": "",
+   "act_start": "2026-10-23 16:00",
+   "status": "TK_Active"
+  },
+  "H25-12 A1230": {
+   "act_end": "",
+   "act_start": "2026-10-23 08:00",
+   "status": "TK_Active"
+  },
+  "H26-02 A1260": {
+   "act_end": "",
+   "act_start": "2027-01-25 08:00",
+   "status": "TK_Active"
+  },
+  "H26-02 A1270": {
+   "act_end": "",
+   "act_start": "2027-01-28 08:00",
+   "status": "TK_Active"
+  },
+  "H26-07 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H26-07 A1180": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H26-08 A1300": {
+   "act_end": "",
+   "act_start": "2026-08-24 07:00",
+   "status": "TK_Active"
+  },
+  "H26-10 A1200": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H26-11 A1220": {
+   "act_end": "",
+   "act_start": "2027-02-01 11:00",
+   "status": "TK_Active"
+  },
+  "H26-11 A1230": {
+   "act_end": "",
+   "act_start": "2027-02-04 17:30",
+   "status": "TK_Active"
+  },
+  "H26-12 A1190": {
+   "act_end": "",
+   "act_start": "2027-01-12 13:00",
+   "status": "TK_Active"
+  },
+  "H27-01 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-01 A1330": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-01 A1340": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-02 A1210": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-02 A1220": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-03 A1260": {
+   "act_end": "",
+   "act_start": "2026-12-25 06:00",
+   "status": "TK_Active"
+  },
+  "H27-03 A1270": {
+   "act_end": "",
+   "act_start": "2026-12-22 06:00",
+   "status": "TK_Active"
+  },
+  "H27-03 A1280": {
+   "act_end": "",
+   "act_start": "2026-12-25 06:00",
+   "status": "TK_Active"
+  },
+  "H27-05 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-07 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-07 A1320": {
+   "act_end": "",
+   "act_start": "2026-12-10 16:00",
+   "status": "TK_Active"
+  },
+  "H27-09 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-09 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-09 A1330": {
+   "act_end": "",
+   "act_start": "2026-04-09 00:00",
+   "status": "TK_Active"
+  },
+  "H27-10 A1150": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-11 A1340": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-11 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H27-12 A1390": {
+   "act_end": "",
+   "act_start": "2026-09-02 08:00",
+   "status": "TK_Active"
+  },
+  "H27-12 A1400": {
+   "act_end": "",
+   "act_start": "2026-07-17 17:00",
+   "status": "TK_Active"
+  },
+  "H27-12 A1410": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H28-08 A1140": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H28-08 A1150": {
+   "act_end": "2026-10-27 08:00",
+   "act_start": "2026-10-16 08:00",
+   "status": "TK_Complete"
+  },
+  "H28-10 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H28-10 A1400": {
+   "act_end": "",
+   "act_start": "2026-04-01 17:00",
+   "status": "TK_Active"
+  },
+  "H28-11 A1240": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H28-11 A1250": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H28-12 A1380": {
+   "act_end": "",
+   "act_start": "2026-05-14 08:00",
+   "status": "TK_Active"
+  },
+  "H28-12 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H28-12 A1400": {
+   "act_end": "",
+   "act_start": "2026-05-07 08:00",
+   "status": "TK_Active"
+  },
+  "H29-02 A1370": {
+   "act_end": "",
+   "act_start": "2026-12-07 08:00",
+   "status": "TK_Active"
+  },
+  "H29-02 A1380": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H29-02 A1390": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H29-04 A1390": {
+   "act_end": "",
+   "act_start": "2026-07-18 04:00",
+   "status": "TK_Active"
+  },
+  "H29-05 A1220": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H29-05 A1230": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H29-09 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H29-09 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H30-04 A1310": {
+   "act_end": "",
+   "act_start": "2026-04-07 06:00",
+   "status": "TK_Active"
+  },
+  "H30-06 A1170": {
+   "act_end": "2026-12-27 00:00",
+   "act_start": "2026-12-25 00:00",
+   "status": "TK_Complete"
+  },
+  "H30-09 A1260": {
+   "act_end": "",
+   "act_start": "2026-05-19 07:00",
+   "status": "TK_Active"
+  },
+  "H30-09 A1270": {
+   "act_end": "",
+   "act_start": "2026-05-21 11:00",
+   "status": "TK_Active"
+  },
+  "H30-10 A1160": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H30-10 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H8-01 A1160": {
+   "act_end": "",
+   "act_start": "2026-11-07 16:00",
+   "status": "TK_Active"
+  },
+  "H8-02 A1230": {
+   "act_end": "",
+   "act_start": "2026-05-13 07:00",
+   "status": "TK_Active"
+  },
+  "H8-02 A1240": {
+   "act_end": "",
+   "act_start": "2026-05-21 07:00",
+   "status": "TK_Active"
+  },
+  "H8-02 A1250": {
+   "act_end": "",
+   "act_start": "2026-05-21 07:00",
+   "status": "TK_Active"
+  },
+  "H8-03 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H8-03 A1360": {
+   "act_end": "",
+   "act_start": "2026-07-24 16:00",
+   "status": "TK_Active"
+  },
+  "H8-06 A1330": {
+   "act_end": "",
+   "act_start": "2026-10-17 00:00",
+   "status": "TK_Active"
+  },
+  "H8-06 A1340": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H8-07 A1220": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H8-07 A1230": {
+   "act_end": "",
+   "act_start": "2026-11-16 07:00",
+   "status": "TK_Active"
+  },
+  "H8-09 A1300": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H8-09 A1310": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H8-09 A1320": {
+   "act_end": "",
+   "act_start": "2026-05-29 07:00",
+   "status": "TK_Active"
+  },
+  "H8-11 A1210": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H9-02 A1170": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H9-02 A1180": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H9-02 A1190": {
+   "act_end": "",
+   "act_start": "2026-03-05 00:00",
+   "status": "TK_Active"
+  },
+  "H9-03 A1350": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H9-03 A1360": {
+   "act_end": "",
+   "act_start": "2026-12-14 00:00",
+   "status": "TK_Active"
+  },
+  "H9-04 A1390": {
+   "act_end": "",
+   "act_start": "2026-09-17 11:00",
+   "status": "TK_Active"
+  },
+  "H9-07 A1400": {
+   "act_end": "",
+   "act_start": "2026-09-11 00:00",
+   "status": "TK_Active"
+  },
+  "H9-07 A1410": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H9-08 A1320": {
+   "act_end": "",
+   "act_start": "",
+   "status": "TK_NotStart"
+  },
+  "H9-10 A1380": {
+   "act_end": "",
+   "act_start": "2026-05-25 07:00",
+   "status": "TK_Active"
+  },
+  "H9-11 A1330": {
+   "act_end": "",
+   "act_start": "2026-05-28 14:00",
+   "status": "TK_Active"
+  },
+  "H9-11 A1340": {
+   "act_end": "",
+   "act_start": "2026-05-29 06:00",
+   "status": "TK_Active"
+  },
+  "H9-11 A1350": {
+   "act_end": "",
+   "act_start": "2026-05-29 10:00",
+   "status": "TK_Active"
+  }
+ }
+}
