@@ -14412,6 +14412,36 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
     check('LE-19: under progress override a completed predecessor bounds nothing: late start = late finish (Tue 17:00)',
         le(r19).late_start_dt === '2026-01-06 17:00' && le(r19).late_finish_dt === '2026-01-06 17:00',
         JSON.stringify(le(r19)));
+
+    // LE round 3 (27-Nov-2026): a level of effort under way, under progress
+    // override. W is under way (8 h left, into F, late Tue).
+    const w20 = act('W', 8, { actual_start: '2026-01-02 08:00' });
+    const l20 = loe('L', { actual_start: '2026-01-02 08:00' });
+    const r20 = run2([w20, l20], [rel('W', 'F'), rel('W', 'L', 'SS'), rel('L', 'X', 'FF')]);
+    const r20po = run2([w20, l20], [rel('W', 'F'), rel('W', 'L', 'SS'), rel('L', 'X', 'FF')],
+        { scheduleMode: 'progress_override' });
+    check("LE-20: an SS from W under way: retained logic reads W's late start; progress override none (late start = late finish)",
+        le(r20).late_start_dt === r20.nodes.W.late_start_dt && le(r20).late_start_dt !== le(r20).late_finish_dt &&
+        le(r20po).late_start_dt === le(r20po).late_finish_dt && le(r20po).late_finish_dt === '2026-01-06 17:00',
+        JSON.stringify([le(r20), r20.nodes.W.late_start_dt, le(r20po)]));
+    const tf21 = {};
+    for (const mode of ['retained_logic', 'progress_override']) {
+        tf21[mode] = le(run2([l20], [rel('A', 'L', 'SS'), rel('L', 'X', 'FF')],
+            { floatType: 'FT_Min', scheduleMode: mode })).tf_hours;
+    }
+    check('LE-21: FT_Min, under way, start float 0 and finish float 8 h: retained logic 0, progress override 8 (finish float)',
+        JSON.stringify(tf21) === JSON.stringify({ retained_logic: 0, progress_override: 8 }), JSON.stringify(tf21));
+    // completed P feeds X FS +4 h (X late Tue 08:00); L hangs SS from P. P's
+    // late date takes the lag REMAINING at the data date (Mon 5 Jan 08:00).
+    const ls22 = {};
+    for (const fin of ['2026-01-02 17:00', '2026-01-01 17:00']) {
+        const p22 = act('P', 8, { actual_start: fin.slice(0, 10) + ' 08:00', actual_finish: fin, is_complete: true });
+        ls22[fin.slice(0, 10)] = le(run2([p22, loe('L')], [rel('P', 'X', 'FS', 4), rel('P', 'L', 'SS'),
+            rel('L', 'X', 'FF')])).late_start_dt;
+    }
+    check('LE-22: a completed predecessor\'s late date less the lag remaining: finished Fri, 4 h left (Mon 13:00); Thu, used up (Tue 08:00)',
+        JSON.stringify(ls22) === JSON.stringify({ '2026-01-02': '2026-01-05 13:00', '2026-01-01': '2026-01-06 08:00' }),
+        JSON.stringify(ls22));
 }
 
 console.log('\n========================================');

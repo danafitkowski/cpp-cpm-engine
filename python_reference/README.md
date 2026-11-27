@@ -200,7 +200,7 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  4cd713ade21812b014ae9a97baca9abe3c40260817eacdc994acc225eb4437f2
+cpm.py          SHA-256:  e10f07e2e012ed683bf8ff2d37215544793ad07d242b089fc3a93db87704e400
 cpm_minutes.py  SHA-256:  7e0619baa016225adaccd88c25b7e3b7df1ed12e862cf7b3d176249e303af03d
 cpm_hours.py    SHA-256:  05f43718388bc51b7c906bde4c0119c9d57131639c1afa3022a3eadc3624e605
 
@@ -967,8 +967,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 354533
-  sha-256:  4cd713ade21812b014ae9a97baca9abe3c40260817eacdc994acc225eb4437f2
+  bytes: 356765
+  sha-256:  e10f07e2e012ed683bf8ff2d37215544793ad07d242b089fc3a93db87704e400
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish
