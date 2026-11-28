@@ -3876,10 +3876,19 @@ function _hrWorkingDays(minutes, hpd) {
     return Math.abs(v - r) < 1e-9 ? r : _roundHalfUpTo(v, 4);
 }
 
-// LE (level of effort, candidate, unreleased, 26-Nov-2026) — the dates P6 gives a level of
+// LE (level of effort, v2.10.21; its actual dates, round 4, v2.10.22) — the dates P6 gives a level of
 // effort, after the hours pass and on its instants. The network leaves every
 // TT_LOE out (v2.9.42), so a level of effort never drives the critical path or
 // the project finish; P6 derives its dates from the activities it is linked to:
+//   actual dates  (round 4) P6 sets them itself at the F9 from the progress
+//           of the work it is linked to, whatever the file says: under way
+//           from the earliest of its SS predecessors' actual starts and its
+//           completed FS predecessors' actual finishes, each lag walked on
+//           (no lag: that instant), when that falls by the data date;
+//           finished once every finish link is dated, at the latest of them,
+//           never before its start and by the data date (f9Actuals); with
+//           no link that starts it, or handed in finished, the dates it is
+//           handed stand;
 //   start   the earliest of its predecessors' SS (their start) and FS (their
 //           finish) bounds, each lag walked on the lag calendar, at the next
 //           opening of its own calendar and never before the data date; work
@@ -3908,8 +3917,9 @@ function _hrWorkingDays(minutes, hpd) {
 // update correction: 887 of 892 on start, finish, late start, late finish and
 // total float together, to the minute; the five others are generated stress
 // projects whose resource dependent work P6's F9 resized. On the input P6
-// scheduled from (held-out sets H8 to H30) all 271 unfinished LOE match on
-// all five. A lag in days is first converted to hours on
+// scheduled from (held-out sets H8 to H30) every LOE takes the status and
+// actual dates P6 gave it at the F9 (278 of 278) and all 271 unfinished LOE
+// match on all five. A lag in days is first converted to hours on
 // the predecessor's calendar, as the hours pass converts it. A link that is not
 // followed is named in links_not_followed with the reason: the other end is a
 // level of effort or a WBS summary, the type has no measured rule (an SF, or an
@@ -4050,16 +4060,90 @@ function _levelOfEffortPass(activities, relationships, nodes, hours, p) {
     const floatType = p.floatType || 'FT_FF';
     const dd = _hrParseInstant(p.dataDate);
     const fmt = (t) => (t === null ? null : _hrFormatInstant(t));
+    // LE round 4 (28-Nov-2026): P6 sets a level of effort's actual dates itself
+    // at the F9, from the progress of the work it is linked to, whatever the
+    // file it was handed says. Under way from the earliest of its SS
+    // predecessors' actual starts and its completed FS predecessors' actual
+    // finishes, each lag walked on the lag calendar (no lag: that instant
+    // itself), when that falls by the data date; finished, once every finish
+    // link has its date, at the latest of its completed FF predecessors' actual
+    // finishes (lag walked on), its FS successors' actual starts and its
+    // completed FF successors' actual finishes (lag walked back), never before
+    // its start and by the data date. A level of effort no link starts keeps
+    // the dates it is handed. Held-out sets H8 to H30, on the case files P6
+    // scheduled from: 278 of 278 on status, actual start and actual finish
+    // against P6's (validation/held-out/loe-actuals.json). Returns [start,
+    // finish] instants, null where the links set none. Python paired site:
+    // f9_actuals.
+    const f9Actuals = (code, cid) => {
+        const st = [];
+        const fi = [];
+        let waiting = 0;
+        for (const r of relationships || []) {
+            if (!r) continue;
+            const fc = String(r.from_code === null || r.from_code === undefined ? '' : r.from_code).trim();
+            const tc = String(r.to_code === null || r.to_code === undefined ? '' : r.to_code).trim();
+            if ((fc !== code && tc !== code) || fc === tc) continue;
+            const other = tc === code ? fc : tc;
+            if (!Object.prototype.hasOwnProperty.call(nodes, other)) continue;
+            const rt = String(r.type || 'FS').toUpperCase().replace('PR_', '');
+            const oa = byCode.get(other) || {};
+            const oCid = oa.clndr_id || projectCalendar;
+            const oS = _hrParseInstant(oa.actual_start || null);
+            const oF = nodes[other].is_complete ? _hrParseInstant(oa.actual_finish || null) : null;
+            if (tc === code) {
+                const c = lagCal(oCid, cid);
+                const m = lagMinutes(r, oCid);
+                if (rt === 'SS') {
+                    if (oS !== null) st.push(walkOn(oS, m, c));
+                } else if (rt === 'FS') {
+                    if (oF !== null) st.push(walkOn(oF, m, c));
+                } else if (rt === 'FF') {
+                    if (oF !== null) fi.push(walkOn(oF, m, c));
+                    else waiting += 1;
+                }
+            } else {
+                const c = lagCal(cid, oCid);
+                const m = lagMinutes(r, cid);
+                if (rt === 'FS') {
+                    if (oS !== null) fi.push(walkBack(oS, m, c));
+                    else waiting += 1;
+                } else if (rt === 'FF') {
+                    if (oF !== null) fi.push(walkBack(oF, m, c));
+                    else waiting += 1;
+                }
+            }
+        }
+        if (dd === null || !st.length) return [null, null];
+        const s = lo(st);
+        if (s > dd) return [null, null];
+        if (waiting || !fi.length) return [s, null];
+        const f = Math.max(hi(fi), s);
+        return [s, f > dd ? null : f];
+    };
     const out = {};
     for (const [code, a] of loe) {
         const cid = a.clndr_id || projectCalendar;
         const cal = calOf(cid);
-        const aS = _hrParseInstant(a.actual_start || null);
-        const aF = _hrParseInstant(a.actual_finish || null);
+        let aS = _hrParseInstant(a.actual_start || null);
+        let aF = _hrParseInstant(a.actual_finish || null);
         const rec = {
             code, clndr_id: cid, actual_start: a.actual_start || null, actual_finish: a.actual_finish || null,
-            late_start_dt: null, links_not_followed: [],
+            actual_from: 'as handed', handed_actual_start: a.actual_start || null,
+            handed_actual_finish: a.actual_finish || null, late_start_dt: null, links_not_followed: [],
         };
+        // a level of effort handed in finished keeps its dates: on 171 of the
+        // 453 finished LOE in P6's database the links would not give its status
+        // or dates (links and neighbours changed after it finished), which fits
+        // P6 leaving finished work alone; no input file shows it either way
+        const [f9S, f9F] = aF === null ? f9Actuals(code, cid) : [null, null];
+        if (f9S !== null) {
+            // the links set both dates, as P6 does (a handed start moves: 30
+            // held-out LOE under way in the case file had theirs moved)
+            aS = f9S;
+            aF = f9F;
+            Object.assign(rec, { actual_from: 'links', actual_start: fmt(aS), actual_finish: fmt(aF) });
+        }
         if (aF !== null) {
             Object.assign(rec, {
                 status: 'complete', early_start_dt: fmt(aS), early_finish_dt: fmt(aF), late_finish_dt: fmt(aF),

@@ -1,5 +1,5 @@
 {
- "_about": "The actual dates P6 Professional 23.12.1 gave each level of effort (TT_LOE) of the held-out sets at its F9, read from P6 after the read-back, keyed \"<case> <task code>\". A generated case file writes some level of effort as not started; at the F9 P6 starts a level of effort itself from its predecessors' progress, and an XER P6 exports after the F9 carries those dates. tests/p6-heldout-loe.test.js lays them over the case files. Synthetic projects only.",
+ "_about": "The actual dates P6 Professional 23.12.1 gave each level of effort (TT_LOE) of the held-out sets at its F9, read from P6 after the read-back, keyed \"<case> <task code>\". A generated case file writes some level of effort as not started; at the F9 P6 starts a level of effort itself from its predecessors' progress, and an XER P6 exports after the F9 carries those dates. tests/p6-heldout-loe.test.js laid them over the case files in v2.10.21; since v2.10.22 the engine sets them itself and the test checks its actual dates against these. Synthetic projects only.",
  "loe": {
   "H10-01 A1280": {
    "act_end": "",

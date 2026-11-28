@@ -14442,6 +14442,54 @@ console.log('\n=== HR — the hours engine (12-Oct) ===');
     check('LE-22: a completed predecessor\'s late date less the lag remaining: finished Fri, 4 h left (Mon 13:00); Thu, used up (Tue 08:00)',
         JSON.stringify(ls22) === JSON.stringify({ '2026-01-02': '2026-01-05 13:00', '2026-01-01': '2026-01-06 08:00' }),
         JSON.stringify(ls22));
+
+    // LE round 4 (28-Nov-2026): the actual dates P6 sets on a level of effort
+    // at the F9, from the progress of the work it is linked to. P (the LE-16
+    // predecessor) ran Fri 2 Jan 08:00 to 17:00; the data date is Mon 08:00.
+    const ACT = ['status', 'actual_start', 'actual_finish', 'actual_from', 'handed_actual_start'];
+    const r23 = run2([p16, loe('L')], [rel('P', 'X'), rel('P', 'L', 'SS'), rel('L', 'X', 'FF')]);
+    check("LE-23: an SS from completed P starts the LOE at P's actual start (Fri 08:00); it carries on from the data date",
+        pick(le(r23), ACT.concat(['early_start_dt'])) === JSON.stringify(['started', '2026-01-02 08:00', null, 'links',
+            null, '2026-01-05 08:00']), JSON.stringify(le(r23)));
+    const st24 = {};
+    for (const fin of ['2026-01-01 17:00', '2026-01-02 17:00']) {
+        const p24 = act('P', 8, { actual_start: fin.slice(0, 10) + ' 08:00', actual_finish: fin, is_complete: true });
+        st24[fin.slice(0, 10)] = pick(le(run2([p24, loe('L')], [rel('P', 'X'), rel('P', 'L', 'FS', 4),
+            rel('L', 'X', 'FF')])), ['status', 'actual_start', 'actual_from']);
+    }
+    check('LE-24: FS +4 h from P: finished Thu, the LOE is under way from Fri 12:00; finished Fri, Mon 12:00 falls after the data date: not started',
+        JSON.stringify(st24) === JSON.stringify({ '2026-01-01': JSON.stringify(['started', '2026-01-02 12:00', 'links']),
+            '2026-01-02': JSON.stringify(['not_started', null, 'as handed']) }), JSON.stringify(st24));
+    const r25 = run2([p16, loe('L', { actual_start: '2025-12-29 08:00' })], [rel('P', 'X'), rel('P', 'L', 'SS'),
+        rel('L', 'X', 'FF')]);
+    check("LE-25: a handed actual start the links do not give moves to theirs (Mon 29 Dec to Fri 2 Jan 08:00), the handed one kept beside it",
+        pick(le(r25), ACT) === JSON.stringify(['started', '2026-01-02 08:00', null, 'links', '2025-12-29 08:00']),
+        JSON.stringify(le(r25)));
+    const fin26 = {};
+    for (const [k, q] of [['done', act('Q', 16, { actual_start: '2026-01-01 08:00', actual_finish: '2026-01-02 17:00',
+        is_complete: true })], ['under way', act('Q', 16, { actual_start: '2026-01-01 08:00' })]]) {
+        fin26[k] = pick(le(run2([p16, q, loe('L')], [rel('P', 'X'), rel('Q', 'F'), rel('P', 'L', 'SS'),
+            rel('L', 'Q', 'FF')])), ['status', 'actual_start', 'actual_finish', 'tf_hours']);
+    }
+    check('LE-26: FF to Q: Q finished Fri 17:00, the LOE is complete then (no float); Q under way, it is under way',
+        JSON.stringify(fin26) === JSON.stringify({
+            done: JSON.stringify(['complete', '2026-01-02 08:00', '2026-01-02 17:00', null]),
+            'under way': JSON.stringify(['started', '2026-01-02 08:00', null, 0]) }), JSON.stringify(fin26));
+    const s27 = act('S', 8, { actual_start: '2026-01-02 08:00' });
+    const r27 = run2([p16, s27, loe('L')], [rel('P', 'X'), rel('S', 'F'), rel('P', 'L', 'SS', 4), rel('L', 'S', 'FS')]);
+    check('LE-27: started Fri 12:00 (SS +4 h), its FS successor S started Fri 08:00: finished at its own start, never before',
+        pick(le(r27), ['status', 'actual_start', 'actual_finish']) ===
+        JSON.stringify(['complete', '2026-01-02 12:00', '2026-01-02 12:00']), JSON.stringify(le(r27)));
+    const r28 = run2([p16, loe('L', { actual_start: '2026-01-02 10:00' })], [rel('P', 'X'), rel('P', 'L', 'FF'),
+        rel('L', 'X', 'FF')]);
+    check('LE-28: no SS or FS link starts it (an FF from P only): the handed actual start stands',
+        pick(le(r28), ACT) === JSON.stringify(['started', '2026-01-02 10:00', null, 'as handed', '2026-01-02 10:00']),
+        JSON.stringify(le(r28)));
+    const r29 = run2([p16, loe('L', { actual_start: '2025-12-29 08:00', actual_finish: '2025-12-31 17:00' })],
+        [rel('P', 'X'), rel('P', 'L', 'SS'), rel('L', 'X', 'FF')]);
+    check('LE-29: handed in finished, it keeps its dates though an SS from P would start it Fri 08:00',
+        pick(le(r29), ['status', 'actual_start', 'actual_finish', 'actual_from']) ===
+        JSON.stringify(['complete', '2025-12-29 08:00', '2025-12-31 17:00', 'as handed']), JSON.stringify(le(r29)));
 }
 
 console.log('\n========================================');

@@ -2416,11 +2416,20 @@ def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_d
     return None
 
 
-# LE (level of effort, candidate, unreleased, 26-Nov-2026) — the dates P6 gives a level of
+# LE (level of effort, v2.10.21; its actual dates, round 4, v2.10.22) — the dates P6 gives a level of
 # effort. The network leaves every TT_LOE out (v2.9.42 PAIRED FIX), so a level
 # of effort never drives the critical path or the project finish; until now it
 # also got no dates. P6 derives them from the activities it is linked to, and
 # this pass does the same, after the hours pass, on that pass's instants:
+#   actual dates  (round 4) P6 sets them itself at the F9 from the progress
+#           of the work it is linked to, whatever the file says: under way
+#           from the earliest of its SS predecessors' actual starts and its
+#           completed FS predecessors' actual finishes, each lag walked on
+#           (no lag: that instant), when that falls by the data date;
+#           finished once every finish link is dated, at the latest of them,
+#           never before its start and by the data date (f9_actuals); with
+#           no link that starts it, or handed in finished, the dates it is
+#           handed stand;
 #   start   the earliest of its predecessors' SS (their start) and FS (their
 #           finish) bounds, each lag walked on the lag calendar (a lag in days
 #           first converted to hours on the predecessor's calendar, as the hours
@@ -2459,8 +2468,9 @@ def _restart_driver_record(best, anchor, held_by, node, node_cal, dd_num, data_d
 # the minute; the five others are in generated stress projects whose resource
 # dependent work P6's F9 resized, so the database does not hold the input P6
 # scheduled from. On that input (the public held-out sets H8 to H30, P6's import
-# laid over, each LOE's actual dates as P6 gave them at the F9) the engine
-# matches P6 on all 271 unfinished LOE on all five fields. A link that is
+# laid over) the engine gives every LOE the status and actual dates P6 gave it
+# at the F9 (278 of 278) and matches P6 on all 271 unfinished LOE on all five
+# fields. A link that is
 # not followed is named in links_not_followed with the reason: the other end is
 # a level of effort or a WBS summary, the type has no measured rule (an SF, or an
 # SS from the level of effort), or the other end carries no date. A level of
@@ -2603,13 +2613,86 @@ def _level_of_effort_pass(activities, relationships, nodes, hours, *, data_date,
     net_lf = [cm.parse_instant(n.get('late_finish_dt')) for n in nodes.values() if not n.get('is_complete')]
     net_lf = max([x for x in net_lf if x is not None], default=None)
     dd = cm.parse_instant(data_date)
+
+    def f9_actuals(code, cid):
+        """LE round 4 (28-Nov-2026): the actual dates P6 sets on a level of effort itself at the F9, from the
+        progress of the work it is linked to, whatever the file it was handed says. Under way from the earliest of
+        its SS predecessors' actual starts and its completed FS predecessors' actual finishes, each lag walked on
+        the lag calendar (no lag: that instant itself), when that falls by the data date; finished, once every
+        finish link has its date, at the latest of its completed FF predecessors' actual finishes (lag walked
+        on), its FS successors' actual starts and its completed FF successors' actual finishes (lag walked back),
+        never before its start and by the data date. A level of effort no link starts keeps the dates it is
+        handed. Held-out sets H8 to H30, on the case files P6 scheduled from: 278 of 278 on status, actual start
+        and actual finish against P6's (validation/held-out/loe-actuals.json in the engine repository).
+        (start, finish) instants, None where the links set none. JS paired site: f9Actuals."""
+        st, fi, waiting = [], [], 0
+        for r in relationships or []:
+            fc, tc = str(r.get('from_code') or '').strip(), str(r.get('to_code') or '').strip()
+            if code not in (fc, tc) or fc == tc:
+                continue
+            other = fc if tc == code else tc
+            if other not in nodes:
+                continue
+            rt = str(r.get('type') or 'FS').upper().replace('PR_', '')
+            oa = by_code.get(other) or {}
+            o_cid = oa.get('clndr_id') or project_calendar
+            o_s = cm.parse_instant(oa.get('actual_start') or None)
+            o_f = cm.parse_instant(oa.get('actual_finish') or None) if nodes[other].get('is_complete') else None
+            if tc == code:
+                c, m = lag_cal(o_cid, cid), lag_minutes(r, o_cid)
+                if rt == 'SS':
+                    if o_s is not None:
+                        st.append(walk_on(o_s, m, c))
+                elif rt == 'FS':
+                    if o_f is not None:
+                        st.append(walk_on(o_f, m, c))
+                elif rt == 'FF':
+                    if o_f is not None:
+                        fi.append(walk_on(o_f, m, c))
+                    else:
+                        waiting += 1
+            else:
+                c, m = lag_cal(cid, o_cid), lag_minutes(r, cid)
+                if rt == 'FS':
+                    if o_s is not None:
+                        fi.append(walk_back(o_s, m, c))
+                    else:
+                        waiting += 1
+                elif rt == 'FF':
+                    if o_f is not None:
+                        fi.append(walk_back(o_f, m, c))
+                    else:
+                        waiting += 1
+        if dd is None or not st:
+            return None, None
+        s = min(st)
+        if s > dd:
+            return None, None
+        if waiting or not fi:
+            return s, None
+        f = max(max(fi), s)
+        return s, (None if f > dd else f)
+
     out = {}
     for code, a in loe.items():
         cid = a.get('clndr_id') or project_calendar
         cal = cal_of(cid)
         a_s, a_f = cm.parse_instant(a.get('actual_start') or None), cm.parse_instant(a.get('actual_finish') or None)
         rec = {'code': code, 'clndr_id': cid, 'actual_start': a.get('actual_start') or None,
-               'actual_finish': a.get('actual_finish') or None, 'late_start_dt': None, 'links_not_followed': []}
+               'actual_finish': a.get('actual_finish') or None, 'actual_from': 'as handed',
+               'handed_actual_start': a.get('actual_start') or None,
+               'handed_actual_finish': a.get('actual_finish') or None, 'late_start_dt': None,
+               'links_not_followed': []}
+        # a level of effort handed in finished keeps its dates: on 171 of the 453 finished LOE in P6's
+        # database the links would not give its status or dates (links and neighbours changed after it
+        # finished), which fits P6 leaving finished work alone; no input file shows it either way
+        f9_s, f9_f = f9_actuals(code, cid) if a_f is None else (None, None)
+        if f9_s is not None:
+            # the links set both dates, as P6 does (a handed start moves: 30 held-out LOE under way in the
+            # case file had theirs moved)
+            a_s, a_f = f9_s, f9_f
+            rec.update({'actual_from': 'links', 'actual_start': cm.format_instant(a_s),
+                        'actual_finish': cm.format_instant(a_f) if a_f is not None else None})
         if a_f is not None:
             rec.update({'status': 'complete', 'early_start_dt': cm.format_instant(a_s) if a_s is not None else None,
                         'early_finish_dt': cm.format_instant(a_f), 'late_finish_dt': cm.format_instant(a_f),
