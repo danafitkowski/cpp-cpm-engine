@@ -12,7 +12,7 @@ const E = require('@critical-path-partners/cpm-engine');
 
 | Name                   | Type    | Description                                                              |
 |------------------------|---------|--------------------------------------------------------------------------|
-| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.21'` at the current tag.|
+| `E.ENGINE_VERSION`     | string  | Engine version string. Synchronized with `package.json`. e.g. `'2.10.22'` at the current tag.|
 | `E.EPOCH_YEAR`         | number  | `1900` — the epoch anchor for internal day-offset arithmetic (since v2.10.7; 2020 before). |
 | `E.EPOCH_MONTH`        | number  | `1`.                                                                     |
 | `E.EPOCH_DAY`          | number  | `1`.                                                                     |
@@ -256,6 +256,16 @@ below, which schedules those lags to the minute; the alert is then an INFO.
 > calendar, and its actual dates when started or complete) is dated after the network
 > from the activities it is linked to, and returned in `result.level_of_effort`, as P6
 > stores a level of effort's dates:
+> - **actual dates** (since v2.10.22): P6 sets them itself at the F9, from the progress of
+>   the work it is linked to, whatever the file says. A level of effort not handed in
+>   finished is under way from the earliest of its SS predecessors' actual starts and its
+>   completed FS predecessors' actual finishes, each lag walked on the lag calendar (no
+>   lag: that instant itself), when that falls by the data date; a handed actual start
+>   the links do not give moves to theirs. It is finished once every finish link has its
+>   date, at the latest of its completed FF predecessors' actual finishes (lag walked
+>   on), its FS successors' actual starts and its completed FF successors' actual
+>   finishes (lag walked back), never before its start and by the data date. One no SS
+>   or FS link starts, or one handed in finished, keeps the dates it is handed;
 > - **start**: the earliest of its SS predecessors' starts and FS predecessors' finishes,
 >   lag walked on the lag calendar, at the next opening of its own calendar and never
 >   before the data date; one under way restarts at the data date;
@@ -275,9 +285,12 @@ below, which schedules those lags to the minute; the alert is then an INFO.
 >   override); critical at or below zero.
 >
 > `result.level_of_effort` is `{applied, activities, float_type}`, `activities` keyed by
-> code: `{code, clndr_id, actual_start, actual_finish, status ('not_started' | 'started' |
+> code: `{code, clndr_id, actual_start, actual_finish, actual_from ('links' | 'as handed'),
+> handed_actual_start, handed_actual_finish, status ('not_started' | 'started' |
 > 'complete'), early_start_dt, early_finish_dt, late_start_dt, late_finish_dt,
-> remaining_hours, tf_hours, tf_working_days, critical, links_not_followed}`. A link it
+> remaining_hours, tf_hours, tf_working_days, critical, links_not_followed}`;
+> `actual_start`, `actual_finish` and `status` are the ones P6 sets (v2.10.22), the handed
+> dates beside them. A link it
 > does not follow is named in `links_not_followed` with the reason (the other end is a
 > level of effort or a WBS summary; an SF link, or an SS from the level of effort, which
 > no measured P6 rule dates; the other end carries no date). A level of effort whose code

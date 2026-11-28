@@ -12,6 +12,57 @@ A stray bridge tag `temp-deploy-bridge-2026-05-11` (unrelated to any CHANGELOG e
 
 ---
 
+## v2.10.22 - 2026-11-28 - A level of effort takes the actual dates P6 sets on it
+
+**Computed values move (Class A) for the level of effort only: engine math changed in one place, the status and
+actual dates of a level of effort (`TT_LOE`) handed to `computeCPM`, and through them its dates in
+`result.level_of_effort`. No date, float or critical flag of any other activity moves.** At the F9 P6 sets a level
+of effort's actual dates itself, from the progress of the work it is linked to, whatever the file it was handed
+says: a generated held-out case writes some level of effort as not started that P6 then starts, and some that P6
+finishes. v2.10.21 dated a level of effort from the actual dates it was handed and did not model that, so its
+held-out test laid P6's own actual dates over the case files. The engine now sets them as P6 does.
+
+The rule (both engines: `f9Actuals` in `_levelOfEffortPass`, `f9_actuals` in the Python reference's
+`_level_of_effort_pass`), for a level of effort not handed in finished:
+- **Under way** from the earliest of its SS predecessors' actual starts and its completed FS predecessors' actual
+  finishes, each lag walked on the lag calendar (no lag: that instant itself, not the next opening of its calendar),
+  when that falls by the data date. A handed actual start the links do not give moves to theirs.
+- **Finished**, once every finish link has its date, at the latest of its completed FF predecessors' actual finishes
+  (lag walked on), its FS successors' actual starts and its completed FF successors' actual finishes (lag walked
+  back), never before its own start and by the data date.
+- A level of effort no SS or FS link starts keeps the dates it is handed. So does one handed in finished: on 171 of
+  the 453 finished level of effort in the P6 database below the links would not give its status or dates (links and
+  neighbours changed after it finished), which fits P6 leaving finished work alone; no input file shows it either way.
+- Each record in `result.level_of_effort.activities` now carries `actual_from` (`'links'` or `'as handed'`) and the
+  dates it was handed (`handed_actual_start`, `handed_actual_finish`) beside the ones it carries; `actual_start`,
+  `actual_finish` and `status` are P6's. The start, finish, late dates and float follow from them by v2.10.21's rules.
+
+**How it was measured.** On the input P6 scheduled from, the held-out sets H8 to H30 (`tests/p6-heldout-loe.test.js`,
+in `npm run test:p6-comparison`, the case files with P6's import laid over and each level of effort's own actual
+dates): the status and actual dates of all 278 level of effort match the ones P6 gave them at the F9
+(`validation/held-out/loe-actuals.json`): 157 not started, 114 under way, 7 finished. P6 started 61 the case file
+writes as not started (4 of them finished too), moved the actual start of 31 and finished 3 more. With nothing of P6's laid over, all 271 unfinished level of effort
+match P6 on start, finish, late start, late finish and total float; v2.10.21 on the same input gave 266 of 271. On
+P6's stored dates in the private P6 database v2.10.21 was measured on (390 projects, 892 unfinished level of effort):
+the rule gives the status and actual start P6 stored on 890 of 892; on the other 2 no link starts the level of
+effort, and P6 keeps the actual start it stores, as the engine keeps a handed one. Through the skills' corrected update (their Python engine, every option the file sets, at its data date) on the same database: 887 of 892 on all five fields, as v2.10.21; the five others are the generated projects whose resource dependent work P6's F9 resized. This is a fitted rule,
+not a held-out score: it was measured on that database and on these sets together.
+
+**What did not move.** Census of every distinct XER on the measuring machine (1,807 files, frozen for the run; 1,789 schedule, the 18 others are unreadable on both versions alike): every field of all 344,150 unfinished activities identical to v2.10.21, `driving_predecessor` and the alerts included. `parseXER` leaves a level of effort out, so none reaches `computeCPM` on that path: the census shows the rest of the engine unchanged. H1 to H30 re-scored on these bytes in diagnosis mode (not a new held-out score):
+8,850 of 8,850, as v2.10.21, none moved. Cross-validation: 233 fixtures, 22189 of 22189; it does not compare
+`level_of_effort`. JS unit 1,595 (1,588 before; LE-23 to LE-29). Coverage 94.28% statements / 82.90% branches /
+96.92% functions (94.23 / 82.81 / 96.91 before: the rule adds 84 statements and 54 branches).
+
+In the skills (not this repository), time-impact-analysis's corrected update now writes the status and actual dates
+into the level of effort rows, and one the links finish as P6 writes a finished level of effort (its remaining, late
+and float fields blank; P6 database, 454 finished level of effort).
+
+**Not claimed.** A level of effort linked SF, or SS from itself, is not dated through that link. Whether P6 revisits
+a level of effort it finished at an earlier F9 is not measured on any input file: the engine leaves it as handed.
+`parseXER` and `getTasks()` still leave a level of effort out, so a caller hands the rows in.
+
+---
+
 ## v2.10.21 - 2026-11-27 - The level of effort is dated as P6 dates it
 
 **Computed values move (Class A) for the level of effort only: engine math changed in one place, the dates of a

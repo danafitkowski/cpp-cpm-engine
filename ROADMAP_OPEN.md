@@ -152,6 +152,25 @@ No audit item changed status. v2.9.52 changes the scheduling arithmetic in two p
 
 Item 6 stands: the probe projects are fitted to the rules they measured, so they are not the held-out capture either.
 
+## Status at v2.10.22 (reviewed 2026-11-28)
+
+v2.10.22 gives a level of effort the status and actual dates P6 sets on it at the F9. Class A under PROCEDURE.md §12.1
+for the level of effort only; the network, which leaves it out, does not move.
+- Census of 1,789 exports against v2.10.21: every field of all 344,150 unfinished activities identical.
+- Held-out sets H8 to H30 (`tests/p6-heldout-loe.test.js`): status and actual dates of 278 of 278 level of effort
+  against P6's, and 271 of 271 unfinished on all five fields with nothing of P6's laid over (v2.10.21: 266 of 271).
+  Fitted: the rule was measured on the P6 database and these sets together.
+- The skills' corrected update on the P6 database: 887 of 892 on all five fields, as v2.10.21.
+- The unit suite grew from 1,588 to 1,595 (LE-23 to LE-29); crossval stays at 233 fixtures and 22189 of 22189.
+- Coverage on the v2.10.22 bytes: 94.28% statements / 82.90% branches / 96.92% functions.
+- Held-out sets H1 to H30, re-scored in diagnosis mode: 8,850 of 8,850 rows, as on v2.10.21.
+- **CLOSED:** P6 starts a level of effort itself at the F9 from its predecessors' progress (v2.10.21's first OPEN).
+- **OPEN:** a level of effort handed in finished keeps the dates it is handed; whether P6 revisits one it finished at an
+  earlier F9 is not measured on any input file (171 of the 453 finished in the P6 database carry dates the links
+  would not give, which fits P6 leaving them alone).
+- **OPEN:** `parseXER` and `getTasks()` leave a level of effort out, so it is dated only when a caller hands the rows in.
+- **OPEN:** a level of effort linked SF, or SS from itself, is not dated through that link (no measured P6 rule).
+
 ## Status at v2.10.21 (reviewed 2026-11-27)
 
 v2.10.21 dates the level of effort. Class A under PROCEDURE.md §12.1 for the level of effort only: each `TT_LOE`
@@ -560,4 +579,4 @@ Item 6 stands: the probe projects are fitted to the rule they measured, so they 
 
 ## Document version
 
-Aligned to `cpm-engine` v2.10.21. Update on every release that closes or opens an audit item.
+Aligned to `cpm-engine` v2.10.22. Update on every release that closes or opens an audit item.

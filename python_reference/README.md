@@ -200,9 +200,19 @@ have been applied:
 ## SHA-256 Pin
 
 ```
-cpm.py          SHA-256:  ffc5453090c7fd3ba3e2d5fa8756aaf5a06a27132e7c0f2ad4594a7ffb13f4c5
+cpm.py          SHA-256:  7d16dbae5711b52a73f7c87d087ab2da856cab50c4a3d0fd74886b4a9896f38b
 cpm_minutes.py  SHA-256:  7e0619baa016225adaccd88c25b7e3b7df1ed12e862cf7b3d176249e303af03d
 cpm_hours.py    SHA-256:  05f43718388bc51b7c906bde4c0119c9d57131639c1afa3022a3eadc3624e605
+
+(v2.10.22, 2026-11-28 - cpm.py bumped from ffc54530... (v2.10.21): the
+actual dates P6 sets on a level of effort at the F9 (f9_actuals, in
+_level_of_effort_pass), paired with the JS engine's f9Actuals. A level of
+effort not finished in the file is under way from the earliest of its SS
+predecessors' actual starts and its completed FS predecessors' actual
+finishes, lag walked on, when that falls by the data date, and finished
+once every finish link is dated; result['level_of_effort'] carries
+actual_from and the handed dates beside. The network does not move.
+ENGINE_VERSION reads 2.10.22. cpm_hours.py and cpm_minutes.py unchanged.)
 
 (v2.10.21, 2026-11-27 - cpm.py bumped from 9cde0fb3... (v2.10.20): the
 level-of-effort pass (_level_of_effort_pass, after the hours pass), paired
@@ -976,8 +986,8 @@ Expected output (Node 18+, Python 3.8+):
 
 ```
 Python reference: <repo>/python_reference/cpm.py
-  bytes: 356765
-  sha-256:  ffc5453090c7fd3ba3e2d5fa8756aaf5a06a27132e7c0f2ad4594a7ffb13f4c5
+  bytes: 361478
+  sha-256:  7d16dbae5711b52a73f7c87d087ab2da856cab50c4a3d0fd74886b4a9896f38b
 --- F1 -- A->B->C linear, no cal ---
   PASS  project_finish_num
   PASS  project_finish

@@ -258,7 +258,7 @@ See [DAUBERT.md §9](DAUBERT.md#9-forensic-strict-mode-shipped-v2931) for the fu
 
 **Do:**
 - Verify the deliverable's report manifest references:
-  - Engine version (e.g., `cpm-engine v2.10.21`)
+  - Engine version (e.g., `cpm-engine v2.10.22`)
   - Source SHA-256 (from Step 2)
   - This SOP (`FORENSIC_USE_SOP.md`)
   - DAUBERT.md (engine disclosure)
@@ -310,11 +310,11 @@ live work. Do not wait for a client to ask.
 
 FRE 702 attacks come in two flavors:
 
-1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.10.21 verification chain answer this layer.
+1. **Attacks on principles.** "The engine itself is unreliable, the math is wrong, the validation is insufficient." → The engine's [DAUBERT.md](DAUBERT.md) + [VERIFY_RELEASE.md](VERIFY_RELEASE.md) + the v2.10.22 verification chain answer this layer.
 
 2. **Attacks on application.** "Even granting the engine's validation record, the analyst applied it incorrectly: missed an alert, used the wrong calendar, mislabeled the method, didn't document the overrides, didn't verify against P6 on a controlling activity." → This SOP answers that layer.
 
-Opposing counsel will go after whichever is weaker. The engine layer carries its own evidence: open source, a Sigstore-signed witness, the Rekor transparency log, 1,588 unit tests, 22189 of 22189 enumerated crossval comparisons bit-identical, 94.23 / 82.81 / 96.91 / 94.23% coverage (statements / branches / functions / lines) at the v2.10.21 baseline. The application layer has no such record of its own: following this SOP is how it gets one.
+Opposing counsel will go after whichever is weaker. The engine layer carries its own evidence: open source, a Sigstore-signed witness, the Rekor transparency log, 1,595 unit tests, 22189 of 22189 enumerated crossval comparisons bit-identical, 94.28 / 82.90 / 96.92 / 94.28% coverage (statements / branches / functions / lines) at the v2.10.22 baseline. The application layer has no such record of its own: following this SOP is how it gets one.
 
 Following this SOP does not guarantee admissibility. It documents a defensible application discipline. Whether the opinion itself is defensible remains the analyst's burden under FRE 702.
 
@@ -360,4 +360,4 @@ only the second is an answer.
 
 ## Document version
 
-This SOP is aligned to `cpm-engine` v2.10.21. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.
+This SOP is aligned to `cpm-engine` v2.10.22. SOP revisions are tracked in [`CHANGELOG.md`](CHANGELOG.md) under the engine version that introduced them.
